@@ -1,5 +1,7 @@
 package com.gitee.planners.core.config
 
+import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.job.Job
 import com.gitee.planners.api.job.Route
 import com.gitee.planners.api.job.Router
 import com.gitee.planners.api.script.KetherScriptOptions
@@ -21,6 +23,10 @@ class ImmutableRoute(private val parent: Router, private val config: Configurati
 
     override fun getBranches(): List<Route> {
         return branchs.mapNotNull { parent.getRouteOrNull(it) }
+    }
+
+    override fun getJob(): Job {
+        return RegistryBuiltin.JOB.getOrNull(id) ?: error("Couldn't find job with id $id")
     }
 
     override fun isInfer(player: Player, options: KetherScriptOptions): Boolean {

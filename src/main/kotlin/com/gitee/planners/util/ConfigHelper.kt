@@ -1,8 +1,13 @@
 package com.gitee.planners.util
 
+import com.gitee.planners.Planners
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
 import taboolib.module.configuration.util.mapSection
+
+
+val config: Configuration
+    get() = Planners.config
 
 @Suppress("UNCHECKED_CAST")
 fun <V> ConfigurationSection.mapSectionNotNull(transform: (ConfigurationSection) -> V?): Map<String, V> {

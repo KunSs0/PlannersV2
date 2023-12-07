@@ -15,7 +15,7 @@ class MetadataTypeToken {
 
     }
 
-    open class TypeToken(override val clazz: Class<*>, val any: Any, val stopTime: Long) : Metadata {
+    open class TypeToken(override val clazz: Class<*>, val any: Any, override val stopTime: Long) : Metadata {
 
         open override fun isTimeout(): Boolean {
             return System.currentTimeMillis() > stopTime

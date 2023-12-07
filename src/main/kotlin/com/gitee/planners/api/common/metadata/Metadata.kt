@@ -12,6 +12,8 @@ interface Metadata {
 
     val clazz: Class<*>
 
+    val stopTime: Long
+
     fun isTimeout(): Boolean
 
     fun asString(): String
@@ -27,7 +29,6 @@ interface Metadata {
     fun asBoolean(): Boolean
 
     fun any(): Any
-
 
 
     interface Serializable<T> : JsonDeserializer<T>, JsonSerializer<T> {
@@ -59,6 +60,15 @@ interface Metadata {
 
         fun isSupported(clazz: Class<*>): Boolean {
             return this.table.containsKey(clazz)
+        }
+
+        fun toJson(metadata: Metadata): String {
+            return gson.toJson(metadata.any())
+        }
+
+        fun parseTypeToken(type: Class<*>, content: String, stopTime: Long): MetadataTypeToken.TypeToken {
+            val data = parseJson<Any>(type, content)
+            return MetadataTypeToken.TypeToken(type, data, stopTime)
         }
 
         fun <T> parseJson(clazz: Class<*>, content: String): Any {

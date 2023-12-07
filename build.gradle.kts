@@ -12,6 +12,7 @@ taboolib {
     install("module-nms")
     install("module-nms-util")
     install("module-lang")
+    install("module-database")
     install("module-chat")
     install("module-configuration")
     install("platform-bukkit")
