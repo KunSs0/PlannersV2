@@ -26,13 +26,24 @@ taboolib {
 }
 
 repositories {
+    // 依赖使用阿里云 maven 源
+    maven {
+        setUrl("https://maven.aliyun.com/repository/public/")
+    }
+    maven {
+        setUrl("https://maven.aliyun.com/repository/spring/")
+    }
+    mavenLocal()
     mavenCentral()
 }
-
 dependencies {
     compileOnly("ink.ptms:nms-all:1.0.0")
     compileOnly("ink.ptms.core:v11902:11902-minimize:mapped")
     compileOnly("ink.ptms.core:v11902:11902-minimize:universal")
+
+    implementation("com.google.code.gson:gson:2.8.9")
+
+    compileOnly("com.mojang:datafixerupper:4.0.26")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 }

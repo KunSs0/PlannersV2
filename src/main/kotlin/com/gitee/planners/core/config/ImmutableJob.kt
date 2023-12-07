@@ -1,13 +1,11 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.SkillAPI
-import com.gitee.planners.api.skill.Job
-import com.gitee.planners.api.skill.Variable
+import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.job.Job
+import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
-import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
-import taboolib.module.configuration.util.mapSection
 
 class ImmutableJob(private val config: Configuration) : Job {
 
@@ -28,11 +26,11 @@ class ImmutableJob(private val config: Configuration) : Job {
     }
 
     fun getImmutableSkillValues(): List<ImmutableSkill> {
-        return SkillAPI.getValues().filter { it.id in immutableSkillKeys }
+        return RegistryBuiltin.SKILL.getValues().filter { it.id in immutableSkillKeys }
     }
 
     override fun getSkillOrNull(id: String): ImmutableSkill? {
-        return SkillAPI.getOrNull(id)
+        return RegistryBuiltin.SKILL.getOrNull(id)
     }
 
     override fun getVariableOrNull(id: String): Variable? {
