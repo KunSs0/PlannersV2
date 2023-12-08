@@ -2,17 +2,14 @@ package com.gitee.planners.core.database
 
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataTypeToken
-import com.gitee.planners.core.config.ImmutableJob
+import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerProfile
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.util.config
 import org.bukkit.entity.Player
-import taboolib.module.database.ActionFilterable
-import taboolib.module.database.ColumnTypeSQL
-import taboolib.module.database.Table
-import taboolib.module.database.getHost
+import taboolib.module.database.*
 import java.sql.ResultSet
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -20,7 +17,7 @@ import javax.sql.DataSource
 
 class DatabaseSQL : Database {
 
-    val host = config.getHost("database.sql")
+    val host = HostSQL(Database.option.get().sql!!)
 
     val cachedId = mutableMapOf<UUID, Long>()
 
@@ -37,7 +34,7 @@ class DatabaseSQL : Database {
         add { id() }
         add("router") { type(ColumnTypeSQL.VARCHAR, 10) }
         add("parent") { type(ColumnTypeSQL.VARCHAR, 10) }
-        add("route_id") { type(ColumnTypeSQL.VARCHAR, 10) }
+        add("route") { type(ColumnTypeSQL.VARCHAR, 10) }
     }
 
     val tableMetadata = Table("planners_metadata", host) {
@@ -58,6 +55,9 @@ class DatabaseSQL : Database {
 
     init {
         tableUser.createTable(dataSource)
+        tableRoute.createTable(dataSource)
+        tableMetadata.createTable(dataSource)
+        tableSkill.createTable(dataSource)
     }
 
     // 该方法最好运行在异步 否则向数据库插入数据时会耗时
@@ -139,7 +139,7 @@ class DatabaseSQL : Database {
     private fun getRouteById(id: Long): PlayerRoute {
         return tableRoute.select(dataSource) {
             where { "id" eq id }
-            rows("id", "router", "parent", "route_id")
+            rows("id", "router", "parent", "route")
         }.first {
             PlayerRoute(
                 getLong("id"),
@@ -183,17 +183,29 @@ class DatabaseSQL : Database {
     override fun createPlayerSkill(profile: PlayerProfile, skill: ImmutableSkill): CompletableFuture<PlayerSkill> {
         val future = CompletableFuture<PlayerSkill>()
         tableSkill.insert(dataSource, "route", "node", "level") {
-            value(profile.route?.id ?: error("Player ${profile.onlinePlayer.name} not find route"), skill.id, skill.startedLevel)
+            value(
+                profile.route?.id ?: error("Player ${profile.onlinePlayer.name} not find route"),
+                skill.id,
+                skill.startedLevel
+            )
             onFinally {
                 val id = getId(generatedKeys)
-                future.complete(PlayerSkill(id, skill.id,skill.startedLevel))
+                future.complete(PlayerSkill(id, skill.id, skill.startedLevel))
             }
         }
         return future
     }
 
-    override fun createPlayerJob(profile: PlayerProfile, job: ImmutableJob): CompletableFuture<PlayerRoute> {
-        TODO("Not yet implemented")
+    override fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
+        val future = CompletableFuture<PlayerRoute>()
+        val node = PlayerRoute.Node(profile.route?.bindingId ?: -1L, route.id)
+        tableRoute.insert(dataSource, "router", "parent", "route") {
+            value(route.routerId, node.parentId, node.route)
+            onFinally {
+                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, node, emptyList()))
+            }
+        }
+        return future
     }
 
     private fun getId(resultSet: ResultSet): Long {

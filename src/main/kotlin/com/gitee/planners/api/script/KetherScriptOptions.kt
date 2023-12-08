@@ -9,6 +9,23 @@ interface KetherScriptOptions {
 
     companion object {
 
+        fun generic(player: Player): KetherScriptOptions {
+            return create {
+                sender(player)
+            }
+        }
+
+        fun create(builder: ScriptOptions.ScriptOptionsBuilder.() -> Unit): KetherScriptOptions {
+            return object : KetherScriptOptions {
+                override fun build(): ScriptOptions.ScriptOptionsBuilder {
+                    return ScriptOptions.ScriptOptionsBuilder().also {
+                        it.sandbox(true)
+                        builder(it)
+                    }
+                }
+            }
+        }
+
         fun sender(player: Player, options: KetherScriptOptions): KetherScriptOptions {
             return object : KetherScriptOptions {
                 override fun build(): ScriptOptions.ScriptOptionsBuilder {

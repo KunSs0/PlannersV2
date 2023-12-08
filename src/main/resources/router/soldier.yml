@@ -1,0 +1,15 @@
+__option__:
+  name: "战士"
+  run: swordsman
+
+swordsman:
+  # 分支 可以多分支转职
+  branch: blade-master
+  condition:
+    m0:
+      if: balance has 100
+      post: balance take 100
+      message: "金币未满足100({{ balance get }})"
+
+blade-master:
+  branch: grand-master

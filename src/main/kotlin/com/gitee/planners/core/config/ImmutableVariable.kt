@@ -3,10 +3,9 @@ package com.gitee.planners.core.config
 import com.gitee.planners.api.script.SingletonKetherScript
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.script.KetherScriptOptions
+import taboolib.common5.cbool
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
-import taboolib.module.kether.ScriptOptions
-import taboolib.module.kether.runKether
 import java.util.concurrent.CompletableFuture
 
 interface ImmutableVariable : Variable {
@@ -40,7 +39,7 @@ interface ImmutableVariable : Variable {
          * 玩家是否匹配条件
          */
         fun match(options: KetherScriptOptions): Boolean {
-            return runKether(false) { condition.run(options) }!! as Boolean
+            return condition.run(options).thenApply { it.cbool }.getNow(false)
         }
 
     }

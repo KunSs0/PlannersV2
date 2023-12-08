@@ -8,6 +8,9 @@ open class SingletonKetherScript(string: String? = null) : KetherScript {
 
     open val action = string ?: "null"
 
+    val isNotNull: Boolean
+        get() = action == "null"
+
     override fun run(options: KetherScriptOptions): CompletableFuture<Any?> {
         return KetherShell.eval(action, options.build().build())
     }
