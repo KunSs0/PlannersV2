@@ -5,10 +5,11 @@ import com.gitee.planners.api.job.Condition
 import com.gitee.planners.api.job.Job
 import com.gitee.planners.api.job.Route
 import com.gitee.planners.api.job.Router
-import com.gitee.planners.api.script.KetherScript
-import com.gitee.planners.api.script.KetherScriptOptions
+import com.gitee.planners.api.common.script.KetherScriptOptions
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
 import taboolib.library.configuration.ConfigurationSection
+import taboolib.library.xseries.getItemStack
 
 class ImmutableRoute(private val parent: Router, private val config: ConfigurationSection) : Route {
 
@@ -16,12 +17,24 @@ class ImmutableRoute(private val parent: Router, private val config: Configurati
 
     override val id = config.name
 
-    private val branchs = config.getStringList("branches")
+    val icon = config.getItemStack("icon")
+        @JvmName("icon0")
+        get
+
+    private val branches = if (config.isString("branch")) {
+        listOf(config.getString("branch")!!)
+    } else {
+        config.getStringList("branch")
+    }
 
     val condition = Condition.combined(config.getConfigurationSection("condition"))
 
     override fun getBranches(): List<Route> {
-        return branchs.mapNotNull { parent.getRouteOrNull(it) }
+        return branches.mapNotNull { parent.getRouteOrNull(it) }
+    }
+
+    override fun getIcon(): ItemStack? {
+        return icon
     }
 
     override fun getJob(): Job {

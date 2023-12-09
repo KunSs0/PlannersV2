@@ -2,12 +2,15 @@ package com.gitee.planners.core.player
 
 import com.gitee.planners.api.RegistryBuiltin
 import com.gitee.planners.api.job.*
-import com.gitee.planners.api.script.KetherScriptOptions
+import com.gitee.planners.api.common.script.KetherScriptOptions
+import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
 import java.util.concurrent.CompletableFuture
 
-class PlayerRoute(val bindingId: Long, private val routerId: String, val current: Node, skills: List<PlayerSkill>) : Route,
+class PlayerRoute(val bindingId: Long, private val routerId: String, val current: Node, skills: List<PlayerSkill>) :
+    Route,
     Job {
 
     private val router: Router
@@ -17,6 +20,7 @@ class PlayerRoute(val bindingId: Long, private val routerId: String, val current
         get() = router.getRouteOrNull(current.route)!!
 
     private val job: Job
+        @JvmName("job0")
         get() = RegistryBuiltin.JOB.getOrNull(current.route) ?: error("Couldn't find job with id ${current.route}'")
 
     override val id: String
@@ -25,24 +29,23 @@ class PlayerRoute(val bindingId: Long, private val routerId: String, val current
     private val skills = mutableMapOf(*skills.map { it.id to it }.toTypedArray())
 
     override val name: String
-        get() = TODO("Not yet implemented")
+        get() = job.name
 
 
     override fun getBranches(): List<Route> {
-        throw IllegalStateException("Not implemented")
+        return route.getBranches()
     }
 
     override fun getJob(): Job {
         return job
     }
 
-    override fun isInfer(player: Player, options: KetherScriptOptions): Boolean {
-        throw IllegalStateException("Not implemented")
+    override fun getIcon(): ItemStack? {
+        return route.getIcon()
     }
 
-
-    override fun run(options: KetherScriptOptions): CompletableFuture<Any?> {
-        TODO("Not yet implemented")
+    override fun isInfer(player: Player, options: KetherScriptOptions): Condition.VerifyInfo {
+        throw IllegalStateException("Not implemented")
     }
 
     override fun getVariables(): Map<String, Variable> {

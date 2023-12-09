@@ -12,20 +12,25 @@ taboolib {
     install("module-nms")
     install("module-nms-util")
     install("module-lang")
+    install("module-ui")
     install("module-database")
     install("module-chat")
     install("module-configuration")
     install("platform-bukkit")
+    install("expansion-command-helper")
     classifier = null
-    version = "6.0.12-35"
+    version = "6.0.12-40"
     description {
         dependencies {
-            name("PlaceholderAPI")
-            name("MythicMobs")
+            name("PlaceholderAPI").optional(true)
+            name("MythicMobs").optional(true)
         }
     }
 }
-
+tasks.withType<Jar> {
+    destinationDir = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
+//    destinationDir = file("F:/Server/paper 1.19.4/plugins")
+}
 repositories {
     // 依赖使用阿里云 maven 源
     maven {

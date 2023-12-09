@@ -1,15 +1,62 @@
 __option__:
   name: "战士"
-  run: swordsman
+  originate: swordsman
+  icon:
+    material: DIAMOND_SWORD
+    name: "职业: 战士"
+    lore:
+      - '&f- &a基础数值'
+      - "&f体力： &b|||||||"
+      - "&f攻击： &b|||||"
+      - "&f防御： &b|||||"
+      - "&f机动： &b|||||"
+      - '&f- &a转职路线'
+      - "    &7> &f剑魂"
+      - "    &7> &f剑圣"
+      - ''
+      - '&e难度： ||'
 
 swordsman:
   # 分支 可以多分支转职
   branch: blade-master
-  condition:
-    m0:
-      if: balance has 100
-      post: balance take 100
-      message: "金币未满足100({{ balance get }})"
 
 blade-master:
   branch: grand-master
+  condition:
+    m0:
+      if: "true"
+      message: "金币所需100"
+  icon:
+    material: DIAMOND_SWORD
+    name: "职业: 剑魂"
+    lore:
+      - '&f- &a基础数值'
+      - "&f体力： &b|||||||"
+      - "&f攻击： &b|||||"
+      - "&f防御： &b|||||"
+      - "&f机动： &b|||||"
+      - '&f- &a转职路线'
+      - "    &7> &f剑圣"
+      - ''
+      - '$message'
+      - ''
+      - '&e难度： ||'
+
+grand-master:
+  condition:
+    m0:
+      if: "false"
+      message: "金币所需100"
+  icon:
+    material: DIAMOND_SWORD
+    name: "职业: 剑圣"
+    lore:
+      - '&f- &a基础数值'
+      - "&f体力： &b|||||||"
+      - "&f攻击： &b|||||"
+      - "&f防御： &b|||||"
+      - "&f机动： &b|||||"
+      - ''
+      - '$message'
+      - ''
+      - '&e难度： ||'

@@ -18,8 +18,8 @@ interface Database {
         @ConfigNode("database")
         val option = configNodeTo { DatabaseOption(this) }
 
-        val INSTANCE by lazy {
-            when (option.get().use) {
+        val INSTANCE : Database by lazy {
+            when (option.get().use.uppercase()) {
                 "LOCAL" -> TODO("Not implemented")
                 "SQL" -> DatabaseSQL()
                 else -> TODO("Not implemented")
@@ -30,9 +30,13 @@ interface Database {
 
     fun getPlayerProfile(player: Player): PlayerProfile
 
+    fun updateRoute(profile: PlayerProfile)
+
     fun updateMetadata(profile: PlayerProfile, id: String, metadata: Metadata)
 
     fun createPlayerSkill(profile: PlayerProfile, skill: ImmutableSkill): CompletableFuture<PlayerSkill>
+
+    fun createPlayerJob(profile: PlayerProfile,parentId: Long,route: ImmutableRoute) : CompletableFuture<PlayerRoute>
 
     fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute>
 

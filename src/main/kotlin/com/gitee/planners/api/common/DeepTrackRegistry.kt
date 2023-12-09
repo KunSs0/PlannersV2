@@ -1,30 +1,28 @@
 package com.gitee.planners.api.common
 
 import taboolib.common.LifeCycle
+import taboolib.common.inject.ClassVisitor
+import taboolib.common.io.newFile
 import taboolib.common.io.newFolder
+import taboolib.common.platform.Awake
+import taboolib.common.platform.function.getDataFolder
 import taboolib.common.platform.function.postpone
 import taboolib.common.platform.function.releaseResourceFile
+import taboolib.common.util.unsafeLazy
 import taboolib.module.configuration.Configuration
 import java.io.File
+import java.util.function.Supplier
 
-class DeepTrackRegistry<T : Unique>(
-    val name: String,
-    val attachs: List<String> = emptyList(),
-    val invoke: Configuration.() -> T
-) : AbstractRegistryBuiltin<T>() {
+abstract class DeepTrackRegistry<T : Unique>(val name: String, private val attaches: List<String> = emptyList()) : AbstractRegistryBuiltin<T>() {
 
-    private val folder = newFolder(name)
+    val folder by unsafeLazy { File(getDataFolder(), name) }
 
-    init {
-        init()
-        // 在 LOAD 阶段 加载所有文件配置
-        postpone(LifeCycle.LOAD) { this.load() }
-    }
+    init { register(this) }
 
     fun init() {
-        if (folder.exists()) {
+        if (!folder.exists()) {
             folder.mkdirs()
-            attachs.forEach { releaseResourceFile("$name/$it") }
+            attaches.forEach { releaseResourceFile("$name/$it") }
         }
     }
 
@@ -51,9 +49,30 @@ class DeepTrackRegistry<T : Unique>(
         return files
     }
 
-    override fun invokeInstance(config: Configuration): T {
-        return invoke(config)
-    }
+    companion object {
 
+        private val registry = mutableListOf<DeepTrackRegistry<*>>()
+
+        fun register(deepTrackRegistry: DeepTrackRegistry<*>) {
+            this.registry += deepTrackRegistry
+        }
+
+        @Awake(LifeCycle.LOAD)
+        internal fun onLoad() {
+            println("on load $registry")
+            registry.forEach { it.init() }
+        }
+
+        fun onReload() {
+            this.registry.forEach { it.reload() }
+        }
+
+        @Awake(LifeCycle.ENABLE)
+        internal fun onEnable() {
+            println("on enable $registry")
+            registry.forEach { it.load() }
+        }
+
+    }
 
 }

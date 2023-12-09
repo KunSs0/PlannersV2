@@ -1,4 +1,4 @@
-package com.gitee.planners.api.script
+package com.gitee.planners.api.common.script
 
 import java.util.concurrent.CompletableFuture
 

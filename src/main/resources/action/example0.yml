@@ -1,0 +1,12 @@
+__option__:
+  id: "example"
+  format: [ type,uuid ]
+  # 接收可选参数
+  props:
+    - id: title
+      default: "abc"
+    - id: tick
+      default: 100
+
+action: |-
+  tell "{{ &type }}:{{ &uuid }} title = {{ &title }} tick = {{ &tick }}"

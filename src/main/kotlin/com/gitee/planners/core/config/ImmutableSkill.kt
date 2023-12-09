@@ -1,6 +1,6 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.script.SingletonKetherScript
+import com.gitee.planners.api.common.script.SingletonKetherScript
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption

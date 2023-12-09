@@ -1,0 +1,7 @@
+player-route-exists: "&3&l< &b&l｡◕‿◕｡&3&l > &f您已经选择了{0}职业，无法重复选择"
+player-route-selected: '&3&l< &b&l｡◕‿◕｡&3&l > &f选择 {0} 职业'
+player-route-clear: '&3&l< &b&l｡◕‿◕｡&3&l > &f清空职业成功'
+player-route-invalid: '&3&l< &b&l｡◕‿◕｡&3&l > &c还未选择职业'
+
+player-transfer-invalid: '&3&l< &b&l｡◕‿◕｡&3&l > &f转职条件不满足,无法转职'
+player-transfer-success: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功转职 {0}'

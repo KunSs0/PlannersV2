@@ -14,7 +14,7 @@ class TargetConsoleCommandSender(val console : ConsoleCommandSender) : TargetCom
         return Bukkit.dispatchCommand(console,command)
     }
 
-    override fun getInstance(): CommandSender {
+    override fun getInstance(): ConsoleCommandSender {
         return console
     }
 

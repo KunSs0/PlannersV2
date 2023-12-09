@@ -1,4 +1,4 @@
-package com.gitee.planners.api.script
+package com.gitee.planners.api.common.script
 
 import org.bukkit.entity.Player
 import taboolib.module.kether.ScriptOptions
@@ -13,6 +13,14 @@ interface KetherScriptOptions {
             return create {
                 sender(player)
             }
+        }
+
+        /**
+         * 公共命名空间
+         */
+        fun common(player: Player) = create {
+            sender(player)
+            namespace(listOf("planners-common"))
         }
 
         fun create(builder: ScriptOptions.ScriptOptionsBuilder.() -> Unit): KetherScriptOptions {

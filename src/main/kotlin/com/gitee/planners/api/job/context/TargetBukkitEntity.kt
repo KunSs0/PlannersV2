@@ -6,7 +6,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Entity
 import java.util.*
 
-class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetCommandSender<CommandSender> {
+class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>,TargetCommandSender<Entity> {
     override fun getUniqueId(): UUID {
         return entity.uniqueId
     }

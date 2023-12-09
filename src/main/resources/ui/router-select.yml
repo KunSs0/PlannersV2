@@ -1,0 +1,9 @@
+__option__:
+  rows: 1
+  title: "Router Select"
+  slots: [ 1,2,3 ]
+
+icon-#:
+  slots: [0,8]
+  material: STAINED_GLASS_PANE
+  damage: 7

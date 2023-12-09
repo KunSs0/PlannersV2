@@ -9,6 +9,7 @@ import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.util.config
 import org.bukkit.entity.Player
+import taboolib.common5.clong
 import taboolib.module.database.*
 import java.sql.ResultSet
 import java.util.UUID
@@ -19,25 +20,28 @@ class DatabaseSQL : Database {
 
     val host = HostSQL(Database.option.get().sql!!)
 
+    val prefix: String
+        get() = Database.option.get().sql!!.getString("table", "planners_v2")!!
+
     val cachedId = mutableMapOf<UUID, Long>()
 
     val dataSource: DataSource
         get() = host.createDataSource()
 
-    val tableUser = Table("planners_user", host) {
+    val tableUser = Table("${prefix}_user", host) {
         add { id() }
         add("user") { type(ColumnTypeSQL.VARCHAR, 36) }
         add("route") { type(ColumnTypeSQL.INT) }
     }
 
-    val tableRoute = Table("planners_route", host) {
+    val tableRoute = Table("${prefix}_route", host) {
         add { id() }
-        add("router") { type(ColumnTypeSQL.VARCHAR, 10) }
-        add("parent") { type(ColumnTypeSQL.VARCHAR, 10) }
-        add("route") { type(ColumnTypeSQL.VARCHAR, 10) }
+        add("router") { type(ColumnTypeSQL.VARCHAR, 30) }
+        add("parent") { type(ColumnTypeSQL.INT) }
+        add("route") { type(ColumnTypeSQL.VARCHAR, 30) }
     }
 
-    val tableMetadata = Table("planners_metadata", host) {
+    val tableMetadata = Table("${prefix}_metadata", host) {
         add { id() }
         add("user") { type(ColumnTypeSQL.INT) }
         add("node") { type(ColumnTypeSQL.VARCHAR, 36) }
@@ -46,10 +50,10 @@ class DatabaseSQL : Database {
         add("stop_time") { type(ColumnTypeSQL.TIMESTAMP) }
     }
 
-    val tableSkill = Table("planners_job", host) {
+    val tableSkill = Table("${prefix}_job", host) {
         add { id() }
         add("route") { type(ColumnTypeSQL.INT) }
-        add("node") { type(ColumnTypeSQL.VARCHAR, 10) }
+        add("node") { type(ColumnTypeSQL.VARCHAR, 30) }
         add("level") { type(ColumnTypeSQL.INT) }
     }
 
@@ -66,6 +70,14 @@ class DatabaseSQL : Database {
         val route = getRoute(player)
         val metadataMap = getMetadataMap(player)
         return PlayerProfile(getUserId(player).id, player, route, metadataMap)
+    }
+
+    override fun updateRoute(profile: PlayerProfile) {
+        val userId = getUserId(profile.onlinePlayer).id
+        tableUser.update(dataSource) {
+            where { "id" eq userId }
+            set("route", profile.route?.bindingId)
+        }
     }
 
     private fun getMetadataMap(player: Player): Map<String, Metadata> {
@@ -124,9 +136,12 @@ class DatabaseSQL : Database {
         }
 
         return tableUser.select(dataSource) {
-            where { "id" eq getUserId(player) }
+            where { "id" eq userId.id }
             rows("route")
-        }.first { getRouteById(getLong("route")) }
+        }.firstOrNull {
+            val id = getObject("route")?.clong ?: return@firstOrNull null
+            getRouteById(id)
+        }
     }
 
     private fun getPlayerSkills(route: Long): List<PlayerSkill> {
@@ -196,9 +211,9 @@ class DatabaseSQL : Database {
         return future
     }
 
-    override fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
+    override fun createPlayerJob(profile: PlayerProfile, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
         val future = CompletableFuture<PlayerRoute>()
-        val node = PlayerRoute.Node(profile.route?.bindingId ?: -1L, route.id)
+        val node = PlayerRoute.Node(parentId, route.id)
         tableRoute.insert(dataSource, "router", "parent", "route") {
             value(route.routerId, node.parentId, node.route)
             onFinally {
@@ -206,6 +221,10 @@ class DatabaseSQL : Database {
             }
         }
         return future
+    }
+
+    override fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
+        return createPlayerJob(profile, profile.route?.bindingId ?: -1L, route)
     }
 
     private fun getId(resultSet: ResultSet): Long {

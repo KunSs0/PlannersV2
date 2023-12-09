@@ -22,6 +22,7 @@ fun <T> configNodeTo(transfer: ConfigurationSection.() -> T): ConfigNodeTransfer
 
 fun <T> configNodeToList(transfer: Any.() -> T): ConfigNodeTransfer<List<Any>, List<T>> {
     return ConfigNodeTransfer {
+        println("=== to list ${this}")
         this.map(transfer)
     }
 }
@@ -36,7 +37,6 @@ fun <V> ConfigurationSection.mapSectionNotNull(transform: (ConfigurationSection)
 }
 
 fun <V> ConfigurationSection.mapValueWithId(node: String, block: (id: String, value: Any) -> V): Map<String, V> {
-    mapSection { }
     return getConfigurationSection(node)?.mapValueWithId(block) ?: emptyMap()
 }
 

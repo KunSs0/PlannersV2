@@ -90,7 +90,7 @@ interface Metadata {
         }
 
         override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
-            if (Serializable::class.java.isAssignableFrom(clazz)) {
+            if (Serializable::class.java.isAssignableFrom(clazz) && !clazz.isInterface) {
                 table[clazz] = (instance?.get() ?: clazz.newInstance()) as Serializable<*>
             }
         }

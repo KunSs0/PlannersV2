@@ -1,8 +1,8 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.script.SingletonKetherScript
+import com.gitee.planners.api.common.script.SingletonKetherScript
 import com.gitee.planners.api.job.Variable
-import com.gitee.planners.api.script.KetherScriptOptions
+import com.gitee.planners.api.common.script.KetherScriptOptions
 import taboolib.common5.cbool
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
