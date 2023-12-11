@@ -7,4 +7,3 @@ database:
     password: 123456
     database: bukkit_plugin
     table: planners_v2
-

@@ -48,6 +48,8 @@ dependencies {
     compileOnly("ink.ptms.core:v11902:11902-minimize:universal")
 
     implementation("com.google.code.gson:gson:2.8.9")
+    implementation("org.tabooproject.reflex:reflex:1.0.19")
+    implementation("org.tabooproject.reflex:analyser:1.0.19")
 
     compileOnly("com.mojang:datafixerupper:4.0.26")
     compileOnly(kotlin("stdlib"))

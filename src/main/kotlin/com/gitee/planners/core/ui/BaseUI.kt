@@ -13,9 +13,6 @@ interface BaseUI {
 
     fun display(player: Player): Display
 
-    @Target(AnnotationTarget.FIELD)
-    @Retention(AnnotationRetention.RUNTIME)
-    annotation class Option(val node: String)
 
     interface Display {
 

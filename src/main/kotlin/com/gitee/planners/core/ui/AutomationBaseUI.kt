@@ -1,18 +1,19 @@
 package com.gitee.planners.core.ui
 
+import com.gitee.planners.util.Reflex
+import org.bukkit.entity.Player
+import org.bukkit.inventory.Inventory
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
-import taboolib.common.platform.PlatformFactory
 import taboolib.common.platform.function.releaseResourceFile
 import taboolib.common.platform.function.warning
 import taboolib.common5.FileWatcher
+import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.reflex.ClassField
 import taboolib.library.xseries.XItemStack
 import taboolib.module.configuration.*
-import taboolib.module.ui.type.Basic
-import taboolib.module.ui.type.Linked
 import java.util.function.Supplier
 
 abstract class AutomationBaseUI(name: String) : BaseUI {
@@ -20,6 +21,18 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
     private val path = "ui/$name"
 
     private lateinit var config: Configuration
+
+
+    @Option("__option__.rows")
+    val rows = 6
+
+    @Option("__option__.title")
+    val title = "Chest"
+
+
+    @Target(AnnotationTarget.FIELD)
+    @Retention(AnnotationRetention.RUNTIME)
+    annotation class Option(val node: String)
 
     class SimpleConfigNodeTransfer<T, V>(private val block: T.() -> V) : Supplier<V> {
 
@@ -42,19 +55,6 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
             return SimpleConfigNodeTransfer { block(this) }
         }
 
-        fun decorateIcon() = simpleConfigNodeTo<Configuration, List<DecorateIcon>> {
-            this.getKeys(false).filter { it != "__option__" }.map {
-                DecorateIcon(this.getConfigurationSection(it)!!)
-            }
-        }
-
-        fun Basic.injectDecorateIcon(icons: List<DecorateIcon>) {
-            icons.forEach { icon ->
-                icon.slots.forEach {
-                    this.set(it, icon.icon)
-                }
-            }
-        }
 
     }
 
@@ -71,17 +71,47 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
     }
 
     @Awake
-    class OptionVisitor : ClassVisitor(2) {
+    class ConfigVisitor : ClassVisitor(1) {
+
         override fun getLifeCycle(): LifeCycle {
             return LifeCycle.INIT
         }
 
-        override fun visit(field: ClassField, clazz: Class<*>, instance: Supplier<*>?) {
-            if (AutomationBaseUI::class.java.isAssignableFrom(clazz) && field.isAnnotationPresent(BaseUI.Option::class.java)) {
+        override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
+            if (BaseUI::class.java.isAssignableFrom(clazz) && instance != null) {
+                val automationBaseUI = instance.get() as? AutomationBaseUI ?: return
+                val path = automationBaseUI.path
+                if (ConfigLoader.files.containsKey(path)) {
+                    automationBaseUI.config = ConfigLoader.files[path]!!.configuration
+                } else {
+                    val file = releaseResourceFile(path)
+                    val conf = Configuration.loadFromFile(file)
+                    automationBaseUI.config = conf
+                    // 自动重载文件
+                    FileWatcher.INSTANCE.addSimpleListener(file) {
+                        if (file.exists()) {
+                            conf.loadFromFile(file)
+                        }
+                    }
+                    val nodeFile = ConfigNodeFile(conf, file)
+                    // 自动重载节点
+                    conf.onReload {
+                        nodeFile.nodes.forEach { visitOption(it, clazz, instance) }
+                    }
+                    ConfigLoader.files[path] = nodeFile
+                }
+                Reflex.getFieldsWithSuperclass(clazz).forEach { field ->
+                    visitOption(field, clazz, instance)
+                }
+            }
+        }
+
+
+        fun visitOption(field: ClassField, clazz: Class<*>, instance: Supplier<*>?) {
+            if (AutomationBaseUI::class.java.isAssignableFrom(clazz) && field.isAnnotationPresent(Option::class.java)) {
                 val automationBaseUI = instance?.get() as? AutomationBaseUI ?: return
-                val option = field.getAnnotation(BaseUI.Option::class.java)
+                val option = field.getAnnotation(Option::class.java)
                 val bind = automationBaseUI.path
-                println("====== bind $bind node ${option.property<String>("node")}")
                 val file = ConfigLoader.files[bind]
                 if (file == null) {
                     warning("$bind not defined")
@@ -112,42 +142,6 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
 
         fun String.toNode(): String {
             return map { if (it.isUpperCase()) "-${it.lowercase()}" else it }.joinToString("")
-        }
-
-    }
-
-    @Awake
-    class ConfigVisitor : ClassVisitor(1) {
-
-        override fun getLifeCycle(): LifeCycle {
-            return LifeCycle.INIT
-        }
-
-        override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
-            if (BaseUI::class.java.isAssignableFrom(clazz) && instance != null) {
-                val automationBaseUI = instance.get() as? AutomationBaseUI ?: return
-                val path = automationBaseUI.path
-                if (ConfigLoader.files.containsKey(path)) {
-                    automationBaseUI.config = ConfigLoader.files[path]!!.configuration
-                } else {
-                    val file = releaseResourceFile(path)
-                    val conf = Configuration.loadFromFile(file)
-                    automationBaseUI.config = conf
-                    // 自动重载文件
-                    FileWatcher.INSTANCE.addSimpleListener(file) {
-                        if (file.exists()) {
-                            conf.loadFromFile(file)
-                        }
-                    }
-                    val nodeFile = ConfigNodeFile(conf, file)
-                    // 自动重载节点
-                    conf.onReload {
-                        val loader = PlatformFactory.getAPI<OptionVisitor>()
-                        nodeFile.nodes.forEach { loader.visit(it, clazz, instance) }
-                    }
-                    ConfigLoader.files[path] = nodeFile
-                }
-            }
         }
 
     }
