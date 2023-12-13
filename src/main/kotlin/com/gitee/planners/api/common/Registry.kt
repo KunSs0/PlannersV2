@@ -3,20 +3,16 @@ package com.gitee.planners.api.common
 import taboolib.module.configuration.Configuration
 import java.io.File
 
-interface Registry<T> {
+interface Registry<K, V> {
 
-    fun getOrNull(id: String): T?
+    fun getOrNull(id: K): V?
 
-    fun get(id: String): T
+    fun get(id: K): V
 
-    fun loadFromFile(file: File) {
-        this.load(Configuration.loadFromFile(file))
-    }
+    operator fun set(id: K, value: V)
 
-    fun load(config: Configuration)
+    fun getValues(): List<V>
 
-    fun getValues(): List<T>
-
-    fun getKeys(): Set<String>
+    fun getKeys(): Set<K>
 
 }

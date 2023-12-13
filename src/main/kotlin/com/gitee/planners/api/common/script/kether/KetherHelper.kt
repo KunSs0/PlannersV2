@@ -17,14 +17,6 @@ object KetherHelper {
 
     const val NAMESPACE_SKILL = "planners-skill"
 
-    fun ParserHolder.materialOr(defaultValue: Material) = material(defaultValue)
-
-    fun ParserHolder.material(default: Material): Parser<Material> {
-        return any().map {
-            Material.valueOf(it?.toString() ?: return@map null)
-        }.defaultsTo(default)
-    }
-
     fun simpleKetherParser(vararg id: String, func: () -> ScriptActionParser<out Any?>): SimpleKetherParser {
         return object : SimpleKetherParser(*id) {
             override fun run(): ScriptActionParser<out Any?> {
@@ -45,15 +37,6 @@ object KetherHelper {
                 return ScriptActionParser {
                     Parser.build(builder(ParserHolder, Parser.instance())).resolve<Any?>(this)
                 }
-            }
-        }
-    }
-
-    fun deconstructionKetherParser(vararg id: String, func: QuestReader.(argument: ParsedAction<*>) -> ScriptAction<*>): SimpleKetherParser {
-        return object : SimpleKetherParser(*id) {
-
-            override fun run(): QuestActionParser {
-                return scriptParser { func(it, it.nextParsedAction()) }
             }
         }
     }

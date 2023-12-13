@@ -1,7 +1,6 @@
-package com.gitee.planners.api.job.context
+package com.gitee.planners.api.job.target
 
 import org.bukkit.Bukkit
-import org.bukkit.command.CommandSender
 import org.bukkit.command.ConsoleCommandSender
 
 class TargetConsoleCommandSender(val console : ConsoleCommandSender) : TargetCommandSender<ConsoleCommandSender> {

@@ -1,7 +1,9 @@
-package com.gitee.planners.api.job.context
+package com.gitee.planners.api.job.target
 
 import org.bukkit.Location
 import org.bukkit.World
+import org.bukkit.entity.LivingEntity
+import taboolib.common.util.Vector
 
 open class TargetBukkitLocation(val location: Location) : TargetLocation<Location> {
 
@@ -27,6 +29,12 @@ open class TargetBukkitLocation(val location: Location) : TargetLocation<Locatio
 
     override fun getInstance(): Location {
         return location
+    }
+
+    override fun getNearbyLivingEntities(vector: Vector): List<LivingEntity> {
+        return getBukkitWorld()!!
+            .getNearbyEntities(this.location, vector.x, vector.y, vector.z)
+            .filterIsInstance<LivingEntity>()
     }
 
 

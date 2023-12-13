@@ -1,19 +1,13 @@
 package com.gitee.planners.api.common
 
 import taboolib.common.LifeCycle
-import taboolib.common.inject.ClassVisitor
-import taboolib.common.io.newFile
-import taboolib.common.io.newFolder
 import taboolib.common.platform.Awake
 import taboolib.common.platform.function.getDataFolder
-import taboolib.common.platform.function.postpone
 import taboolib.common.platform.function.releaseResourceFile
 import taboolib.common.util.unsafeLazy
-import taboolib.module.configuration.Configuration
 import java.io.File
-import java.util.function.Supplier
 
-abstract class DeepTrackRegistry<T : Unique>(val name: String, private val attaches: List<String> = emptyList()) : AbstractRegistryBuiltin<T>() {
+abstract class DeepTrackConfigurationRegistry<T : Unique>(val name: String, private val attaches: List<String> = emptyList()) : AbstractConfigurationRegistryBuiltin<T>() {
 
     val folder by unsafeLazy { File(getDataFolder(), name) }
 
@@ -51,9 +45,9 @@ abstract class DeepTrackRegistry<T : Unique>(val name: String, private val attac
 
     companion object {
 
-        private val registry = mutableListOf<DeepTrackRegistry<*>>()
+        private val registry = mutableListOf<DeepTrackConfigurationRegistry<*>>()
 
-        fun register(deepTrackRegistry: DeepTrackRegistry<*>) {
+        fun register(deepTrackRegistry: DeepTrackConfigurationRegistry<*>) {
             this.registry += deepTrackRegistry
         }
 

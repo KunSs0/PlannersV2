@@ -1,8 +1,8 @@
-package com.gitee.planners.api.job.context
+package com.gitee.planners.api.job.target
 
-import org.bukkit.Bukkit
 import org.bukkit.World
-import taboolib.common.util.Location
+import org.bukkit.entity.LivingEntity
+import taboolib.common.util.Vector
 
 
 interface TargetLocation<T> : Target<T> {
@@ -16,5 +16,7 @@ interface TargetLocation<T> : Target<T> {
     fun getY(): Double
 
     fun getZ(): Double
+
+    fun getNearbyLivingEntities(vector: Vector): List<LivingEntity>
 
 }

@@ -7,7 +7,6 @@ import java.util.concurrent.CompletableFuture
 open class SingletonKetherScript(string: String? = null) : KetherScript {
 
     open val action = string ?: ""
-
     val isNotNull: Boolean
         get() = action.isNotEmpty()
 

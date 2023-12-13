@@ -1,6 +1,6 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.api.common.DeepTrackRegistry
+import com.gitee.planners.api.common.DeepTrackConfigurationRegistry
 import com.gitee.planners.api.common.Registry
 import com.gitee.planners.api.common.Unique
 import com.gitee.planners.core.config.ImmutableJob
@@ -27,9 +27,9 @@ object RegistryBuiltin {
         ImmutableRouter(this)
     }
 
-    fun <T : Unique> deepTrackRegistry(name: String, attaches: List<String> = emptyList(), block: Configuration.() -> T): Registry<T> {
+    fun <T : Unique> deepTrackRegistry(name: String, attaches: List<String> = emptyList(), block: Configuration.() -> T): Registry<String,T> {
         println("===== deep track registry")
-        return object : DeepTrackRegistry<T>(name, attaches) {
+        return object : DeepTrackConfigurationRegistry<T>(name, attaches) {
 
             override fun invokeInstance(config: Configuration): T {
                 return block(config)
@@ -39,7 +39,7 @@ object RegistryBuiltin {
     }
 
     fun handleReload() {
-        DeepTrackRegistry.onReload()
+        DeepTrackConfigurationRegistry.onReload()
     }
 
 }
