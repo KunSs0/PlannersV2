@@ -1,8 +1,10 @@
 package com.gitee.planners.api.common.script
 
+import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.core.action.getEnvironmentContext
 import com.google.common.collect.MultimapBuilder
+import taboolib.common.platform.event.SubscribeEvent
 import taboolib.library.kether.ExitStatus
 import taboolib.module.kether.KetherShell
 import taboolib.module.kether.Script
@@ -21,6 +23,12 @@ interface ComplexScriptPlatform {
     companion object {
 
         val SKILL = DefaultComplexScriptPlatform()
+
+        // 配置重载时 刷新缓存
+        @SubscribeEvent
+        private fun onReload(e: PluginReloadEvents.Pre) {
+            this.SKILL.getCache().scriptMap.clear()
+        }
 
     }
 

@@ -16,18 +16,11 @@ import taboolib.platform.util.sendLang
 object CommandSkill {
 
     @CommandBody
-    val cast = withPlayerSkill { player, skill ->
+    val cast = Command.withPlayerSkill { player, skill ->
         val context = ImmutableSkillContext(player.adaptTarget(), skill.immutable, 1)
         context.process()
         player.sendMessage("casted ${skill.id}")
     }
 
-    fun withImmutableSkill(block: ProxyCommandSender.(player: Player, skill: ImmutableSkill) -> Unit): SimpleCommandBody {
-        return withUnique("id", { RegistryBuiltin.SKILL.getValues() }, block)
-    }
-
-    fun withPlayerSkill(block: ProxyCommandSender.(player: Player, skill: PlayerSkill) -> Unit): SimpleCommandBody {
-        return withUnique("id", { it.plannersProfile.getPlayerSkills() }, block)
-    }
 
 }

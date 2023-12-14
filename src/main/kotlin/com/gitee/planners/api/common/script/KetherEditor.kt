@@ -14,7 +14,7 @@ annotation class KetherEditor {
      * [objective: (sender/console/origin/empty)] 可选目标容器：默认配置
      * (~namespace)
      */
-    annotation class Document(val value: String, val result: KClass<*>, val author: String = "yoyo")
+    annotation class Document(val value: String, val result: KClass<*> = Void::class, val author: String = "yoyo")
 
 
 }

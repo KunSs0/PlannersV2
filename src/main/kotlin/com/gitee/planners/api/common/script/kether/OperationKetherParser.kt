@@ -6,7 +6,7 @@ import taboolib.library.kether.QuestReader
 import taboolib.library.reflex.ReflexClass
 import taboolib.module.kether.*
 
-abstract class ParameterKetherParser(vararg id: String) : SimpleKetherParser(*id), KetherRegistry {
+abstract class OperationKetherParser(vararg id: String) : SimpleKetherParser(*id), KetherRegistry {
 
     protected val method = mutableMapOf<String, ArgumentKetherParser>()
 
@@ -16,8 +16,9 @@ abstract class ParameterKetherParser(vararg id: String) : SimpleKetherParser(*id
     override fun run(): QuestActionParser {
         return scriptParser {
             val argument = it.nextParsedAction()
+            println(method.map { it.key }.joinToString(","))
             it.switch {
-                this@ParameterKetherParser.method.forEach { (id, parser) ->
+                this@OperationKetherParser.method.forEach { (id, parser) ->
                     case(id) { parser.parser.invoke(it, argument) }
                 }
                 other { mainParser?.parser?.invoke(it, argument) }

@@ -15,10 +15,10 @@ class MetadataTypeToken {
 
     }
 
-    open class TypeToken(override val clazz: Class<*>, val any: Any, override val stopTime: Long) : Metadata {
+    open class TypeToken(override val clazz: Class<*>, var any: Any, override val stopTime: Long) : Metadata {
 
         open override fun isTimeout(): Boolean {
-            return System.currentTimeMillis() > stopTime
+            return stopTime != -1L && System.currentTimeMillis() > stopTime
         }
 
         override fun asBoolean(): Boolean {
@@ -47,6 +47,18 @@ class MetadataTypeToken {
 
         override fun asString(): String {
             return any.toString()
+        }
+
+        override fun increase(value: Any) {
+            this.any = when(clazz) {
+                java.lang.Integer::class.java -> asInt() + value.cint
+                java.lang.Double::class.java -> asDouble() + value.cdouble
+                java.lang.Float::class.java -> asFloat() + value.cfloat
+                java.lang.Long::class.java -> asLong() + value.clong
+
+                else -> error("")
+            }
+            println("increase ${this.any}")
         }
 
     }
@@ -90,6 +102,16 @@ class MetadataTypeToken {
 
         override fun decode(element: JsonElement): Float {
             return element.asJsonPrimitive.asFloat
+        }
+    }
+
+    class SerializableD : Metadata.Serializable<Double> {
+        override fun type(): Class<Double> {
+            return Double::class.java
+        }
+
+        override fun decode(element: JsonElement): Double {
+            return element.asJsonPrimitive.asDouble
         }
     }
 

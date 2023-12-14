@@ -31,7 +31,10 @@ object KetherHelper {
         }
     }
 
-    fun <T> combinedKetherParser(vararg id: String, builder: ParserHolder.(Parser.Instance) -> App<Parser.Mu, Parser.Action<T>>): SimpleKetherParser {
+    fun <T> combinedKetherParser(
+        vararg id: String,
+        builder: ParserHolder.(Parser.Instance) -> App<Parser.Mu, Parser.Action<T>>
+    ): SimpleKetherParser {
         return object : SimpleKetherParser(*id) {
             override fun run(): ScriptActionParser<Any?> {
                 return ScriptActionParser {
@@ -43,7 +46,8 @@ object KetherHelper {
 
     @Suppress("UNCHECKED_CAST")
     fun registerCombinationKetherParser(id: String, combinationKetherParser: CombinationKetherParser) {
-        val ids = arrayOf(id, *combinationKetherParser.id)
+        // method 过滤方法名字以action开头的
+        val ids = arrayOf(id, *combinationKetherParser.id).filter { !it.startsWith("action") }.toTypedArray()
         val namespace = combinationKetherParser.namespace
         if (combinationKetherParser is KetherRegistry) {
             combinationKetherParser.onInit()

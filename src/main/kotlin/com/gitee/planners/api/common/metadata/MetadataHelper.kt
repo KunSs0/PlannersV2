@@ -1,7 +1,13 @@
 package com.gitee.planners.api.common.metadata
 
-fun Any.metadata(timeout: Long = -1): MetadataTypeToken.TypeToken {
-    if (!Metadata.Loader.isSupported(this::class.java)) {
+import com.gitee.planners.util.unboxJavaToKotlin
+
+fun Any?.metadata(timeout: Long = -1): MetadataTypeToken.TypeToken {
+    // 如果是null 则代表要删除metadata 直接返回空
+    if (this == null) {
+        return MetadataTypeToken.Void()
+    }
+    if (!Metadata.Loader.isSupported(unboxJavaToKotlin(this::class.java))) {
         throw IllegalStateException("Metadata type ${this::class.java} is not supported.")
     }
 

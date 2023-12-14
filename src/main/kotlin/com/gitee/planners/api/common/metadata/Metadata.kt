@@ -1,5 +1,6 @@
 package com.gitee.planners.api.common.metadata
 
+import com.gitee.planners.util.unboxJavaToKotlin
 import com.google.gson.*
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
@@ -30,6 +31,7 @@ interface Metadata {
 
     fun any(): Any
 
+    fun increase(value: Any)
 
     interface Serializable<T> : JsonDeserializer<T>, JsonSerializer<T> {
 
@@ -72,8 +74,7 @@ interface Metadata {
         }
 
         fun <T> parseJson(clazz: Class<*>, content: String): Any {
-            val serializable =
-                table[clazz] ?: throw IllegalStateException("No serializable class found for class $clazz")
+            val serializable = table[unboxJavaToKotlin(clazz)] ?: throw IllegalStateException("No serializable class found for class $clazz")
             return gson.fromJson(content, serializable.type())!!
         }
 
@@ -91,7 +92,8 @@ interface Metadata {
 
         override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
             if (Serializable::class.java.isAssignableFrom(clazz) && !clazz.isInterface) {
-                table[clazz] = (instance?.get() ?: clazz.newInstance()) as Serializable<*>
+                val serializable = (instance?.get() ?: clazz.newInstance()) as Serializable<*>
+                table[unboxJavaToKotlin(serializable.type())] = serializable
             }
         }
 

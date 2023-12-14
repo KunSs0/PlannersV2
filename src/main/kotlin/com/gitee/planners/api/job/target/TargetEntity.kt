@@ -9,8 +9,5 @@ interface TargetEntity<T> : TargetLocation<T> {
 
     fun getName(): String
 
-    fun getMetadata(id: String): Metadata?
-
-    fun setMetadata(id: String,data: Metadata)
 
 }
