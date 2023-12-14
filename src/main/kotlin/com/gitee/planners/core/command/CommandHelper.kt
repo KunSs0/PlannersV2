@@ -32,8 +32,24 @@ fun withList(comment: String,suggest: List<String>,block: ProxyCommandSender.(pl
 }
 
 fun <T : Unique> withUnique(comment: String, suggest: List<T>, block: ProxyCommandSender.(player: Player, element: T) -> Unit): SimpleCommandBody {
-    return withList(comment, suggest.map { it.id }) { player, value ->
-        val unique = suggest.firstOrNull { it.id == value } ?: error("Unknown value for $value")
-        block(this,player,unique)
+    return withUnique(comment,{ suggest },block)
+}
+
+fun <T: Unique> withUnique(comment: String,onSuggestion: ProxyCommandSender.(Player) -> List<T>,block: ProxyCommandSender.(player: Player,element: T) -> Unit): SimpleCommandBody {
+    return subCommand {
+        dynamic("player") {
+            suggestPlayers()
+            dynamic(comment) {
+                suggestion<ProxyCommandSender>{sender, ctx ->
+                    onSuggestion(sender,ctx.player("player").castSafely<Player>()!!).map { it.id }
+                }
+                execute<ProxyCommandSender>{sender, ctx, _ ->
+                    val player = ctx.player("player").castSafely<Player>() ?: return@execute
+                    val map = onSuggestion(sender, ctx.player("player").castSafely<Player>()!!)
+                    block(sender, player,map.first { it.id == ctx.self() })
+                }
+            }
+
+        }
     }
 }

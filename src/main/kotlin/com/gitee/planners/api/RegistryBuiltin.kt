@@ -7,6 +7,7 @@ import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableRouter
 import com.gitee.planners.core.config.ImmutableSkill
 import taboolib.common.platform.Awake
+import taboolib.common.platform.function.info
 import taboolib.module.configuration.Configuration
 
 @Awake

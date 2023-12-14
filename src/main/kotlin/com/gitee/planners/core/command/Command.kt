@@ -15,6 +15,9 @@ object Command {
     val main = mainCommand { createHelper() }
 
     @CommandBody
+    val skill = CommandSkill
+
+    @CommandBody
     val route = CommandRoute
 
     @CommandBody

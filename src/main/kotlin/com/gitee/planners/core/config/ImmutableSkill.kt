@@ -16,6 +16,10 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
     val action = config.getString("action", config.getString("run", "tell none"))!!
 
+    init {
+        this.compiledScript()
+    }
+
     override fun source(): String {
         return action
     }
@@ -43,6 +47,10 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
     override fun getVariables(): Map<String, Variable> {
         return immutableVariables
+    }
+
+    override fun toString(): String {
+        return "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
     }
 
 

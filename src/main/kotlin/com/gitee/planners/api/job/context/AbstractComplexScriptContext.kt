@@ -26,7 +26,7 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
                 this.sender(this@AbstractComplexScriptContext.sender.getInstance() as Player)
             }
             // 注入变量
-            this.vars("@RUNNING_ENVIRONMENT_CONTEXT" to this)
+            this.vars("@RUNNING_ENVIRONMENT_CONTEXT" to this@AbstractComplexScriptContext)
             block(this)
         }
     }

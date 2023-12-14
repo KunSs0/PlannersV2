@@ -3,6 +3,7 @@ package com.gitee.planners.core.player
 import com.gitee.planners.api.RegistryBuiltin
 import com.gitee.planners.api.job.*
 import com.gitee.planners.api.common.script.KetherScriptOptions
+import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import org.bukkit.entity.Player
@@ -62,6 +63,10 @@ class PlayerRoute(val bindingId: Long, private val routerId: String, val current
 
     fun getSkillOrNull(skill: ImmutableSkill): Skill? {
         return this.getSkillOrNull(skill.id)
+    }
+
+    fun getImmutableSkillValues(): List<ImmutableSkill> {
+        return (job as ImmutableJob).getImmutableSkillValues()
     }
 
     override fun getSkillOrNull(id: String): Skill? {

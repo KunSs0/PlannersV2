@@ -17,4 +17,9 @@ class TargetConsoleCommandSender(val console : ConsoleCommandSender) : TargetCom
         return console
     }
 
+    override fun toString(): String {
+        return "TargetConsoleCommandSender(console=$console)"
+    }
+
+
 }

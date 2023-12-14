@@ -30,6 +30,11 @@ class PlayerProfile(val id: Long, val onlinePlayer: Player, var route: PlayerRou
         return route?.getSkillOrNull(id) as? PlayerSkill
     }
 
+    fun getPlayerSkills(): List<PlayerSkill> {
+        if (route == null) return emptyList()
+        return route!!.getImmutableSkillValues().mapNotNull { route!!.getSkillOrNull(it) as? PlayerSkill }
+    }
+
     fun modifiedSkill(id: String, block: PlayerSkill.() -> Unit): PlayerSkill? {
         val skill = getSkillOrNull(id) ?: return null
         val cached = skill.level

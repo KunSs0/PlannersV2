@@ -2,6 +2,7 @@ package com.gitee.planners.core.config
 
 import com.gitee.planners.api.RegistryBuiltin
 import com.gitee.planners.api.job.Job
+import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
@@ -19,7 +20,7 @@ class ImmutableJob(private val config: Configuration) : Job {
         ImmutableVariable.parse(id, value)
     }
 
-    private val immutableSkillKeys = mutableListOf<String>()
+    private val immutableSkillKeys = option.getStringList("skill")
 
     override fun hasSkill(id: String): Boolean {
         return this.immutableSkillKeys.contains(id)

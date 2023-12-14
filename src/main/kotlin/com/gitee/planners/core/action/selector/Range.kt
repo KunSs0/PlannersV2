@@ -1,5 +1,6 @@
-package com.gitee.planners.api.job.selector
+package com.gitee.planners.core.action.selector
 
+import com.gitee.planners.api.job.selector.Selector
 import com.gitee.planners.api.job.target.Target.Companion.cast
 import com.gitee.planners.api.job.target.TargetLocation
 import com.gitee.planners.api.job.target.adaptTarget

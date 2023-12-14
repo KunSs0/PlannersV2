@@ -39,4 +39,9 @@ class TargetTabooLocation(val location: Location) : TargetLocation<Location> {
             .filterIsInstance<LivingEntity>()
     }
 
+    override fun toString(): String {
+        return "TargetTabooLocation(location=$location)"
+    }
+
+
 }

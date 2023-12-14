@@ -3,6 +3,5 @@ __option__:
 
 action:
   def main = {
-    tell "我要放大招了" at @sender @range 3 type *player @world [ "dp_000" ]
-    attack 10 at @range 3 @filter *player
+    tell "我要放大招了" at @sender
   }
