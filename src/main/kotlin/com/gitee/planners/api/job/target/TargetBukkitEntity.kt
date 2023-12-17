@@ -6,6 +6,7 @@ import com.gitee.planners.api.common.metadata.EntityMetadataManager
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
 import org.bukkit.Bukkit
+import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
@@ -13,7 +14,8 @@ import org.bukkit.entity.Player
 import taboolib.common.util.Vector
 import java.util.*
 
-class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>,TargetContainerization {
+class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>,
+    TargetContainerization {
     override fun getUniqueId(): UUID {
         return entity.uniqueId
     }
@@ -32,6 +34,10 @@ class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetComma
 
     override fun getBukkitWorld(): World? {
         return entity.world
+    }
+
+    override fun getBukkitLocation(): Location {
+        return entity.location
     }
 
     override fun getX(): Double {
@@ -60,7 +66,7 @@ class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetComma
             .filterIsInstance<LivingEntity>()
     }
 
-    private fun getMetadataContainer() : MetadataContainer {
+    private fun getMetadataContainer(): MetadataContainer {
         return if (entity is Player) {
             entity.plannersProfile
         }

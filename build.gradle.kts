@@ -18,6 +18,7 @@ taboolib {
     install("module-configuration")
     install("platform-bukkit")
     install("expansion-command-helper")
+    install("expansion-player-fake-op")
     classifier = null
     version = "6.0.12-40"
     description {

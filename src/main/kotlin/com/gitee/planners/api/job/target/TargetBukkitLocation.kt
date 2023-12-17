@@ -27,6 +27,10 @@ open class TargetBukkitLocation(val location: Location) : TargetLocation<Locatio
         return location.z
     }
 
+    override fun getBukkitLocation(): Location {
+        return location
+    }
+
     override fun getInstance(): Location {
         return location
     }

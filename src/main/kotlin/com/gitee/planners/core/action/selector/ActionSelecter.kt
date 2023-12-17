@@ -12,10 +12,7 @@ import com.gitee.planners.core.action.getTargetContainer
 import org.bukkit.Bukkit
 import taboolib.library.kether.QuestAction
 import taboolib.library.kether.QuestActionParser
-import taboolib.module.kether.ScriptFrame
-import taboolib.module.kether.actionNow
-import taboolib.module.kether.actionTake
-import taboolib.module.kether.scriptParser
+import taboolib.module.kether.*
 import java.util.concurrent.CompletableFuture
 
 
@@ -65,16 +62,17 @@ private fun actionSelect() = KetherHelper.simpleKetherParser("select") {
     }
 
     scriptParser { reader ->
-        val actions = SelectorRegistry.getKeys().mapNotNull {
-            try {
-                reader.mark()
-                reader.expect("@$it")
-                SelectorRegistry.get(it).action().resolve<Any>(reader)
-            } catch (e: Exception) {
-                reader.reset()
-                null
-            }
+        val actions = mutableListOf<QuestAction<*>>()
+        try {
+            reader.mark()
+            val expect = reader.expects(*SelectorRegistry.getKeys().map { "@$it" }.toTypedArray())
+            val selector = SelectorRegistry.get(expect.substring(1))
+            actions += selector.action().resolve<Any>(reader)
+
+        } catch (e: Exception) {
+            reader.reset()
         }
+
         actionNow {
             TargetContainer().also {
                 // temp variable

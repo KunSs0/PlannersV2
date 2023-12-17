@@ -8,6 +8,7 @@ import taboolib.common.util.Vector
 import taboolib.platform.util.toBukkitLocation
 
 class TargetTabooLocation(val location: Location) : TargetLocation<Location> {
+
     override fun getWorld(): String {
         return location.world!!
     }
@@ -22,6 +23,10 @@ class TargetTabooLocation(val location: Location) : TargetLocation<Location> {
 
     override fun getY(): Double {
         return location.y
+    }
+
+    override fun getBukkitLocation(): org.bukkit.Location {
+        return location.toBukkitLocation()
     }
 
     override fun getZ(): Double {
