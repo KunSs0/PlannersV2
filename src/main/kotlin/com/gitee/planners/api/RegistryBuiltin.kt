@@ -13,10 +13,7 @@ import taboolib.module.configuration.Configuration
 @Awake
 object RegistryBuiltin {
 
-    val JOB = deepTrackRegistry(
-        "job",
-        listOf("soldier/blade-master.yml", "soldier/grand-master.yml", "soldier/swordsman.yml")
-    ) {
+    val JOB = deepTrackRegistry("job", listOf("soldier/blade-master.yml", "soldier/grand-master.yml", "soldier/swordsman.yml")) {
         ImmutableJob(this)
     }
 

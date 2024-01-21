@@ -1,8 +1,7 @@
 package com.gitee.planners.api.common.script.kether
 
 import com.mojang.datafixers.kinds.App
-import org.bukkit.Material
-import taboolib.library.kether.ParsedAction
+import taboolib.library.kether.DefaultRegistry
 import taboolib.library.kether.Parser
 import taboolib.library.kether.QuestActionParser
 import taboolib.library.kether.QuestReader
@@ -31,15 +30,14 @@ object KetherHelper {
         }
     }
 
-    fun <T> combinedKetherParser(
+    fun combinedKetherParser(
         vararg id: String,
-        builder: ParserHolder.(Parser.Instance) -> App<Parser.Mu, Parser.Action<T>>
+        builder: ParserHolder.(Parser.Instance) -> App<Parser.Mu, Parser.Action<Any?>>
     ): SimpleKetherParser {
         return object : SimpleKetherParser(*id) {
+
             override fun run(): ScriptActionParser<Any?> {
-                return ScriptActionParser {
-                    Parser.build(builder(ParserHolder, Parser.instance())).resolve<Any?>(this)
-                }
+                return combinationParser(builder)
             }
         }
     }
@@ -60,8 +58,10 @@ object KetherHelper {
     }
 
     fun registerCombinationKetherParser(id: Array<String>, namespace: String, parser: ScriptActionParser<Any?>) {
+        println("register combination parser ${id.toList()} namespace $namespace ")
         KetherLoader.registerParser(parser, id, namespace, true)
     }
+
 
     fun registerCombinationKetherParser(combinationKetherParser: CombinationKetherParser) {
         val id = combinationKetherParser.id
@@ -69,7 +69,7 @@ object KetherHelper {
         if (combinationKetherParser is KetherRegistry) {
             combinationKetherParser.onInit()
         }
-        KetherLoader.registerParser(combinationKetherParser.run() as ScriptActionParser<*>, id, namespace, true)
+        this.registerCombinationKetherParser(id,namespace,combinationKetherParser.run() as ScriptActionParser<Any?>)
     }
 
 }

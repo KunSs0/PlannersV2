@@ -2,8 +2,8 @@ package com.gitee.planners.core.command
 
 import com.gitee.planners.api.ProfileAPI.plannersProfile
 import com.gitee.planners.api.RegistryBuiltin
-import com.gitee.planners.api.job.context.AbstractSkillContext
-import com.gitee.planners.api.job.context.ImmutableSkillContext
+import com.gitee.planners.core.action.context.AbstractSkillContext
+import com.gitee.planners.core.action.context.ImmutableSkillContext
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill

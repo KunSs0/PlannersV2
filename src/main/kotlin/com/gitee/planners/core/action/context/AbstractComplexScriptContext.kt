@@ -1,15 +1,14 @@
-package com.gitee.planners.api.job.context
+package com.gitee.planners.core.action.context
 
 import com.gitee.planners.api.common.script.ComplexCompiledScript
+import com.gitee.planners.api.common.script.ComplexScriptPlatform
 import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import org.bukkit.entity.Player
-import taboolib.module.kether.Script
 import taboolib.module.kether.ScriptOptions
 
-abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: ComplexCompiledScript) :
-    AbstractContext(sender) {
+abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: ComplexCompiledScript) : AbstractContext(sender) {
 
     abstract val trackId: String
 
@@ -26,9 +25,8 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
                 this.sender(this@AbstractComplexScriptContext.sender.getInstance() as Player)
             }
             // 注入变量
-            this.vars("@RUNNING_ENVIRONMENT_CONTEXT" to this@AbstractComplexScriptContext)
+            this.vars("@running-environment-context" to this@AbstractComplexScriptContext)
             block(this)
         }
     }
-
 }

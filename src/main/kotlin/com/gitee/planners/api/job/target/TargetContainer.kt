@@ -4,11 +4,12 @@ class TargetContainer : ArrayList<Target<*>>() {
 
     companion object {
 
-        fun of(target: Target<*>): TargetContainer {
+        fun of(vararg target: Target<*>): TargetContainer {
             return TargetContainer().also {
                 it += target
             }
         }
+
 
     }
 

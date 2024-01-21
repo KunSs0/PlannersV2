@@ -3,8 +3,6 @@ package com.gitee.planners.core.action.common
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
-import taboolib.module.kether.ParserHolder.double
-import taboolib.module.kether.ParserHolder.now
 
 
 @KetherEditor.Document("cos <value:Number>")

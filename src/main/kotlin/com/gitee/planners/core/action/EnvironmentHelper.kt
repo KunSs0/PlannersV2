@@ -1,6 +1,6 @@
 package com.gitee.planners.core.action
 
-import com.gitee.planners.api.job.context.Context
+import com.gitee.planners.core.action.context.Context
 import com.gitee.planners.api.job.target.TargetContainer
 import taboolib.library.kether.LoadError
 import taboolib.library.kether.ParsedAction
@@ -15,7 +15,7 @@ fun ScriptFrame.getTargetContainer(): TargetContainer {
 }
 
 fun ScriptFrame.getEnvironmentContext(): Context {
-    return this.deepVars()["@RUNNING_ENVIRONMENT_CONTEXT"] as? Context ?: error("Error running environment !")
+    return this.deepVars()["@running-environment-context"] as? Context ?: error("Error running environment !")
 }
 
 inline fun <reified T> Context.castUnsafely(): T? {

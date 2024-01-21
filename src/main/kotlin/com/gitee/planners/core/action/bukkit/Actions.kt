@@ -16,7 +16,8 @@ fun actionExplosion() = KetherHelper.combinedKetherParser("explosion") {
         now {
             objective.filterIsInstance<TargetLocation<*>>().forEach {
                 val world = it.getBukkitLocation().world ?: return@forEach
-                world.createExplosion(it.getBukkitLocation(),power,isFire,isBreak)
+                val location = it.getBukkitLocation()
+                world.createExplosion(location.x,location.y,location.z,power,isFire,isBreak)
             }
         }
     }

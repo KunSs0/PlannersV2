@@ -1,10 +1,11 @@
 package com.gitee.planners.api.common.script
 
-import taboolib.module.kether.KetherShell
+import com.gitee.planners.api.common.script.kether.KetherHelper
+import com.gitee.planners.module.event.ScriptEventHandler
+import taboolib.library.kether.Quest
+import taboolib.module.kether.*
 import taboolib.module.kether.Script
-import taboolib.module.kether.parseKetherScript
-import taboolib.module.kether.runKether
-import java.util.concurrent.CompletableFuture
+import java.util.*
 
 interface ComplexCompiledScript {
 
@@ -18,12 +19,21 @@ interface ComplexCompiledScript {
 
     // 编译后的脚本
     fun compiledScript(): Script {
-        return platform().getCache().scriptMap.computeIfAbsent(source()) {
+        if (!platform().getCache().scriptMap.containsKey(source())) {
             val complex = if (source().startsWith("def ")) source() else "def main = { ${source()} }"
-            runKether {
+            val quest = runKether(detailError = true) {
                 complex.parseKetherScript(namespaces())
             }!!
+            platform().getCache().scriptMap[source()] = quest
+            ScriptEventHandler.registerListenerForScript(this@ComplexCompiledScript)
+            return quest
         }
+
+        return platform().getCache().scriptMap[source()]!!
+    }
+
+    fun getBlockScript(name: String): Optional<Quest.Block> {
+        return compiledScript().getBlock(name)
     }
 
     // 缓存容器 编译隔离

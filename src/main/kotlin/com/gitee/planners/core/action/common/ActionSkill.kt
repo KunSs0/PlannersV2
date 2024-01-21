@@ -5,11 +5,10 @@ import com.gitee.planners.api.RegistryBuiltin
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
-import com.gitee.planners.api.job.context.ImmutableSkillContext
+import com.gitee.planners.core.action.context.ImmutableSkillContext
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.api.job.target.TargetEntity
 import com.gitee.planners.core.action.commandEnum
 import com.gitee.planners.core.action.commandInt
 import com.gitee.planners.core.action.commandObjective

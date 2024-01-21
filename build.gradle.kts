@@ -11,16 +11,18 @@ taboolib {
     install("module-kether")
     install("module-nms")
     install("module-nms-util")
+    install("module-ai")
     install("module-lang")
     install("module-ui")
     install("module-database")
+    install("module-navigation")
     install("module-chat")
     install("module-configuration")
     install("platform-bukkit")
     install("expansion-command-helper")
     install("expansion-player-fake-op")
     classifier = null
-    version = "6.0.12-40"
+    version = "6.0.12-69"
     description {
         dependencies {
             name("PlaceholderAPI").optional(true)
@@ -44,12 +46,13 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    compileOnly("ink.ptms:nms-all:1.0.0")
-    compileOnly("ink.ptms.core:v11902:11902-minimize:mapped")
-    compileOnly("ink.ptms.core:v11902:11902-minimize:universal")
+    implementation("ink.ptms:nms-all:1.0.0")
+    implementation("ink.ptms.core:v11902:11902-minimize:mapped")
+    implementation("ink.ptms.core:v11902:11902-minimize:universal")
+    implementation("ink.ptms:nms-all:1.0.0")
 
     implementation("com.google.code.gson:gson:2.8.9")
-    compileOnly("com.google.guava:guava:30.0-android")
+    implementation("com.google.guava:guava:30.0-android")
 
     compileOnly("com.mojang:datafixerupper:4.0.26")
     compileOnly(kotlin("stdlib"))

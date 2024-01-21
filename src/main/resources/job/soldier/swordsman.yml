@@ -1,2 +1,4 @@
 __option__:
   name: 剑士
+  skill:
+    - example0

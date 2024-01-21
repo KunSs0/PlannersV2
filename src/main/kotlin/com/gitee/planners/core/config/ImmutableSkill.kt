@@ -18,6 +18,7 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
     init {
         this.compiledScript()
+
     }
 
     override fun source(): String {

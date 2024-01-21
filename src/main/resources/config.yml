@@ -7,3 +7,12 @@ database:
     password: 123456
     database: bukkit_plugin
     table: planners_v2
+
+settings:
+  bukkit-launch:
+    unimpeded-types:
+      - AIR
+      - LONG_GRASS
+      - GLASS
+      - WATER
+      - YELLOW_FLOWER

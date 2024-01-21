@@ -1,0 +1,159 @@
+package com.gitee.planners.core.action.bukkit
+
+import com.gitee.planners.Planners
+import com.gitee.planners.api.common.entity.animated.Animated
+import com.gitee.planners.api.common.entity.animated.AnimatedListener
+import com.gitee.planners.api.common.script.KetherEditor
+import com.gitee.planners.api.common.script.kether.CombinationKetherParser
+import com.gitee.planners.api.common.script.kether.KetherHelper
+import com.gitee.planners.api.common.script.kether.MultipleKetherParser
+import com.gitee.planners.api.common.task.SimpleUniqueFutureTask
+import com.gitee.planners.api.common.util.NearestEntityFinder
+import com.gitee.planners.api.common.util.PathTrace
+import com.gitee.planners.core.action.context.AbstractComplexScriptContext
+import com.gitee.planners.core.action.context.Context
+import com.gitee.planners.api.job.target.*
+import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.core.action.*
+import com.gitee.planners.module.entity.animated.AbstractBukkitEntityAnimated
+import com.gitee.planners.module.entity.animated.BukkitEntity
+import com.gitee.planners.module.entity.animated.BukkitProjectile
+import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
+import org.bukkit.Material
+import org.bukkit.entity.Entity
+import org.bukkit.entity.EntityType
+import org.bukkit.entity.LivingEntity
+import taboolib.common.platform.function.info
+import taboolib.common.platform.function.submit
+import taboolib.common.platform.function.submitAsync
+import taboolib.common5.Baffle
+import taboolib.library.xseries.XMaterial
+import taboolib.module.ai.clearGoalAi
+import taboolib.module.ai.clearTargetAi
+import taboolib.module.ai.navigationMove
+import taboolib.module.kether.ScriptFrame
+import taboolib.module.navigation.isWater
+import taboolib.platform.util.getMeta
+import taboolib.platform.util.getMetaFirstOrNull
+import taboolib.platform.util.setMeta
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+
+@CombinationKetherParser.Used
+object ActionBukkitEntity : MultipleKetherParser("entity") {
+
+    @KetherEditor.Document("entity create <entity-type> <validity/tick>")
+    val create = KetherHelper.combinedKetherParser {
+        it.group(enum<EntityType>(), int()).apply(it) { type,tick ->
+            now {
+                BukkitEntity(type,tick)
+            }
+        }
+    }
+
+    @KetherEditor.Document("entity spawn <animated> [at objective:TargetContainer(sender)]")
+    val spawn = KetherHelper.combinedKetherParser {
+        it.group(any(), commandObjective(LeastType.ORIGIN)).apply(it) { animated,objective ->
+            animated as? AbstractBukkitEntityAnimated<*> ?: error("Animated object is not supported")
+            now {
+                val container = TargetContainer.of(*objective.map { this.createBukkitEntity(animated,it) }.toTypedArray())
+                container
+            }
+        }
+    }
+
+    @Suppress("NAME_SHADOWING")
+    @KetherEditor.Document("entity launch <animated> <time/tick> [at objective:TargetContainer(sender)] <to objective:TargetContainer>")
+    val launch = KetherHelper.combinedKetherParser {
+        it.group(any(), long(), commandObjective(LeastType.ORIGIN), command("to", then = objective(LeastType.EMPTY))).apply(it) { animated, time,origin, objective ->
+            animated as? BukkitEntity ?: error("Animated object is not supported")
+            val origin = origin.filterIsInstance<TargetLocation<*>>().first()
+            val objective = objective.filterIsInstance<TargetLocation<*>>().first()
+            val distance = objective.getBukkitLocation().distance(origin.getBukkitLocation())
+            val accuracy = distance / time
+            val direction = objective.getBukkitLocation().toVector().subtract(origin.getBukkitLocation().toVector()).normalize()
+            val trace = PathTrace(origin.getBukkitLocation().toVector(), direction)
+
+            now {
+                val entity = createBukkitEntity(animated,origin).getInstance() as LivingEntity
+                val context = getEnvironmentContext() as AbstractComplexScriptContext
+                var tick = 0L
+                val vectors = trace.traces(distance, accuracy).toList()
+                val baffle = Baffle.of(1000, TimeUnit.MILLISECONDS)
+                submit(period = 1) {
+                    if (tick == time) {
+                        cancel()
+                        return@submit
+                    }
+                    val location = vectors[tick.toInt()].toLocation(entity.world)
+                    // 如果被阻拦 并且有障碍物（非空气 非液体）
+                    if (animated.isObstacle.asBoolean() && (location.block.type !in Planners.unimpededTypes.get())) {
+                        cancel()
+                        info("on obstacle ${location.block}")
+                        entity.setMeta("clearable","obstacle")
+                        return@submit
+                    }
+                    entity.teleport(location)
+                    NearestEntityFinder(location).request().filter { it != entity && baffle.hasNext(it.uniqueId.toString(),true) }.forEach {
+                        // 如果非自由节点 并且命中了 origin 直接过滤掉本次
+                        if (!animated.isFreedom.asBoolean() && it == origin.getInstance()) {
+                            return@forEach
+                        }
+                        animated.emit(AnimatedEntityEvent.Hit(animated,entity,it,null),context)
+                    }
+                    tick++
+                }
+                entity
+            }
+
+        }
+    }
+
+    @KetherEditor.Document("entity remove <entity>")
+    val remove = KetherHelper.combinedKetherParser {
+        it.group(any()).apply(it) {
+            val entity = it as Entity
+            now {
+                val animated = entity.getMetaFirstOrNull("@animated")?.value() as BukkitEntity ?: return@now
+                animated.getClearableTask(entity)?.close()
+            }
+        }
+    }
+
+
+    @KetherEditor.Document("entity listen <animated> on <event> then <function>")
+    val listen = KetherHelper.combinedKetherParser {
+        it.group(any(), command("on", then = text()), command("then", then = any())).apply(it) { animated,event,funcId ->
+            animated as? AbstractBukkitEntityAnimated<*> ?: error("Animated object is not supported")
+            now {
+                // on listen
+                animated.listen(AnimatedListener(event,funcId.toString()))
+            }
+        }
+    }
+
+    private fun ScriptFrame.createBukkitEntity(animated: AbstractBukkitEntityAnimated<*>,target: Target<*>): TargetBukkitEntity {
+        val context = this.getEnvironmentContext() as AbstractComplexScriptContext
+        val entity = animated.invokeSpawn(target)
+        entity.setMeta("@caster",target)
+        entity.setMeta("@animated",animated)
+        entity.setMeta("@context",context)
+        animated.emit(AnimatedEntityEvent.Spawn(animated,entity,target), context)
+        return entity.adaptTarget()
+    }
+
+    fun Entity.getAnimated(): Animated? {
+        return this.getMetaFirstOrNull("@animated")?.value() as? Animated
+    }
+
+    fun Entity.getCasterTarget(): Target<*>? {
+        return this.getMetaFirstOrNull("@caster")?.value() as? Target<*>
+    }
+
+    fun Entity.getCasterContext(): Context? {
+        return this.getMetaFirstOrNull("@context")?.value() as? Context
+    }
+
+
+
+}

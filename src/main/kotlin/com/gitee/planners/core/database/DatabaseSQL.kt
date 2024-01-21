@@ -182,8 +182,8 @@ class DatabaseSQL : Database {
         }
         // 插入节点
         else {
-            tableMetadata.insert(dataSource, "type", "token", "stop_time") {
-                value(metadata.clazz.name, Metadata.Loader.toJson(metadata), metadata.stopTime)
+            tableMetadata.insert(dataSource, "user", "node", "type", "token", "stop_time") {
+                value(profile.id, id, metadata.clazz.name, Metadata.Loader.toJson(metadata), metadata.stopTime)
             }
         }
     }
@@ -211,7 +211,11 @@ class DatabaseSQL : Database {
         return future
     }
 
-    override fun createPlayerJob(profile: PlayerProfile, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
+    override fun createPlayerJob(
+        profile: PlayerProfile,
+        parentId: Long,
+        route: ImmutableRoute
+    ): CompletableFuture<PlayerRoute> {
         val future = CompletableFuture<PlayerRoute>()
         val node = PlayerRoute.Node(parentId, route.id)
         tableRoute.insert(dataSource, "router", "parent", "route") {

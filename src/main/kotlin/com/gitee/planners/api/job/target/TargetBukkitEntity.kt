@@ -9,6 +9,7 @@ import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Entity
+import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import taboolib.common.util.Vector
@@ -18,6 +19,10 @@ class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetComma
     TargetContainerization {
     override fun getUniqueId(): UUID {
         return entity.uniqueId
+    }
+
+    override fun getEntityType(): EntityType {
+        return entity.type
     }
 
     override fun getName(): String {

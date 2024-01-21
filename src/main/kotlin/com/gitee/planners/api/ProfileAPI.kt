@@ -15,7 +15,7 @@ object ProfileAPI {
 
     private val profiles = mutableMapOf<UUID, PlayerProfile>()
 
-    val Player.plannersLoaded : Boolean
+    val Player.plannersLoaded: Boolean
         get() = profiles.containsKey(uniqueId)
 
     val Player.plannersProfile: PlayerProfile
@@ -29,9 +29,9 @@ object ProfileAPI {
     private fun e(e: PlayerJoinEvent) {
         submitAsync(delay = 5) {
             if (e.player.isOnline) {
-                this@ProfileAPI.profiles[e.player.uniqueId] = Database.INSTANCE.getPlayerProfile(e.player).also {
-                    PlayerProfileLoadedEvent(it).call()
-                }
+                val profile = Database.INSTANCE.getPlayerProfile(e.player)
+                this@ProfileAPI.profiles[e.player.uniqueId] = profile
+                PlayerProfileLoadedEvent(profile).call()
             }
         }
     }

@@ -25,7 +25,6 @@ class Visitor : ClassVisitor(0) {
                 return
             }
             val combinationKetherParser = (if (instance == null) method.invokeStatic() else method.invoke(instance.get())) as CombinationKetherParser
-            println("====== ${combinationKetherParser.id.joinToString(",")} $combinationKetherParser")
             KetherHelper.registerCombinationKetherParser(method.name, combinationKetherParser)
         }
     }

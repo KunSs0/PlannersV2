@@ -1,0 +1,138 @@
+package com.gitee.planners.module.event
+
+import com.gitee.planners.api.ProfileAPI.plannersLoaded
+import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.common.script.ComplexCompiledScript
+import com.gitee.planners.api.event.PluginReloadEvents
+import com.gitee.planners.api.job.target.TargetBukkitEntity
+import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.core.action.context.CompiledScriptContext
+import com.gitee.planners.core.action.context.ImmutableSkillContext
+import com.gitee.planners.core.config.ImmutableSkill
+import org.bukkit.Bukkit
+import org.bukkit.entity.Player
+import org.bukkit.event.Event
+import taboolib.common.LifeCycle
+import taboolib.common.inject.ClassVisitor
+import taboolib.common.platform.Awake
+import taboolib.common.platform.event.EventPriority
+import taboolib.common.platform.event.SubscribeEvent
+import taboolib.common.platform.function.info
+import taboolib.common.platform.function.registerBukkitListener
+import taboolib.common.platform.function.unregisterListener
+import taboolib.common.platform.function.warning
+import taboolib.module.kether.runKether
+import java.util.UUID
+import java.util.function.Supplier
+
+object ScriptEventHandler {
+
+    val listeners = mutableListOf<ScriptBlockListener>()
+
+    val wrappers = mutableListOf<ScriptEventWrapped<*>>()
+
+    fun <T : Event> registerListener(listener: ScriptBlockListener) {
+        val wrapped = getWrapped(listener.event)
+        if (wrapped == null) {
+            warning("Script Listener ${listener.compiled.id} ${listener.event} is not supported.")
+            return
+        }
+        if (wrapped is ScriptBukkitEventWrapped<*>) {
+            wrapped as ScriptBukkitEventWrapped<T>
+            listener.mapping = registerBukkitListener(wrapped.bind, listener.priority, listener.ignoreCancelled) { event ->
+                val compiled = listener.compiled
+                val sender = wrapped.getSender(event) ?: return@registerBukkitListener
+                // 对技能做出处理
+                val ctx = if (compiled is ImmutableSkill) {
+                    // 如果是玩家 则转为技能释放上下文
+                    val level = if (sender is TargetBukkitEntity && sender.getInstance() is Player && (sender.getInstance() as Player).plannersLoaded) {
+                        (sender.getInstance() as Player).plannersProfile.getSkillOrNull(compiled.id)?.level ?: 0
+                    } else {
+                        0
+                    }
+                    ImmutableSkillContext(sender,compiled,level)
+                } else {
+                    CompiledScriptContext(sender,compiled)
+                }
+                // handle event
+                val handle = ctx.createOptions {
+                    context { wrapped.handle(event, this) }
+                }
+                val platform = listener.compiled.platform()
+                runKether {
+                    platform.run(UUID.randomUUID().toString(),listener.compiled.compiledScript(),listener.block,handle)
+                }
+            }
+        }
+        listeners += listener
+    }
+
+    fun registerListener(compiled: ComplexCompiledScript,id: String,block: String,event: String,ignoreCancelled: Boolean,priority: EventPriority) : ScriptBlockListener? {
+        val optional = compiled.compiledScript().getBlock(block)
+        if (optional.isPresent) {
+            val listener = ScriptBlockListener(id,compiled, optional.get(), event, priority, ignoreCancelled)
+            registerListener<Event>(listener)
+            println("register listener $listener")
+            return listener
+        }
+        return null
+    }
+
+    fun getListenerById(id: String): ScriptBlockListener? {
+        return this.listeners.firstOrNull { it.id == id }
+    }
+
+    fun registerListenerForScript(compiled: ComplexCompiledScript) {
+        val script = compiled.compiledScript()
+        script.getBlock("onload").ifPresent { block ->
+           runKether {
+               val context = CompiledScriptContext(Bukkit.getConsoleSender().adaptTarget(), compiled)
+               compiled.platform().run(UUID.randomUUID().toString(),script,block, context.createOptions())
+           }
+        }
+    }
+
+    @SubscribeEvent
+    fun e(e: PluginReloadEvents.Pre) {
+        unregisterListeners()
+    }
+
+    fun unregisterListeners() {
+        listeners.forEach { unregisterListener(it.mapping) }
+        listeners.clear()
+    }
+
+    fun unregisterListener(listener: ScriptBlockListener) {
+        unregisterListener(listener.mapping)
+        listeners -= listener
+    }
+
+    fun getListeners(wrapped: ScriptEventWrapped<*>): List<ScriptBlockListener> {
+        return listeners.filter { it.event == wrapped.name }
+    }
+
+    fun getWrapped(event: String): ScriptEventWrapped<*>? {
+        return wrappers.firstOrNull { it.name == event }
+    }
+
+    fun registerBukkitWrapper(wrapped: ScriptBukkitEventWrapped<*>) {
+        info("register bukkit wrapped ${wrapped.name} ${wrapped.bind}")
+        this.wrappers += wrapped
+    }
+
+    @Awake
+    class Visitor : ClassVisitor(0) {
+        override fun getLifeCycle(): LifeCycle {
+            return LifeCycle.LOAD
+        }
+
+        override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
+            if (ScriptBukkitEventWrapped::class.java.isAssignableFrom(clazz)) {
+                val wrapped = instance?.get() as? ScriptBukkitEventWrapped<*> ?: return
+                registerBukkitWrapper(wrapped)
+            }
+        }
+
+    }
+
+}

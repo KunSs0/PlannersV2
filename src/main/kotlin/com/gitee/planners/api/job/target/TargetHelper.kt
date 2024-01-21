@@ -9,6 +9,7 @@ fun Entity.adaptTarget(): TargetBukkitEntity {
     return TargetBukkitEntity(this)
 }
 
+
 fun Location.adaptTarget(): TargetBukkitLocation {
     return TargetBukkitLocation(this)
 }

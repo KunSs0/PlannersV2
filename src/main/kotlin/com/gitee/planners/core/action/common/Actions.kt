@@ -3,7 +3,7 @@ package com.gitee.planners.core.action.common
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
-import com.gitee.planners.api.job.context.AbstractSkillContext
+import com.gitee.planners.core.action.context.AbstractSkillContext
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetCommandSender
 import com.gitee.planners.core.action.*

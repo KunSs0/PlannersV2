@@ -16,9 +16,13 @@ object ActionCommand : SimpleKetherParser("command") {
 
     override fun run(): QuestActionParser {
         return combinationParser {
-            it.group(text(), command("as",then = enum<SenderType>(SenderType.PLAYER)),commandObjective(LeastType.SENDER)).apply(it) { command, senderType, objective ->
+            it.group(
+                text(),
+                command("as", then = enum<SenderType>()).option().defaultsTo(SenderType.PLAYER),
+                commandObjective(LeastType.SENDER)
+            ).apply(it) { command, senderType, objective ->
                 now {
-                    objective.filterIsInstance<TargetCommandSender<*>>().forEach { senderType!!.dispatchCommand(it,command) }
+                    objective.filterIsInstance<TargetCommandSender<*>>().forEach { senderType!!.dispatchCommand(it, command) }
                 }
             }
         }

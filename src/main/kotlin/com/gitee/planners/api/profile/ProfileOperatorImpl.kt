@@ -34,6 +34,6 @@ class ProfileOperatorImpl(val profile: PlayerProfile) : ProfileOperator {
     }
 
     override fun setMetadata(id: String, metadata: Metadata) {
-        TODO("Not yet implemented")
+        profile[id] = metadata
     }
 }
