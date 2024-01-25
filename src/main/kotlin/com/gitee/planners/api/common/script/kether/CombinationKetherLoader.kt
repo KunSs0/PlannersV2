@@ -1,14 +1,11 @@
 package com.gitee.planners.api.common.script.kether
 
-import com.gitee.planners.api.common.Plugin
+import com.gitee.planners.api.common.registry.Plugin
 import org.bukkit.Bukkit
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
-import taboolib.common.platform.function.info
 import taboolib.library.reflex.ClassMethod
-import taboolib.module.kether.KetherLoader
-import taboolib.module.kether.ScriptActionParser
 import java.util.function.Supplier
 
 
@@ -36,7 +33,8 @@ class Visitor : ClassVisitor(0) {
             }
 
             // 检查前置
-            if (clazz.isAnnotationPresent(Plugin::class.java) && Bukkit.getPluginManager().getPlugin(clazz.getAnnotation(Plugin::class.java).name) == null) {
+            if (clazz.isAnnotationPresent(Plugin::class.java) && Bukkit.getPluginManager().getPlugin(clazz.getAnnotation(
+                    Plugin::class.java).name) == null) {
                 return
             }
 

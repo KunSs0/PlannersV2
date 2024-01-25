@@ -1,6 +1,6 @@
 package com.gitee.planners.core.command
 
-import com.gitee.planners.api.common.Unique
+import com.gitee.planners.api.common.registry.Unique
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
@@ -35,7 +35,7 @@ fun <T : Unique> withUnique(comment: String, suggest: List<T>, block: ProxyComma
     return withUnique(comment,{ suggest },block)
 }
 
-fun <T: Unique> withUnique(comment: String,onSuggestion: ProxyCommandSender.(Player) -> List<T>,block: ProxyCommandSender.(player: Player,element: T) -> Unit): SimpleCommandBody {
+fun <T: Unique> withUnique(comment: String, onSuggestion: ProxyCommandSender.(Player) -> List<T>, block: ProxyCommandSender.(player: Player, element: T) -> Unit): SimpleCommandBody {
     return subCommand {
         dynamic("player") {
             suggestPlayers()

@@ -1,5 +1,6 @@
 package com.gitee.planners.api
 
+import com.gitee.planners.api.common.registry.AbstractRegistry
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.profile.ProfileOperatorImpl
 import com.gitee.planners.api.profile.ProfileOperator
@@ -11,18 +12,16 @@ import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.submitAsync
 import java.util.UUID
 
-object ProfileAPI {
-
-    private val profiles = mutableMapOf<UUID, PlayerProfile>()
+object ProfileAPI : AbstractRegistry<UUID, PlayerProfile>() {
 
     val Player.plannersLoaded: Boolean
-        get() = profiles.containsKey(uniqueId)
+        get() = containsKey(uniqueId)
 
     val Player.plannersProfile: PlayerProfile
         get() = getProfile(this)
 
     fun getProfile(player: Player): PlayerProfile {
-        return this.profiles[player.uniqueId] ?: error("Player ${player.name} unloaded.")
+        return this.getOrNull(player.uniqueId) ?: error("Player ${player.name} unloaded.")
     }
 
     @SubscribeEvent
@@ -30,14 +29,14 @@ object ProfileAPI {
         submitAsync(delay = 5) {
             if (e.player.isOnline) {
                 val profile = Database.INSTANCE.getPlayerProfile(e.player)
-                this@ProfileAPI.profiles[e.player.uniqueId] = profile
+                this@ProfileAPI[e.player.uniqueId] = profile
                 PlayerProfileLoadedEvent(profile).call()
             }
         }
     }
 
     fun modified(player: Player, async: Boolean = true, block: ProfileOperator.() -> Unit) {
-        val profile = profiles[player.uniqueId] ?: error("Player ${player.name} unloaded.")
+        val profile = this.getOrNull(player.uniqueId) ?: error("Player ${player.name} unloaded.")
         if (async) {
             submitAsync { block(ProfileOperatorImpl(profile)) }
         } else {

@@ -1,7 +1,7 @@
 package com.gitee.planners.api.job.selector
 
-import com.gitee.planners.api.common.AbstractRegistry
-import com.gitee.planners.api.common.RunningClassRegistredVisitor
+import com.gitee.planners.api.common.registry.AbstractRegistry
+import com.gitee.planners.api.common.registry.RunningClassRegistredVisitor
 import taboolib.common.platform.Awake
 
 object SelectorRegistry : AbstractRegistry<String, Selector>() {

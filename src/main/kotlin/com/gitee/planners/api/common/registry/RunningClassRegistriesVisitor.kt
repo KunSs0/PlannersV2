@@ -1,10 +1,10 @@
-package com.gitee.planners.api.common
+package com.gitee.planners.api.common.registry
 
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import java.util.function.Supplier
 
-abstract class RunningClassRegistredVisitor<T>(val target: Class<T>, val registry: Registry<String, T>) :
+abstract class RunningClassRegistriesVisitor<T>(val target: Class<T>, val registry: Registry<String, T>) :
     ClassVisitor(0) {
 
     override fun getLifeCycle(): LifeCycle {

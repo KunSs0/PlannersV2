@@ -1,13 +1,13 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.api.common.DeepTrackConfigurationRegistry
-import com.gitee.planners.api.common.Registry
-import com.gitee.planners.api.common.Unique
+import com.gitee.planners.api.common.registry.DeepTrackConfigurationRegistry
+import com.gitee.planners.api.common.registry.ReloadableRegistry
+import com.gitee.planners.api.common.registry.Unique
+import com.gitee.planners.api.common.registry.deepTrackRegistry
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableRouter
 import com.gitee.planners.core.config.ImmutableSkill
 import taboolib.common.platform.Awake
-import taboolib.common.platform.function.info
 import taboolib.module.configuration.Configuration
 
 @Awake
@@ -25,19 +25,9 @@ object RegistryBuiltin {
         ImmutableRouter(this)
     }
 
-    fun <T : Unique> deepTrackRegistry(name: String, attaches: List<String> = emptyList(), block: Configuration.() -> T): Registry<String,T> {
-        println("===== deep track registry")
-        return object : DeepTrackConfigurationRegistry<T>(name, attaches) {
-
-            override fun invokeInstance(config: Configuration): T {
-                return block(config)
-            }
-
-        }
-    }
 
     fun handleReload() {
-        DeepTrackConfigurationRegistry.onReload()
+        ReloadableRegistry.onReload()
     }
 
 }

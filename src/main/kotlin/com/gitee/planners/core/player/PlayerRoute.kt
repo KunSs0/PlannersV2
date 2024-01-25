@@ -2,13 +2,10 @@ package com.gitee.planners.core.player
 
 import com.gitee.planners.api.RegistryBuiltin
 import com.gitee.planners.api.job.*
-import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.core.config.ImmutableJob
-import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import java.util.concurrent.CompletableFuture
 
 class PlayerRoute(val bindingId: Long, private val routerId: String, val current: Node, skills: List<PlayerSkill>) :
     Route,

@@ -1,10 +1,8 @@
 package com.gitee.planners.api.common.metadata
 
-import com.gitee.planners.api.common.AbstractRegistry
-import com.gitee.planners.api.common.Registry
+import com.gitee.planners.api.common.registry.AbstractRegistry
 import com.gitee.planners.api.common.entity.ProxyBukkitEntity
 import com.gitee.planners.api.common.entity.ProxyEntity
-import org.bukkit.entity.Entity
 import org.bukkit.event.entity.EntityDeathEvent
 import taboolib.common.platform.event.EventPriority
 import taboolib.common.platform.function.registerBukkitListener

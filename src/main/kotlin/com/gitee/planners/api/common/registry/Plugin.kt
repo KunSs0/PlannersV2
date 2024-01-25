@@ -1,4 +1,4 @@
-package com.gitee.planners.api.common
+package com.gitee.planners.api.common.registry
 
 import org.bukkit.Bukkit
 
