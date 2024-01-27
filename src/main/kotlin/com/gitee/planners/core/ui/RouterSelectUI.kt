@@ -1,6 +1,7 @@
 package com.gitee.planners.core.ui
 
 import com.gitee.planners.api.ProfileAPI
+import com.gitee.planners.api.ProfileAPI.plannersProfile
 import com.gitee.planners.api.RegistryBuiltin
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableRouter
@@ -25,16 +26,17 @@ object RouterSelectUI : SingletonChoiceUI<ImmutableRouter>("router-select.yml") 
 
     override fun onClick(event: ClickEvent, element: ImmutableRouter) {
         val player = event.clicker
-        ProfileAPI.modified(player) {
-            if (this.getRoute() != null) {
-                player.sendLang("player-route-exists", this.getRoute()!!.name)
-                return@modified
-            }
-            val route = element.originate ?: error("Route originate does not exist")
-            // 选择职业
-            this.setRoute(route).thenAccept {
-                player.sendLang("player-route-selected", getRoute()!!.name)
-            }
+        val profile = player.plannersProfile
+        if (profile.route != null) {
+            player.sendLang("player-route-exists", profile.route!!.name)
+            return
+        }
+        val route = element.originate ?: error("Route originate does not exist")
+        // 选择职业
+
+        ProfileAPI.OPERATOR.createPlayerRoute(profile,route).thenAccept {
+            profile.route = it
+            player.sendLang("player-route-selected", it.name)
         }
     }
 }

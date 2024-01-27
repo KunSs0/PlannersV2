@@ -34,6 +34,10 @@ interface Database {
 
     fun updateMetadata(profile: PlayerProfile, id: String, metadata: Metadata)
 
+    fun deleteSkill(vararg skill: PlayerSkill)
+
+    fun updateSkill(skill: PlayerSkill)
+
     fun createPlayerSkill(profile: PlayerProfile, skill: ImmutableSkill): CompletableFuture<PlayerSkill>
 
     fun createPlayerJob(profile: PlayerProfile,parentId: Long,route: ImmutableRoute) : CompletableFuture<PlayerRoute>

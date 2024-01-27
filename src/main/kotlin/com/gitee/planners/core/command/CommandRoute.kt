@@ -27,10 +27,8 @@ object CommandRoute {
 
     @CommandBody
     val clear = with { player ->
-        ProfileAPI.modified(player) {
-            clearRoute()
-            player.sendLang("player-route-clear")
-        }
+        player.plannersProfile.route = null
+        player.sendLang("player-route-clear")
     }
 
 

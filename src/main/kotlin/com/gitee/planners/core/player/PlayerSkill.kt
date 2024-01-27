@@ -1,18 +1,34 @@
 package com.gitee.planners.core.player
 
+import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.core.database.Database
+import taboolib.common.platform.function.submitAsync
 
-class PlayerSkill(var bindingId: Long, private val skillId: String, var level: Int) : Skill {
+class PlayerSkill(var index: Long, private val skillId: String, level: Int, private var bindingId: String?) : Skill {
 
     val immutable: ImmutableSkill
         get() = RegistryBuiltin.SKILL.getOrNull(skillId) ?: error("Couldn't find skill with id $skillId'")
 
-    override val id: String
-        get() = skillId
+    var level = level
+        set(value) {
+            field = value
+            submitAsync { Database.INSTANCE.updateSkill(this@PlayerSkill) }
+        }
 
+    var binding: KeyBinding?
+        get() = if (bindingId != null) KeyBindingAPI.getOrNull(bindingId!!) else null
+        set(value) {
+            bindingId = value?.id
+            submitAsync { Database.INSTANCE.updateSkill(this@PlayerSkill) }
+        }
+
+    override val id: String
+        get() = immutable.id
 
     override fun getVariables(): Map<String, Variable> {
         return immutable.getVariables()

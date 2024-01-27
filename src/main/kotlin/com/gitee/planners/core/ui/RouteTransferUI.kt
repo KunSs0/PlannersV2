@@ -25,10 +25,10 @@ object RouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml")
             player.sendLang("player-transfer-invalid")
             return
         }
-        ProfileAPI.modified(player) {
-            this.transferRoute(element).thenAccept {
-                player.sendLang("player-transfer-success", element.getJob().name)
-            }
+        val profile = player.plannersProfile
+        ProfileAPI.OPERATOR.createPlayerRoute(profile,element).thenAccept {
+            profile.route = it
+            player.sendLang("player-transfer-success", element.getJob().name)
         }
     }
 

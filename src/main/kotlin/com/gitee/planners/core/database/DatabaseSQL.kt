@@ -55,6 +55,7 @@ class DatabaseSQL : Database {
         add("route") { type(ColumnTypeSQL.INT) }
         add("node") { type(ColumnTypeSQL.VARCHAR, 30) }
         add("level") { type(ColumnTypeSQL.INT) }
+        add("binding") { type(ColumnTypeSQL.VARCHAR) }
     }
 
     init {
@@ -76,7 +77,7 @@ class DatabaseSQL : Database {
         val userId = getUserId(profile.onlinePlayer).id
         tableUser.update(dataSource) {
             where { "id" eq userId }
-            set("route", profile.route?.bindingId)
+            set("route", profile.route?.index)
         }
     }
 
@@ -147,8 +148,8 @@ class DatabaseSQL : Database {
     private fun getPlayerSkills(route: Long): List<PlayerSkill> {
         return tableSkill.select(dataSource) {
             where { "route" eq route }
-            rows("id", "node", "level")
-        }.map { PlayerSkill(getLong("id"), getString("node"), getInt("level")) }
+            rows("id", "node", "level","binding")
+        }.map { PlayerSkill(getLong("id"), getString("node"), getInt("level"),getString("binding")) }
     }
 
     private fun getRouteById(id: Long): PlayerRoute {
@@ -205,17 +206,27 @@ class DatabaseSQL : Database {
             )
             onFinally {
                 val id = getId(generatedKeys)
-                future.complete(PlayerSkill(id, skill.id, skill.startedLevel))
+                future.complete(PlayerSkill(id, skill.id, skill.startedLevel,null))
             }
         }
         return future
     }
 
-    override fun createPlayerJob(
-        profile: PlayerProfile,
-        parentId: Long,
-        route: ImmutableRoute
-    ): CompletableFuture<PlayerRoute> {
+    override fun deleteSkill(vararg skill: PlayerSkill) {
+        tableSkill.delete(dataSource) {
+            where { "id" inside skill.map { it.index }.toTypedArray() }
+        }
+    }
+
+    override fun updateSkill(skill: PlayerSkill) {
+        tableSkill.update(dataSource) {
+            where { "id" eq skill.index }
+            set("level",skill.level)
+            set("binding",skill.binding?.id)
+        }
+    }
+
+    override fun createPlayerJob(profile: PlayerProfile, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
         val future = CompletableFuture<PlayerRoute>()
         val node = PlayerRoute.Node(parentId, route.id)
         tableRoute.insert(dataSource, "router", "parent", "route") {
@@ -228,7 +239,7 @@ class DatabaseSQL : Database {
     }
 
     override fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
-        return createPlayerJob(profile, profile.route?.bindingId ?: -1L, route)
+        return createPlayerJob(profile, profile.route?.index ?: -1L, route)
     }
 
     private fun getId(resultSet: ResultSet): Long {

@@ -25,7 +25,6 @@ object RegistryBuiltin {
         ImmutableRouter(this)
     }
 
-
     fun handleReload() {
         ReloadableRegistry.onReload()
     }

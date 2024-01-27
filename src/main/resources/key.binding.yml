@@ -1,0 +1,10 @@
+# 按键id
+key0:
+  # 按键昵称 用于视图展示
+  name: R
+  # 匹配规则 strict 严格 fuzzy 模糊
+  matching-type: strict
+  # 生效时间 单位 tick 在单映射键位下无效
+  timeout: 30
+  # 按键具体映射键位 可顺序
+  mapping: R

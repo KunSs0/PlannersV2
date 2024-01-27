@@ -1,6 +1,4 @@
 package com.gitee.planners.core.player
 
-fun PlayerProfile.releaseMetadata() {
-    val release = this.release()
-    TODO("update to database")
-}
+import com.gitee.planners.core.database.Database
+import taboolib.common.platform.function.submitAsync
