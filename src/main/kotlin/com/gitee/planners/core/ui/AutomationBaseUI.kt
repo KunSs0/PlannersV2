@@ -22,18 +22,19 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
 
     private lateinit var config: Configuration
 
-
     @Option("__option__.rows")
     val rows = 6
 
     @Option("__option__.title")
     val title = "Chest"
 
-
     @Target(AnnotationTarget.FIELD)
     @Retention(AnnotationRetention.RUNTIME)
     annotation class Option(val node: String)
 
+    /**
+     * 隔离转换器 与taboolib的transfer隔离
+     */
     class SimpleConfigNodeTransfer<T, V>(private val block: T.() -> V) : Supplier<V> {
 
         private var value: V? = null

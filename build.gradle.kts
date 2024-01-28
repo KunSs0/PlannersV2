@@ -31,7 +31,8 @@ taboolib {
     }
 }
 tasks.withType<Jar> {
-    destinationDir = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
+    destinationDir = file("$projectDir/build-jar")
+//    destinationDir = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
 repositories {

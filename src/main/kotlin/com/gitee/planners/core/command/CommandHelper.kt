@@ -53,3 +53,7 @@ fun <T: Unique> withUnique(comment: String, onSuggestion: ProxyCommandSender.(Pl
         }
     }
 }
+
+fun CommandContext<*>.getBukkitPlayer(): Player? {
+    return player("player").castSafely<Player>()
+}

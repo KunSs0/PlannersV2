@@ -1,12 +1,11 @@
 package com.gitee.planners.core.config
 
 import com.gitee.planners.api.job.KeyBinding
+import com.gitee.planners.module.binding.Combined
 import taboolib.library.configuration.ConfigurationSection
 
-class ImmutableKeyBinding(val config: ConfigurationSection) : KeyBinding {
+class ImmutableKeyBinding(config: ConfigurationSection) : KeyBinding, Combined(config) {
 
-    override val id = config.name
-
-    override val name = config.getString("name", id)!!
+    override val priority = config.getDouble("1.0")
 
 }

@@ -4,7 +4,6 @@ abstract class AbstractRegistry<K, V> : Registry<K, V> {
 
     protected val table = LinkedHashMap<K, V>()
 
-
     override fun getOrNull(id: K): V? {
         return table[id]
     }
@@ -39,6 +38,17 @@ abstract class AbstractRegistry<K, V> : Registry<K, V> {
 
     override fun removeAll() {
         this.table.clear()
+    }
+
+    override fun remove(key: K) {
+        this.table.remove(key)
+    }
+
+
+    override fun removeIf(func: (key: K, value: V) -> Boolean) {
+        this.table.filter { func(it.key, it.value) }.forEach {
+            this.table.remove(it.key)
+        }
     }
 
     override fun toString(): String {

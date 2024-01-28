@@ -40,6 +40,6 @@ object Command {
     }
 
     fun withPlayerSkill(block: ProxyCommandSender.(player: Player, skill: PlayerSkill) -> Unit): SimpleCommandBody {
-        return withUnique("id", { it.plannersProfile.getPlayerSkills() }, block)
+        return withUnique("id", { it.plannersProfile.getRegistrySkill().getValues() }, block)
     }
 }

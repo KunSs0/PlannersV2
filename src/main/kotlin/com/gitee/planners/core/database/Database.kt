@@ -1,6 +1,7 @@
 package com.gitee.planners.core.database
 
 import com.gitee.planners.api.common.metadata.Metadata
+import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerProfile
@@ -38,7 +39,7 @@ interface Database {
 
     fun updateSkill(skill: PlayerSkill)
 
-    fun createPlayerSkill(profile: PlayerProfile, skill: ImmutableSkill): CompletableFuture<PlayerSkill>
+    fun createPlayerSkill(profile: PlayerProfile, skill: Skill): CompletableFuture<PlayerSkill>
 
     fun createPlayerJob(profile: PlayerProfile,parentId: Long,route: ImmutableRoute) : CompletableFuture<PlayerRoute>
 

@@ -27,6 +27,8 @@ interface Registry<K, V> {
 
     fun removeAll()
 
+    fun remove(key: K)
+
     @Target(AnnotationTarget.CLASS)
     @Retention(AnnotationRetention.RUNTIME)
     annotation class Load
@@ -56,4 +58,5 @@ interface Registry<K, V> {
 
     }
 
+    fun removeIf(func: (key: K, value: V) -> Boolean)
 }

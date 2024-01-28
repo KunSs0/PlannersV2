@@ -2,6 +2,7 @@ package com.gitee.planners.core.database
 
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataTypeToken
+import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerProfile
@@ -50,7 +51,7 @@ class DatabaseSQL : Database {
         add("stop_time") { type(ColumnTypeSQL.TIMESTAMP) }
     }
 
-    val tableSkill = Table("${prefix}_job", host) {
+    val tableSkill = Table("${prefix}_skill", host) {
         add { id() }
         add("route") { type(ColumnTypeSQL.INT) }
         add("node") { type(ColumnTypeSQL.VARCHAR, 30) }
@@ -196,18 +197,34 @@ class DatabaseSQL : Database {
         }
     }
 
-    override fun createPlayerSkill(profile: PlayerProfile, skill: ImmutableSkill): CompletableFuture<PlayerSkill> {
+    override fun createPlayerSkill(profile: PlayerProfile, skill: Skill): CompletableFuture<PlayerSkill> {
         val future = CompletableFuture<PlayerSkill>()
-        tableSkill.insert(dataSource, "route", "node", "level") {
-            value(
-                profile.route?.id ?: error("Player ${profile.onlinePlayer.name} not find route"),
-                skill.id,
-                skill.startedLevel
-            )
-            onFinally {
-                val id = getId(generatedKeys)
-                future.complete(PlayerSkill(id, skill.id, skill.startedLevel,null))
+        val route = profile.route?.id ?: error("Player ${profile.onlinePlayer.name} not find route")
+        if (skill is ImmutableSkill) {
+            tableSkill.insert(dataSource, "route", "node", "level") {
+                value(
+                    route,
+                    skill.id,
+                    skill.startedLevel,
+                )
+                onFinally {
+                    val id = getId(generatedKeys)
+                    future.complete(PlayerSkill(id, skill.id, skill.startedLevel,null))
+                }
             }
+        } else if (skill is PlayerSkill && skill.index == -1L) {
+            tableSkill.nullableInsert(dataSource) {
+                set("route",route)
+                set("node",skill.id)
+                set("level",skill.level)
+                set("binding",skill.binding?.id)
+                onFinally {
+                    skill.index = getId(generatedKeys)
+                    future.complete(skill)
+                }
+            }
+        } else {
+            future.complete(null)
         }
         return future
     }

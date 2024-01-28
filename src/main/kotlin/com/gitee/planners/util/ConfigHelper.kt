@@ -22,7 +22,6 @@ fun <T> configNodeTo(transfer: ConfigurationSection.() -> T): ConfigNodeTransfer
 
 fun <T> configNodeToList(transfer: Any.() -> T): ConfigNodeTransfer<List<Any>, List<T>> {
     return ConfigNodeTransfer {
-        println("=== to list ${this}")
         this.map(transfer)
     }
 }

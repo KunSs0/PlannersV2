@@ -20,6 +20,7 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
 
     open fun createOptions(block: ScriptOptions.ScriptOptionsBuilder.() -> Unit = {}): KetherScriptOptions {
         return KetherScriptOptions.create {
+            namespace(compiled.namespaces())
             // set sender
             if (this@AbstractComplexScriptContext.sender is TargetBukkitEntity && this@AbstractComplexScriptContext.sender.getInstance() is Player) {
                 this.sender(this@AbstractComplexScriptContext.sender.getInstance() as Player)

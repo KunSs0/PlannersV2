@@ -37,7 +37,7 @@ object ActionSkill : MultipleKetherParser("skill") {
                     val skill = RegistryBuiltin.SKILL.get(id)
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
                         val player = entity.getInstance() as? Player ?: return@forEach
-                        val i = player.plannersProfile.getSkillOrNull(id)?.level ?: return@forEach
+                        val i = player.plannersProfile.getRegistriedSkillOrNull(id)?.level ?: return@forEach
                         ImmutableSkillContext(entity, skill, i).process()
                     }
                 }
@@ -76,7 +76,7 @@ object ActionSkill : MultipleKetherParser("skill") {
     }
 
     fun getSkillLevelWithTarget(target: Target<*>, id: String): Int? {
-        return ((target as? TargetBukkitEntity)?.entity as? Player)?.plannersProfile?.getSkillOrNull(id)?.level
+        return ((target as? TargetBukkitEntity)?.entity as? Player)?.plannersProfile?.getRegistriedSkillOrNull(id)?.level
     }
 
 

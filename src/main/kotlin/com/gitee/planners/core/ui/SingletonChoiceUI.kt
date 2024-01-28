@@ -17,11 +17,15 @@ abstract class SingletonChoiceUI<T>(name: String) : AutomationBaseUI(name) {
     @Option("*")
     val decorateIcon = decorateIcon()
 
+
+
     abstract fun onGenerate(player: Player, element: T, index: Int, slot: Int): ItemStack
 
     abstract fun onClick(event: ClickEvent, element: T)
 
     abstract fun getElements(player: Player): List<T>
+
+    open fun onClose(player: Player) {}
 
     override fun display(player: Player): BaseUI.Display {
 
@@ -36,6 +40,10 @@ abstract class SingletonChoiceUI<T>(name: String) : AutomationBaseUI(name) {
 
             onClick { event, element ->
                 this@SingletonChoiceUI.onClick(event, element)
+            }
+
+            onClose {
+                this@SingletonChoiceUI.onClose(it.player as Player)
             }
 
         }

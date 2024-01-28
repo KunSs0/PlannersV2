@@ -1,0 +1,8 @@
+__option__:
+  rows: 1
+  title: "KeyBindings Editor"
+  slots: [ 0,1,2,3,4,5,6,7 ]
+  append-text:
+    - "快捷键 {0}"
+    - ''
+    - '左键打开技能书 / 右键修改快捷键'
