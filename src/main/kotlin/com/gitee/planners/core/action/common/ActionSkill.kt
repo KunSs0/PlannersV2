@@ -22,12 +22,12 @@ object ActionSkill : MultipleKetherParser("skill") {
             text(),
             commandEnum<PlayupType>("type", PlayupType.RELATIVE),
             commandInt("level", 1),
-            commandObjective(LeastType.SENDER)
+            commandObjective(type = LeastType.SENDER)
         ).apply(it) { id, type, level, sender ->
             now {
                 if (type == PlayupType.FORCE) {
                     val skill = RegistryBuiltin.SKILL.get(id)
-                    sender.forEach { ImmutableSkillContext(it, skill, level).process() }
+                    sender.forEach { ImmutableSkillContext(it, skill, level).run() }
                 } else if (type == PlayupType.RELATIVE) {
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
                         val player = entity.getInstance() as? Player
@@ -38,7 +38,7 @@ object ActionSkill : MultipleKetherParser("skill") {
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
                         val player = entity.getInstance() as? Player ?: return@forEach
                         val i = player.plannersProfile.getRegistriedSkillOrNull(id)?.level ?: return@forEach
-                        ImmutableSkillContext(entity, skill, i).process()
+                        ImmutableSkillContext(entity, skill, i).run()
                     }
                 }
             }
@@ -49,12 +49,12 @@ object ActionSkill : MultipleKetherParser("skill") {
 
         // 强制释放 不计入冷却，可传入等级，不传入等级相对自身技能等级释放
         val force = KetherHelper.combinedKetherParser {
-            it.group(text(), commandInt("level", -1), commandObjective(LeastType.SENDER)).apply(it) { id, level, objective ->
+            it.group(text(), commandInt("level", -1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
                 now {
                     val skill = RegistryBuiltin.SKILL.get(id)
                     objective.forEach {
                         val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
-                        ImmutableSkillContext(it, skill, i).process()
+                        ImmutableSkillContext(it, skill, i).run()
                     }
                 }
             }
@@ -62,12 +62,12 @@ object ActionSkill : MultipleKetherParser("skill") {
 
         // 调用释放，技能必须释放者存在，会计入冷却（跟随等级参数），可传入等级，不传入等级相对自身技能等级释放
         val invoke = KetherHelper.combinedKetherParser {
-            it.group(text(), commandInt("level", -1), commandObjective(LeastType.SENDER)).apply(it) { id, level, objective ->
+            it.group(text(), commandInt("level", -1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
                 now {
                     val skill = RegistryBuiltin.SKILL.get(id)
                     objective.forEach {
                         val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
-                        ImmutableSkillContext(it, skill, i).process()
+                        ImmutableSkillContext(it, skill, i).run()
                     }
                 }
             }

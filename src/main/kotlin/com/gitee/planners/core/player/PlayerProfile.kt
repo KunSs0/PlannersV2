@@ -61,7 +61,7 @@ class PlayerProfile(val id: Long, val onlinePlayer: Player, route: PlayerRoute?,
             error("You must specify a route")
         }
         // 如果Immutable Skill 不存在这个技能
-        if (route!!.hasImmutableSkill(id)) {
+        if (!route!!.hasImmutableSkill(id)) {
             error("Skill $id already exists for ${route!!.id}")
         }
         // 如果没有学习 则添加一个新的（这时候并未在数据库内添加）

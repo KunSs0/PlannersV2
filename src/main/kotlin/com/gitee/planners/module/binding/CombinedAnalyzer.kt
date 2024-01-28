@@ -48,7 +48,7 @@ class CombinedAnalyzer {
 
         fun getInferKeyBindingCombined(action: InteractionAction): List<KeyBinding> {
             return KeyBindingAPI.getValues().filter {
-                (it as Combined).mapping[0] == action.code
+                (it as Combined).mapping.getOrNull(0) == action.code
             }
         }
 

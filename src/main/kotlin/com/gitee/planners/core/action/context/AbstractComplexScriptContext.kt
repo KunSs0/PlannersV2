@@ -6,6 +6,7 @@ import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import org.bukkit.entity.Player
+import taboolib.common.platform.function.submit
 import taboolib.module.kether.ScriptOptions
 
 abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: ComplexCompiledScript) : AbstractContext(sender) {
@@ -14,8 +15,13 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
 
     val platform = compiled.platform()
 
-    override fun process() {
-        platform.run(trackId, compiled.compiledScript(), this.createOptions())
+    // 是否异步运行
+    var async = compiled.async
+
+    override fun run() {
+        submit(async = async) {
+            platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.createOptions())
+        }
     }
 
     open fun createOptions(block: ScriptOptions.ScriptOptionsBuilder.() -> Unit = {}): KetherScriptOptions {

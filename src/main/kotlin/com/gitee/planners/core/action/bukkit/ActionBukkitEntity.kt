@@ -53,7 +53,7 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
 
     @KetherEditor.Document("entity spawn <animated> [at objective:TargetContainer(sender)]")
     val spawn = KetherHelper.combinedKetherParser {
-        it.group(any(), commandObjective(LeastType.ORIGIN)).apply(it) { animated,objective ->
+        it.group(any(), commandObjectiveOrOrigin()).apply(it) { animated,objective ->
             animated as? AbstractBukkitEntityAnimated<*> ?: error("Animated object is not supported")
             now {
                 val container = TargetContainer.of(*objective.map { this.createBukkitEntity(animated,it) }.toTypedArray())
@@ -65,7 +65,7 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
     @Suppress("NAME_SHADOWING")
     @KetherEditor.Document("entity launch <animated> <time/tick> [at objective:TargetContainer(sender)] <to objective:TargetContainer>")
     val launch = KetherHelper.combinedKetherParser {
-        it.group(any(), long(), commandObjective(LeastType.ORIGIN), command("to", then = objective(LeastType.EMPTY))).apply(it) { animated, time,origin, objective ->
+        it.group(any(), long(), commandObjectiveOrEmpty(), commandObjectiveOrEmpty("to")).apply(it) { animated, time,origin, objective ->
             animated as? BukkitEntity ?: error("Animated object is not supported")
             val origin = origin.filterIsInstance<TargetLocation<*>>().first()
             val objective = objective.filterIsInstance<TargetLocation<*>>().first()
@@ -114,7 +114,7 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
         it.group(any()).apply(it) {
             val entity = it as Entity
             now {
-                val animated = entity.getMetaFirstOrNull("@animated")?.value() as BukkitEntity ?: return@now
+                val animated = entity.getMetaFirstOrNull("@animated")?.value() as? BukkitEntity ?: return@now
                 animated.getClearableTask(entity)?.close()
             }
         }

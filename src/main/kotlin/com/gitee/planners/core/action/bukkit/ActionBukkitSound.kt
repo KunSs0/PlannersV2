@@ -12,13 +12,13 @@ import taboolib.module.kether.combinationParser
 
 @KetherEditor.Document("sound <source> [with <volume(1)> <pitch(1)>] [at objective:TargetContainer(sender)]")
 @CombinationKetherParser.Used
-object ActionSound : SimpleKetherParser("sound") {
+object ActionBukkitSound : SimpleKetherParser("sound") {
     override fun run(): QuestActionParser {
         return combinationParser {
             it.group(
                 text(),
                 command("with", then = float().and(float())).option().defaultsTo(Pair(1f, 1f)),
-                commandObjective(LeastType.SENDER)
+                commandObjective(type = LeastType.SENDER)
             ).apply(it) { source, with, objective ->
                 now {
                     val volume = with.first

@@ -25,7 +25,7 @@ object CommandSkill {
     @CommandBody
     val cast = Command.withPlayerSkill { player, skill ->
         val context = ImmutableSkillContext(player.adaptTarget(), skill.immutable, 1)
-        context.process()
+        context.run()
         player.sendMessage("casted ${skill.id}")
     }
 
@@ -57,7 +57,7 @@ object CommandSkill {
     }
 
     private fun commandSkillRun(player: Player,skill: ImmutableSkill,level: Int) {
-
+        ImmutableSkillContext(player.adaptTarget(), skill, level).run()
     }
 
 

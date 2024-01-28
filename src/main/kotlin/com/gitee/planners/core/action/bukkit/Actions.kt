@@ -12,7 +12,7 @@ import com.gitee.planners.core.action.commandObjective
 @KetherEditor.Document("explosion <power> <fire:bool(false)> <break:bool(false)> [at objective:TargetContainer(sender)]")
 @CombinationKetherParser.Used
 fun actionExplosion() = KetherHelper.combinedKetherParser("explosion") {
-    it.group(float(),commandBool("fire"),commandBool("break"),commandObjective(LeastType.ORIGIN)).apply(it) { power, isFire, isBreak, objective ->
+    it.group(float(),commandBool("fire"),commandBool("break"),commandObjective(type = LeastType.ORIGIN)).apply(it) { power, isFire, isBreak, objective ->
         now {
             objective.filterIsInstance<TargetLocation<*>>().forEach {
                 val world = it.getBukkitLocation().world ?: return@forEach

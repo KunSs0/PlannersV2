@@ -78,25 +78,37 @@ fun ScriptFrame.runTargetContainer(action: ActionTargetContainer): CompletableFu
 }
 
 fun QuestReader.expectTargetContainerParsedAction(type: LeastType): ActionTargetContainer {
-    return ActionTargetContainer.parser(this, type)
+    return ActionTargetContainer.parser(reader = this, type = type)
 }
 
-fun ParserHolder.objective(type: LeastType = LeastType.EMPTY): Parser<TargetContainer> {
+fun ParserHolder.commandObjective(expect: Array<String> = ActionTargetContainer.DEFAULT_PREFIX,type: LeastType = LeastType.EMPTY): Parser<TargetContainer> {
     return Parser.frame { r ->
-        val parser = ActionTargetContainer.parser(r, type, true)
+        val expects = if (expect.isEmpty()) {
+            ActionTargetContainer.DEFAULT_PREFIX
+        } else {
+            expect
+        }
+        val parser = ActionTargetContainer.parser(expects, r, type, false)
         Action { frame ->
             parser.process(frame)
         }
     }
 }
 
-fun ParserHolder.commandObjective(type: LeastType = LeastType.EMPTY): Parser<TargetContainer> {
-    return Parser.frame { r ->
-        val parser = ActionTargetContainer.parser(r, type, false)
-        Action { frame ->
-            parser.process(frame)
-        }
-    }
+fun ParserHolder.commandObjectiveOrSender(vararg expect: String): Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect),LeastType.SENDER)
+}
+
+fun ParserHolder.commandObjectiveOrOrigin(vararg expect: String) : Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect),LeastType.ORIGIN)
+}
+
+fun ParserHolder.commandObjectiveOrEmpty(vararg expect: String) : Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect),LeastType.EMPTY)
+}
+
+fun ParserHolder.commandObjectiveOrConsole(vararg expect: String) : Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect),LeastType.CONSOLE)
 }
 
 inline fun <reified T : Enum<T>> getEnumWithIdOrNull(name: String): T? {

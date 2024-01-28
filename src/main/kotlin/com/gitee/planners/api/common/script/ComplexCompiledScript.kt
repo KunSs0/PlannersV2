@@ -12,6 +12,9 @@ interface ComplexCompiledScript {
     // 缓存唯一id(不可重复)
     val id: String
 
+    // 是否异步运行
+    val async: Boolean
+
     // 脚本源
     fun source(): String
 

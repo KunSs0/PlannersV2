@@ -29,7 +29,7 @@ private fun actionLazyVar() = KetherHelper.combinedKetherParser("lazy") {
 @KetherEditor.Document(value = "tell <message> <at <objective...>>", result = Void::class)
 @CombinationKetherParser.Used
 private fun actionTell() = KetherHelper.combinedKetherParser("tell") {
-    it.group(text(), commandObjective(LeastType.SENDER)).apply(it) { message, container ->
+    it.group(text(), commandObjective(type = LeastType.SENDER)).apply(it) { message, container ->
         now {
             container.filterIsInstance<TargetCommandSender<*>>().forEach {
                 it.sendMessage(message)

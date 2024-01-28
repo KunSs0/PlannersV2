@@ -12,14 +12,14 @@ import taboolib.library.kether.QuestActionParser
 import taboolib.module.kether.combinationParser
 
 @CombinationKetherParser.Used
-object ActionCommand : SimpleKetherParser("command") {
+object ActionBukkitCommand : SimpleKetherParser("command") {
 
     override fun run(): QuestActionParser {
         return combinationParser {
             it.group(
                 text(),
                 command("as", then = enum<SenderType>()).option().defaultsTo(SenderType.PLAYER),
-                commandObjective(LeastType.SENDER)
+                commandObjective(type = LeastType.SENDER)
             ).apply(it) { command, senderType, objective ->
                 now {
                     objective.filterIsInstance<TargetCommandSender<*>>().forEach { senderType!!.dispatchCommand(it, command) }

@@ -19,7 +19,7 @@ object ActionContext : MultipleKetherParser("ctx", "context") {
 
         @KetherEditor.Document("ctx origin to [at objective:TargetContainer(sender)]")
         val set = KetherHelper.combinedKetherParser("to") {
-            it.group(commandObjective(LeastType.SENDER)).apply(it) { objective ->
+            it.group(commandObjective(type = LeastType.SENDER)).apply(it) { objective ->
                 now {
                     getEnvironmentContext().origin = objective.firstOrNull() ?: return@now
                 }

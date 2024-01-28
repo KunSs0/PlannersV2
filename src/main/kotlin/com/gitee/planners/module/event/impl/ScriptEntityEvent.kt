@@ -4,6 +4,7 @@ import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.action.bukkit.ActionBukkitEntity.getAnimated
 import com.gitee.planners.module.event.ScriptBukkitEventWrapped
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityEvent
@@ -12,6 +13,9 @@ import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import taboolib.module.kether.ScriptContext
 import taboolib.platform.util.attacker
+import taboolib.platform.util.getMetaFirst
+import taboolib.platform.util.getMetaFirstOrNull
+import taboolib.platform.util.hasMeta
 
 abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventWrapped<T> {
 
@@ -61,8 +65,13 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventWrapped<T> 
 
         override fun handle(event: PlayerDeathEvent, ctx: ScriptContext) {
             super.handle(event, ctx)
-            val el = event.entity.lastDamageCause as? EntityDamageByEntityEvent ?: return
-            ctx["attacker"] = el.attacker
+            // 识别 killer
+            val killer = if (event.entity.hasMeta("@killer")) {
+                event.entity.getMetaFirst("@killer").value() as LivingEntity
+            } else {
+                (event.entity.lastDamageCause as? EntityDamageByEntityEvent)?.attacker
+            }
+            ctx["attacker"] = killer
             ctx["message"] = event.deathMessage
         }
 

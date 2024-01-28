@@ -9,7 +9,12 @@ abstract class Combined(val config: ConfigurationSection) : Unique {
 
     val name = config.getString("name",id)!!
 
-    val mapping = config.getStringList("mapping")
+    /** 键位对照 Localized Id */
+    val mapping = if (config.isString("mapping")) {
+        listOf(config.getString("mapping")!!)
+    } else {
+        config.getStringList("mapping")
+    }
 
     val requestTick = config.getInt("request-tick")
 

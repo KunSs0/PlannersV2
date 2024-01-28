@@ -13,12 +13,12 @@ class LogicalSkillContext(sender: TargetBukkitEntity,val playerSkill : PlayerSki
 
     val isSupported = bukkitPlayer != null
 
-    override fun process() {
+    override fun run() {
         if (!isSupported) {
             error("Target sender $sender is not supported processing")
         }
 
-        super.process()
+        super.run()
     }
 
 

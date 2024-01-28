@@ -21,6 +21,8 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
     val icon = option.getItemStack("icon-formatter")
 
+    override val async = option.getBoolean("async",true)
+
     val action = config.getString("action", config.getString("run", "tell none"))!!
 
     init {

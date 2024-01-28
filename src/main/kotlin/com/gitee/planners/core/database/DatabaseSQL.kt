@@ -199,7 +199,7 @@ class DatabaseSQL : Database {
 
     override fun createPlayerSkill(profile: PlayerProfile, skill: Skill): CompletableFuture<PlayerSkill> {
         val future = CompletableFuture<PlayerSkill>()
-        val route = profile.route?.id ?: error("Player ${profile.onlinePlayer.name} not find route")
+        val route = profile.route?.index ?: error("Player ${profile.onlinePlayer.name} not find route")
         if (skill is ImmutableSkill) {
             tableSkill.insert(dataSource, "route", "node", "level") {
                 value(

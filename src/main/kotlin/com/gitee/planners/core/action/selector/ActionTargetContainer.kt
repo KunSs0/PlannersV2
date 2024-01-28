@@ -42,13 +42,14 @@ class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = e
 
     companion object {
 
+        val DEFAULT_PREFIX = arrayOf("at","to")
 
-        fun parser(reader: QuestReader, type: LeastType, ignorePrefix: Boolean = false): ActionTargetContainer {
+        fun parser(expects: Array<String> = DEFAULT_PREFIX,reader: QuestReader, type: LeastType, ignorePrefix: Boolean = false): ActionTargetContainer {
             val actions = try {
                 reader.mark()
                 // 如果忽略前缀
                 if (!ignorePrefix) {
-                    reader.expects("at", "to")
+                    reader.expects(*expects)
                 }
                 val selectors = mutableListOf<QuestAction<Any>>()
                 while (true) {

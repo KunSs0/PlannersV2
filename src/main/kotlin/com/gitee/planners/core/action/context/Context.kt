@@ -2,7 +2,7 @@ package com.gitee.planners.core.action.context
 
 import com.gitee.planners.api.job.target.Target
 
-interface Context {
+interface Context : Runnable{
 
     // 执行者 不可变
     val sender: Target<*>
@@ -10,6 +10,5 @@ interface Context {
     // 原点 可变
     var origin: Target<*>
 
-    fun process()
 
 }
