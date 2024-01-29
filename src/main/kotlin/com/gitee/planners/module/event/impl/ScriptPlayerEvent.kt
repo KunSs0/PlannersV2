@@ -5,6 +5,7 @@ import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.event.ScriptBukkitEventWrapped
 import com.gitee.planners.module.event.ScriptEventWrapped
+import org.bukkit.event.player.AsyncPlayerChatEvent
 import org.bukkit.event.player.PlayerEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import taboolib.module.kether.ScriptContext
@@ -51,11 +52,11 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventWrapped<T> {
 
     }
 
-    object Chat : ScriptPlayerEvent<PlayerJoinEvent>() {
+    object Chat : ScriptPlayerEvent<AsyncPlayerChatEvent>() {
 
         override val name = "chat"
 
-        override val bind = PlayerJoinEvent::class.java
+        override val bind = AsyncPlayerChatEvent::class.java
 
     }
 

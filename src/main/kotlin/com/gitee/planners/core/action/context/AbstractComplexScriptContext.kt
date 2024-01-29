@@ -7,20 +7,32 @@ import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
+import taboolib.library.kether.Quest
+import taboolib.library.kether.Quest.Block
 import taboolib.module.kether.ScriptOptions
 
-abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: ComplexCompiledScript) : AbstractContext(sender) {
+abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: ComplexCompiledScript) :
+    AbstractContext(sender) {
 
     abstract val trackId: String
 
     val platform = compiled.platform()
 
-    // 是否异步运行
+    /** 是否异步运行 */
     var async = compiled.async
 
+    /** 是否立即执行 如果为true则忽略async，同步当前线程执行 */
+    var now = false
+
     override fun run() {
-        submit(async = async) {
+        submit(async = async, now = now) {
             platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.createOptions())
+        }
+    }
+
+    fun run(block: Quest.Block,func: ScriptOptions.ScriptOptionsBuilder.() -> Unit = { }) {
+        submit(async = async, now = now) {
+            platform.run(trackId, compiled.compiledScript(), block, this@AbstractComplexScriptContext.createOptions(func))
         }
     }
 

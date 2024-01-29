@@ -2,14 +2,10 @@ package com.gitee.planners.api.common.entity.animated
 
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
-import com.gitee.planners.api.common.script.ComplexCompiledScript
-import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.core.action.context.AbstractComplexScriptContext
-import com.gitee.planners.core.action.context.Context
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.util.unboxJavaToKotlin
-import org.bukkit.event.Event
 import taboolib.common.util.Vector
 import taboolib.common5.cbool
 import taboolib.common5.cdouble
@@ -17,7 +13,7 @@ import taboolib.common5.cfloat
 import taboolib.common5.cint
 import taboolib.module.kether.runKether
 
-abstract class AbstractAnimated : Animated, MetadataContainer() {
+abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated {
 
     val listeners = mutableListOf<AnimatedListener>()
 
@@ -42,18 +38,17 @@ abstract class AbstractAnimated : Animated, MetadataContainer() {
     }
 
     override fun metaKeys(): Set<String> {
-        return this.valuesOf().keys
+        return this.getImmutableRegistry().getKeys()
     }
 
     override fun getMetadata(id: String): Metadata? {
         return this[id]
     }
 
-    protected fun handleUpdate() {
-        this.valuesOf().values.filterIsInstance<AnimatedMeta<Any>>().forEach {
-            it.onUpdate(this, it.any())
-        }
+    override fun handleUpdate(metadata: AnimatedMeta.CoerceMeta<Any>) {
+        metadata.onUpdate(this,metadata.any())
     }
+
 
     fun AbstractAnimated.text(id: String, defaultValue: String, onUpdate: Animated.(data: String) -> Unit) =
         createBaked(id, defaultValue, parser = { this.toString() }, onUpdate)

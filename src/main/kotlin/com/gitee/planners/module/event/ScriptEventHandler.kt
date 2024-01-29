@@ -54,23 +54,27 @@ object ScriptEventHandler {
                 } else {
                     CompiledScriptContext(sender,compiled)
                 }
-                // handle event
-                val handle = ctx.createOptions {
-                    context { wrapped.handle(event, this) }
-                }
-                val platform = listener.compiled.platform()
                 runKether {
-                    platform.run(UUID.randomUUID().toString(),listener.compiled.compiledScript(),listener.block,handle)
+                    // 关联异步逻辑
+                    ctx.async = listener.async
+                    // 再event运行环境下，如果非异步行为，强制设置为now
+                    if (!ctx.async) {
+                        ctx.now = true
+                    }
+                    ctx.run(listener.block) {
+                        // handle event
+                        context { wrapped.handle(event, this) }
+                    }
                 }
             }
         }
         listeners += listener
     }
 
-    fun registerListener(compiled: ComplexCompiledScript,id: String,block: String,event: String,ignoreCancelled: Boolean,priority: EventPriority) : ScriptBlockListener? {
+    fun registerListener(compiled: ComplexCompiledScript,id: String,block: String,event: String,ignoreCancelled: Boolean,priority: EventPriority,async: Boolean = true) : ScriptBlockListener? {
         val optional = compiled.compiledScript().getBlock(block)
         if (optional.isPresent) {
-            val listener = ScriptBlockListener(id,compiled, optional.get(), event, priority, ignoreCancelled)
+            val listener = ScriptBlockListener(id,compiled, optional.get(), event, priority, ignoreCancelled, async)
             registerListener<Event>(listener)
             println("register listener $listener")
             return listener

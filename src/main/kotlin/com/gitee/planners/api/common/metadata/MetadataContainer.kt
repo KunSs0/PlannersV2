@@ -1,5 +1,8 @@
 package com.gitee.planners.api.common.metadata
 
+import com.gitee.planners.api.common.registry.MutableRegistry
+import com.gitee.planners.api.common.registry.mutableRegistry
+
 abstract class MetadataContainer(map: Map<String, Metadata> = emptyMap()) {
 
     private val table = mutableMapOf(*map.map { it.key to it.value }.toTypedArray())
@@ -27,8 +30,8 @@ abstract class MetadataContainer(map: Map<String, Metadata> = emptyMap()) {
         return metadataMap
     }
 
-    fun valuesOf(): Map<String, Metadata> {
-        return table.filter { !it.value.isTimeout() }
+    fun getImmutableRegistry(): MutableRegistry<String, Metadata> {
+        return mutableRegistry(table.filter { !it.value.isTimeout() })
     }
 
 }

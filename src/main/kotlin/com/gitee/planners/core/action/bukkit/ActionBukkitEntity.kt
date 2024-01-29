@@ -19,6 +19,7 @@ import com.gitee.planners.module.entity.animated.AbstractBukkitEntityAnimated
 import com.gitee.planners.module.entity.animated.BukkitEntity
 import com.gitee.planners.module.entity.animated.BukkitProjectile
 import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
+import com.gitee.planners.util.createBukkitAwaitFuture
 import org.bukkit.Material
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
@@ -66,9 +67,9 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
     @KetherEditor.Document("entity launch <animated> <time/tick> [at objective:TargetContainer(sender)] <to objective:TargetContainer>")
     val launch = KetherHelper.combinedKetherParser {
         it.group(any(), long(), commandObjectiveOrEmpty(), commandObjectiveOrEmpty("to")).apply(it) { animated, time,origin, objective ->
-            animated as? BukkitEntity ?: error("Animated object is not supported")
-            val origin = origin.filterIsInstance<TargetLocation<*>>().first()
-            val objective = objective.filterIsInstance<TargetLocation<*>>().first()
+            animated as? BukkitEntity ?: error("[BukkitEntity] Animated object is not supported")
+            val origin = origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("[BukkitEntity] origin cannot be empty")
+            val objective = objective.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("[BukkitEntity] objective cannot be empty")
             val distance = objective.getBukkitLocation().distance(origin.getBukkitLocation())
             val accuracy = distance / time
             val direction = objective.getBukkitLocation().toVector().subtract(origin.getBukkitLocation().toVector()).normalize()
@@ -134,7 +135,8 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
 
     private fun ScriptFrame.createBukkitEntity(animated: AbstractBukkitEntityAnimated<*>,target: Target<*>): TargetBukkitEntity {
         val context = this.getEnvironmentContext() as AbstractComplexScriptContext
-        val entity = animated.invokeSpawn(target)
+        // 拉到主线程创建实体
+        val entity = createBukkitAwaitFuture { animated.invokeSpawn(target) }.get()
         entity.setMeta("@caster",target)
         entity.setMeta("@animated",animated)
         entity.setMeta("@context",context)

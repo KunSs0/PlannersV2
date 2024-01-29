@@ -1,9 +1,8 @@
 package com.gitee.planners.module.entity.animated
 
 import com.gitee.planners.api.common.entity.animated.AbstractAnimated
+import com.gitee.planners.api.common.entity.animated.AnimatedMeta
 import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
-import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import taboolib.module.ai.clearGoalAi
@@ -45,8 +44,17 @@ abstract class AbstractBukkitEntityAnimated<E : Entity> : AbstractAnimated() {
     fun invokeSpawn(target: Target<*>): E {
         instance = create(target)
         instance.setMeta("@animated", this)
-        this.handleUpdate()
+        this.getImmutableRegistry().getValues().filterIsInstance<AnimatedMeta<Any>>().forEach {
+            it.onUpdate(this, it.any())
+        }
         return instance
+    }
+
+
+
+    // 禁止原生更新逻辑
+    override fun handleUpdate(metadata: AnimatedMeta.CoerceMeta<Any>) {
+
     }
 
     protected abstract fun create(target: Target<*>): E

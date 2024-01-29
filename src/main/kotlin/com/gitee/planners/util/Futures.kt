@@ -1,14 +1,13 @@
 package com.gitee.planners.util
 
+import taboolib.common.platform.function.submit
 import taboolib.common.platform.function.submitAsync
 import java.util.concurrent.CompletableFuture
 
-fun <T> createBukkitAsyncFuture(future: CompletableFuture<T>) : CompletableFuture<T> {
+fun <T> createBukkitAwaitFuture(func: () -> T) : CompletableFuture<T> {
     val f1 = CompletableFuture<T>()
-    submitAsync {
-        future.thenAccept {
-            f1.complete(it)
-        }
+    submit {
+        f1.complete(func())
     }
     return f1
 }

@@ -11,7 +11,8 @@ class ScriptBlockListener(
     val block: Quest.Block,
     val event: String,
     val priority: EventPriority = EventPriority.NORMAL,
-    val ignoreCancelled: Boolean = true
+    val ignoreCancelled: Boolean = true,
+    val async: Boolean = true
 ) {
 
 

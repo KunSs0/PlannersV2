@@ -19,15 +19,16 @@ object ActionListen {
     @CombinationKetherParser.Used
     fun actionListen() = KetherHelper.combinedKetherParser("listen") {
         it.group(
-            text(),
+            symbol(),
             commandText("id", UUID.randomUUID().toString()),
-            command("on", then = text()),
+            command("on", then = symbol()),
             commandBool("ignore-cancelled", true),
-            commandEnum("priority", EventPriority.NORMAL)
-        ).apply(it) { blockId,id, eventId, ignoreCancelled, priority ->
+            commandEnum("priority", EventPriority.NORMAL),
+            commandBool("async",false)
+        ).apply(it) { blockId,id, eventId, ignoreCancelled, priority,async ->
             now {
                 val context = getEnvironmentContext() as AbstractComplexScriptContext
-                ScriptEventHandler.registerListener(context.compiled,id,blockId,eventId,ignoreCancelled,priority)
+                ScriptEventHandler.registerListener(context.compiled,id,blockId,eventId,ignoreCancelled,priority,async)
             }
         }
     }

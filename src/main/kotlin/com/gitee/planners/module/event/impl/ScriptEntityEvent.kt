@@ -1,20 +1,20 @@
 package com.gitee.planners.module.event.impl
 
+import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.action.bukkit.ActionBukkitEntity.getAnimated
 import com.gitee.planners.module.event.ScriptBukkitEventWrapped
+import com.gitee.planners.module.event.animated.DamageEventModifier
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.entity.ProjectileHitEvent
-import org.bukkit.event.player.PlayerJoinEvent
 import taboolib.module.kether.ScriptContext
 import taboolib.platform.util.attacker
 import taboolib.platform.util.getMetaFirst
-import taboolib.platform.util.getMetaFirstOrNull
 import taboolib.platform.util.hasMeta
 
 abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventWrapped<T> {
@@ -22,11 +22,6 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventWrapped<T> 
     override fun getSender(event: T): Target<*>? {
         return (event.entity as? Player)?.adaptTarget()
     }
-
-    override fun handle(event: T, ctx: ScriptContext) {
-
-    }
-
 
     abstract class DamageEvent : ScriptEntityEvent<EntityDamageByEntityEvent>() {
 
@@ -36,6 +31,10 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventWrapped<T> 
             super.handle(event, ctx)
             ctx["damager"] = event.damager.adaptTarget()
             ctx["entity"] = event.entity.adaptTarget()
+        }
+
+        override fun getModifier(event: EntityDamageByEntityEvent): Animated? {
+            return DamageEventModifier(event)
         }
 
     }
