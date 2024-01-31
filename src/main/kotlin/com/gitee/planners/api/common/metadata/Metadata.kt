@@ -31,12 +31,6 @@ interface Metadata {
 
     fun asBoolean(): Boolean
 
-    fun asVector3f(): SimpleMatrix
-
-    fun asVector4f(): SimpleMatrix
-
-    fun asVector4d(): SimpleMatrix
-
     fun asVector(): Vector
 
     fun any(): Any

@@ -6,8 +6,8 @@ import com.gitee.planners.api.common.script.ComplexCompiledScript
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.core.action.context.CompiledScriptContext
-import com.gitee.planners.core.action.context.ImmutableSkillContext
+import com.gitee.planners.module.kether.context.CompiledScriptContext
+import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.core.config.ImmutableSkill
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player

@@ -1,10 +1,9 @@
 package com.gitee.planners.module.skill
 
-import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.common.script.SingletonKetherScript
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.core.action.context.ImmutableSkillContext
+import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player

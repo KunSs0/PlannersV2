@@ -1,19 +1,14 @@
 package com.gitee.planners.core.command
 
-import com.gitee.planners.api.ProfileAPI.plannersProfile
 import com.gitee.planners.api.RegistryBuiltin
-import com.gitee.planners.core.action.context.AbstractSkillContext
-import com.gitee.planners.core.action.context.ImmutableSkillContext
+import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.config.ImmutableSkill
-import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.ui.PlayerSkillOperatorUI
-import com.gitee.planners.core.ui.RouterSelectUI
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
 import taboolib.common5.cint
-import taboolib.platform.util.sendLang
 
 object CommandSkill {
 

@@ -2,9 +2,8 @@ package com.gitee.planners.api.common.script
 
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.core.action.getEnvironmentContext
+import com.gitee.planners.module.kether.getEnvironmentContext
 import com.google.common.collect.MultimapBuilder
-import org.bukkit.Bukkit
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.library.kether.Quest
 import taboolib.library.kether.Quest.Block
