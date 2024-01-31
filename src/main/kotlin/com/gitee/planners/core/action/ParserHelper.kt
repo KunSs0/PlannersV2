@@ -1,25 +1,24 @@
 package com.gitee.planners.core.action
 
+import com.gitee.planners.api.common.task.SimpleFutureTask
 import com.gitee.planners.api.job.target.LeastType
+import com.gitee.planners.api.job.target.Target.Companion.cast
 import com.gitee.planners.api.job.target.TargetContainer
+import com.gitee.planners.api.job.target.TargetLocation
 import com.gitee.planners.core.action.selector.ActionTargetContainer
+import com.gitee.planners.util.asVector
 import org.bukkit.Material
-import org.bukkit.util.Vector
 import taboolib.common.platform.command.command
+import taboolib.common.util.Vector
 import taboolib.common5.cbool
 import taboolib.common5.cdouble
 import taboolib.common5.cfloat
 import taboolib.common5.cint
-import taboolib.library.kether.LoadError
-import taboolib.library.kether.ParsedAction
-import taboolib.library.kether.Parser
-import taboolib.library.kether.Parser.Action
-import taboolib.library.kether.QuestReader
+import taboolib.library.kether.*
+import taboolib.library.kether.Parser.*
 import taboolib.library.reflex.Reflex.Companion.getProperty
-import taboolib.module.kether.ParserHolder
-import taboolib.module.kether.ScriptFrame
+import taboolib.module.kether.*
 import taboolib.module.kether.action.ActionLiteral
-import taboolib.module.kether.literalAction
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -45,10 +44,7 @@ fun ParserHolder.actionFloat() = actionType { it.cfloat }
 
 fun ParserHolder.actionBool() = actionType { it.cbool }
 
-fun ParserHolder.actionVector() = actionDouble().and(actionDouble(), actionDouble()).map {
-    val (x, y, z) = it
-    Vector(x, y, z)
-}
+fun ParserHolder.actionVector() = actionType { it?.asVector() ?: error("Missing argument") }
 
 fun QuestReader.expectParsedAction(token: String, defaultValue: Any?): ParsedAction<*> {
     val parsedAction = this.expectParsedActionOrNull(token)
@@ -81,7 +77,8 @@ fun QuestReader.expectTargetContainerParsedAction(type: LeastType): ActionTarget
     return ActionTargetContainer.parser(reader = this, type = type)
 }
 
-fun ParserHolder.commandObjective(expect: Array<String> = ActionTargetContainer.DEFAULT_PREFIX,type: LeastType = LeastType.EMPTY): Parser<TargetContainer> {
+fun ParserHolder.commandObjective(expect: Array<String> = ActionTargetContainer.DEFAULT_PREFIX,
+                                  type: LeastType = LeastType.EMPTY): Parser<TargetContainer> {
     return Parser.frame { r ->
         val expects = if (expect.isEmpty()) {
             ActionTargetContainer.DEFAULT_PREFIX

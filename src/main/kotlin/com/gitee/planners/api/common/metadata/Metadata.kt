@@ -2,9 +2,11 @@ package com.gitee.planners.api.common.metadata
 
 import com.gitee.planners.util.unboxJavaToKotlin
 import com.google.gson.*
+import org.ejml.simple.SimpleMatrix
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
+import taboolib.common.util.Vector
 import taboolib.common.util.unsafeLazy
 import java.lang.reflect.Type
 import java.util.function.Supplier
@@ -28,6 +30,14 @@ interface Metadata {
     fun asDouble(): Double
 
     fun asBoolean(): Boolean
+
+    fun asVector3f(): SimpleMatrix
+
+    fun asVector4f(): SimpleMatrix
+
+    fun asVector4d(): SimpleMatrix
+
+    fun asVector(): Vector
 
     fun any(): Any
 
@@ -74,7 +84,8 @@ interface Metadata {
         }
 
         fun <T> parseJson(clazz: Class<*>, content: String): Any {
-            val serializable = table[unboxJavaToKotlin(clazz)] ?: throw IllegalStateException("No serializable class found for class $clazz")
+            val serializable = table[unboxJavaToKotlin(clazz)]
+                    ?: throw IllegalStateException("No serializable class found for class $clazz")
             return gson.fromJson(content, serializable.type())!!
         }
 
