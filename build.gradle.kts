@@ -47,13 +47,16 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation("ink.ptms:nms-all:1.0.0")
-    implementation("ink.ptms.core:v11902:11902-minimize:mapped")
-    implementation("ink.ptms.core:v11902:11902-minimize:universal")
-    implementation("ink.ptms:nms-all:1.0.0")
+    compileOnly("ink.ptms:nms-all:1.0.0")
+    compileOnly("ink.ptms.core:v11902:11902-minimize:mapped")
+    compileOnly("ink.ptms.core:v11902:11902-minimize:universal")
 
-    implementation("com.google.code.gson:gson:2.8.9")
-    implementation("com.google.guava:guava:30.0-android")
+    compileOnly("com.google.code.gson:gson:2.8.9")
+
+    // https://mvnrepository.com/artifact/org.ejml/ejml-all
+    compileOnly("org.ejml:ejml-core:0.41")
+    compileOnly("org.ejml:ejml-simple:0.41")
+    compileOnly("org.ejml:ejml-fdense:0.41")
 
     compileOnly("com.mojang:datafixerupper:4.0.26")
     compileOnly(kotlin("stdlib"))

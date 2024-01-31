@@ -1,11 +1,6 @@
 package com.gitee.planners.api.common.entity.animated
 
-import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataTypeToken
-import com.gitee.planners.core.action.*
-import com.gitee.planners.util.unboxJavaToKotlin
-import taboolib.library.kether.Parser
-import taboolib.module.kether.ParserHolder
 
 abstract class AnimatedMeta<T : Any>(
     val id: String,

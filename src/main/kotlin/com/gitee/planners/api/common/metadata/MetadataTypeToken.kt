@@ -1,8 +1,7 @@
 package com.gitee.planners.api.common.metadata
 
-import com.gitee.planners.util.asVector
+import com.gitee.planners.util.math.asVector
 import com.google.gson.JsonElement
-import org.bukkit.Location
 import org.ejml.simple.SimpleMatrix
 import taboolib.common.util.Vector
 import taboolib.common5.*
@@ -49,24 +48,6 @@ class MetadataTypeToken {
 
         override fun asString(): String {
             return any.toString()
-        }
-
-        override fun asVector3f(): SimpleMatrix {
-            return any.asVector() { x, y, z ->
-                SimpleMatrix(1, 3, true, x, y, z)
-            }
-        }
-
-        override fun asVector4f(): SimpleMatrix {
-            return any.asVector() { x, y, z ->
-                SimpleMatrix(1, 4, true, x, y, z, 1.0)
-            }
-        }
-
-        override fun asVector4d(): SimpleMatrix {
-            return any.asVector() { x, y, z ->
-                SimpleMatrix(1, 4, true, x, y, z, 0.0)
-            }
         }
 
         override fun asVector(): Vector {

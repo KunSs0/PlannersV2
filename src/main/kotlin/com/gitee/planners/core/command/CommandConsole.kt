@@ -1,10 +1,9 @@
 package com.gitee.planners.core.command
 
 import com.gitee.planners.api.RegistryBuiltin
-import com.gitee.planners.core.action.context.ImmutableSkillContext
+import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.api.job.target.adaptTarget
 import org.bukkit.command.ConsoleCommandSender
-import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.CommandBody
 import taboolib.common.platform.command.subCommand
 import taboolib.common.platform.command.suggest

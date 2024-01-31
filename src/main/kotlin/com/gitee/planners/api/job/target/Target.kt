@@ -7,8 +7,12 @@ interface Target<T> {
     companion object {
 
 
-        inline fun <reified T : Target<*>> Target<*>.cast(): T {
-            return this as T
+        inline fun <reified T : Target<*>> Target<*>.cast(): T? {
+            return this as? T
+        }
+
+        inline fun <reified T : Target<*>> Target<*>.castUnsafely(): T {
+            return cast<T>()!!
         }
 
     }

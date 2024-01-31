@@ -1,6 +1,6 @@
 package com.gitee.planners.api.job.target
 
-import com.gitee.planners.core.action.getEnvironmentContext
+import com.gitee.planners.module.kether.getEnvironmentContext
 import org.bukkit.Bukkit
 import taboolib.module.kether.ScriptFrame
 
