@@ -1,5 +1,7 @@
 package com.gitee.planners.module.kether.selector
 
+import com.gitee.planners.api.common.script.kether.KetherHelper
+import com.gitee.planners.api.common.script.kether.SimpleKetherParser
 import com.gitee.planners.api.job.selector.Selector
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.*
@@ -7,7 +9,6 @@ import org.bukkit.Bukkit
 import org.bukkit.World
 import org.bukkit.entity.EntityType
 import taboolib.library.kether.Parser
-import taboolib.library.kether.QuestActionParser
 import taboolib.module.kether.*
 
 object InWorld : Selector {
@@ -16,13 +17,11 @@ object InWorld : Selector {
         return arrayOf("inworld", "inWorld")
     }
 
-    override fun action(): QuestActionParser {
-        return combinationParser {
-            it.group(bukkitWorldListOf(), commandEnumListOf<EntityType>("type")).apply(it) { worlds, types ->
-                now {
-                    val entities = worlds.flatMap { it.entities }.filter { it.isDead && (types.isEmpty() || it.type in types) }
-                    getTargetContainer() += entities.map { it.adaptTarget() }
-                }
+    override fun action() = KetherHelper.combinedKetherParser {
+        it.group(bukkitWorldListOf(), commandEnumListOf<EntityType>("type")).apply(it) { worlds, types ->
+            now {
+                val entities = worlds.flatMap { it.entities }.filter { it.isDead && (types.isEmpty() || it.type in types) }
+                getTargetContainer() += entities.map { it.adaptTarget() }
             }
         }
     }

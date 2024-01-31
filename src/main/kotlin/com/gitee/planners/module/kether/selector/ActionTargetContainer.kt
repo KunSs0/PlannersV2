@@ -9,8 +9,7 @@ import taboolib.module.kether.ScriptFrame
 import taboolib.module.kether.expects
 import java.util.concurrent.CompletableFuture
 
-class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = emptyList(), val type: LeastType) :
-    QuestAction<TargetContainer>() {
+class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = emptyList(), val type: LeastType) : QuestAction<TargetContainer>() {
 
     override fun process(frame: ScriptFrame): CompletableFuture<TargetContainer> {
         // 填充容器
@@ -60,7 +59,7 @@ class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = e
                             false
                         }
                     } ?: break
-                    selectors.add(SelectorRegistry.get(expect).action().resolve(reader))
+                    selectors.add(SelectorRegistry.get(expect).action().run().resolve(reader))
                 }
                 // 如果 actions 为空 则尝试捕获一个变量
                 selectors.ifEmpty { listOf(InVariable(reader.nextParsedAction())) }

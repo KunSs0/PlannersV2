@@ -30,6 +30,13 @@ abstract class MetadataContainer(map: Map<String, Metadata> = emptyMap()) {
         return metadataMap
     }
 
+    fun removeAll() {
+        // 设置为虚空节点
+        this.table.keys.forEach {
+            this[it] = MetadataTypeToken.Void()
+        }
+    }
+
     fun getImmutableRegistry(): MutableRegistry<String, Metadata> {
         return mutableRegistry(table.filter { !it.value.isTimeout() })
     }

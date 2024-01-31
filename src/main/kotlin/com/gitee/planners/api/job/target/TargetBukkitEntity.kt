@@ -29,6 +29,10 @@ class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetComma
         return entity.name
     }
 
+    override fun getBukkitEyeLocation(): Location {
+        return (getInstance() as? LivingEntity)?.eyeLocation ?: getBukkitLocation()
+    }
+
     override fun getInstance(): Entity {
         return entity
     }
@@ -44,6 +48,7 @@ class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetComma
     override fun getBukkitLocation(): Location {
         return entity.location
     }
+
 
     override fun getX(): Double {
         return entity.location.x

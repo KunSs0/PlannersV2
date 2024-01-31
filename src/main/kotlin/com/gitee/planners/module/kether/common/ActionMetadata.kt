@@ -12,7 +12,7 @@ import com.gitee.planners.module.kether.runTargetContainer
 import taboolib.module.kether.*
 
 @CombinationKetherParser.Used
-object ActionMetadata : OperationKetherParser("metadata","meta") {
+object ActionMetadata : OperationKetherParser("metadata") {
 
     @Suppress("NAME_SHADOWING")
     @KetherEditor.Document(value = "metadata <id> [def <value>] [at objective:TargetContainer(sender)]", result = Void::class)
@@ -32,7 +32,7 @@ object ActionMetadata : OperationKetherParser("metadata","meta") {
         }
     }
 
-    @KetherEditor.Document("metadata <id> to <value:Any> [at objective:TargetContainer(sender)]")
+    @KetherEditor.Document("metadata <id> to <value:Any> [timeout: long(-1)] [at objective:TargetContainer(sender)]")
     val to = argumentKetherParser { argument ->
         val data = this.nextParsedAction()
         val timeout = this.catchParsedAction("timeout", -1)
@@ -41,7 +41,7 @@ object ActionMetadata : OperationKetherParser("metadata","meta") {
             this.run(argument).str { id ->
                 this.run(data).thenAccept { data ->
                     this.run(timeout).long { timeout ->
-                        val metadata = data.metadata(timeout)
+                        val metadata = data.metadata(timeout * 50)
                         this.runTargetContainer(container).thenAccept {
                             it.filterIsInstance<TargetContainerization>().forEach { entity ->
                                 entity.setMetadata(id, metadata)
