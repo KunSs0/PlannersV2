@@ -52,6 +52,8 @@ dependencies {
     compileOnly("ink.ptms.core:v11902:11902-minimize:universal")
 
     compileOnly("com.google.code.gson:gson:2.8.9")
+    // https://mvnrepository.com/artifact/com.google.guava/guava
+    implementation("com.google.guava:guava:33.0.0-jre")
 
     // https://mvnrepository.com/artifact/org.ejml/ejml-all
     compileOnly("org.ejml:ejml-core:0.41")

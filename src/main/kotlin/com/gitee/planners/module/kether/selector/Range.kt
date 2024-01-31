@@ -2,6 +2,7 @@ package com.gitee.planners.module.kether.selector
 
 import com.gitee.planners.api.job.selector.Selector
 import com.gitee.planners.api.job.target.Target.Companion.cast
+import com.gitee.planners.api.job.target.Target.Companion.castUnsafely
 import com.gitee.planners.api.job.target.TargetLocation
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.getEnvironmentContext
@@ -21,7 +22,7 @@ object Range : Selector {
             it.group(double()).apply(it) { r ->
                 now {
                     val vector = Vector(r, r, r)
-                    val entities = getEnvironmentContext().origin.cast<TargetLocation<*>>().getNearbyLivingEntities(vector)
+                    val entities = getEnvironmentContext().origin.castUnsafely<TargetLocation<*>>().getNearbyLivingEntities(vector)
                     this.getTargetContainer() += entities.map { it.adaptTarget() }
                 }
             }
