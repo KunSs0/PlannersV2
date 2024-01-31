@@ -1,9 +1,11 @@
 package com.gitee.planners.api.common.metadata
 
+import com.gitee.planners.util.asVector
 import com.google.gson.JsonElement
 import org.bukkit.Location
+import org.ejml.simple.SimpleMatrix
+import taboolib.common.util.Vector
 import taboolib.common5.*
-import java.nio.charset.StandardCharsets
 
 class MetadataTypeToken {
 
@@ -17,7 +19,7 @@ class MetadataTypeToken {
 
     open class TypeToken(override val clazz: Class<*>, var any: Any, override val stopTime: Long) : Metadata {
 
-        open override fun isTimeout(): Boolean {
+        override fun isTimeout(): Boolean {
             return stopTime != -1L && System.currentTimeMillis() > stopTime
         }
 
@@ -49,8 +51,30 @@ class MetadataTypeToken {
             return any.toString()
         }
 
+        override fun asVector3f(): SimpleMatrix {
+            return any.asVector() { x, y, z ->
+                SimpleMatrix(1, 3, true, x, y, z)
+            }
+        }
+
+        override fun asVector4f(): SimpleMatrix {
+            return any.asVector() { x, y, z ->
+                SimpleMatrix(1, 4, true, x, y, z, 1.0)
+            }
+        }
+
+        override fun asVector4d(): SimpleMatrix {
+            return any.asVector() { x, y, z ->
+                SimpleMatrix(1, 4, true, x, y, z, 0.0)
+            }
+        }
+
+        override fun asVector(): Vector {
+            return any.asVector()
+        }
+
         override fun increase(value: Any) {
-            this.any = when(clazz) {
+            this.any = when (clazz) {
                 java.lang.Integer::class.java -> asInt() + value.cint
                 java.lang.Double::class.java -> asDouble() + value.cdouble
                 java.lang.Float::class.java -> asFloat() + value.cfloat

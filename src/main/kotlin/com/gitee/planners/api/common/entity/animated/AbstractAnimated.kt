@@ -6,6 +6,7 @@ import com.gitee.planners.core.action.context.AbstractComplexScriptContext
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.util.unboxJavaToKotlin
+import org.bukkit.Bukkit
 import taboolib.common.util.Vector
 import taboolib.common5.cbool
 import taboolib.common5.cdouble
@@ -56,6 +57,17 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
     fun AbstractAnimated.int(id: String, defaultValue: Int = 0, onUpdate: Animated.(data: Int) -> Unit) =
         createBaked(id, defaultValue, parser = { this.cint }, onUpdate)
 
+    fun AbstractAnimated.strictInt(id: String, defaultValue: Int = 0, min: Int = 0, onUpdate: Animated.(data: Int) -> Unit) =
+        createBaked(id, defaultValue, parser = {
+           val value = this.cint
+              if (value < min) {
+                  // I didn't throw an illegal arg here. But some input should be checked.
+                  Bukkit.getLogger().warning("The minimum acceptable value of $id is $min, but get $value.")
+                  min
+              } else
+                  value
+        }, onUpdate)
+
     fun AbstractAnimated.double(id: String, defaultValue: Double = 0.0, onUpdate: Animated.(data: Double) -> Unit) =
         createBaked(id, defaultValue, parser = { this.cdouble }, onUpdate)
 
@@ -77,10 +89,6 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
         return createBaked(id, TargetContainer(), parser = { this as TargetContainer }) {
 
         }
-    }
-
-    fun AnimatedMeta.CoerceMeta<Vector>.asVector(): Vector {
-        return this.any() as Vector
     }
 
     inline fun <reified T : Any> AbstractAnimated.createBaked(
