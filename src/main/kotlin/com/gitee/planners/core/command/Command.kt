@@ -23,6 +23,9 @@ object Command {
     val route = CommandRoute
 
     @CommandBody
+    val metadata = CommandMetadata
+
+    @CommandBody
     val reload = subCommand {
         execute<ProxyCommandSender> { sender, context, argument ->
             PluginReloadEvents.Pre().call()

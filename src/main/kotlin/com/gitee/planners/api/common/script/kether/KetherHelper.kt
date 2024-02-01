@@ -1,10 +1,7 @@
 package com.gitee.planners.api.common.script.kether
 
 import com.mojang.datafixers.kinds.App
-import taboolib.library.kether.DefaultRegistry
-import taboolib.library.kether.Parser
-import taboolib.library.kether.QuestActionParser
-import taboolib.library.kether.QuestReader
+import taboolib.library.kether.*
 import taboolib.module.kether.*
 
 /**
@@ -16,9 +13,15 @@ object KetherHelper {
 
     const val NAMESPACE_SKILL = "planners-skill"
 
-    fun simpleKetherParser(vararg id: String, func: () -> ScriptActionParser<out Any?>): SimpleKetherParser {
+    fun simpleKetherParser(vararg id: String, func: (QuestReader) -> QuestAction<out Any?>): SimpleKetherParser {
+        return createSimpleKetherParser(*id) {
+            scriptParser { func(it) }
+        }
+    }
+
+    fun createSimpleKetherParser(vararg id: String, func: () -> QuestActionParser): SimpleKetherParser {
         return object : SimpleKetherParser(*id) {
-            override fun run(): ScriptActionParser<out Any?> {
+            override fun run(): QuestActionParser {
                 return func()
             }
         }
@@ -26,7 +29,14 @@ object KetherHelper {
 
     fun simpleKetherNow(vararg id: String, func: ScriptFrame.() -> Any?): SimpleKetherParser {
         return simpleKetherParser(*id) {
-            scriptParser { actionNow { func(this) } }
+            actionNow { func(this) }
+        }
+    }
+
+    fun simpleKetherVoid(vararg id: String, func: ScriptFrame.() -> Unit): SimpleKetherParser {
+        return simpleKetherNow(*id) {
+            func(this)
+            null
         }
     }
 
@@ -69,7 +79,7 @@ object KetherHelper {
         if (combinationKetherParser is KetherRegistry) {
             combinationKetherParser.onInit()
         }
-        this.registerCombinationKetherParser(id,namespace,combinationKetherParser.run() as ScriptActionParser<Any?>)
+        this.registerCombinationKetherParser(id, namespace, combinationKetherParser.run() as ScriptActionParser<Any?>)
     }
 
 }

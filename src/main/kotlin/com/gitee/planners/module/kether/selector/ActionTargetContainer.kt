@@ -1,5 +1,6 @@
 package com.gitee.planners.module.kether.selector
 
+import com.gitee.planners.api.job.selector.Selector
 import com.gitee.planners.api.job.selector.SelectorRegistry
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
@@ -38,9 +39,14 @@ class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = e
 
     companion object {
 
-        val DEFAULT_PREFIX = arrayOf("at","to")
+        val DEFAULT_PREFIX = arrayOf("at", "to")
 
-        fun parser(expects: Array<String> = DEFAULT_PREFIX,reader: QuestReader, type: LeastType, ignorePrefix: Boolean = false): ActionTargetContainer {
+        fun parser(
+            expects: Array<String> = DEFAULT_PREFIX,
+            reader: QuestReader,
+            type: LeastType,
+            ignorePrefix: Boolean = false
+        ): ActionTargetContainer {
             val actions = try {
                 reader.mark()
                 // 如果忽略前缀
@@ -49,18 +55,35 @@ class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = e
                 }
                 val selectors = mutableListOf<QuestAction<Any>>()
                 while (true) {
+
+                    var expect : String? = null
+                    var filterable = false
                     // 尝试捕获一个解析器 如果捕获不到 直接退出本次捕获
-                    val expect = SelectorRegistry.getKeys().firstOrNull {
-                        try {
-                            reader.mark()
-                            reader.expect("@$it")
-                            true
-                        } catch (e: Exception) {
-                            reader.reset()
-                            false
+                    processInspect@for (key in SelectorRegistry.getKeys()) {
+
+                        reader.mark()
+                        val token = reader.nextToken()
+                        if (token == "@$key") {
+                            expect = key
+                            break@processInspect
                         }
-                    } ?: break
-                    selectors.add(SelectorRegistry.get(expect).action().resolve(reader))
+                        // filterable
+                        else if (token == "@!$key") {
+                            expect = key
+                            filterable = SelectorRegistry.get(key) is Selector.Filterable
+                            break@processInspect
+                        }
+                        // 复位 继续下一次检查
+                        reader.reset()
+                    }
+                    // 直接跳出循环
+                    if (expect == null) {
+                        break
+                    }
+                    val instance = SelectorRegistry.get(expect)
+                    val action = if (filterable) (instance as Selector.Filterable).filter() else instance.select()
+
+                    selectors.add(action.run().resolve(reader))
                 }
                 // 如果 actions 为空 则尝试捕获一个变量
                 selectors.ifEmpty { listOf(InVariable(reader.nextParsedAction())) }
@@ -73,4 +96,7 @@ class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = e
         }
 
     }
+
+    private class ExpectResult(val id: String, val filterable: Boolean)
+
 }

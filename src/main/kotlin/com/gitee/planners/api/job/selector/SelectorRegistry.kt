@@ -12,7 +12,7 @@ object SelectorRegistry : AbstractRegistry<String, Selector>() {
     class Visitor : RunningClassRegistriesVisitor<Selector>(Selector::class.java, SelectorRegistry) {
 
         override fun visit(instance: Selector) {
-            instance.namespace().forEach { id ->
+            instance.namespace.forEach { id ->
                 this.registry[id] = instance
             }
         }

@@ -1,5 +1,6 @@
 package com.gitee.planners.api.common.script.kether
 
+import com.gitee.planners.api.common.script.kether.KetherHelper.createSimpleKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper.simpleKetherParser
 import taboolib.library.kether.QuestActionParser
 import taboolib.library.reflex.ReflexClass
@@ -44,7 +45,7 @@ abstract class MultipleKetherParser(vararg id: String) : SimpleKetherParser(*id)
             }
             // scriptParser combinationParser
             else if (ScriptActionParser::class.java.isAssignableFrom(field.fieldType)) {
-                val parser = simpleKetherParser(field.name) {
+                val parser = createSimpleKetherParser(field.name) {
                     field.get(this) as ScriptActionParser<Any>
                 }
                 registerInternalCombinationParser(arrayOf(field.name), parser)
