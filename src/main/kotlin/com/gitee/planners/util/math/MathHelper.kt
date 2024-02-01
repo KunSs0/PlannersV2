@@ -3,10 +3,6 @@ package com.gitee.planners.util.math
 import org.bukkit.Location
 import org.ejml.simple.SimpleMatrix
 import taboolib.common.util.Vector
-import kotlin.math.cos
-import kotlin.math.sin
-
-typealias MatrixTransform = (SimpleMatrix) -> SimpleMatrix
 
 
 /**
@@ -23,8 +19,8 @@ inline fun <reified T : Any> Any.asVector(after: (x: Double, y: Double, z: Doubl
         is Location -> after(x, y, z)
         // EJML matrix
         is SimpleMatrix -> {
-            assert((numCols() == 3 || numCols() == 4) && numRows() == 1) {
-                "Expected 1x3 or 1x4 matrix but the matrix has dimensions ${numRows()}x${numCols()}"
+            assert((numCols == 3 || numCols == 4) && numRows == 1) {
+                "Expected 1x3 or 1x4 matrix but the matrix has dimensions ${numRows}x${numCols}"
             }
             after(this[0, 0], this[0, 1], this[0, 2])
         }

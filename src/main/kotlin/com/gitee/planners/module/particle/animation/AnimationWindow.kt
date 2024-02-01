@@ -1,11 +1,15 @@
 package com.gitee.planners.module.particle.animation
 
-import com.gitee.planners.util.MatrixTransform
+import com.gitee.planners.util.math.MatrixTransform
+import org.ejml.simple.SimpleMatrix
 import taboolib.common5.cint
 
-class AnimationWindow : Animation() {
+class AnimationWindow : Animation(transform = false) {
 
     private var last: Double = 0.0
+    override fun transform(moment: Double): SimpleMatrix {
+        throw NotImplementedError("This animation does not have a transform function")
+    }
 
     override fun play(moment: Double): MatrixTransform {
         // Get a submatrix of the animation matrix

@@ -5,11 +5,12 @@ import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.common.entity.animated.AnimatedMeta
 import com.gitee.planners.module.particle.animation.Animation
 import com.gitee.planners.module.particle.shape.Shape
+import com.gitee.planners.util.math.MatrixTransform
 import org.bukkit.Bukkit
 import org.ejml.simple.SimpleMatrix
 import taboolib.common.util.Vector
 
-class ParticleAnimated(val particle: Particle) : AbstractAnimated(), Animated.Periodic {
+open class ParticleAnimated(val particle: Particle) : AbstractAnimated(), Animated.Periodic {
 
     private val shapes = mutableListOf<Shape>()
 
@@ -19,10 +20,9 @@ class ParticleAnimated(val particle: Particle) : AbstractAnimated(), Animated.Pe
 
     private val lock = Any()
 
-    protected var isPlaying = false
+    private var isPlaying = false
 
-    protected var baked = false
-
+    private var baked = false
 
     /** The duration of the animation */
     val duration = strictInt("duration", 20, 1) { }
@@ -75,14 +75,44 @@ class ParticleAnimated(val particle: Particle) : AbstractAnimated(), Animated.Pe
             isPlaying = false
         }
 
-        // Transform the shape
-        var frame = bakedShape
+        if (speed.asDouble() == 0.0) {
+            error("The speed of the animation cannot be 0")
+        }
+
+        val transformAnimations = mutableListOf<SimpleMatrix>()
+        val nonTransformAnimations = mutableListOf<MatrixTransform>()
         for (anim in animations) {
             if (anim.start.asInt() < tick.asInt() && tick.asInt() < anim.end.asInt()) {
-                frame = anim.play((tick.asInt() - anim.start.asInt()) / (anim.end.asInt() - anim.start.asInt()).toDouble())(frame)
+                if (anim.transform) {
+                    transformAnimations.add(anim.transform((tick.asInt() - anim.start.asInt()) / (anim.end.asInt() - anim.start.asInt()).toDouble()))
+                } else {
+                    nonTransformAnimations.add(anim.play((tick.asInt() - anim.start.asInt()) / (anim.end.asInt() - anim.start.asInt()).toDouble()))
+                }
             }
         }
 
+        // Get the transformation matrix
+        var transformMatrix: SimpleMatrix? = null
+        for (anim in transformAnimations) {
+            transformMatrix = if (transformMatrix == null) {
+                anim
+            } else {
+                transformMatrix.mult(anim)
+            }
+        }
+
+        // Get the matrix for display
+        var frame = bakedShape.copy()!!
+        for (anim in nonTransformAnimations) {
+            frame = anim(frame)
+        }
+
+        // Get the final matrix
+        if (transformMatrix != null) {
+            frame = transformMatrix.mult(frame)
+        }
+
+        // Display the frame
         for (i in 0 until frame.numRows) {
             val vector = frame.extractVector(true, i) ?: break
             particle.display(vector.get(0), vector.get(1), vector.get(2), vector.get(3), life.asInt())
@@ -105,6 +135,10 @@ class ParticleAnimated(val particle: Particle) : AbstractAnimated(), Animated.Pe
         } else {
             TODO("Implement the animation")
         }
+    }
+
+    fun pause() = synchronized(lock) {
+        isPlaying = false // Will pause by next frame
     }
 
     override fun handleUpdate(metadata: AnimatedMeta.CoerceMeta<Any>) = synchronized(lock) {

@@ -83,12 +83,47 @@ object ActionVector : MultipleKetherParser("vector") {
         }
     }
 
+    @KetherEditor.Document("vector norm <vector>")
+    val norm = KetherHelper.combinedKetherParser("norm") {
+        it.group(actionVector()).apply(it) { vector ->
+            now { vector.clone().normalize() }
+        }
+    }
+
+    @KetherEditor.Document("vector length <vector>")
+    val length = KetherHelper.combinedKetherParser("length") {
+        it.group(actionVector()).apply(it) { vector ->
+            now { vector.length() }
+        }
+    }
+
+    @KetherEditor.Document("vector dot <vector> <vector>")
+    val dot = KetherHelper.combinedKetherParser("dot") {
+        it.group(actionVector(), actionVector()).apply(it) { vector1, vector2 ->
+            now { vector1.dot(vector2) }
+        }
+    }
+
+    @KetherEditor.Document("vector cross <vector> <vector>")
+    val cross = KetherHelper.combinedKetherParser("cross", "cross-product") {
+        it.group(actionVector(), actionVector()).apply(it) { vector1, vector2 ->
+            now { vector1.clone().crossProduct(vector2) }
+        }
+    }
+
+    @KetherEditor.Document("vector scale <vector> <number>")
+    val scale = KetherHelper.combinedKetherParser("scale") {
+        it.group(actionVector(), double()).apply(it) { vector, value ->
+            now { vector.clone().multiply(value) }
+        }
+    }
+
     /**
      * 解析位置
      * @param value 位置字符串
      * @param offset 相对位置
      */
-    fun parseVector(value: String, offset: Double = 0.0): Double {
+    private fun parseVector(value: String, offset: Double = 0.0): Double {
         return if (value.startsWith("~")) { // Use relative position
             val loc: Double = try {
                 if (value.length == 1) 0.0 else value.substring(1).cdouble

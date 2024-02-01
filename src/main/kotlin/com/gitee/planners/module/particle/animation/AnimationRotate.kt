@@ -1,6 +1,7 @@
 package com.gitee.planners.module.particle.animation
 
-import com.gitee.planners.util.rotateMatrix
+import com.gitee.planners.util.math.rotation
+import org.ejml.simple.SimpleMatrix
 import taboolib.common5.cint
 
 class AnimationRotate : Animation() {
@@ -26,5 +27,7 @@ class AnimationRotate : Animation() {
 
     private var radians: Double = 0.0
 
-    override fun play(moment: Double) = rotateMatrix(radians, axis.asInt())
+    override fun transform(moment: Double): SimpleMatrix {
+        return rotation(radians * moment, axis.asInt())
+    }
 }
