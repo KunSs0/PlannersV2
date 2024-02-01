@@ -6,11 +6,12 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 
-fun Metadata.toVector3f() : SimpleMatrix {
+fun Metadata.toVector3f(): SimpleMatrix {
     return any().asVector { x, y, z ->
         SimpleMatrix(1, 3, true, doubleArrayOf(x, y, z))
     }
 }
+
 fun Metadata.toVector4f(): SimpleMatrix {
     return any().asVector { x, y, z ->
         SimpleMatrix(1, 4, true, doubleArrayOf(x, y, z, 1.0))
@@ -21,6 +22,17 @@ fun Metadata.toVector4d(): SimpleMatrix {
     return any().asVector { x, y, z ->
         SimpleMatrix(1, 4, true, doubleArrayOf(x, y, z, 0.0))
     }
+}
+
+fun createZeroMatrix(): SimpleMatrix {
+    return SimpleMatrix(
+        arrayOf(
+            doubleArrayOf(0.0, 0.0, 0.0, 0.0),
+            doubleArrayOf(0.0, 0.0, 0.0, 0.0),
+            doubleArrayOf(0.0, 0.0, 0.0, 0.0),
+            doubleArrayOf(0.0, 0.0, 0.0, 0.0),
+        )
+    )
 }
 
 /**
@@ -40,13 +52,13 @@ fun SimpleMatrix.rotation(angle: Double, axis: Int): SimpleMatrix {
     }
     return this.mult(
         SimpleMatrix(
-        arrayOf(
-            doubleArrayOf(if (x == 1) 1.0 else cos, if (y == 1) -sin else 0.0, if (z == 1) sin else 0.0, 0.0),
-            doubleArrayOf(if (x == 2) 0.0 else sin, if (y == 2) 1.0 else cos, if (z == 2) -sin else 0.0, 0.0),
-            doubleArrayOf(if (x == 3) 0.0 else -sin, if (y == 3) sin else 0.0, if (z == 3) 1.0 else cos, 0.0),
-            doubleArrayOf(0.0, 0.0, 0.0, 1.0)
+            arrayOf(
+                doubleArrayOf(if (x == 1) 1.0 else cos, if (y == 1) -sin else 0.0, if (z == 1) sin else 0.0, 0.0),
+                doubleArrayOf(if (x == 2) 0.0 else sin, if (y == 2) 1.0 else cos, if (z == 2) -sin else 0.0, 0.0),
+                doubleArrayOf(if (x == 3) 0.0 else -sin, if (y == 3) sin else 0.0, if (z == 3) 1.0 else cos, 0.0),
+                doubleArrayOf(0.0, 0.0, 0.0, 1.0)
+            )
         )
-    )
     )
 }
 
@@ -62,11 +74,11 @@ fun SimpleMatrix.scale(x: Double, y: Double, z: Double): SimpleMatrix {
     return this.mult(
         SimpleMatrix(
             arrayOf(
-        doubleArrayOf(x, 0.0, 0.0, 0.0),
-        doubleArrayOf(0.0, y, 0.0, 0.0),
-        doubleArrayOf(0.0, 0.0, z, 0.0),
-        doubleArrayOf(0.0, 0.0, 0.0, 1.0)
-    )
+                doubleArrayOf(x, 0.0, 0.0, 0.0),
+                doubleArrayOf(0.0, y, 0.0, 0.0),
+                doubleArrayOf(0.0, 0.0, z, 0.0),
+                doubleArrayOf(0.0, 0.0, 0.0, 1.0)
+            )
         )
     )
 }
@@ -82,11 +94,11 @@ fun SimpleMatrix.translate(x: Double, y: Double, z: Double): SimpleMatrix {
     return this.mult(
         SimpleMatrix(
             arrayOf(
-        doubleArrayOf(1.0, 0.0, 0.0, x),
-        doubleArrayOf(0.0, 1.0, 0.0, y),
-        doubleArrayOf(0.0, 0.0, 1.0, z),
-        doubleArrayOf(0.0, 0.0, 0.0, 1.0)
-    )
+                doubleArrayOf(1.0, 0.0, 0.0, x),
+                doubleArrayOf(0.0, 1.0, 0.0, y),
+                doubleArrayOf(0.0, 0.0, 1.0, z),
+                doubleArrayOf(0.0, 0.0, 0.0, 1.0)
+            )
         )
     )
 }
@@ -94,15 +106,14 @@ fun SimpleMatrix.translate(x: Double, y: Double, z: Double): SimpleMatrix {
 /**
  * Apply the identity matrix
  */
-fun SimpleMatrix.identity(): SimpleMatrix {
-    return this.mult(
-        SimpleMatrix(
-            arrayOf(
-        doubleArrayOf(1.0, 0.0, 0.0, 0.0),
-        doubleArrayOf(0.0, 1.0, 0.0, 0.0),
-        doubleArrayOf(0.0, 0.0, 1.0, 0.0),
-        doubleArrayOf(0.0, 0.0, 0.0, 1.0)
-    )
+fun createIdentityMatrix(): SimpleMatrix {
+    return SimpleMatrix(
+        arrayOf(
+            doubleArrayOf(1.0, 0.0, 0.0, 0.0),
+            doubleArrayOf(0.0, 1.0, 0.0, 0.0),
+            doubleArrayOf(0.0, 0.0, 1.0, 0.0),
+            doubleArrayOf(0.0, 0.0, 0.0, 1.0)
         )
     )
+
 }

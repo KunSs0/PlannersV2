@@ -11,13 +11,9 @@ import org.bukkit.entity.EntityType
 import taboolib.library.kether.Parser
 import taboolib.module.kether.*
 
-object InWorld : Selector {
+object InWorld : AbstractSelector("inworld","inWorld","in-world") {
 
-    override fun namespace(): Array<String> {
-        return arrayOf("inworld", "inWorld")
-    }
-
-    override fun action() = KetherHelper.combinedKetherParser {
+    override fun select() = KetherHelper.combinedKetherParser {
         it.group(bukkitWorldListOf(), commandEnumListOf<EntityType>("type")).apply(it) { worlds, types ->
             now {
                 val entities = worlds.flatMap { it.entities }.filter { it.isDead && (types.isEmpty() || it.type in types) }

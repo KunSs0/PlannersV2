@@ -5,9 +5,14 @@ import com.gitee.planners.api.common.script.kether.SimpleKetherParser
 
 interface Selector {
 
-    fun namespace(): Array<String>
+    val namespace: Array<String>
 
-    fun action(): SimpleKetherParser
+    fun select(): SimpleKetherParser
 
+    interface Filterable {
+
+        fun filter(): SimpleKetherParser
+
+    }
 
 }

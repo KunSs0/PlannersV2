@@ -9,13 +9,10 @@ import org.bukkit.entity.EntityType
 import taboolib.common.util.asList
 import taboolib.module.kether.combinationParser
 
-object EntityType : Selector {
+object EntityType : AbstractSelector("type","entity-type") {
 
-    override fun namespace(): Array<String> {
-        return arrayOf("type", "entity-type")
-    }
 
-    override fun action() = KetherHelper.combinedKetherParser {
+    override fun select() = KetherHelper.combinedKetherParser {
         it.group(any()).apply(it) { types ->
             val entityTypes = types!!.asList().map { EntityType.valueOf(it.uppercase().replace(".", "_").trim()) }
             now {
@@ -23,4 +20,5 @@ object EntityType : Selector {
             }
         }
     }
+
 }

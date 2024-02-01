@@ -17,24 +17,18 @@ import taboolib.module.kether.*
 import java.util.concurrent.CompletableFuture
 
 
-private object Sender : Selector {
-    override fun namespace(): Array<String> {
-        return arrayOf("sender", "self")
-    }
+private object Sender : AbstractSelector("sender","self") {
 
-    override fun action(): SimpleKetherParser {
+    override fun select(): SimpleKetherParser {
         return KetherHelper.simpleKetherVoid {
             getTargetContainer() += getEnvironmentContext().sender
         }
     }
 }
 
-private object Console : Selector {
-    override fun namespace(): Array<String> {
-        return arrayOf("console")
-    }
+private object Console : AbstractSelector("console") {
 
-    override fun action(): SimpleKetherParser {
+    override fun select(): SimpleKetherParser {
         return KetherHelper.simpleKetherVoid {
             getTargetContainer() += Bukkit.getConsoleSender().adaptTarget()
         }

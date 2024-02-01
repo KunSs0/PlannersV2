@@ -15,21 +15,18 @@ import taboolib.module.kether.combinationParser
  * * ct-location ...
  * ct-loc ...
  */
-object ConvertToLocation: Selector {
-    override fun namespace(): Array<String> {
-        return arrayOf("convert-to-location","ct-location","ct-loc")
-    }
+object ConvertToLocation: AbstractSelector("convert-to-location","ct-location","ct-loc") {
 
-    override fun action() = KetherHelper.combinedKetherParser {
-        it.group(commandEnum("rule",MatchRule.DEFAULT)).apply(it) { match ->
+    override fun select() = KetherHelper.combinedKetherParser {
+        it.group(commandEnum("rule",Type.DEFAULT)).apply(it) { match ->
             now {
                 this.getTargetContainer().modified {
                     if (it is TargetEntity<*>) {
                         when (match) {
-                            MatchRule.DEFAULT -> {
+                            Type.DEFAULT -> {
                                 it.getBukkitLocation().adaptTarget()
                             }
-                            MatchRule.EYE -> {
+                            Type.EYE -> {
                                 it.getBukkitEyeLocation().adaptTarget()
                             }
                             else -> error("Unknown match-rule type for $match")
@@ -42,7 +39,7 @@ object ConvertToLocation: Selector {
         }
     }
 
-    private enum class MatchRule {
+    private enum class Type {
 
         DEFAULT,EYE
 

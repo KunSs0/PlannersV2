@@ -65,7 +65,9 @@ private fun actionFunction() = KetherHelper.combinedKetherParser("inline", "func
                 }
             }
             runKether(text) {
-                SingletonKetherScript(text).run(options).getNow(null).toString()
+                KetherFunction.reader.replaceNested(text) {
+                    SingletonKetherScript(this).run(options).getNow(null).toString()
+                }
             }
         }
     }

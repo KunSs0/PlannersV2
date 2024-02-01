@@ -11,13 +11,10 @@ import com.gitee.planners.module.kether.getTargetContainer
 import taboolib.common.util.Vector
 import taboolib.module.kether.combinationParser
 
-object Range : Selector {
+object Range : AbstractSelector("range") {
 
-    override fun namespace(): Array<String> {
-        return arrayOf("range")
-    }
 
-    override fun action() = KetherHelper.combinedKetherParser {
+    override fun select() = KetherHelper.combinedKetherParser {
         it.group(double()).apply(it) { r ->
             now {
                 val vector = Vector(r, r, r)

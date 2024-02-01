@@ -2,7 +2,13 @@ package com.gitee.planners.api.job.target
 
 interface Target<T> {
 
-    fun getInstance() : T
+    fun getInstance(): T
+
+    interface Named {
+
+        fun getName(): String
+
+    }
 
     companion object {
 
