@@ -1,20 +1,20 @@
-package com.gitee.planners.module.kether.common
+package com.gitee.planners.module.kether.math
 
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.Target.Companion.cast
-import com.gitee.planners.api.job.target.Target.Companion.castUnsafely
+import com.gitee.planners.api.job.target.TargetBukkitEntity
 import com.gitee.planners.api.job.target.TargetLocation
-import com.gitee.planners.module.kether.actionVector
-import com.gitee.planners.module.kether.commandObjectiveOrOrigin
-import com.gitee.planners.module.kether.getEnvironmentContext
+import com.gitee.planners.module.kether.*
+import com.gitee.planners.util.math.asSimpleMatrix
 import taboolib.common.OpenResult
 import taboolib.common.util.Vector
 import taboolib.common5.cdouble
 import taboolib.module.kether.KetherProperty
 import taboolib.module.kether.ScriptProperty
+import kotlin.math.cos
 
 @KetherEditor.Document("vector ...")
 @CombinationKetherParser.Used
@@ -57,14 +57,38 @@ object ActionVector : MultipleKetherParser("vector") {
     @Suppress("NAME_SHADOWING")
     @KetherEditor.Document("vector new <x:Number> <y:Number> <z:Number> [at objective:TargetContainer(sender)]")
     val create = KetherHelper.combinedKetherParser("new") {
-        it.group(text(), text(), text(),commandObjectiveOrOrigin()).apply(it) { x, y, z,origin ->
+        it.group(text(), text(), text(), commandObjectiveOrOrigin()).apply(it) { x, y, z, origin ->
             now {
-                val origin = origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: this.getEnvironmentContext().origin.cast()
+                val origin = origin.filterIsInstance<TargetLocation<*>>().firstOrNull()
+                        ?: this.getEnvironmentContext().origin.cast()
                 Vector(
-                    parseVector(x,origin?.getX() ?: 0.0),
-                    parseVector(y,origin?.getY() ?: 0.0),
-                    parseVector(z,origin?.getZ() ?: 0.0),
+                        parseVector(x, origin?.getX() ?: 0.0),
+                        parseVector(y, origin?.getY() ?: 0.0),
+                        parseVector(z, origin?.getZ() ?: 0.0),
                 ) // Return the vector
+            }
+        }
+    }
+
+    /**
+     * 返回一个 Vector 对象, 该向量指向目标看向的位置
+     *
+     * 例如: vector looking-at [of objective:TargetContainer(sender)]
+     * 默认目标为执行者
+     */
+    @KetherEditor.Document("vector looking-at|sight [of objective:TargetContainer(sender)] [scale <number>]")
+    val lookingAt = KetherHelper.combinedKetherParser("looking-at", "sight") {
+        it.group(commandObjectiveOrSender("of"), commandDouble("scale", 1.0)).apply(it) { targets, scale ->
+            now {
+                val entity = targets.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance()
+                        ?: error("No entity found")
+                val yaw = Math.toRadians(entity.location.yaw.toDouble())
+                val pitch = Math.toRadians(entity.location.pitch.toDouble())
+                Vector(
+                        -kotlin.math.sin(yaw) * cos(pitch),
+                        -kotlin.math.sin(pitch),
+                        cos(yaw) * cos(pitch)
+                ).normalize().multiply(scale)
             }
         }
     }
@@ -115,6 +139,47 @@ object ActionVector : MultipleKetherParser("vector") {
     val scale = KetherHelper.combinedKetherParser("scale") {
         it.group(actionVector(), double()).apply(it) { vector, value ->
             now { vector.clone().multiply(value) }
+        }
+    }
+
+    @KetherEditor.Document("vector angle <vector> <vector>")
+    val angle = KetherHelper.combinedKetherParser("angle") {
+        it.group(actionVector(), actionVector()).apply(it) { vector1, vector2 ->
+            now { vector1.angle(vector2) }
+        }
+    }
+
+    val projection = KetherHelper.combinedKetherParser("proj", "projection") {
+        it.group(actionVector(), actionVector()).apply(it) { vector1, vector2 ->
+            now { vector2.multiply(vector1.dot(vector2) / vector2.dot(vector2)) }
+        }
+    }
+
+    @KetherEditor.Document("vector rotate <vector> <angle:radian> <axis:Vector>")
+    val rotate = KetherHelper.combinedKetherParser("rotate") {
+        it.group(actionVector(), double(), actionVector()).apply(it) { vector, angle, axis ->
+            now { vector.clone().rotateAroundAxis(axis, angle) }
+        }
+    }
+
+    @KetherEditor.Document("vector rotate <vector> <angle:radian> <axis:x|y|z>")
+    val rotateOn = KetherHelper.combinedKetherParser("rotate-on") {
+        it.group(actionVector(), double(), text()).apply(it) { vector, angle, axis ->
+            now {
+                when (axis) {
+                    "x" -> vector.clone().rotateAroundX(angle)
+                    "y" -> vector.clone().rotateAroundY(angle)
+                    "z" -> vector.clone().rotateAroundZ(angle)
+                    else -> error("Unknown axis $axis")
+                }
+            }
+        }
+    }
+
+    @KetherEditor.Document("vector mult-matrix <vector> <matrix:Matrix>")
+    val multMatrix = KetherHelper.combinedKetherParser("mult-matrix", "mult-m") {
+        it.group(actionVector(), actionTransformMatrix()).apply(it) { vector, matrix ->
+            now { matrix.copy().mult(vector.asSimpleMatrix()) }
         }
     }
 

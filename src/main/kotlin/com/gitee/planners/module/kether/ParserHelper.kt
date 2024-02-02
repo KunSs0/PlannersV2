@@ -3,7 +3,10 @@ package com.gitee.planners.module.kether
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.module.kether.selector.ActionTargetContainer
+import com.gitee.planners.module.particle.ParticleAnimated
+import com.gitee.planners.util.math.asTransformMatrix
 import com.gitee.planners.util.math.asVector
+import taboolib.common.util.Vector
 import taboolib.common5.cbool
 import taboolib.common5.cdouble
 import taboolib.common5.cfloat
@@ -30,6 +33,14 @@ fun ParserHolder.actionFloat() = actionType { it.cfloat }
 fun ParserHolder.actionBool() = actionType { it.cbool }
 
 fun ParserHolder.actionVector() = actionType { it?.asVector() ?: error("Missing argument") }
+
+fun ParserHolder.actionTransformMatrix() = actionType { it?.asTransformMatrix() ?: error("Missing argument") }
+
+fun ParserHolder.actionParticle() = actionType {
+    it?.let {
+        it as? ParticleAnimated ?: error("Invalid particle")
+    } ?: error("Missing argument")
+}
 
 fun QuestReader.catchParsedAction(token: String, defaultValue: Any?): ParsedAction<*> {
     val parsedAction = this.catchParsedActionOrNull(token)
@@ -149,6 +160,10 @@ fun ParserHolder.commandFloat(token: String, defaultValue: Float = 0f): Parser<F
 
 fun ParserHolder.commandDouble(token: String, defaultValue: Double = 0.0): Parser<Double> {
     return command(token, then = double()).option().defaultsTo(defaultValue)
+}
+
+fun ParserHolder.commandVector(token: String, defaultValue: Vector = Vector(0, 0, 0)): Parser<Vector> {
+    return command(token, then = actionVector()).option().defaultsTo(defaultValue)
 }
 
 /**

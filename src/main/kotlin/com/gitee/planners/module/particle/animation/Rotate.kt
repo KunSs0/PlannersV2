@@ -1,10 +1,10 @@
 package com.gitee.planners.module.particle.animation
 
-import com.gitee.planners.util.math.rotation
+import com.gitee.planners.util.math.rotate
 import org.ejml.simple.SimpleMatrix
 import taboolib.common5.cint
 
-class AnimationRotate : Animation() {
+class Rotate : ParticleAnimation() {
 
     val axis = createBaked("axis", 0,
             parser = {
@@ -27,7 +27,7 @@ class AnimationRotate : Animation() {
 
     private var radians: Double = 0.0
 
-    override fun transform(moment: Double): SimpleMatrix {
-        return rotation(radians * moment, axis.asInt())
+    override fun apply(input: SimpleMatrix, moment: Double): SimpleMatrix {
+        return input.rotate(radians * moment, axis.asInt())
     }
 }

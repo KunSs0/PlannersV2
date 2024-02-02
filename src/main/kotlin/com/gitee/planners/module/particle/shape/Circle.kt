@@ -5,7 +5,7 @@ import taboolib.common.util.Vector
 import kotlin.math.cos
 import kotlin.math.sin
 
-class Circle : Shape() {
+class Circle : ParticleShape() {
 
     private val centerMatrix = SimpleMatrix(1, 4, true, 0.0, 0.0, 0.0, 1.0)
 

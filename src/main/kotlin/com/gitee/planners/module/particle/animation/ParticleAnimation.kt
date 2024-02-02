@@ -1,7 +1,6 @@
 package com.gitee.planners.module.particle.animation
 
 import com.gitee.planners.api.common.entity.animated.AbstractAnimated
-import com.gitee.planners.util.math.MatrixTransform
 import org.ejml.simple.SimpleMatrix
 
 /**
@@ -11,19 +10,17 @@ import org.ejml.simple.SimpleMatrix
  *                      If false, the animation will transform the shape's vertices.
 
  */
-abstract class Animation(val transform: Boolean = false) : AbstractAnimated() {
+abstract class ParticleAnimation(val transform: Boolean = false) : AbstractAnimated() {
 
     val start = strictInt("start", 0) { }
 
     val end = strictInt("end", 1) { }
 
+    val stay = bool("stay", true) { }
+
     /**
      * Play the animation at the given moment. moment is a value between 0 and 1.
      */
-    abstract fun transform(moment: Double): SimpleMatrix
-
-    open fun play(moment: Double): MatrixTransform {
-        return { m -> m.mult(transform(moment)) }
-    }
+    abstract fun apply(input: SimpleMatrix, moment: Double): SimpleMatrix
 
 }

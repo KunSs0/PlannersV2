@@ -1,6 +1,7 @@
 package com.gitee.planners.module.particle.shape
 
 import com.gitee.planners.api.common.entity.animated.AbstractAnimated
+import com.gitee.planners.util.math.createIdentityMatrix
 import org.ejml.simple.SimpleMatrix
 import taboolib.common5.cdouble
 
@@ -8,13 +9,16 @@ import taboolib.common5.cdouble
  * Shape of the particle
  *
  */
-abstract class Shape : AbstractAnimated() {
+abstract class ParticleShape : AbstractAnimated() {
+
+    val transformMatrix: SimpleMatrix = createIdentityMatrix()
 
     /**
      * Shape of the particle at the given moment
      * described as a function in 3d space
      *
-     * @param t The moment. The return has to be a nx4 matrix
+     * @param t The moment. Between 0 and 1
+     * @return The return has to be a nx4 matrix
      */
     abstract fun shape(t: Double): SimpleMatrix
 
@@ -38,7 +42,7 @@ abstract class Shape : AbstractAnimated() {
             t += step
         }
 
-        return shape!!
+        return shape!!.mult(transformMatrix)
     }
 
 }
