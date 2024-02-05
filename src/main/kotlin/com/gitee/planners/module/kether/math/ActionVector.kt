@@ -162,7 +162,7 @@ object ActionVector : MultipleKetherParser("vector") {
         }
     }
 
-    @KetherEditor.Document("vector rotate <vector> <angle:radian> <axis:x|y|z>")
+    @KetherEditor.Document("vector rotate-on <vector> <angle:radian> <axis:x|y|z>")
     val rotateOn = KetherHelper.combinedKetherParser("rotate-on") {
         it.group(actionVector(), double(), text()).apply(it) { vector, angle, axis ->
             now {

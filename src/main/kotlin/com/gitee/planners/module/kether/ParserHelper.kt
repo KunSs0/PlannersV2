@@ -105,7 +105,7 @@ fun ParserHolder.commandObjectiveOrConsole(vararg expect: String) : Parser<Targe
 }
 
 inline fun <reified T : Enum<T>> getEnumWithIdOrNull(name: String): T? {
-    return T::class.java.enumConstants.firstOrNull { it.name == name }
+    return T::class.java.enumConstants.firstOrNull { it.name.equals(name, ignoreCase = true) }
 }
 
 inline fun <reified T : Enum<T>> getEnumWithId(name: String): T {
