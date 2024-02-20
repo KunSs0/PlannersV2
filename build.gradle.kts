@@ -27,12 +27,13 @@ taboolib {
         dependencies {
             name("PlaceholderAPI").optional(true)
             name("MythicMobs").optional(true)
+            name("Vault").optional(true)
         }
     }
 }
 tasks.withType<Jar> {
-//    destinationDir = file("$projectDir/build-jar")
-    destinationDir = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
+    destinationDir = file("$projectDir/build-jar")
+//    destinationDir = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
 repositories {
