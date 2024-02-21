@@ -4,10 +4,10 @@ import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
-import com.gitee.planners.api.job.particle.ParticleRegistry
+import com.gitee.planners.api.job.particle.ParticleSpawnRegistry
 import com.gitee.planners.api.job.target.TargetLocation
 import com.gitee.planners.module.kether.*
-import com.gitee.planners.module.particle.ParticleAnimated
+import com.gitee.planners.module.particle.BukkitParticle
 import com.gitee.planners.module.particle.shape.Circle
 import com.gitee.planners.module.particle.shape.Line
 import com.gitee.planners.module.particle.shape.ParticleShape
@@ -19,7 +19,7 @@ import org.bukkit.Bukkit
 object ActionParticle : MultipleKetherParser("particle") {
 
     @KetherEditor.Document("particle new <type:particle> [at location:location] [with shape:particle shape] " +
-            "[animated:bool] [duration:Number]", result = ParticleAnimated::class)
+            "[animated:bool] [duration:Number]", result = BukkitParticle::class)
     val create = KetherHelper.combinedKetherParser("new") {
         it.group(text(),
                 commandObjectiveOrOrigin(),
@@ -29,21 +29,21 @@ object ActionParticle : MultipleKetherParser("particle") {
             val nameSplit = type.split(":") // e.g.: minecraft:flame
             // Get particle type. TODO: Add Germ particles
             val (particle, id) = if (nameSplit.size == 1) {
-                ParticleRegistry.getDefault() to nameSplit[0]
+                ParticleSpawnRegistry.getDefault() to nameSplit[0]
             } else {
-                ParticleRegistry.get(nameSplit[0]) to nameSplit[1]
+                ParticleSpawnRegistry.get(nameSplit[0]) to nameSplit[1]
             }
-            val particleAnimated = ParticleAnimated(particle, id,
+            val bukkitParticle = BukkitParticle(particle, id,
                     origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("No location available"))
-            particleAnimated.animated.set(animated)
-            particleAnimated.duration.set(duration)
+            bukkitParticle.animated.set(animated)
+            bukkitParticle.duration.set(duration)
             if (shape != "")
-                particleAnimated.addShape(newParticleShape(shape))
+                bukkitParticle.addShape(newParticleShape(shape))
 
             // TODO support metadata map
 
             now {
-                particleAnimated
+                bukkitParticle
             }
 
         }

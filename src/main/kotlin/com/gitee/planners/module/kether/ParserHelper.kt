@@ -3,7 +3,7 @@ package com.gitee.planners.module.kether
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.module.kether.selector.ActionTargetContainer
-import com.gitee.planners.module.particle.ParticleAnimated
+import com.gitee.planners.module.particle.BukkitParticle
 import com.gitee.planners.util.math.asTransformMatrix
 import com.gitee.planners.util.math.asVector
 import taboolib.common.util.Vector
@@ -38,7 +38,7 @@ fun ParserHolder.actionTransformMatrix() = actionType { it?.asTransformMatrix() 
 
 fun ParserHolder.actionParticle() = actionType {
     it?.let {
-        it as? ParticleAnimated ?: error("Invalid particle")
+        it as? BukkitParticle ?: error("Invalid particle")
     } ?: error("Missing argument")
 }
 
@@ -81,7 +81,7 @@ fun ParserHolder.commandObjective(expect: Array<String> = ActionTargetContainer.
         } else {
             expect
         }
-        val parser = ActionTargetContainer.parser(expects, r, type, false)
+        val parser = ActionTargetContainer.parser(expects, r, type)
         Action { frame ->
             parser.process(frame)
         }

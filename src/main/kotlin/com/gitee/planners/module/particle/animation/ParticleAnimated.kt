@@ -10,7 +10,7 @@ import org.ejml.simple.SimpleMatrix
  *                      If false, the animation will transform the shape's vertices.
 
  */
-abstract class ParticleAnimation(val transform: Boolean = false) : AbstractAnimated() {
+abstract class ParticleAnimated(val transform: Boolean = false) : AbstractAnimated() {
 
     val start = strictInt("start", 0) { }
 

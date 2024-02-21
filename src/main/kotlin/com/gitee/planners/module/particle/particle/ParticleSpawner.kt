@@ -3,7 +3,7 @@ package com.gitee.planners.module.particle.particle
 import taboolib.common.util.Location
 import taboolib.common.util.Vector
 
-abstract class Particle(val namespace: Array<String>) {
+abstract class ParticleSpawner(val namespace: Array<String>) {
 
 
     /**

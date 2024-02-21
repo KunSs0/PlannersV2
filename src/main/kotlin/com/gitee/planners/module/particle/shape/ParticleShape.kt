@@ -34,7 +34,7 @@ abstract class ParticleShape : AbstractAnimated() {
         for (i in 0 until numSamples) {
             val vector = shape(t)
 
-            assert(vector.numCols == 4) { "The shape function has to return a nx4 matrix" }
+            assert(vector.numCols() == 4) { "The shape function has to return a nx4 matrix" }
 
             // Stack the vectors
             shape = if (shape == null) vector else shape.concatRows(vector)

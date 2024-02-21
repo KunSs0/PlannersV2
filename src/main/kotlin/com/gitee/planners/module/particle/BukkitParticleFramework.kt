@@ -1,13 +1,12 @@
 package com.gitee.planners.module.particle
 
-import com.gitee.planners.module.particle.animation.ParticleAnimation
+import com.gitee.planners.module.particle.animation.ParticleAnimated
 import com.gitee.planners.util.math.createIdentityMatrix
 import org.ejml.simple.SimpleMatrix
 
-class AnimationPlayer(animations: MutableList<ParticleAnimation>, bakedShape: SimpleMatrix,
-                      var tick: Int, val duration: Int, val backward: Boolean = false, val spawner: (x: Double, y: Double, z: Double) -> Unit) {
+class BukkitParticleFramework(animations: MutableList<ParticleAnimated>, bakedShape: SimpleMatrix, var tick: Int, val duration: Int, val backward: Boolean = false, val spawner: (x: Double, y: Double, z: Double) -> Unit) {
 
-    val animations: MutableList<ParticleAnimation>
+    val animations: MutableList<ParticleAnimated>
 
     var bakedShape: SimpleMatrix
 
@@ -20,7 +19,7 @@ class AnimationPlayer(animations: MutableList<ParticleAnimation>, bakedShape: Si
         this.animations = animations.toMutableList()
     }
 
-    private fun moment(animation: ParticleAnimation): Double {
+    private fun moment(animation: ParticleAnimated): Double {
         return if (!backward) {
             (tick - animation.start.asInt()) / (animation.end.asInt() - animation.start.asInt()).toDouble()
         } else {
@@ -43,7 +42,7 @@ class AnimationPlayer(animations: MutableList<ParticleAnimation>, bakedShape: Si
         // Get the transformation matrix
         var transformMatrix: SimpleMatrix = createIdentityMatrix()
 
-        val nonTransformAnimations = mutableListOf<ParticleAnimation>()
+        val nonTransformAnimations = mutableListOf<ParticleAnimated>()
 
         val animationIterator = animations.iterator()
         while (animationIterator.hasNext()) {
@@ -71,7 +70,7 @@ class AnimationPlayer(animations: MutableList<ParticleAnimation>, bakedShape: Si
         shape = shape.mult(transformMatrix)
 
         // Display the frame
-        for (i in 0 until shape.numRows) {
+        for (i in 0 until shape.numRows()) {
             val vector = shape.extractVector(true, i) ?: break
             spawner(vector.get(0), vector.get(1), vector.get(2))
         }

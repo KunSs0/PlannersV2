@@ -7,6 +7,8 @@ import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
+import com.gitee.planners.api.common.util.DefaultNearestEntityFinder
+import com.gitee.planners.api.common.util.EntitySynchronousSampling
 import com.gitee.planners.api.common.util.NearestEntityFinder
 import com.gitee.planners.api.common.util.PathTrace
 import com.gitee.planners.module.kether.context.AbstractComplexScriptContext
@@ -89,7 +91,8 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
                         return@submit
                     }
                     entity.teleport(location)
-                    NearestEntityFinder(location).request().filter { it != entity && baffle.hasNext(it.uniqueId.toString(),true) }.forEach {
+                    val nearestEntityFinder = DefaultNearestEntityFinder(location, EntitySynchronousSampling(location.world!!).get())
+                    nearestEntityFinder.request().filter { it != entity && baffle.hasNext(it.uniqueId.toString(),true) }.forEach {
                         // 如果非自由节点 并且命中了 origin 直接过滤掉本次
                         if (!animated.isFreedom.asBoolean() && it == origin.getInstance()) {
                             return@forEach

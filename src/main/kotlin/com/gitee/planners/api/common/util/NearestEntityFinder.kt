@@ -1,30 +1,48 @@
 package com.gitee.planners.api.common.util
 
+import com.gitee.planners.api.common.registry.defaultRegistry
 import org.bukkit.Location
 import org.bukkit.entity.Entity
+import org.bukkit.entity.LivingEntity
+import taboolib.common.platform.Schedule
 import taboolib.module.navigation.BoundingBox
+import java.util.Collections
 
-class NearestEntityFinder(val origin: Location) {
+abstract class NearestEntityFinder(val origin: Location, var samples: List<Entity>) {
 
-    val world = origin.world!!
+    constructor(origin: Location,sampling: EntitySynchronousSampling) : this(origin,sampling.get())
 
-    val center = origin.toVector()
+    abstract fun request(): List<Entity>
 
-    fun request(): List<Entity> {
-        val boundingBoxes = world.entities.map { entity ->
+    fun getBoundingBox(entity: Entity): BoundingBox {
+        return cache.computeIfAbsent(entity) {
             val boundingBoxWidth = entity.width
             val boundingBoxHeight = entity.height
             val x = entity.location.x
             val y = entity.location.y
             val z = entity.location.z
-            entity to BoundingBox(
+            BoundingBox(
                 x - boundingBoxWidth, y - boundingBoxHeight, z - boundingBoxWidth,
                 x + boundingBoxWidth, y + boundingBoxHeight, z + boundingBoxWidth,
             )
         }
-
-        return boundingBoxes.filter { it.second.contains(center) }.map { it.first }
     }
 
+    companion object {
+
+        private val cache = Collections.synchronizedMap(mutableMapOf<Entity,BoundingBox>())
+
+        @Schedule(async = true, period = 20 * 60 * 60)
+        private fun clear() {
+            val iterator = cache.iterator()
+            while (iterator.hasNext()) {
+                val next = iterator.next()
+                if (next.key.isDead || next.key.isEmpty) {
+                    iterator.remove()
+                }
+            }
+        }
+
+    }
 
 }

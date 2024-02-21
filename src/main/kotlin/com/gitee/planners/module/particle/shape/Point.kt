@@ -13,7 +13,7 @@ class Point : ParticleShape() {
     }
 
     override fun shape(t: Double): SimpleMatrix {
-        return SimpleMatrix(1, 4, true, originVector.x, originVector.y, originVector.z, 1.0)
+        return SimpleMatrix(1, 4, true, doubleArrayOf(originVector.x, originVector.y, originVector.z, 1.0))
     }
 
 }

@@ -2,6 +2,7 @@ package com.gitee.planners.module.kether.common
 
 import com.gitee.planners.api.ProfileAPI.plannersProfile
 import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
@@ -17,6 +18,7 @@ import org.bukkit.entity.Player
 @CombinationKetherParser.Used
 object ActionSkill : MultipleKetherParser("skill") {
 
+    @KetherEditor.Document("skill cast <id> [type: relative] [level: 1] [at objective:TargetContainer(sender)]")
     val cast0 = KetherHelper.combinedKetherParser {
         it.group(
             text(),

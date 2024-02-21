@@ -5,9 +5,9 @@ import taboolib.common.util.Vector
 
 class Line : ParticleShape() {
 
-    private val pointMatrix = SimpleMatrix(1, 4, true, 0.0, 0.0, 0.0, 1.0)
+    private val pointMatrix = SimpleMatrix(1, 4, true, doubleArrayOf(0.0, 0.0, 0.0, 1.0))
 
-    private val directionMatrix = SimpleMatrix(1, 4, true, 1.0, 0.0, 0.0, 0.0)
+    private val directionMatrix = SimpleMatrix(1, 4, true, doubleArrayOf(1.0, 0.0, 0.0, 0.0))
 
     val origin = vector("origin", Vector(0, 0, 0)) {
         pointMatrix[0, 0] = it.x

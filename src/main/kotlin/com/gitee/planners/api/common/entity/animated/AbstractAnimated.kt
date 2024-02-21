@@ -7,6 +7,7 @@ import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.util.unboxJavaToKotlin
 import org.bukkit.Bukkit
+import taboolib.common.platform.function.warning
 import taboolib.common.util.Vector
 import taboolib.common5.cbool
 import taboolib.common5.cdouble
@@ -51,55 +52,57 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
     }
 
 
-    fun AbstractAnimated.text(id: String, defaultValue: String, onUpdate: Animated.(data: String) -> Unit) =
-        createBaked(id, defaultValue, parser = { this.toString() }, onUpdate)
+    fun AbstractAnimated.text(id: String, defaultValue: String, onUpdate: Animated.(data: String) -> Unit = {}): AnimatedMeta.CoerceMeta<String> {
+        return createBaked(id, defaultValue, parser = { this.toString() }, onUpdate)
+    }
 
-    fun AbstractAnimated.int(id: String, defaultValue: Int = 0, onUpdate: Animated.(data: Int) -> Unit) =
-        createBaked(id, defaultValue, parser = { this.cint }, onUpdate)
+    fun AbstractAnimated.int(id: String, defaultValue: Int = 0, onUpdate: Animated.(data: Int) -> Unit = {}): AnimatedMeta.CoerceMeta<Int> {
+        return createBaked(id, defaultValue, parser = { this.cint }, onUpdate)
+    }
 
-    fun AbstractAnimated.strictInt(id: String, defaultValue: Int = 0, min: Int = 0, onUpdate: Animated.(data: Int) -> Unit) =
-        createBaked(id, defaultValue, parser = {
-           val value = this.cint
-              if (value < min) {
-                  // I didn't throw an illegal arg here. But some input should be checked.
-                  Bukkit.getLogger().warning("The minimum acceptable value of $id is $min, but get $value.")
-                  min
-              } else
-                  value
-        }, onUpdate)
 
-    fun AbstractAnimated.double(id: String, defaultValue: Double = 0.0, onUpdate: Animated.(data: Double) -> Unit) =
-        createBaked(id, defaultValue, parser = { this.cdouble }, onUpdate)
+    fun AbstractAnimated.strictInt(id: String, defaultValue: Int = 0, min: Int = 0, onUpdate: Animated.(data: Int) -> Unit = {}): AnimatedMeta.CoerceMeta<Int> {
+        val parser: Any.() -> Int = {
+            val value = this.cint
+            if (value < min) {
+                // I didn't throw an illegal arg here. But some input should be checked.
+                warning("The minimum acceptable value of $id is $min, but get $value.")
+                min
+            } else {
+                value
+            }
+        }
 
-    fun AbstractAnimated.float(id: String, defaultValue: Float = 0f, onUpdate: Animated.(data: Float) -> Unit) =
-        createBaked(id, defaultValue, parser = { this.cfloat }, onUpdate)
+        return createBaked(id, defaultValue, parser, onUpdate)
+    }
 
-    fun AbstractAnimated.bool(id: String, defaultValue: Boolean = false, onUpdate: Animated.(data: Boolean) -> Unit) =
-        createBaked(id, defaultValue, parser = { this.cbool }, onUpdate)
+    fun AbstractAnimated.double(id: String, defaultValue: Double = 0.0, onUpdate: Animated.(data: Double) -> Unit = {}): AnimatedMeta.CoerceMeta<Double> {
+        return createBaked(id, defaultValue, parser = { this.cdouble }, onUpdate)
+    }
 
-    fun AbstractAnimated.vector(
-        id: String,
-        defaultValue: Vector,
-        onUpdate: Animated.(data: Vector) -> Unit
-    ): AnimatedMeta.CoerceMeta<Vector> {
+    fun AbstractAnimated.float(id: String, defaultValue: Float = 0f, onUpdate: Animated.(data: Float) -> Unit = {}): AnimatedMeta.CoerceMeta<Float> {
+        return createBaked(id, defaultValue, parser = { this.cfloat }, onUpdate)
+    }
+
+
+    fun AbstractAnimated.bool(id: String, defaultValue: Boolean = false, onUpdate: Animated.(data: Boolean) -> Unit = {}): AnimatedMeta.CoerceMeta<Boolean> {
+        return createBaked(id, defaultValue, parser = { this.cbool }, onUpdate)
+    }
+
+
+    fun AbstractAnimated.vector(id: String, defaultValue: Vector, onUpdate: Animated.(data: Vector) -> Unit): AnimatedMeta.CoerceMeta<Vector> {
         return createBaked(id, defaultValue, parser = { this as Vector }, onUpdate)
     }
 
     fun AbstractAnimated.objective(id: String, defaultValue: LeastType): AnimatedMeta.CoerceMeta<TargetContainer> {
-        return createBaked(id, TargetContainer(), parser = { this as TargetContainer }) {
-
-        }
+        return createBaked(id, TargetContainer(), parser = { this as TargetContainer })
     }
 
-    inline fun <reified T : Any> AbstractAnimated.createBaked(
-        id: String,
-        defaultValue: T,
-        noinline parser: Any.() -> T,
-        noinline onUpdate: Animated.(data: T) -> Unit
-    ): AnimatedMeta.CoerceMeta<T> {
-        return AnimatedMeta.CoerceMeta(id, unboxJavaToKotlin(T::class.java), defaultValue, parser, onUpdate).apply {
-            this@createBaked[id] = this
-        }
+    inline fun <reified T : Any> AbstractAnimated.createBaked(id: String, defaultValue: T, noinline parser: Any.() -> T, noinline onUpdate: Animated.(data: T) -> Unit = {}): AnimatedMeta.CoerceMeta<T> {
+        val unboxJavaToKotlin = unboxJavaToKotlin(T::class.java)
+        val meta = AnimatedMeta.CoerceMeta(id, unboxJavaToKotlin, defaultValue, parser, onUpdate)
+        this@createBaked[id] = meta
+        return meta
     }
 
 

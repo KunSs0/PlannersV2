@@ -7,7 +7,7 @@ import kotlin.math.sin
 
 class Circle : ParticleShape() {
 
-    private val centerMatrix = SimpleMatrix(1, 4, true, 0.0, 0.0, 0.0, 1.0)
+    private val centerMatrix = SimpleMatrix(1, 4, true, doubleArrayOf(0.0, 0.0, 0.0, 1.0))
 
     val center = vector("center", Vector(0, 0, 0)) {
         centerMatrix[0, 0] = it.x
@@ -23,7 +23,7 @@ class Circle : ParticleShape() {
         val x = cos(radians)
         val y = sin(radians)
         val rad = radius.asDouble()
-        return centerMatrix.plus(SimpleMatrix(1, 4, true, x * rad, y * rad, 0.0, 0.0))
+        return centerMatrix.plus(SimpleMatrix(1, 4, true, doubleArrayOf(x * rad, y * rad, 0.0, 0.0)))
     }
 
 }
