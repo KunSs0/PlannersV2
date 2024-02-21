@@ -17,8 +17,7 @@ import taboolib.common.util.Vector
 import taboolib.common5.cint
 import kotlin.math.abs
 
-open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, location: TargetLocation<*>) : AbstractAnimated(),
-    Animated.Periodic {
+open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, location: TargetLocation<*>) : AbstractAnimated(), Animated.Periodic {
 
     private val shapes = mutableListOf<ParticleShape>()
 
@@ -26,7 +25,7 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
 
     private var bakedShape = SimpleMatrix(0, 4)
 
-    private var bukkitParticleFramework: BukkitParticleFramework? = null
+    private var framework: BukkitParticleFramework? = null
 
     private val lock = Any()
 
@@ -138,10 +137,10 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
             error("The speed of the animation cannot be 0")
         }
 
-        if (bukkitParticleFramework == null) {
+        if (framework == null) {
             bakeShapes()
             // Restore the animation
-            bukkitParticleFramework = BukkitParticleFramework(
+            framework = BukkitParticleFramework(
                 animations,
                 bakedShape, // copy will be made
                 tick.asInt(),
@@ -159,8 +158,8 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
                     cancel()
                     return@submit
                 }
-                if (bukkitParticleFramework!!.nextFrame()) { // finished
-                    bukkitParticleFramework = null
+                if (framework!!.nextFrame()) { // finished
+                    framework = null
                     isPlaying = false
                     cancel()
                 }
@@ -178,7 +177,7 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
         }
 
         tick.set(0)
-        bukkitParticleFramework = null
+        framework = null
     }
 
     fun addAnimation(animation: ParticleAnimated) = synchronized(lock) {

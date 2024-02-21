@@ -18,9 +18,9 @@ import org.bukkit.Bukkit
 @CombinationKetherParser.Used
 object ActionParticle : MultipleKetherParser("particle") {
 
-    @KetherEditor.Document("particle new <type:particle> [at location:location] [with shape:particle shape] " +
+    @KetherEditor.Document("particle create <type:particle> [at location:location] [with shape:particle shape] " +
             "[animated:bool] [duration:Number]", result = BukkitParticle::class)
-    val create = KetherHelper.combinedKetherParser("new") {
+    val create = KetherHelper.combinedKetherParser("create") {
         it.group(text(),
                 commandObjectiveOrOrigin(),
                 commandText("shape", ""),
@@ -33,12 +33,11 @@ object ActionParticle : MultipleKetherParser("particle") {
             } else {
                 ParticleSpawnRegistry.get(nameSplit[0]) to nameSplit[1]
             }
-            val bukkitParticle = BukkitParticle(particle, id,
-                    origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("No location available"))
+            val bukkitParticle = BukkitParticle(particle, id, origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("No location available"))
             bukkitParticle.animated.set(animated)
             bukkitParticle.duration.set(duration)
             if (shape != "")
-                bukkitParticle.addShape(newParticleShape(shape))
+                bukkitParticle.addShape(createParticleShape(shape))
 
             // TODO support metadata map
 
@@ -90,7 +89,7 @@ object ActionParticle : MultipleKetherParser("particle") {
 
     // TODO support shape
 
-    fun newParticleShape(name: String): ParticleShape {
+    fun createParticleShape(name: String): ParticleShape {
         return when (name) {
             "point" -> Point()
             "line" -> Line()

@@ -55,7 +55,7 @@ object ActionVector : MultipleKetherParser("vector") {
      * 例如: vector ~1 ~2 &myVar
      */
     @Suppress("NAME_SHADOWING")
-    @KetherEditor.Document("vector new <x:Number> <y:Number> <z:Number> [at objective:TargetContainer(sender)]")
+    @KetherEditor.Document("vector create <x:Number> <y:Number> <z:Number> [at objective:TargetContainer(sender)]")
     val create = KetherHelper.combinedKetherParser("new") {
         it.group(text(), text(), text(), commandObjectiveOrOrigin()).apply(it) { x, y, z, origin ->
             now {
