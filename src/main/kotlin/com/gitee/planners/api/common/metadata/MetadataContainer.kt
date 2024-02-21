@@ -41,4 +41,11 @@ abstract class MetadataContainer(map: Map<String, Metadata> = emptyMap()) {
         return mutableRegistry(table.filter { !it.value.isTimeout() })
     }
 
+    fun copyMetaDataTo(container: MetadataContainer) { // Quick clone
+        if (this::class != container::class) {
+            throw IllegalArgumentException("MetadataContainer type mismatch")
+        }
+        container.table.putAll(this.table)
+    }
+
 }

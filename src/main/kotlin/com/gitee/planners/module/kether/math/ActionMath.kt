@@ -1,4 +1,4 @@
-package com.gitee.planners.module.kether.common
+package com.gitee.planners.module.kether.math
 
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
@@ -7,7 +7,7 @@ import com.gitee.planners.api.common.script.kether.KetherHelper
 
 @KetherEditor.Document("cos <value:Number>")
 @CombinationKetherParser.Used
-fun cos() = KetherHelper.combinedKetherParser() {
+fun cos() = KetherHelper.combinedKetherParser {
     it.group(double()).apply(it) { value ->
         now { kotlin.math.cos(value) }
     }
@@ -15,7 +15,7 @@ fun cos() = KetherHelper.combinedKetherParser() {
 
 @KetherEditor.Document("sin <value:Number>")
 @CombinationKetherParser.Used
-fun sin() = KetherHelper.combinedKetherParser {
+fun sin(toRadians: Double) = KetherHelper.combinedKetherParser {
     it.group(double()).apply(it) { value ->
         now { kotlin.math.sin(value) }
     }
@@ -32,8 +32,8 @@ fun radians() = KetherHelper.combinedKetherParser {
 @KetherEditor.Document("pow <value:Number>")
 @CombinationKetherParser.Used
 fun pow() = KetherHelper.combinedKetherParser {
-    it.group(double(), double()).apply(it) { value,t ->
-        now { Math.pow(value,t) }
+    it.group(double(), double()).apply(it) { value, t ->
+        now { Math.pow(value, t) }
     }
 }
 

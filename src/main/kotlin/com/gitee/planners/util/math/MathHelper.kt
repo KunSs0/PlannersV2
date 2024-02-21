@@ -3,10 +3,7 @@ package com.gitee.planners.util.math
 import org.bukkit.Location
 import org.ejml.simple.SimpleMatrix
 import taboolib.common.util.Vector
-import kotlin.math.cos
-import kotlin.math.sin
-
-typealias MatrixTransform = (SimpleMatrix) -> SimpleMatrix
+import taboolib.common5.cdouble
 
 
 /**
@@ -21,10 +18,21 @@ inline fun <reified T : Any> Any.asVector(after: (x: Double, y: Double, z: Doubl
         is Vector -> after(x, y, z)
         // Bukkit location
         is Location -> after(x, y, z)
+        // Array
+        is Array<*> -> {
+            assert(this.size == 3) {
+                "Expected a 3d vector, but array has size ${this.size}"
+            }
+            try {
+                after(this[0].cdouble, this[1].cdouble, this[2].cdouble)
+            } catch (e: Exception) {
+                error("Error while casting the array element to double!")
+            }
+        }
         // EJML matrix
         is SimpleMatrix -> {
-            assert((numCols() == 3 || numCols() == 4) && numRows() == 1) {
-                "Expected 1x3 or 1x4 matrix but the matrix has dimensions ${numRows()}x${numCols()}"
+            assert((numCols == 3 || numCols == 4) && numRows == 1) {
+                "Expected 1x3 or 1x4 matrix but the matrix has dimensions ${numRows}x${numCols}"
             }
             after(this[0, 0], this[0, 1], this[0, 2])
         }
@@ -39,3 +47,22 @@ inline fun <reified T : Any> Any.asVector(after: (x: Double, y: Double, z: Doubl
 fun Any.asVector(): Vector {
     return asVector { x, y, z -> Vector(x, y, z) }
 }
+
+
+fun Any.asTransformMatrix(): SimpleMatrix {
+    return if (this is SimpleMatrix) {
+        assert(numCols == 4 && numRows == 4) {
+            "Expected 4x4 matrix but the matrix has dimensions ${numRows}x${numCols}"
+        }
+        this
+    } else {
+        error("The class is of type ${this::class.java} and is not a matrix")
+    }
+}
+
+fun Any.asScaleMatrix(): SimpleMatrix {
+    val vector = this.asVector()
+    return createIdentityMatrix().scale(vector.x, vector.y, vector.z)
+}
+
+

@@ -18,6 +18,7 @@ import com.gitee.planners.module.entity.animated.AbstractBukkitEntityAnimated
 import com.gitee.planners.module.entity.animated.BukkitEntity
 import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
 import com.gitee.planners.util.createBukkitAwaitFuture
+import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
@@ -59,11 +60,15 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
             animated as? BukkitEntity ?: error("[BukkitEntity] Animated object is not supported")
             val origin = origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("[BukkitEntity] origin cannot be empty")
             val objective = objective.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("[BukkitEntity] objective cannot be empty")
+            // Check if the distance is too short. FIXME: Maybe we should silent this when there is no target?
+            if (origin.getX() == objective.getX() && origin.getY() == objective.getY() && origin.getZ() == objective.getZ()) {
+                error("[BukkitEntity] The position of the origin and the target is the same! " +
+                        "Did you excluded the origin (sender) in the target selection?")
+            }
             val distance = objective.getBukkitLocation().distance(origin.getBukkitLocation())
             val accuracy = distance / time
             val direction = objective.getBukkitLocation().toVector().subtract(origin.getBukkitLocation().toVector()).normalize()
             val trace = PathTrace(origin.getBukkitLocation().toVector(), direction)
-
             now {
                 val entity = createBukkitEntity(animated,origin).getInstance() as LivingEntity
                 val context = getEnvironmentContext() as AbstractComplexScriptContext
