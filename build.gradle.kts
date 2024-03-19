@@ -1,35 +1,42 @@
+import io.izzel.taboolib.gradle.*
+
 plugins {
-    `java-library`
-    `maven-publish`
-    id("org.jetbrains.kotlin.jvm") version "1.9.21"
-    id("io.izzel.taboolib") version "1.56"
+    java
+    id("io.izzel.taboolib") version "2.0.9"
+    id("org.jetbrains.kotlin.jvm") version "1.8.22"
 }
 
 taboolib {
-    install("common")
-    install("common-5")
-    install("module-kether")
-    install("module-nms")
-    install("module-nms-util")
-    install("module-ai")
-    install("module-lang")
-    install("module-ui")
-    install("module-database")
-    install("module-navigation")
-    install("module-chat")
-    install("module-configuration")
-    install("platform-bukkit")
-    install("expansion-command-helper")
-    install("expansion-player-fake-op")
-    classifier = null
-    version = "6.0.12-69"
-    description {
-        dependencies {
-            name("PlaceholderAPI").optional(true)
-            name("MythicMobs").optional(true)
-            name("Vault").optional(true)
-        }
+    env {
+        // 安装模块
+        install(
+            KETHER,
+            LANG,
+            CHAT,
+            CONFIGURATION,
+            NMS,
+            NMS_UTIL,
+            UI,
+            EXPANSION_COMMAND_HELPER,
+            UNIVERSAL,
+            BUKKIT,
+            BUKKIT_UTIL,
+            BUKKIT_HOOK,
+            NAVIGATION,
+            BUKKIT_XSERIES,
+            DATABASE,
+            AI,
+            EXPANSION_PLAYER_FAKE_OP,
+
+        )
     }
+    version {
+        taboolib = "6.1.1-beta13"
+    }
+}
+repositories {
+    mavenCentral()
+    mavenLocal()
 }
 tasks.withType<Jar> {
     destinationDir = file("$projectDir/build-jar")

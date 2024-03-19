@@ -18,14 +18,18 @@ import org.bukkit.Bukkit
 @CombinationKetherParser.Used
 object ActionParticle : MultipleKetherParser("particle") {
 
-    @KetherEditor.Document("particle create <type:particle> [at location:location] [with shape:particle shape] " +
-            "[animated:bool] [duration:Number]", result = BukkitParticle::class)
+    @KetherEditor.Document(
+        value = "particle create <type particle:string> <shape:string> [frame:bool(false)] [duration:number(100)] [at objective:TargetContainer(origin)]",
+        result = BukkitParticle::class
+    )
     val create = KetherHelper.combinedKetherParser("create") {
-        it.group(text(),
-                commandObjectiveOrOrigin(),
-                commandText("shape", ""),
-                commandBool("animated"),
-                commandInt("duration", 100)).apply(it) { type, origin, shape, animated, duration ->
+        it.group(
+            text(),
+            text(),
+            commandBool("frame", false),
+            commandInt("duration", 100),
+            commandObjectiveOrOrigin()
+        ).apply(it) { type, shape, frame, duration, origin ->
             val nameSplit = type.split(":") // e.g.: minecraft:flame
             // Get particle type. TODO: Add Germ particles
             val (particle, id) = if (nameSplit.size == 1) {
@@ -33,8 +37,12 @@ object ActionParticle : MultipleKetherParser("particle") {
             } else {
                 ParticleSpawnRegistry.get(nameSplit[0]) to nameSplit[1]
             }
-            val bukkitParticle = BukkitParticle(particle, id, origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("No location available"))
-            bukkitParticle.animated.set(animated)
+            val bukkitParticle = BukkitParticle(
+                particle,
+                id,
+                origin.filterIsInstance<TargetLocation<*>>().firstOrNull() ?: error("No location available")
+            )
+            bukkitParticle.frame.set(frame)
             bukkitParticle.duration.set(duration)
             if (shape != "")
                 bukkitParticle.addShape(createParticleShape(shape))
@@ -48,7 +56,7 @@ object ActionParticle : MultipleKetherParser("particle") {
         }
     }
 
-    @KetherEditor.Document("particle show <animated:particle animated>")
+    @KetherEditor.Document("particle show <animated:BukkitParticle>")
     val show = KetherHelper.combinedKetherParser("show", "display") {
         it.group(actionParticle()).apply(it) { particleAnimated ->
             now {
@@ -61,8 +69,8 @@ object ActionParticle : MultipleKetherParser("particle") {
         }
     }
 
-    @KetherEditor.Document("particle hide <animated:particle animated>")
-    val pause = KetherHelper.combinedKetherParser("pause") {
+    @KetherEditor.Document("particle stop <animated:particle animated>")
+    val pause = KetherHelper.combinedKetherParser("pause","stop") {
         it.group(actionParticle()).apply(it) { particleAnimated ->
             now {
                 try {

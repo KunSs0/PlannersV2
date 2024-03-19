@@ -47,7 +47,7 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
     val speed = double("speed", 1.0) { }
 
     /** Is the particle animated, or show all frames at once */
-    val animated = bool("animated", false) { }
+    val frame = bool("frame", false) { }
 
     /** The origin */
     val origin = vector("origin", location.asVector()) {
@@ -122,8 +122,8 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
 
         TODO("Particle implementation is not complete yet.")
 
-        // No animation
-        if (!animated.asBoolean()) {
+        // No frame animation
+        if (!frame.asBoolean()) {
             bakeShapes()
             for (i in 0 until bakedShape.numRows()) {
                 val vector = bakedShape.extractVector(true, i) ?: break
