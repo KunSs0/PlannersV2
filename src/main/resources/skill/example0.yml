@@ -5,14 +5,14 @@ __option__:
 
 action:
   def main = {
-  set be0 to entity create pig 60
-  set &be0[name] to "调查"
-  set &be0[is-gravity] to false
-  set &be0[is-obstacle] to false
-  entity listen &be0 on hit then handleHit
-  entity launch &be0 20 at @sender to @range 10 @type zombie
+    set be0 to entity create pig 60
+    set &be0[name] to "调查"
+    set &be0[is-gravity] to false
+    set &be0[is-obstacle] to false
+    entity listen &be0 on hit then handleHit
+    entity launch &be0 20 at @sender to @range 10 @type zombie
   }
 
   def handleHit = {
-  tell inline "on hit {{ &target }}"
+    tell inline "on hit {{ &target }}"
   }

@@ -8,7 +8,6 @@ import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.common.util.DefaultNearestEntityFinder
-import com.gitee.planners.api.common.util.EntitySynchronousSampling
 import com.gitee.planners.api.common.util.NearestEntityFinder
 import com.gitee.planners.api.common.util.PathTrace
 import com.gitee.planners.module.kether.context.AbstractComplexScriptContext
@@ -19,7 +18,7 @@ import com.gitee.planners.module.kether.*
 import com.gitee.planners.module.entity.animated.AbstractBukkitEntityAnimated
 import com.gitee.planners.module.entity.animated.BukkitEntity
 import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
-import com.gitee.planners.util.createBukkitAwaitFuture
+import com.gitee.planners.util.syncing
 import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
@@ -91,7 +90,7 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
                         return@submit
                     }
                     entity.teleport(location)
-                    val nearestEntityFinder = DefaultNearestEntityFinder(location, EntitySynchronousSampling(location.world!!).get())
+                    val nearestEntityFinder = DefaultNearestEntityFinder(location, syncing { location.world!!.entities }.get())
                     nearestEntityFinder.request().filter { it != entity && baffle.hasNext(it.uniqueId.toString(),true) }.forEach {
                         // 如果非自由节点 并且命中了 origin 直接过滤掉本次
                         if (!animated.isFreedom.asBoolean() && it == origin.getInstance()) {
@@ -133,7 +132,7 @@ object ActionBukkitEntity : MultipleKetherParser("entity") {
     private fun ScriptFrame.createBukkitEntity(animated: AbstractBukkitEntityAnimated<*>,target: Target<*>): TargetBukkitEntity {
         val context = this.getEnvironmentContext() as AbstractComplexScriptContext
         // 拉到主线程创建实体
-        val entity = createBukkitAwaitFuture { animated.invokeSpawn(target) }.get()
+        val entity = syncing { animated.invokeSpawn(target) }.get()
         entity.setMeta("@caster",target)
         entity.setMeta("@animated",animated)
         entity.setMeta("@context",context)

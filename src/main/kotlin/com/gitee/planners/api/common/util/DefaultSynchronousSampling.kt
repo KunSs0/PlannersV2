@@ -1,20 +1,18 @@
 package com.gitee.planners.api.common.util
 
 import org.bukkit.Bukkit
-import org.bukkit.World
-import org.bukkit.entity.Entity
 import taboolib.common.platform.function.submit
 import java.util.concurrent.CompletableFuture
 
-class EntitySynchronousSampling(val world: World) {
+class DefaultSynchronousSampling<T>(val block: () -> T): SynchronousSampling<T> {
 
-    fun get() : List<Entity> {
+    override fun get(): T {
         if (Bukkit.isPrimaryThread()) {
-            return world.entities
+            return block()
         }
-        val future = CompletableFuture<List<Entity>>()
+        val future = CompletableFuture<T>()
         submit {
-            future.complete(world.entities)
+            future.complete(block())
         }
         return future.join()
     }

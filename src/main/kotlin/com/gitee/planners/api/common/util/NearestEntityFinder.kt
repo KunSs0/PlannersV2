@@ -10,7 +10,7 @@ import java.util.Collections
 
 abstract class NearestEntityFinder(val origin: Location, var samples: List<Entity>) {
 
-    constructor(origin: Location,sampling: EntitySynchronousSampling) : this(origin,sampling.get())
+    constructor(origin: Location,sampling: SynchronousSampling<List<Entity>>) : this(origin,sampling.get())
 
     abstract fun request(): List<Entity>
 

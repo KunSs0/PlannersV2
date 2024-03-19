@@ -1,13 +1,10 @@
 package com.gitee.planners.util
 
+import com.gitee.planners.api.common.util.DefaultSynchronousSampling
 import taboolib.common.platform.function.submit
-import taboolib.common.platform.function.submitAsync
 import java.util.concurrent.CompletableFuture
 
-fun <T> createBukkitAwaitFuture(func: () -> T) : CompletableFuture<T> {
-    val f1 = CompletableFuture<T>()
-    submit {
-        f1.complete(func())
-    }
-    return f1
+
+fun <T> syncing(block: () -> T): DefaultSynchronousSampling<T> {
+    return DefaultSynchronousSampling(block)
 }

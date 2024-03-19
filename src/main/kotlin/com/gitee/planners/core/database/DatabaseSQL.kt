@@ -37,9 +37,9 @@ class DatabaseSQL : Database {
 
     val tableRoute = Table("${prefix}_route", host) {
         add { id() }
-        add("router") { type(ColumnTypeSQL.VARCHAR, 30) }
+        add("router") { type(ColumnTypeSQL.VARCHAR, 60) }
         add("parent") { type(ColumnTypeSQL.INT) }
-        add("route") { type(ColumnTypeSQL.VARCHAR, 30) }
+        add("route") { type(ColumnTypeSQL.VARCHAR, 60) }
     }
 
     val tableMetadata = Table("${prefix}_metadata", host) {
@@ -54,9 +54,9 @@ class DatabaseSQL : Database {
     val tableSkill = Table("${prefix}_skill", host) {
         add { id() }
         add("route") { type(ColumnTypeSQL.INT) }
-        add("node") { type(ColumnTypeSQL.VARCHAR, 30) }
+        add("node") { type(ColumnTypeSQL.VARCHAR, 60) }
         add("level") { type(ColumnTypeSQL.INT) }
-        add("binding") { type(ColumnTypeSQL.VARCHAR) }
+        add("binding") { type(ColumnTypeSQL.VARCHAR,60) }
     }
 
     init {

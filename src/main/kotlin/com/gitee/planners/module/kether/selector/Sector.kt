@@ -2,13 +2,13 @@ package com.gitee.planners.module.kether.selector
 
 import com.gitee.planners.api.common.WorkableTransform
 import com.gitee.planners.api.common.script.kether.KetherHelper
-import com.gitee.planners.api.common.util.EntitySynchronousSampling
 import com.gitee.planners.api.common.util.SectorNearestEntityFinder
 import com.gitee.planners.api.job.target.TargetLocation
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.actionDouble
 import com.gitee.planners.module.kether.commandObjectiveOrOrigin
 import com.gitee.planners.module.kether.getTargetContainer
+import com.gitee.planners.util.syncing
 
 object Sector : AbstractSelector("sector") {
 
@@ -22,7 +22,7 @@ object Sector : AbstractSelector("sector") {
                 } else {
                     origin.yaw
                 }
-                val sampling = EntitySynchronousSampling(origin.world!!)
+                val sampling = syncing { origin.world!!.entities }
                 try {
                     getTargetContainer() += SectorNearestEntityFinder(origin,angle,radius,origin.yaw, sampling.get()).request().map { it.adaptTarget() }
                 }catch (e: Exception) {
