@@ -5,7 +5,11 @@ import org.bukkit.Bukkit
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
+import taboolib.common.platform.function.info
+import taboolib.common.platform.function.warning
 import taboolib.library.reflex.ClassMethod
+import taboolib.module.kether.printKetherErrorMessage
+import taboolib.module.kether.runKether
 import java.util.function.Supplier
 
 
@@ -21,8 +25,13 @@ class Visitor : ClassVisitor(0) {
             if (method.isAnnotationPresent(CombinationKetherParser.Ignore::class.java)) {
                 return
             }
-            val combinationKetherParser = (if (instance == null) method.invokeStatic() else method.invoke(instance.get())) as CombinationKetherParser
-            KetherHelper.registerCombinationKetherParser(method.name, combinationKetherParser)
+            try {
+                val combinationKetherParser = (if (instance == null) method.invokeStatic() else method.invoke(instance.get())) as CombinationKetherParser
+                KetherHelper.registerCombinationKetherParser(method.name, combinationKetherParser)
+            }catch (e: Exception) {
+                warning("Error by ${clazz.name}#${method.name}")
+                e.printKetherErrorMessage(false)
+            }
         }
     }
 

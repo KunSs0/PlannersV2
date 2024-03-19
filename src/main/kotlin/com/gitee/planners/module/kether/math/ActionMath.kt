@@ -15,7 +15,7 @@ fun cos() = KetherHelper.combinedKetherParser {
 
 @KetherEditor.Document("sin <value:Number>")
 @CombinationKetherParser.Used
-fun sin(toRadians: Double) = KetherHelper.combinedKetherParser {
+fun sin() = KetherHelper.combinedKetherParser {
     it.group(double()).apply(it) { value ->
         now { kotlin.math.sin(value) }
     }
