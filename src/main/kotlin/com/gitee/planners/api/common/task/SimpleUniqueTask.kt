@@ -1,8 +1,6 @@
 package com.gitee.planners.api.common.task
 
-import java.util.Collections
-
-class SimpleUniqueFutureTask(val id: Any, tick: Long, async: Boolean, onClose: Runnable) :
+class SimpleUniqueTask(val id: Any, tick: Long, async: Boolean, onClose: Runnable) :
     SimpleFutureTask(tick, async, onClose) {
 
     var isDone = false
@@ -29,7 +27,7 @@ class SimpleUniqueFutureTask(val id: Any, tick: Long, async: Boolean, onClose: R
 
     companion object {
 
-        private val registeredTask = mutableMapOf<Any, SimpleUniqueFutureTask>()
+        private val registeredTask = mutableMapOf<Any, SimpleUniqueTask>()
 
         fun create(id: Any, tick: Long, async: Boolean, onClose: Runnable) {
             val task = registeredTask[id]
@@ -37,10 +35,10 @@ class SimpleUniqueFutureTask(val id: Any, tick: Long, async: Boolean, onClose: R
             if (task != null && !task.isDone) {
                 task.interrupt()
             }
-            registeredTask[id] = SimpleUniqueFutureTask(id, tick, async, onClose)
+            registeredTask[id] = SimpleUniqueTask(id, tick, async, onClose)
         }
 
-        fun getTask(id: Any): SimpleUniqueFutureTask? {
+        fun getTask(id: Any): SimpleUniqueTask? {
             return registeredTask[id]
         }
 

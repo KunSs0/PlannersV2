@@ -2,7 +2,7 @@ package com.gitee.planners.module.kether
 
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
-import com.gitee.planners.module.kether.selector.ActionTargetContainer
+import com.gitee.planners.module.kether.selector.TargetContainerParser
 import com.gitee.planners.module.particle.BukkitParticle
 import com.gitee.planners.util.math.asTransformMatrix
 import com.gitee.planners.util.math.asVector
@@ -65,23 +65,32 @@ fun QuestReader.catchParsedActionOrNull(token: String): ParsedAction<*>? {
     }
 }
 
-fun ScriptFrame.runTargetContainer(action: ActionTargetContainer): CompletableFuture<TargetContainer> {
+fun ScriptFrame.runTargetContainer(action: TargetContainerParser): CompletableFuture<TargetContainer> {
     return action.process(this)
 }
 
-fun QuestReader.expectTargetContainerParsedAction(type: LeastType): ActionTargetContainer {
-    return ActionTargetContainer.parser(reader = this, type = type)
+fun QuestReader.expectTargetContainerParsedAction(type: LeastType): TargetContainerParser {
+    return TargetContainerParser.parser(reader = this, type = type)
 }
 
-fun ParserHolder.commandObjective(expect: Array<String> = ActionTargetContainer.DEFAULT_PREFIX,
+fun ParserHolder.objective(): Parser<TargetContainer> {
+    return Parser.frame { r ->
+        val parser = TargetContainerParser.parser(emptyArray(), r, LeastType.EMPTY)
+        Action {
+            parser.process(it)
+        }
+    }
+}
+
+fun ParserHolder.commandObjective(expect: Array<String> = TargetContainerParser.DEFAULT_PREFIX,
                                   type: LeastType = LeastType.EMPTY): Parser<TargetContainer> {
     return Parser.frame { r ->
         val expects = if (expect.isEmpty()) {
-            ActionTargetContainer.DEFAULT_PREFIX
+            TargetContainerParser.DEFAULT_PREFIX
         } else {
             expect
         }
-        val parser = ActionTargetContainer.parser(expects, r, type)
+        val parser = TargetContainerParser.parser(expects, r, type)
         Action { frame ->
             parser.process(frame)
         }

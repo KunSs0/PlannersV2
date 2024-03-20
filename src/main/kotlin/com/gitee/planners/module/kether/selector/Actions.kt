@@ -11,7 +11,6 @@ import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.getEnvironmentContext
 import com.gitee.planners.module.kether.getTargetContainer
 import org.bukkit.Bukkit
-import taboolib.common.platform.function.warning
 
 
 private object Sender : AbstractSelector("sender","self") {
@@ -50,5 +49,8 @@ private object Console : AbstractSelector("console") {
 @KetherEditor.Document(value = "select <objective...>", result = TargetContainer::class)
 @CombinationKetherParser.Used
 private fun actionSelect() = KetherHelper.simpleKetherParser("select") {
-    ActionTargetContainer.parser(emptyArray(),it,LeastType.EMPTY)
+    TargetContainerParser.parser(emptyArray(),it,LeastType.EMPTY)
 }
+
+
+

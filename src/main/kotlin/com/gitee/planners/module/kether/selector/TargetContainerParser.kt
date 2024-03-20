@@ -10,7 +10,7 @@ import taboolib.module.kether.ScriptFrame
 import taboolib.module.kether.expects
 import java.util.concurrent.CompletableFuture
 
-class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = emptyList(), val type: LeastType) :
+class TargetContainerParser(private val actions: List<QuestAction<out Any>>? = emptyList(), val type: LeastType) :
     QuestAction<TargetContainer>() {
 
     override fun process(frame: ScriptFrame): CompletableFuture<TargetContainer> {
@@ -41,11 +41,7 @@ class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = e
 
         val DEFAULT_PREFIX = arrayOf("at", "to")
 
-        fun parser(
-            expects: Array<String> = DEFAULT_PREFIX,
-            reader: QuestReader,
-            type: LeastType,
-        ): ActionTargetContainer {
+        fun parser(expects: Array<String> = DEFAULT_PREFIX, reader: QuestReader, type: LeastType, ): TargetContainerParser {
             val actions = try {
                 reader.mark()
                 // 如果忽略前缀
@@ -91,11 +87,9 @@ class ActionTargetContainer(private val actions: List<QuestAction<out Any>>? = e
                 null
             }
 
-            return ActionTargetContainer(actions, type)
+            return TargetContainerParser(actions, type)
         }
 
     }
-
-    private class ExpectResult(val id: String, val filterable: Boolean)
 
 }
