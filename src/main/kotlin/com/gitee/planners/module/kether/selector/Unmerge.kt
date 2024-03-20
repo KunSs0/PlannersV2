@@ -7,7 +7,7 @@ import com.gitee.planners.module.kether.objective
 /**
  * unmerge [objective]
  */
-object Unmerge : AbstractSelector() {
+object Unmerge : AbstractSelector("unmerge","u-merge") {
     override fun select() = KetherHelper.combinedKetherParser {
         it.group(objective()).apply(it) {
             now {

@@ -7,7 +7,7 @@ import com.gitee.planners.module.kether.objective
 /**
  * merge [objective]
  */
-object Merge : AbstractSelector() {
+object Merge : AbstractSelector("merge") {
     override fun select() = KetherHelper.combinedKetherParser {
         it.group(objective()).apply(it) {
             now {
