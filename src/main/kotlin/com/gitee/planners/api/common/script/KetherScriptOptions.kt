@@ -18,8 +18,8 @@ interface KetherScriptOptions {
         fun common(player: Player) = common(TargetBukkitEntity(player))
 
         fun common(sender: Target<*>) = create {
-            if (sender is TargetBukkitEntity && sender.getInstance() is Player) {
-                sender(sender.getInstance())
+            if (sender is TargetBukkitEntity && sender.instance is Player) {
+                sender(sender.instance)
             }
             namespace(listOf(KetherHelper.NAMESPACE_COMMON))
         }

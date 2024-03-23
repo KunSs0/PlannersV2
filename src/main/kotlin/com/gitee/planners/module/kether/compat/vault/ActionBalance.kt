@@ -23,7 +23,7 @@ object ActionBalance : MultipleKetherParser("balance") {
             commandObjectiveOrSender()
         ).apply(it) { value, objective ->
             now {
-                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance() as? Player
+                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? Player
                     ?: error("sender must be a player")
                 hooked.has(player, value)
             }
@@ -36,7 +36,7 @@ object ActionBalance : MultipleKetherParser("balance") {
             commandObjectiveOrSender()
         ).apply(it) { objective ->
             now {
-                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance() as? Player
+                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? Player
                     ?: error("sender must be a player")
                 hooked.getBalance(player)
             }
@@ -50,7 +50,7 @@ object ActionBalance : MultipleKetherParser("balance") {
             commandObjectiveOrSender()
         ).apply(it) { value, objective ->
             now {
-                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance() as? Player
+                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? Player
                     ?: error("sender must be a player")
                 hooked.depositPlayer(player, value)
             }
@@ -64,7 +64,7 @@ object ActionBalance : MultipleKetherParser("balance") {
             commandObjectiveOrSender()
         ).apply(it) { value, objective ->
             now {
-                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance() as? Player
+                val player = objective.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? Player
                     ?: error("sender must be a player")
                 hooked.withdrawPlayer(player, value)
             }

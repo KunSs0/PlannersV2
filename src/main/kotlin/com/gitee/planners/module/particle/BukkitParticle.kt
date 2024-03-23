@@ -17,6 +17,7 @@ import taboolib.common.util.Vector
 import taboolib.common5.cint
 import kotlin.math.abs
 
+@Suppress("UNREACHABLE_CODE")
 open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, location: TargetLocation<*>) : AbstractAnimated(), Animated.Periodic {
 
     private val shapes = mutableListOf<ParticleShape>()

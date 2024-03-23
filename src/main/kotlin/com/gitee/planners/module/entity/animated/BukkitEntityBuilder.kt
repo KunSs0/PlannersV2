@@ -12,7 +12,7 @@ import taboolib.platform.util.setMeta
 /**
  * 实体构建器
  */
-class BukkitEntityBuilder(val type: EntityType, override val timestampTick: Long) : AbstractBukkitEntityAnimated<Entity>(),Animated.Periodic {
+class BukkitEntityBuilder(val type: EntityType, override val timestampTick: Long) : AbstractBukkitEntityAnimated<Entity>(),EntitySpawner,Animated.Periodic {
 
     /** 存活期 单位tick */
     val validityTick = long("validity", timestampTick) {
@@ -24,8 +24,7 @@ class BukkitEntityBuilder(val type: EntityType, override val timestampTick: Long
 
     }
 
-
-    fun create(target: Target<*>): Entity {
+    override fun create(target: Target<*>): Entity {
         val location = (target as TargetLocation<*>).getBukkitLocation()
         val entity = location.world!!.spawnEntity(location, type)
         // 创建删除任务
@@ -36,14 +35,6 @@ class BukkitEntityBuilder(val type: EntityType, override val timestampTick: Long
     }
 
 
-    fun invokeSpawn(target: Target<*>): Entity {
-        instance = create(target)
-        instance.setMeta("@animated", this)
-        this.getImmutableRegistry().getValues().filterIsInstance<AnimatedMeta<Any>>().forEach {
-            it.onUpdate(this, it.any())
-        }
-        return instance
-    }
 
     fun getClearableTask(entity: Entity): SimpleUniqueTask? {
         return SimpleUniqueTask.getTask(entity)

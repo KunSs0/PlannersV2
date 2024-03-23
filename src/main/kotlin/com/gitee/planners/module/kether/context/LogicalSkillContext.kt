@@ -8,7 +8,7 @@ class LogicalSkillContext(sender: TargetBukkitEntity,val playerSkill : PlayerSki
 
     override val trackId = playerSkill.immutable.id
 
-    val bukkitPlayer = sender.getInstance() as? Player
+    val bukkitPlayer = sender.instance as? Player
 
     val isSupported = bukkitPlayer != null
 

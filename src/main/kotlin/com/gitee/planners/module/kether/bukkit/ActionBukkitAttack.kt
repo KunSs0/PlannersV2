@@ -21,13 +21,13 @@ object ActionBukkitAttack : SimpleKetherParser("attack") {
                 commandObjectiveOrEmpty(),
                 commandObjectiveOrSender("source")
             ).apply(it) { value, objective, source ->
-                val killer = source.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance() as? LivingEntity
+                val killer = source.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? LivingEntity
                 now {
                     if (killer == null) {
                         warning("Action attack source not correctly defined")
                         return@now
                     }
-                    objective.filterIsInstance<TargetBukkitEntity>().map { it.getInstance() }.forEach { entity ->
+                    objective.filterIsInstance<TargetBukkitEntity>().map { it.instance }.forEach { entity ->
                         if (entity is Damageable) {
                             entity.damage(value,killer)
                         }

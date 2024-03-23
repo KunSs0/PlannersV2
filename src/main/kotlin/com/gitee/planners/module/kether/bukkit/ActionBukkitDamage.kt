@@ -27,9 +27,9 @@ object ActionBukkitDamage : SimpleKetherParser("damage") {
                 commandObjectiveOrEmpty(),
                 commandObjectiveOrSender("source")
             ).apply(it) { value, objective, source ->
-                val killer = source.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance() as? LivingEntity
+                val killer = source.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? LivingEntity
                 now {
-                    objective.filterIsInstance<TargetBukkitEntity>().map { it.getInstance() }.filter { !it.isDead }.forEach { entity ->
+                    objective.filterIsInstance<TargetBukkitEntity>().map { it.instance }.filter { !it.isDead }.forEach { entity ->
                         // 忽略 自己攻击自己
                         if (killer == entity) return@forEach
 

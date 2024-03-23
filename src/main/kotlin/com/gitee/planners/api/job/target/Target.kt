@@ -2,7 +2,7 @@ package com.gitee.planners.api.job.target
 
 interface Target<T> {
 
-    fun getInstance(): T
+    val instance: T
 
     interface Named {
 

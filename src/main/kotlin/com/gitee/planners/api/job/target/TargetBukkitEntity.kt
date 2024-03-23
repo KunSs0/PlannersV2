@@ -15,74 +15,72 @@ import org.bukkit.entity.Player
 import taboolib.common.util.Vector
 import java.util.*
 
-class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
+class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
+
 
     override fun getUniqueId(): UUID {
-        return entity.uniqueId
+        return instance.uniqueId
     }
 
     override fun getEntityType(): EntityType {
-        return entity.type
+        return instance.type
     }
 
     override fun getName(): String {
-        return entity.name
+        return instance.name
     }
 
     override fun getBukkitEyeLocation(): Location {
-        return (getInstance() as? LivingEntity)?.eyeLocation ?: getBukkitLocation()
+        return (instance as? LivingEntity)?.eyeLocation ?: getBukkitLocation()
     }
 
-    override fun getInstance(): Entity {
-        return entity
-    }
 
     override fun getWorld(): String {
-        return entity.world.name
+        return instance.world.name
     }
 
     override fun getBukkitWorld(): World? {
-        return entity.world
+        return instance.world
     }
 
     override fun getBukkitLocation(): Location {
-        return entity.location
+        return instance.location
     }
 
 
     override fun getX(): Double {
-        return entity.location.x
+        return instance.location.x
     }
 
     override fun getY(): Double {
-        return entity.location.y + entity.height / 2
+        return instance.location.y + instance.height / 2
     }
 
     override fun getZ(): Double {
-        return entity.location.z
+        return instance.location.z
     }
 
     override fun sendMessage(message: String) {
-        getInstance().sendMessage(message)
+        instance.sendMessage(message)
     }
 
     override fun dispatchCommand(command: String): Boolean {
-        return Bukkit.dispatchCommand(getInstance(), command)
+        return Bukkit.dispatchCommand(instance, command)
     }
 
     override fun getNearbyLivingEntities(vector: Vector): List<LivingEntity> {
         return getBukkitWorld()!!
-            .getNearbyEntities(this.getInstance().location, vector.x, vector.y, vector.z)
+            .getNearbyEntities(this.instance.location, vector.x, vector.y, vector.z)
             .filterIsInstance<LivingEntity>()
     }
 
     private fun getMetadataContainer(): MetadataContainer {
-        return if (entity is Player) {
-            entity.plannersProfile
+        return if (instance is Player) {
+            instance.plannersProfile
         }
         // 通过代理实体获取元数据容器
         else {
-            EntityMetadataManager.get(ProxyBukkitEntity(getInstance()))
+            EntityMetadataManager.get(ProxyBukkitEntity(instance))
         }
     }
 
@@ -95,7 +93,7 @@ class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetComma
     }
 
     override fun toString(): String {
-        return "TargetBukkitEntity(entity=$entity)"
+        return "TargetBukkitEntity(instance=$instance)"
     }
 
 

@@ -25,7 +25,7 @@ object ActionBukkitSound : SimpleKetherParser("sound") {
                     val pitch = with.second
                     val sound = parseSound(source)
                     objective.filterIsInstance<TargetBukkitEntity>().forEach {
-                        sound.play(it.entity as? Player ?: return@forEach,volume, pitch)
+                        sound.play(it.instance as? Player ?: return@forEach,volume, pitch)
                     }
                 }
             }

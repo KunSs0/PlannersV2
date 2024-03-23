@@ -8,11 +8,11 @@ import com.gitee.planners.util.rotateAroundZ
 import org.bukkit.entity.*
 import taboolib.common.util.Vector
 
-class BukkitProjectile(val type: Type,step: Float) : AbstractBukkitEntityAnimated<Projectile>() {
+class BukkitProjectileBuilder(val type: Type, step: Float) : AbstractBukkitEntityAnimated<Projectile>(), EntitySpawner {
 
 
     /** 自动删除策略 */
-    val isAutoRemove = bool("is-auto-remove",true) {
+    val isAutoRemove = bool("is-auto-remove", true) {
 
     }
 
@@ -26,21 +26,21 @@ class BukkitProjectile(val type: Type,step: Float) : AbstractBukkitEntityAnimate
 
     // 向量
     val velocity = vector("velocity", Vector(0, 0, 0)) {
-        val velocity = this@BukkitProjectile.instance.velocity
+        val velocity = this@BukkitProjectileBuilder.instance.velocity
         val rotation = rotation.asVector()
-        rotateAroundX(velocity,rotation.x)
-        rotateAroundY(velocity,rotation.y)
-        rotateAroundZ(velocity,rotation.z)
-        velocity.multiply(this@BukkitProjectile.step.asFloat())
-        this@BukkitProjectile.instance.velocity = velocity
+        rotateAroundX(velocity, rotation.x)
+        rotateAroundY(velocity, rotation.y)
+        rotateAroundZ(velocity, rotation.z)
+        velocity.multiply(this@BukkitProjectileBuilder.step.asFloat())
+        this@BukkitProjectileBuilder.instance.velocity = velocity
     }
 
     val isBounce = bool("is-bounce", false) {
-        this@BukkitProjectile.instance.setBounce(it)
+        this@BukkitProjectileBuilder.instance.setBounce(it)
     }
 
     override fun create(target: Target<*>): Projectile {
-        val bukkitEntity = (target as TargetBukkitEntity).getInstance() as LivingEntity
+        val bukkitEntity = (target as TargetBukkitEntity).instance as LivingEntity
         return bukkitEntity.launchProjectile(this.type.clazz)
     }
 

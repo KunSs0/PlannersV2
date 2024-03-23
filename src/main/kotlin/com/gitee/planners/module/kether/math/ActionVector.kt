@@ -80,7 +80,7 @@ object ActionVector : MultipleKetherParser("vector") {
     val lookingAt = KetherHelper.combinedKetherParser("looking-at", "sight") {
         it.group(commandObjectiveOrSender("of"), commandDouble("scale", 1.0)).apply(it) { targets, scale ->
             now {
-                val entity = targets.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.getInstance()
+                val entity = targets.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance
                         ?: error("No entity found")
                 val yaw = Math.toRadians(entity.location.yaw.toDouble())
                 val pitch = Math.toRadians(entity.location.pitch.toDouble())

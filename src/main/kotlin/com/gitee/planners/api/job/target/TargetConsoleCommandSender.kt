@@ -8,16 +8,14 @@ import org.bukkit.command.ConsoleCommandSender
 class TargetConsoleCommandSender(val console: ConsoleCommandSender) : TargetCommandSender<ConsoleCommandSender>,
     TargetContainerization {
 
+    override val instance = console
+
     override fun sendMessage(message: String) {
         console.sendMessage(message)
     }
 
     override fun dispatchCommand(command: String): Boolean {
         return Bukkit.dispatchCommand(console, command)
-    }
-
-    override fun getInstance(): ConsoleCommandSender {
-        return console
     }
 
     override fun getMetadata(id: String): Metadata? {

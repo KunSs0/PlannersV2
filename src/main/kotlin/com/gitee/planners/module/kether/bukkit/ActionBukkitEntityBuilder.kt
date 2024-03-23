@@ -3,6 +3,7 @@ package com.gitee.planners.module.kether.bukkit
 import com.gitee.planners.Planners
 import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.common.entity.animated.AnimatedListener
+import com.gitee.planners.api.common.entity.animated.AnimatedMeta
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
@@ -17,6 +18,7 @@ import com.gitee.planners.module.kether.*
 import com.gitee.planners.module.entity.animated.AbstractBukkitEntityAnimated
 import com.gitee.planners.module.entity.animated.BukkitEntityBuilder
 import com.gitee.planners.module.entity.animated.BukkitEntityInstance
+import com.gitee.planners.module.entity.animated.EntitySpawner
 import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
 import com.gitee.planners.util.syncing
 import org.bukkit.entity.Entity
@@ -77,7 +79,7 @@ object ActionBukkitEntityBuilder : MultipleKetherParser("entity") {
                     objective.getBukkitLocation().toVector().subtract(origin.getBukkitLocation().toVector()).normalize()
                 val trace = PathTrace(origin.getBukkitLocation().toVector(), direction)
                 now {
-                    val entity = createBukkitEntity(animated, origin).getInstance() as LivingEntity
+                    val entity = createBukkitEntity(animated, origin).instance as LivingEntity
                     val context = getEnvironmentContext() as AbstractComplexScriptContext
                     var tick = 0L
                     val vectors = trace.traces(distance, accuracy).toList()
@@ -101,7 +103,7 @@ object ActionBukkitEntityBuilder : MultipleKetherParser("entity") {
                         nearestEntityFinder.request()
                             .filter { it != entity && baffle.hasNext(it.uniqueId.toString(), true) }.forEach {
                             // 如果非自由节点 并且命中了 origin 直接过滤掉本次
-                            if (!animated.isFreedom.asBoolean() && it == origin.getInstance()) {
+                            if (!animated.isFreedom.asBoolean() && it == origin.instance) {
                                 return@forEach
                             }
                             animated.emit(AnimatedEntityEvent.Hit(animated, entity, it, null), context)
@@ -138,15 +140,31 @@ object ActionBukkitEntityBuilder : MultipleKetherParser("entity") {
             }
     }
 
-    private fun ScriptFrame.createBukkitEntity(animated: BukkitEntityBuilder, target: Target<*>): Target<*> {
+    private fun ScriptFrame.createBukkitEntity(spawner: EntitySpawner, target: Target<*>): Target<*> {
         val context = this.getEnvironmentContext() as AbstractComplexScriptContext
         // 拉到主线程创建实体
-        val entity = syncing { animated.invokeSpawn(target) }.get()
+        val entity = syncing { invokeEntitySpawn(spawner,target) }.get()
         entity.setMeta("@caster", target)
-        entity.setMeta("@animated", animated)
         entity.setMeta("@context", context)
-        animated.emit(AnimatedEntityEvent.Spawn(animated, entity, target), context)
+        if (spawner is AbstractBukkitEntityAnimated<*>) {
+            spawner.emit(AnimatedEntityEvent.Spawn(spawner, entity, target), context)
+        }
         return BukkitEntityInstance(entity)
+    }
+
+    fun invokeEntitySpawn(spawner: EntitySpawner,target: Target<*>): Entity {
+        val entity = spawner.create(target)
+
+        // 如果是animated的话 就设置meta
+        if (spawner is AbstractBukkitEntityAnimated<*>) {
+            (spawner as AbstractBukkitEntityAnimated<Entity>).instance = entity
+            spawner.instance.setMeta("@animated", this)
+            spawner.getImmutableRegistry().getValues().filterIsInstance<AnimatedMeta<Any>>().forEach {
+                it.onUpdate(spawner, it.any())
+            }
+        }
+
+        return entity
     }
 
     fun Entity.getAnimated(): Animated? {

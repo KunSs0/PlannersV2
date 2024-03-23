@@ -32,13 +32,13 @@ object ActionSkill : MultipleKetherParser("skill") {
                     sender.forEach { ImmutableSkillContext(it, skill, level).run() }
                 } else if (type == PlayupType.RELATIVE) {
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
-                        val player = entity.getInstance() as? Player
+                        val player = entity.instance as? Player
 
                     }
                 } else if (type == PlayupType.INVOKE) {
                     val skill = RegistryBuiltin.SKILL.get(id)
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
-                        val player = entity.getInstance() as? Player ?: return@forEach
+                        val player = entity.instance as? Player ?: return@forEach
                         val i = player.plannersProfile.getRegistriedSkillOrNull(id)?.level ?: return@forEach
                         ImmutableSkillContext(entity, skill, i).run()
                     }
@@ -78,7 +78,7 @@ object ActionSkill : MultipleKetherParser("skill") {
     }
 
     fun getSkillLevelWithTarget(target: Target<*>, id: String): Int? {
-        return ((target as? TargetBukkitEntity)?.entity as? Player)?.plannersProfile?.getRegistriedSkillOrNull(id)?.level
+        return ((target as? TargetBukkitEntity)?.instance as? Player)?.plannersProfile?.getRegistriedSkillOrNull(id)?.level
     }
 
 

@@ -5,44 +5,40 @@ import org.bukkit.World
 import org.bukkit.entity.LivingEntity
 import taboolib.common.util.Vector
 
-open class TargetBukkitLocation(val location: Location) : TargetLocation<Location> {
+open class TargetBukkitLocation(override val instance: Location) : TargetLocation<Location> {
 
     override fun getWorld(): String {
-        return location.world!!.name
+        return instance.world!!.name
     }
 
     override fun getBukkitWorld(): World? {
-        return location.world
+        return instance.world
     }
 
     override fun getX(): Double {
-        return location.x
+        return instance.x
     }
 
     override fun getY(): Double {
-        return location.y
+        return instance.y
     }
 
     override fun getZ(): Double {
-        return location.z
+        return instance.z
     }
 
     override fun getBukkitLocation(): Location {
-        return location
-    }
-
-    override fun getInstance(): Location {
-        return location
+        return instance
     }
 
     override fun getNearbyLivingEntities(vector: Vector): List<LivingEntity> {
         return getBukkitWorld()!!
-            .getNearbyEntities(this.location, vector.x, vector.y, vector.z)
+            .getNearbyEntities(this.instance, vector.x, vector.y, vector.z)
             .filterIsInstance<LivingEntity>()
     }
 
     override fun toString(): String {
-        return "TargetBukkitLocation(location=$location)"
+        return "TargetBukkitLocation(instance=$instance)"
     }
 
 

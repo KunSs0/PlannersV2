@@ -69,10 +69,6 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
         return proxy.dispatchCommand(command)
     }
 
-    override fun getInstance(): Entity {
-        return proxy.getInstance()
-    }
-
     override fun getName(): String {
         return proxy.getName()
     }

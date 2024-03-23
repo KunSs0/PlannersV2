@@ -33,7 +33,7 @@ object ActionBukkitCommand : SimpleKetherParser("command") {
         OP {
             override fun dispatchCommand(target: TargetCommandSender<*>, command: String) {
                 if (target is TargetBukkitEntity) {
-                    val player = (target.getInstance() as? Player)?.fakeOp() ?: return
+                    val player = (target.instance as? Player)?.fakeOp() ?: return
                     player.adaptTarget().dispatchCommand(command)
                 } else if (target is TargetConsoleCommandSender) {
                     target.dispatchCommand(command)

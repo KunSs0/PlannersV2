@@ -9,6 +9,8 @@ import taboolib.platform.util.toBukkitLocation
 
 class TargetTabooLocation(val location: Location) : TargetLocation<Location> {
 
+    override val instance = location
+
     override fun getWorld(): String {
         return location.world!!
     }
@@ -33,14 +35,10 @@ class TargetTabooLocation(val location: Location) : TargetLocation<Location> {
         return location.z
     }
 
-    override fun getInstance(): Location {
-        return location
-    }
-
 
     override fun getNearbyLivingEntities(vector: Vector): List<LivingEntity> {
         return getBukkitWorld()!!
-            .getNearbyEntities(getInstance().toBukkitLocation(), vector.x, vector.y, vector.z)
+            .getNearbyEntities(instance.toBukkitLocation(), vector.x, vector.y, vector.z)
             .filterIsInstance<LivingEntity>()
     }
 

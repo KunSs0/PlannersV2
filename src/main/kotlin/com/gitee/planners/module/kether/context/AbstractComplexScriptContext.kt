@@ -38,8 +38,8 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
         return KetherScriptOptions.create {
             namespace(compiled.namespaces())
             // set sender
-            if (this@AbstractComplexScriptContext.sender is TargetBukkitEntity && this@AbstractComplexScriptContext.sender.getInstance() is Player) {
-                this.sender(this@AbstractComplexScriptContext.sender.getInstance() as Player)
+            if (this@AbstractComplexScriptContext.sender is TargetBukkitEntity && this@AbstractComplexScriptContext.sender.instance is Player) {
+                this.sender(this@AbstractComplexScriptContext.sender.instance as Player)
             }
             // 注入变量
             this.vars("@running-environment-context" to this@AbstractComplexScriptContext)
