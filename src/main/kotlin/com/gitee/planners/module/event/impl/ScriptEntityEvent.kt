@@ -3,7 +3,7 @@ package com.gitee.planners.module.event.impl
 import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.module.kether.bukkit.ActionBukkitEntity.getAnimated
+import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getAnimated
 import com.gitee.planners.module.event.ScriptBukkitEventWrapped
 import com.gitee.planners.module.event.animated.DamageEventModifier
 import org.bukkit.entity.LivingEntity

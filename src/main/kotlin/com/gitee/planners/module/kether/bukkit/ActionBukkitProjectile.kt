@@ -5,9 +5,9 @@ import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.module.kether.context.AbstractComplexScriptContext
-import com.gitee.planners.module.kether.bukkit.ActionBukkitEntity.getAnimated
-import com.gitee.planners.module.kether.bukkit.ActionBukkitEntity.getCasterContext
-import com.gitee.planners.module.kether.bukkit.ActionBukkitEntity.getCasterTarget
+import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getAnimated
+import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getCasterContext
+import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getCasterTarget
 import com.gitee.planners.module.kether.commandFloat
 import com.gitee.planners.module.kether.enum
 import com.gitee.planners.module.entity.animated.BukkitProjectile
@@ -28,10 +28,10 @@ object ActionBukkitProjectile : MultipleKetherParser("projectile") {
     }
 
     @KetherEditor.Document("projectile spawn <animated> [at objective:TargetContainer(sender)]")
-    val spawn = ActionBukkitEntity.spawn
+    val spawn = ActionBukkitEntityBuilder.spawn
 
     @KetherEditor.Document("projectile listen <animated> on <event> then <function>")
-    val listen = ActionBukkitEntity.listen
+    val listen = ActionBukkitEntityBuilder.listen
 
     @SubscribeEvent
     fun e(e: ProjectileHitEvent) {

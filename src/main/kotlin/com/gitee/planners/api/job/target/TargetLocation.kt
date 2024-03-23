@@ -14,7 +14,6 @@ interface TargetLocation<T> : Target<T> {
 
     fun getBukkitLocation() : Location
 
-
     fun getX(): Double
 
     fun getY(): Double

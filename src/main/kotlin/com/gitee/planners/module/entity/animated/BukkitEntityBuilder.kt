@@ -1,20 +1,21 @@
 package com.gitee.planners.module.entity.animated
 
 import com.gitee.planners.api.common.entity.animated.Animated
+import com.gitee.planners.api.common.entity.animated.AnimatedMeta
 import com.gitee.planners.api.common.task.SimpleUniqueTask
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetLocation
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
+import taboolib.platform.util.setMeta
 
-class BukkitEntity(val type: EntityType,validityTick: Int) : AbstractBukkitEntityAnimated<Entity>(),Animated.Periodic {
-
-    val isGravity = bool("is-gravity", true) {
-        instance.setGravity(it)
-    }
+/**
+ * 实体构建器
+ */
+class BukkitEntityBuilder(val type: EntityType, override val timestampTick: Long) : AbstractBukkitEntityAnimated<Entity>(),Animated.Periodic {
 
     /** 存活期 单位tick */
-    val validityTick = int("validity", validityTick) {
+    val validityTick = long("validity", timestampTick) {
 
     }
 
@@ -23,10 +24,8 @@ class BukkitEntity(val type: EntityType,validityTick: Int) : AbstractBukkitEntit
 
     }
 
-    override val timestampTick: Long
-        get() = validityTick.asLong()
 
-    override fun create(target: Target<*>): Entity {
+    fun create(target: Target<*>): Entity {
         val location = (target as TargetLocation<*>).getBukkitLocation()
         val entity = location.world!!.spawnEntity(location, type)
         // 创建删除任务
@@ -34,6 +33,16 @@ class BukkitEntity(val type: EntityType,validityTick: Int) : AbstractBukkitEntit
             entity.remove()
         }
         return entity
+    }
+
+
+    fun invokeSpawn(target: Target<*>): Entity {
+        instance = create(target)
+        instance.setMeta("@animated", this)
+        this.getImmutableRegistry().getValues().filterIsInstance<AnimatedMeta<Any>>().forEach {
+            it.onUpdate(this, it.any())
+        }
+        return instance
     }
 
     fun getClearableTask(entity: Entity): SimpleUniqueTask? {

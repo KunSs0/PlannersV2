@@ -15,8 +15,8 @@ import org.bukkit.entity.Player
 import taboolib.common.util.Vector
 import java.util.*
 
-class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>,
-    TargetContainerization {
+class TargetBukkitEntity(val entity: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
+
     override fun getUniqueId(): UUID {
         return entity.uniqueId
     }

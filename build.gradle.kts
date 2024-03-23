@@ -2,7 +2,7 @@ import io.izzel.taboolib.gradle.*
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.9"
+    id("io.izzel.taboolib") version "2.0.11"
     id("org.jetbrains.kotlin.jvm") version "1.8.22"
 }
 
@@ -31,27 +31,20 @@ taboolib {
         )
     }
     version {
-        taboolib = "6.1.1-beta13"
+        taboolib = "6.1.1-beta15"
     }
 }
+
 repositories {
     mavenCentral()
     mavenLocal()
 }
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
-    destinationDir = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
+    destinationDirectory = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
 repositories {
-    // 依赖使用阿里云 maven 源
-    maven {
-        setUrl("https://maven.aliyun.com/repository/public/")
-    }
-    maven {
-        setUrl("https://maven.aliyun.com/repository/spring/")
-    }
-    mavenLocal()
     mavenCentral()
 }
 dependencies {
@@ -66,6 +59,7 @@ dependencies {
     compileOnly("org.ejml:ejml-core:0.41")
     compileOnly("org.ejml:ejml-simple:0.41")
     compileOnly("org.ejml:ejml-fdense:0.41")
+    compileOnly("public:ModelEngine:2.5.1")
 
     compileOnly("com.mojang:datafixerupper:4.0.26")
     compileOnly(kotlin("stdlib"))

@@ -9,10 +9,7 @@ import com.gitee.planners.util.unboxJavaToKotlin
 import org.bukkit.Bukkit
 import taboolib.common.platform.function.warning
 import taboolib.common.util.Vector
-import taboolib.common5.cbool
-import taboolib.common5.cdouble
-import taboolib.common5.cfloat
-import taboolib.common5.cint
+import taboolib.common5.*
 import taboolib.module.kether.runKether
 
 abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated {
@@ -58,6 +55,10 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
 
     fun AbstractAnimated.int(id: String, defaultValue: Int = 0, onUpdate: Animated.(data: Int) -> Unit = {}): AnimatedMeta.CoerceMeta<Int> {
         return createBaked(id, defaultValue, parser = { this.cint }, onUpdate)
+    }
+
+    fun AbstractAnimated.long(id: String, defaultValue: Long = 0, onUpdate: Animated.(data: Long) -> Unit = {}): AnimatedMeta.CoerceMeta<Long> {
+        return createBaked(id, defaultValue, parser = { this.clong }, onUpdate)
     }
 
 
