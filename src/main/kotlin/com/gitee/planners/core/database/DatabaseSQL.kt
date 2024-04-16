@@ -37,6 +37,7 @@ class DatabaseSQL : Database {
 
     val tableRoute = Table("${prefix}_route", host) {
         add { id() }
+        add("user") { type(ColumnTypeSQL.INT) }
         add("router") { type(ColumnTypeSQL.VARCHAR, 60) }
         add("parent") { type(ColumnTypeSQL.INT) }
         add("route") { type(ColumnTypeSQL.VARCHAR, 60) }
@@ -56,7 +57,7 @@ class DatabaseSQL : Database {
         add("route") { type(ColumnTypeSQL.INT) }
         add("node") { type(ColumnTypeSQL.VARCHAR, 60) }
         add("level") { type(ColumnTypeSQL.INT) }
-        add("binding") { type(ColumnTypeSQL.VARCHAR,60) }
+        add("binding") { type(ColumnTypeSQL.VARCHAR, 60) }
     }
 
     init {
@@ -149,8 +150,8 @@ class DatabaseSQL : Database {
     private fun getPlayerSkills(route: Long): List<PlayerSkill> {
         return tableSkill.select(dataSource) {
             where { "route" eq route }
-            rows("id", "node", "level","binding")
-        }.map { PlayerSkill(getLong("id"), getString("node"), getInt("level"),getString("binding")) }
+            rows("id", "node", "level", "binding")
+        }.map { PlayerSkill(getLong("id"), getString("node"), getInt("level"), getString("binding")) }
     }
 
     private fun getRouteById(id: Long): PlayerRoute {
@@ -209,15 +210,15 @@ class DatabaseSQL : Database {
                 )
                 onFinally {
                     val id = getId(generatedKeys)
-                    future.complete(PlayerSkill(id, skill.id, skill.startedLevel,null))
+                    future.complete(PlayerSkill(id, skill.id, skill.startedLevel, null))
                 }
             }
         } else if (skill is PlayerSkill && skill.index == -1L) {
             tableSkill.nullableInsert(dataSource) {
-                set("route",route)
-                set("node",skill.id)
-                set("level",skill.level)
-                set("binding",skill.binding?.id)
+                set("route", route)
+                set("node", skill.id)
+                set("level", skill.level)
+                set("binding", skill.binding?.id)
                 onFinally {
                     skill.index = getId(generatedKeys)
                     future.complete(skill)
@@ -238,16 +239,20 @@ class DatabaseSQL : Database {
     override fun updateSkill(skill: PlayerSkill) {
         tableSkill.update(dataSource) {
             where { "id" eq skill.index }
-            set("level",skill.level)
-            set("binding",skill.binding?.id)
+            set("level", skill.level)
+            set("binding", skill.binding?.id)
         }
     }
 
-    override fun createPlayerJob(profile: PlayerProfile, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
+    override fun createPlayerJob(
+        profile: PlayerProfile,
+        parentId: Long,
+        route: ImmutableRoute
+    ): CompletableFuture<PlayerRoute> {
         val future = CompletableFuture<PlayerRoute>()
         val node = PlayerRoute.Node(parentId, route.id)
-        tableRoute.insert(dataSource, "router", "parent", "route") {
-            value(route.routerId, node.parentId, node.route)
+        tableRoute.insert(dataSource, "user", "router", "parent", "route") {
+            value(profile.id, route.routerId, node.parentId, node.route)
             onFinally {
                 future.complete(PlayerRoute(getId(generatedKeys), route.routerId, node, emptyList()))
             }

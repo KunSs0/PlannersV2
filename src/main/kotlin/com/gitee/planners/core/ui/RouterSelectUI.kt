@@ -31,10 +31,11 @@ object RouterSelectUI : SingletonChoiceUI<ImmutableRouter>("router-select.yml") 
             player.sendLang("player-route-exists", profile.route!!.name)
             return
         }
+        event.clicker.closeInventory()
         val route = element.originate ?: error("Route originate does not exist")
         // 选择职业
 
-        ProfileAPI.OPERATOR.createPlayerRoute(profile,route).thenAccept {
+        ProfileAPI.OPERATOR.createPlayerRoute(profile, route).thenAccept {
             profile.route = it
             player.sendLang("player-route-selected", it.name)
         }
