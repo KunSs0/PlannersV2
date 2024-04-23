@@ -53,6 +53,7 @@ object ActionBukkitDamage : SimpleKetherParser("damage") {
     }
 
     fun LivingEntity.setKiller(source: LivingEntity) {
+        this.setMeta("@killer",source)
         when (MinecraftVersion.major) {
             // 1.12.* 1.16.*
             4, 8 -> setProperty("entity/killer", source.getProperty("entity"))
