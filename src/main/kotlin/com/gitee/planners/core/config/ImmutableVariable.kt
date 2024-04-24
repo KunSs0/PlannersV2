@@ -17,7 +17,8 @@ interface ImmutableVariable : Variable {
 
                 is String -> Default(id, value)
 
-                is Boolean -> Default(id, "$value")
+
+                is Boolean, is Int, is Float, is Double, is Long -> Default(id, "$value")
 
                 is List<*> -> {
                     When(id, value.map { Configuration.fromMap(it as Map<*, *>) })

@@ -11,29 +11,29 @@ import taboolib.common.platform.function.warning
 import taboolib.library.kether.QuestActionParser
 import taboolib.module.kether.combinationParser
 
-@KetherEditor.Document("attack <value: number> [at objective:TargetContainer(empty)] [source objective:TargetContainer(sender)]")
-@CombinationKetherParser.Used
-object ActionBukkitAttack : SimpleKetherParser("attack") {
-    override fun run(): QuestActionParser {
-        return combinationParser {
-            it.group(
-                actionDouble(),
-                commandObjectiveOrEmpty(),
-                commandObjectiveOrSender("source")
-            ).apply(it) { value, objective, source ->
-                val killer = source.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? LivingEntity
-                now {
-                    if (killer == null) {
-                        warning("Action attack source not correctly defined")
-                        return@now
-                    }
-                    objective.filterIsInstance<TargetBukkitEntity>().map { it.instance }.forEach { entity ->
-                        if (entity is Damageable) {
-                            entity.damage(value,killer)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+//@KetherEditor.Document("attack <value: number> [at objective:TargetContainer(empty)] [source objective:TargetContainer(sender)]")
+//@CombinationKetherParser.Used
+//object ActionBukkitAttack : SimpleKetherParser("attack") {
+//    override fun run(): QuestActionParser {
+//        return combinationParser {
+//            it.group(
+//                actionDouble(),
+//                commandObjectiveOrEmpty(),
+//                commandObjectiveOrSender("source")
+//            ).apply(it) { value, objective, source ->
+//                val killer = source.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? LivingEntity
+//                now {
+//                    if (killer == null) {
+//                        warning("Action attack source not correctly defined")
+//                        return@now
+//                    }
+//                    objective.filterIsInstance<TargetBukkitEntity>().map { it.instance }.forEach { entity ->
+//                        if (entity is Damageable) {
+//                            entity.damage(value,killer)
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
