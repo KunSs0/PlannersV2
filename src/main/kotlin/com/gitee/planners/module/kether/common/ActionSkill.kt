@@ -16,7 +16,7 @@ import com.gitee.planners.module.kether.commandObjective
 import org.bukkit.entity.Player
 
 @CombinationKetherParser.Used
-object ActionSkill : MultipleKetherParser("skill") {
+object ActionSkill : MultipleKetherParser(" ") {
 
     @KetherEditor.Document("skill cast <id> [type: relative] [level: 1] [at objective:TargetContainer(sender)]")
     val cast0 = KetherHelper.combinedKetherParser {

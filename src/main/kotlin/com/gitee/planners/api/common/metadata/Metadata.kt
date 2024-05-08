@@ -2,7 +2,6 @@ package com.gitee.planners.api.common.metadata
 
 import com.gitee.planners.util.unboxJavaToKotlin
 import com.google.gson.*
-import org.ejml.simple.SimpleMatrix
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
@@ -15,7 +14,7 @@ interface Metadata {
 
     val clazz: Class<*>
 
-    val stopTime: Long
+    val timeoutTick: Long
 
     fun isTimeout(): Boolean
 

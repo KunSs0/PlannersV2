@@ -8,7 +8,6 @@ import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerProfile
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
-import com.gitee.planners.util.config
 import org.bukkit.entity.Player
 import taboolib.common5.clong
 import taboolib.module.database.*
@@ -49,7 +48,7 @@ class DatabaseSQL : Database {
         add("node") { type(ColumnTypeSQL.VARCHAR, 36) }
         add("type") { type(ColumnTypeSQL.VARCHAR, 36) }
         add("token") { type(ColumnTypeSQL.VARCHAR, 255) }
-        add("stop_time") { type(ColumnTypeSQL.TIMESTAMP) }
+        add("stop_time") { type(ColumnTypeSQL.BIGINT) }
     }
 
     val tableSkill = Table("${prefix}_skill", host) {
@@ -91,8 +90,8 @@ class DatabaseSQL : Database {
         }.map {
             val type = Class.forName(getString("type"))
             val token = getString("token")
-            val stopTime = getTimestamp("stop_time").time
-            getString("node") to Metadata.Loader.parseTypeToken(type, token, stopTime)
+            val timeoutTick = getLong("stop_time")
+            getString("node") to Metadata.Loader.parseTypeToken(type, token, timeoutTick)
         }.toMap()
     }
 
@@ -180,13 +179,17 @@ class DatabaseSQL : Database {
                 whereWithMetadata(profile, id)
                 set("type", metadata.clazz.name)
                 set("token", Metadata.Loader.toJson(metadata))
-                set("stop_time", metadata.stopTime)
+                set("stop_time", metadata.timeoutTick)
             }
         }
         // 插入节点
         else {
-            tableMetadata.insert(dataSource, "user", "node", "type", "token", "stop_time") {
-                value(profile.id, id, metadata.clazz.name, Metadata.Loader.toJson(metadata), metadata.stopTime)
+            tableMetadata.nullableInsert(dataSource) {
+                set("user", profile.id)
+                set("node", id)
+                set("type", metadata.clazz.name)
+                set("token", Metadata.Loader.toJson(metadata))
+                set("stop_time", metadata.timeoutTick)
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.gitee.planners.util.math
 
+import com.gitee.planners.util.math.asVector
 import org.bukkit.Location
 import org.ejml.simple.SimpleMatrix
 import taboolib.common.util.Vector

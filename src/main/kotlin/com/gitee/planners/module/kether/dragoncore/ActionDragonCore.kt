@@ -14,9 +14,9 @@ object ActionDragonCore : MultipleKetherParser("dragoncore") {
         val send = KetherHelper.combinedKetherParser {
             it.group(text(), int(), commandObjective()).apply(it) { name, transition, objective ->
                 now {
-                    objective.filterIsInstance<TargetBukkitEntity>().forEach {
-                        it.instance.sendAnimation(name, transition)
-                    }
+//                    objective.filterIsInstance<TargetBukkitEntity>().forEach {
+//                        it.instance.sendAnimation(name, transition)
+//                    }
                 }
             }
         }

@@ -2,7 +2,7 @@ package com.gitee.planners.api.common.metadata
 
 import com.gitee.planners.util.math.asVector
 import com.google.gson.JsonElement
-import org.ejml.simple.SimpleMatrix
+import com.google.gson.JsonPrimitive
 import taboolib.common.util.Vector
 import taboolib.common5.*
 
@@ -16,10 +16,10 @@ class MetadataTypeToken {
 
     }
 
-    open class TypeToken(override val clazz: Class<*>, var any: Any, override val stopTime: Long) : Metadata {
+    open class TypeToken(override val clazz: Class<*>, var any: Any, override val timeoutTick: Long) : Metadata {
 
         override fun isTimeout(): Boolean {
-            return stopTime != -1L && System.currentTimeMillis() > stopTime
+            return timeoutTick != -1L && System.currentTimeMillis() > timeoutTick
         }
 
         override fun asBoolean(): Boolean {
@@ -77,6 +77,10 @@ class MetadataTypeToken {
         override fun decode(element: JsonElement): String {
             return element.asJsonPrimitive.asString
         }
+
+        override fun encode(src: String): JsonElement {
+            return JsonPrimitive(src)
+        }
     }
 
     class SerializableI : Metadata.Serializable<Int> {
@@ -86,6 +90,10 @@ class MetadataTypeToken {
 
         override fun decode(element: JsonElement): Int {
             return element.asJsonPrimitive.asInt
+        }
+
+        override fun encode(src: Int): JsonElement {
+            return JsonPrimitive(src)
         }
     }
 
@@ -98,6 +106,10 @@ class MetadataTypeToken {
             return element.asJsonPrimitive.asLong
         }
 
+        override fun encode(src: Long): JsonElement {
+            return JsonPrimitive(src)
+        }
+
     }
 
     class SerializableF : Metadata.Serializable<Float> {
@@ -107,6 +119,10 @@ class MetadataTypeToken {
 
         override fun decode(element: JsonElement): Float {
             return element.asJsonPrimitive.asFloat
+        }
+
+        override fun encode(src: Float): JsonElement {
+            return JsonPrimitive(src)
         }
     }
 
@@ -118,6 +134,10 @@ class MetadataTypeToken {
         override fun decode(element: JsonElement): Double {
             return element.asJsonPrimitive.asDouble
         }
+
+        override fun encode(src: Double): JsonElement {
+            return JsonPrimitive(src)
+        }
     }
 
     class SerializableB : Metadata.Serializable<Boolean> {
@@ -128,6 +148,11 @@ class MetadataTypeToken {
         override fun decode(element: JsonElement): Boolean {
             return element.asJsonPrimitive.asBoolean
         }
+
+        override fun encode(src: Boolean): JsonElement {
+            return JsonPrimitive(src)
+        }
+
     }
 
 }

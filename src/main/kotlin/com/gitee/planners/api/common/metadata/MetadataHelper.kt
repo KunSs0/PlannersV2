@@ -1,8 +1,12 @@
 package com.gitee.planners.api.common.metadata
 
 import com.gitee.planners.util.unboxJavaToKotlin
+import kotlin.math.min
 
+@Suppress("NAME_SHADOWING")
 fun Any?.metadata(timeout: Long = -1): MetadataTypeToken.TypeToken {
+    // 限制timeout的最小值
+    val timeout = maxOf(timeout, -1L)
     // 如果是null 则代表要删除metadata 直接返回空
     if (this == null) {
         return MetadataTypeToken.Void()
