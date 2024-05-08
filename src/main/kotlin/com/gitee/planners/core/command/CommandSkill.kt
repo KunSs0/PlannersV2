@@ -19,8 +19,7 @@ object CommandSkill {
 
     @CommandBody
     val cast = Command.withPlayerSkill { player, skill ->
-        val context = ImmutableSkillContext(player.adaptTarget(), skill.immutable, 1)
-        context.run()
+        commandSkillRun(player, skill.immutable, 1)
         player.sendMessage("casted ${skill.id}")
     }
 
@@ -33,12 +32,12 @@ object CommandSkill {
                 suggest { RegistryBuiltin.SKILL.getKeys().toList() }
 
                 execute<ProxyCommandSender> { sender, context, argument ->
-                    commandSkillRun(context.getBukkitPlayer()!!,RegistryBuiltin.SKILL.get(argument),1)
+                    commandSkillRun(context.getBukkitPlayer()!!, RegistryBuiltin.SKILL.get(argument), 1)
                 }
 
-                dynamic("level",optional = true) {
+                dynamic("level", optional = true) {
 
-                    execute<ProxyCommandSender>{sender, context, argument ->
+                    execute<ProxyCommandSender> { sender, context, argument ->
                         val player = context.getBukkitPlayer()!!
                         val skill = RegistryBuiltin.SKILL.get(context["skill"])
                         val level = argument.cint
@@ -51,7 +50,7 @@ object CommandSkill {
         }
     }
 
-    private fun commandSkillRun(player: Player,skill: ImmutableSkill,level: Int) {
+    private fun commandSkillRun(player: Player, skill: ImmutableSkill, level: Int) {
         ImmutableSkillContext(player.adaptTarget(), skill, level).run()
     }
 

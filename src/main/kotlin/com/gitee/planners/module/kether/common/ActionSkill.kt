@@ -16,7 +16,7 @@ import com.gitee.planners.module.kether.commandObjective
 import org.bukkit.entity.Player
 
 @CombinationKetherParser.Used
-object ActionSkill : MultipleKetherParser(" ") {
+object ActionSkill : MultipleKetherParser("skill") {
 
     @KetherEditor.Document("skill cast <id> [type: relative] [level: 1] [at objective:TargetContainer(sender)]")
     val cast0 = KetherHelper.combinedKetherParser {
@@ -51,12 +51,11 @@ object ActionSkill : MultipleKetherParser(" ") {
 
         // 强制释放 不计入冷却，可传入等级，不传入等级相对自身技能等级释放
         val force = KetherHelper.combinedKetherParser {
-            it.group(text(), commandInt("level", -1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
+            it.group(text(), commandInt("level", 1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
                 now {
                     val skill = RegistryBuiltin.SKILL.get(id)
                     objective.forEach {
-                        val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
-                        ImmutableSkillContext(it, skill, i).run()
+                        ImmutableSkillContext(it, skill, level).run()
                     }
                 }
             }
