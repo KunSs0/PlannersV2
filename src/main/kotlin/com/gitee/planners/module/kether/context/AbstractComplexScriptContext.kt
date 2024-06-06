@@ -8,6 +8,7 @@ import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
 import taboolib.library.kether.Quest
 import taboolib.module.kether.ScriptOptions
+import java.util.concurrent.CompletableFuture
 
 abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: ComplexCompiledScript) :
     AbstractContext(sender) {
@@ -22,15 +23,26 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
     /** 是否立即执行 如果为true则忽略async，同步当前线程执行 */
     var now = false
 
-    override fun run() {
-        submit(async = async, now = now) {
+    override fun call(): CompletableFuture<Any> {
+
+        val future = CompletableFuture<Any>()
+        submit(async = async) {
             platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.createOptions())
+                .thenAccept {
+                    future.complete(it)
+                }
         }
+        return future
     }
 
-    fun run(block: Quest.Block,func: ScriptOptions.ScriptOptionsBuilder.() -> Unit = { }) {
-        submit(async = async, now = now) {
-            platform.run(trackId, compiled.compiledScript(), block, this@AbstractComplexScriptContext.createOptions(func))
+    open fun call(block: Quest.Block, func: ScriptOptions.ScriptOptionsBuilder.() -> Unit = { }) {
+        submit(async = async) {
+            platform.run(
+                trackId,
+                compiled.compiledScript(),
+                block,
+                this@AbstractComplexScriptContext.createOptions(func)
+            )
         }
     }
 

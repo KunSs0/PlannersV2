@@ -61,8 +61,7 @@ object ScriptEventHandler {
                     if (!ctx.async) {
                         ctx.now = true
                     }
-                    ctx.run(listener.block) {
-                        // handle event
+                    ctx.call(listener.block) {
                         context { wrapped.handle(event, this) }
                     }
                 }

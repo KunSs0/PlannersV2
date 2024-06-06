@@ -18,14 +18,14 @@ object CommandConsole {
 
             execute<ConsoleCommandSender> { sender, context, argument ->
                 val skill = RegistryBuiltin.SKILL.get(argument)
-                ImmutableSkillContext(sender.adaptTarget(), skill, 1).run()
+                ImmutableSkillContext(sender.adaptTarget(), skill, 1).call()
                 sender.sendMessage("casted ${skill.id}")
             }
 
             dynamic("level", optional = true) {
                 execute<ConsoleCommandSender> { sender, context, argument ->
                     val skill = RegistryBuiltin.SKILL.get(context["id"])
-                    ImmutableSkillContext(sender.adaptTarget(), skill, argument.cint).run()
+                    ImmutableSkillContext(sender.adaptTarget(), skill, argument.cint).call()
                     sender.sendMessage("casted ${skill.id}")
                 }
             }

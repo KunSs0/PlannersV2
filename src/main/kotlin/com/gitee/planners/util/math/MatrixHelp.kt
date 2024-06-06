@@ -95,7 +95,12 @@ fun SimpleMatrix.scale(x: Double, y: Double, z: Double): SimpleMatrix {
 fun SimpleMatrix.translate(x: Double, y: Double, z: Double): SimpleMatrix {
     return this.mult(
         SimpleMatrix(
-            arrayOf(doubleArrayOf(1.0, 0.0, 0.0, x), doubleArrayOf(0.0, 1.0, 0.0, y), doubleArrayOf(0.0, 0.0, 1.0, z), doubleArrayOf(0.0, 0.0, 0.0, 1.0))
+            arrayOf(
+                doubleArrayOf(1.0, 0.0, 0.0, x),
+                doubleArrayOf(0.0, 1.0, 0.0, y),
+                doubleArrayOf(0.0, 0.0, 1.0, z),
+                doubleArrayOf(0.0, 0.0, 0.0, 1.0)
+            )
         )
     )
 }

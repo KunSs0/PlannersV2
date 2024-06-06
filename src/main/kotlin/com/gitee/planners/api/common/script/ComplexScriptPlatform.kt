@@ -69,6 +69,7 @@ interface ComplexScriptPlatform {
             block.actions.forEach { action ->
                 action.process(context.rootFrame())
             }
+            block
         }
 
         private fun createScriptContext(id: String,script: Script,options: KetherScriptOptions): QuestContext {

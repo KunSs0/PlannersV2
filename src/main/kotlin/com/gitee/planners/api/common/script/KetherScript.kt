@@ -6,6 +6,10 @@ interface KetherScript : Script {
 
     fun run(options: KetherScriptOptions): CompletableFuture<Any?>
 
+    fun <T> get(options: KetherScriptOptions,parser: (Any?) -> T): T {
+        return parser.invoke(run(options).get())
+    }
+
     enum class RuntimeEnvironment {
         SKILL {
             override fun getScriptPlatform(): ComplexScriptPlatform {

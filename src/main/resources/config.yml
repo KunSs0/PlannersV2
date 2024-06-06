@@ -9,6 +9,8 @@ database:
     table: planners_v2
 
 settings:
+  cooler:
+    use: memory
   bukkit-launch:
     unimpeded-types:
       - AIR

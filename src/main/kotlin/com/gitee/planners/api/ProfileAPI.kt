@@ -63,7 +63,7 @@ object ProfileAPI : AbstractRegistry<UUID, PlayerProfile>() {
         submitAsync(delay = 5) {
             if (e.player.isOnline) {
                 val profile = Database.INSTANCE.getPlayerProfile(e.player)
-                // 更新到玩家默认技能实例
+//                 更新到玩家默认技能实例
                 profile.executeUpdatedDefaultSkill().thenAccept {
                     this@ProfileAPI[e.player.uniqueId] = profile
                     PlayerProfileLoadedEvent(profile).call()

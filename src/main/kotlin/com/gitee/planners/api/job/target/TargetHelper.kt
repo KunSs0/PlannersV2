@@ -5,10 +5,25 @@ import org.bukkit.command.CommandSender
 import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.entity.Entity
 
+inline fun <reified T : Target<*>> adaptTarget(any: Any): T {
+    return when (any) {
+
+        is CommandSender -> {
+            any.adaptTarget() as T
+        }
+
+        is Location -> {
+            any.adaptTarget() as T
+        }
+
+        else -> throw IllegalStateException("Target ${any::class.java.name} is not supported")
+    }
+
+}
+
 fun Entity.adaptTarget(): TargetBukkitEntity {
     return TargetBukkitEntity(this)
 }
-
 
 fun Location.adaptTarget(): TargetBukkitLocation {
     return TargetBukkitLocation(this)

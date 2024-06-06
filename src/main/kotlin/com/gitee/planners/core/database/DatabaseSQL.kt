@@ -9,6 +9,8 @@ import com.gitee.planners.core.player.PlayerProfile
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
+import taboolib.common.platform.function.info
+import taboolib.common.util.unsafeLazy
 import taboolib.common5.clong
 import taboolib.module.database.*
 import java.sql.ResultSet
@@ -25,8 +27,9 @@ class DatabaseSQL : Database {
 
     val cachedId = mutableMapOf<UUID, Long>()
 
-    val dataSource: DataSource
-        get() = host.createDataSource()
+    val dataSource by unsafeLazy {
+        host.createDataSource()
+    }
 
     val tableUser = Table("${prefix}_user", host) {
         add { id() }

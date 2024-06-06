@@ -3,6 +3,11 @@ package com.gitee.planners.api.common.metadata
 import com.gitee.planners.util.unboxJavaToKotlin
 import kotlin.math.min
 
+
+fun createMetadata(data: Any, timeout: Long = -1): MetadataTypeToken.TypeToken {
+    return data.metadata(timeout)
+}
+
 @Suppress("NAME_SHADOWING")
 fun Any?.metadata(timeout: Long = -1): MetadataTypeToken.TypeToken {
     // 限制timeout的最小值

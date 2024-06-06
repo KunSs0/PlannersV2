@@ -1,5 +1,6 @@
 package com.gitee.planners.core.command
 
+import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.RegistryBuiltin
 import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.api.job.target.adaptTarget
@@ -19,8 +20,7 @@ object CommandSkill {
 
     @CommandBody
     val cast = Command.withPlayerSkill { player, skill ->
-        commandSkillRun(player, skill.immutable, 1)
-        player.sendMessage("casted ${skill.id}")
+        PlannersAPI.cast(player,skill)
     }
 
     @CommandBody
@@ -32,7 +32,7 @@ object CommandSkill {
                 suggest { RegistryBuiltin.SKILL.getKeys().toList() }
 
                 execute<ProxyCommandSender> { sender, context, argument ->
-                    commandSkillRun(context.getBukkitPlayer()!!, RegistryBuiltin.SKILL.get(argument), 1)
+                    PlannersAPI.cast(context.getBukkitPlayer()!!, RegistryBuiltin.SKILL.get(argument), 1)
                 }
 
                 dynamic("level", optional = true) {
@@ -41,7 +41,7 @@ object CommandSkill {
                         val player = context.getBukkitPlayer()!!
                         val skill = RegistryBuiltin.SKILL.get(context["skill"])
                         val level = argument.cint
-                        commandSkillRun(player, skill, level)
+                        PlannersAPI.cast(player, skill, level)
                     }
 
                 }
@@ -49,10 +49,5 @@ object CommandSkill {
 
         }
     }
-
-    private fun commandSkillRun(player: Player, skill: ImmutableSkill, level: Int) {
-        ImmutableSkillContext(player.adaptTarget(), skill, level).run()
-    }
-
 
 }
