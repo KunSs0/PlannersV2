@@ -27,7 +27,7 @@ taboolib {
             DATABASE,
             AI,
             EXPANSION_PLAYER_FAKE_OP,
-
+            METRICS
         )
     }
     version {
