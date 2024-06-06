@@ -1,6 +1,7 @@
 package com.gitee.planners.core.database
 
 import com.gitee.planners.api.common.metadata.Metadata
+import com.gitee.planners.api.event.DatabaseInitEvent
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
@@ -19,11 +20,15 @@ interface Database {
         @ConfigNode("database")
         val option = configNodeTo { DatabaseOption(this) }
 
-        val INSTANCE : Database by lazy {
-            when (option.get().use.uppercase()) {
+        val INSTANCE: Database by lazy {
+            when (val type = option.get().use.uppercase()) {
                 "LOCAL" -> TODO("Not implemented")
                 "SQL" -> DatabaseSQL()
-                else -> TODO("Not implemented")
+                else -> {
+                    val event = DatabaseInitEvent(type)
+                    event.call()
+                    event.instance ?: error("Unsupported database type: $type")
+                }
             }
         }
 
@@ -41,7 +46,7 @@ interface Database {
 
     fun createPlayerSkill(profile: PlayerProfile, skill: Skill): CompletableFuture<PlayerSkill>
 
-    fun createPlayerJob(profile: PlayerProfile,parentId: Long,route: ImmutableRoute) : CompletableFuture<PlayerRoute>
+    fun createPlayerJob(profile: PlayerProfile, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute>
 
     fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute>
 
