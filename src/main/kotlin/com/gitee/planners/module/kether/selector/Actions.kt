@@ -27,7 +27,7 @@ private object Their : AbstractSelector("their") {
     override fun select(): SimpleKetherParser {
         return KetherHelper.simpleKetherVoid {
             val senderId = (getEnvironmentContext().sender as? TargetEntity)?.getUniqueId() ?:
-                TODO("Non TargetEntity sender is currently not supported in @their selector.")
+                error("Non TargetEntity sender is currently not supported in @their selector.")
 
             getTargetContainer().removeIf {
                 it is TargetEntity && it.getUniqueId() == senderId

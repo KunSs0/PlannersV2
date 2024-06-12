@@ -14,7 +14,7 @@ class MemoryCooler : Cooler {
     override fun get(player: Player, skill: Skill): Long {
         val path = "${player.uniqueId}-${skill.id}"
         if (map.containsKey(path)) {
-            return map[path]!!
+            return ((System.currentTimeMillis() - map[path]!!) / 50).coerceAtLeast(0)
         }
         return -1
     }

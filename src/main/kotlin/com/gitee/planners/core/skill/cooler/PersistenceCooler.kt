@@ -20,7 +20,7 @@ class PersistenceCooler : Cooler {
         if (metadata == null) {
             return -1
         }
-        return metadata.asLong()
+        return ((System.currentTimeMillis() - metadata.asLong()) / 50).coerceAtLeast(0)
     }
 
 

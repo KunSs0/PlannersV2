@@ -25,7 +25,7 @@ object PlannersAPI {
      */
     fun cast(player: Player, skill: PlayerSkill): ExecutableResult {
         // 优先检查冷却
-        if (Cooler.INSTANCE.get(player, skill) > System.currentTimeMillis()) {
+        if (Cooler.INSTANCE.get(player, skill) != 0L) {
             return ExecutableResult.cooling()
         }
 
