@@ -7,7 +7,6 @@ import taboolib.common.platform.Awake
 object SelectorRegistry : AbstractRegistry<String, Selector>() {
 
 
-
     @Awake
     class Visitor : RunningClassRegistriesVisitor<Selector>(Selector::class.java, SelectorRegistry) {
 

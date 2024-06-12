@@ -46,6 +46,7 @@ private object Console : AbstractSelector("console") {
 
 }
 
+
 @KetherEditor.Document(value = "select <objective...>", result = TargetContainer::class)
 @CombinationKetherParser.Used
 private fun actionSelect() = KetherHelper.simpleKetherParser("select") {

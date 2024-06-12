@@ -8,22 +8,30 @@ import com.gitee.planners.module.kether.*
 import org.bukkit.Bukkit
 import org.bukkit.World
 import org.bukkit.entity.EntityType
+import taboolib.common.platform.function.warning
 import taboolib.library.kether.Parser
 import taboolib.module.kether.*
 
-object InWorld : AbstractSelector("inworld","inWorld","in-world") {
+object InWorld : AbstractSelector("inworld", "inWorld", "in-world") {
 
     override fun select() = KetherHelper.combinedKetherParser {
-        it.group(bukkitWorldListOf(), commandEnumListOf<EntityType>("type")).apply(it) { worlds, types ->
+        it.group(bukkitWorldParser(), commandEnumListOf<EntityType>("type")).apply(it) { worlds, types ->
             now {
-                val entities = worlds.flatMap { it.entities }.filter { it.isDead && (types.isEmpty() || it.type in types) }
+                val entities =
+                    worlds.flatMap { it.entities }.filter { !it.isDead && (types.isEmpty() || it.type in types) }
                 getTargetContainer() += entities.map { it.adaptTarget() }
             }
         }
     }
 
-    fun ParserHolder.bukkitWorldListOf(): Parser<List<World>> {
-        return tokenListOf { Bukkit.getWorld(it) ?: error("World $it not found.") }
+    fun ParserHolder.bukkitWorldParser(): Parser<List<World>> {
+        return tokenListOf(uppercase = false) {
+            val world = Bukkit.getWorld(it)
+            if (world == null) {
+                error("World $it not found.")
+            }
+            world
+        }
     }
 
 

@@ -178,19 +178,21 @@ fun ParserHolder.commandVector(token: String, defaultValue: Vector = Vector(0, 0
 /**
  * 模糊匹配 [] -> [] , "" -> []
  */
-inline fun <reified T> ParserHolder.tokenListOf(crossinline block: (String) -> T): Parser<List<T>> {
+inline fun <reified T> ParserHolder.tokenListOf(uppercase: Boolean = true,crossinline block: (String) -> T): Parser<List<T>> {
     return Parser.frame { r ->
         val list = ArrayList<String>()
         try {
             r.mark()
             r.expect("[")
             while (r.hasNext() && r.peek() != ']') {
-                list.add(r.nextToken().uppercase())
+                val t = r.nextToken()
+                list.add(if (uppercase) t.uppercase() else t)
             }
             r.expect("]")
         } catch (e: Exception) {
             r.reset()
-            list.add(r.nextToken().uppercase())
+            val t = r.nextToken()
+            list.add(if (uppercase) t.uppercase() else t)
         }
         list.trimToSize()
         now {

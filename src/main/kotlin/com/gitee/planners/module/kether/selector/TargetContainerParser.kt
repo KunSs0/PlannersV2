@@ -4,6 +4,7 @@ import com.gitee.planners.api.job.selector.Selector
 import com.gitee.planners.api.job.selector.SelectorRegistry
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
+import taboolib.common.platform.function.warning
 import taboolib.library.kether.QuestAction
 import taboolib.library.kether.QuestReader
 import taboolib.module.kether.ScriptFrame
@@ -31,6 +32,9 @@ class TargetContainerParser(private val actions: List<QuestAction<out Any>>? = e
         return if (cur < actions!!.size) {
             actions[cur].process(frame).thenCompose {
                 process(frame, cur + 1)
+            }.exceptionally {
+                warning("Error while processing target container action: ${it.message}")
+                null
             }
         } else {
             CompletableFuture.completedFuture(null)
@@ -41,7 +45,11 @@ class TargetContainerParser(private val actions: List<QuestAction<out Any>>? = e
 
         val DEFAULT_PREFIX = arrayOf("at", "to")
 
-        fun parser(expects: Array<String> = DEFAULT_PREFIX, reader: QuestReader, type: LeastType, ): TargetContainerParser {
+        fun parser(
+            expects: Array<String> = DEFAULT_PREFIX,
+            reader: QuestReader,
+            type: LeastType,
+        ): TargetContainerParser {
             val actions = try {
                 reader.mark()
                 // 如果忽略前缀
@@ -50,37 +58,23 @@ class TargetContainerParser(private val actions: List<QuestAction<out Any>>? = e
                 }
                 val selectors = mutableListOf<QuestAction<Any>>()
                 while (true) {
+                    // 标记脚本索引
+                    reader.mark()
+                    // 拿出一个选择器命令
+                    val token = reader.nextToken()
+                    val filterable = token.startsWith("@!")
 
-                    var expect : String? = null
-                    var filterable = false
-                    // 尝试捕获一个解析器 如果捕获不到 直接退出本次捕获
-                    processInspect@for (key in SelectorRegistry.getKeys()) {
-
-                        reader.mark()
-                        val token = reader.nextToken()
-                        if (token == "@$key") {
-                            expect = key
-                            break@processInspect
-                        }
-                        // filterable
-                        else if (token == "@!$key") {
-                            expect = key
-                            filterable = SelectorRegistry.get(key) is Selector.Filterable
-                            break@processInspect
-                        }
-                        // 复位 继续下一次检查
+                    val selector =
+                        SelectorRegistry.getOrNull(if (filterable) token.substring(2) else token.substring(1))
+                    // 如果没有捕捉到一个合适的选择器 退出选择器解析
+                    if (selector == null) {
                         reader.reset()
-                    }
-                    // 直接跳出循环
-                    if (expect == null) {
                         break
                     }
-                    val instance = SelectorRegistry.get(expect)
-                    val action = if (filterable) (instance as Selector.Filterable).filter() else instance.select()
-
+                    val action = if (filterable) (selector as Selector.Filterable).filter() else selector.select()
                     selectors.add(action.run().resolve(reader))
                 }
-                // 如果 actions 为空 则尝试捕获一个变量
+                // 如果 actions 为空 则尝试至少捕获一个变量
                 selectors.ifEmpty { listOf(InVariable(reader.nextParsedAction())) }
             } catch (e: Exception) {
                 reader.reset()
