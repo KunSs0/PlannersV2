@@ -7,19 +7,19 @@ import taboolib.common5.Coerce
 
 @KetherEditor.Document(value = "int <value:Any>", result = Int::class)
 @CombinationKetherParser.Used
-private fun actionInt() = coerce("int") { Coerce.toInteger(this) }
+private fun actionInt() = coerce("int", Coerce::toInteger)
 
 @KetherEditor.Document(value = "double <value:Any>", result = Int::class)
 @CombinationKetherParser.Used
-private fun actionDouble() = coerce("double") { Coerce.toDouble(this) }
+private fun actionDouble() = coerce("double", Coerce::toDouble)
 
 @KetherEditor.Document(value = "long <value:Any>", result = Int::class)
 @CombinationKetherParser.Used
-private fun actionLong() = coerce("long") { Coerce.toLong(this) }
+private fun actionLong() = coerce("long", Coerce::toLong)
 
 @KetherEditor.Document(value = "float <value:Any>", result = Int::class)
 @CombinationKetherParser.Used
-private fun actionFloat() = coerce("float") { Coerce.toFloat(this) }
+private fun actionFloat() = coerce("float", Coerce::toFloat)
 
 private fun <T> coerce(id: String, convert: Any?.() -> T) = KetherHelper.combinedKetherParser(id) {
     it.group(any()).apply(it) { value ->

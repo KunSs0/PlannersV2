@@ -30,6 +30,19 @@ inline fun <reified T : Any> Any.asVector(after: (x: Double, y: Double, z: Doubl
                 error("Error while casting the array element to double!")
             }
         }
+
+        is String -> {
+            val split = split(" ")
+            assert(split.size == 3) {
+                "Expected a 3d vector, but string has size ${split.size}"
+            }
+            try {
+                after(split[0].cdouble, split[1].cdouble, split[2].cdouble)
+            } catch (e: Exception) {
+                error("Error while casting the string element to double!")
+            }
+        }
+
         // EJML matrix
         is SimpleMatrix -> {
             assert((numCols() == 3 || numCols() == 4) && numRows() == 1) {
