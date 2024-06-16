@@ -31,6 +31,17 @@ inline fun <reified T : Any> Any.asVector(after: (x: Double, y: Double, z: Doubl
             }
         }
 
+        is List<*> -> {
+            assert(this.size == 3) {
+                "Expected a 3d vector, but list has size ${this.size}"
+            }
+            try {
+                after(this[0].cdouble, this[1].cdouble, this[2].cdouble)
+            } catch (e: Exception) {
+                error("Error while casting the list element to double!")
+            }
+        }
+
         is String -> {
             val split = split(" ")
             assert(split.size == 3) {
