@@ -9,14 +9,12 @@ import com.gitee.planners.core.player.PlayerProfile
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
-import taboolib.common.platform.function.info
 import taboolib.common.util.unsafeLazy
 import taboolib.common5.clong
 import taboolib.module.database.*
 import java.sql.ResultSet
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
-import javax.sql.DataSource
 
 class DatabaseSQL : Database {
 
@@ -81,7 +79,7 @@ class DatabaseSQL : Database {
         val userId = getUserId(profile.onlinePlayer).id
         tableUser.update(dataSource) {
             where { "id" eq userId }
-            set("route", profile.route?.index)
+            set("route", profile.route?.bindingId)
         }
     }
 
@@ -206,7 +204,7 @@ class DatabaseSQL : Database {
 
     override fun createPlayerSkill(profile: PlayerProfile, skill: Skill): CompletableFuture<PlayerSkill> {
         val future = CompletableFuture<PlayerSkill>()
-        val route = profile.route?.index ?: error("Player ${profile.onlinePlayer.name} not find route")
+        val route = profile.route?.bindingId ?: error("Player ${profile.onlinePlayer.name} not find route")
         if (skill is ImmutableSkill) {
             tableSkill.insert(dataSource, "route", "node", "level") {
                 value(
@@ -267,7 +265,7 @@ class DatabaseSQL : Database {
     }
 
     override fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
-        return createPlayerJob(profile, profile.route?.index ?: -1L, route)
+        return createPlayerJob(profile, profile.route?.bindingId ?: -1L, route)
     }
 
     private fun getId(resultSet: ResultSet): Long {

@@ -2,18 +2,21 @@ package com.gitee.planners.core.player
 
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
+import com.gitee.planners.api.common.metadata.createMetadata
 import com.gitee.planners.api.common.metadata.metadata
-import com.gitee.planners.api.common.registry.Registry
-import com.gitee.planners.api.event.player.PlayerSkillEvent
+import com.gitee.planners.api.event.player.PlayerLevelChangeEvent
 import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.core.config.Leveling
+import com.gitee.planners.core.config.level.AlgorithmLevel
 import com.gitee.planners.core.database.Database
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submitAsync
+import taboolib.common5.cfloat
 import java.util.concurrent.CompletableFuture
 
 class PlayerProfile(val id: Long, val onlinePlayer: Player, route: PlayerRoute?, map: Map<String, Metadata>) :
-    MetadataContainer(map) {
+    MetadataContainer(map), Leveling {
 
     var route = route
         set(value) {
@@ -33,20 +36,142 @@ class PlayerProfile(val id: Long, val onlinePlayer: Player, route: PlayerRoute?,
         }
 
     var level: Int
-        get() = if (route == null) -1 else this["@job:level"]?.asInt() ?: 0
-        set(value) {
-            if (route != null) {
-                this["@job:level"] = value.metadata()
-            }
+        @JvmName("level0")
+        get() = this[AlgorithmLevel.getStoragePathInIsolation(this, "level")]?.asInt()
+            ?: AlgorithmLevel.getInstance(this).minLevel
+        @JvmName("level1")
+        private set(value) {
+            this[AlgorithmLevel.getStoragePathInIsolation(this, "level")] = createMetadata(value)
         }
 
     var experience: Int
-        get() = if (route == null) -1 else this["@job:experience"]?.asInt() ?: 0
-        set(value) {
-            if (route != null) {
-                this["@job:experience"] = value.metadata()
+        @JvmName("experience0")
+        get() = this[AlgorithmLevel.getStoragePathInIsolation(this, "experience")]?.asInt() ?: 0
+        @JvmName("experience1")
+        private set(value) {
+            this[AlgorithmLevel.getStoragePathInIsolation(this, "experience")] = createMetadata(value)
+        }
+
+    val experienceMax: Int
+        get() = AlgorithmLevel.getInstance(this).getExp(onlinePlayer, level).getNow(Int.MAX_VALUE)
+
+    override fun setLevel(level: Int) {
+        val algorithm = AlgorithmLevel.getInstance(this)
+        // 同步 exp
+        val progress = maxOf(0f, minOf(1.0f, experience / experienceMax.cfloat))
+        this.level = maxOf(algorithm.minLevel, minOf(algorithm.maxLevel, level))
+        this.experience = (progress * experienceMax).toInt()
+    }
+
+    override fun addLevel(value: Int) {
+        this.setLevel(level + value)
+    }
+
+    override fun getLevel(): Int {
+        return level
+    }
+
+    override fun setExperience(experience: Int) {
+
+        this.experience = experience
+    }
+
+
+    override fun getExperience(): Int {
+        return experience
+    }
+
+    override fun addExperience(value: Int): CompletableFuture<Void> {
+        val algorithm = AlgorithmLevel.getInstance(this)
+        if (level >= algorithm.maxLevel) {
+            level = algorithm.maxLevel
+            algorithm.getExp(onlinePlayer, level).thenAccept {
+                this.experience = it
+            }
+            return CompletableFuture.completedFuture(null)
+        }
+        val future = CompletableFuture<Void>()
+        var lvl = level
+        var exp = experience + value
+        var expNextLevel = 0
+        fun getNextLevel() = algorithm.getExp(onlinePlayer, lvl).thenAccept {
+            expNextLevel = if (it <= 0) Int.MAX_VALUE else it
+        }
+
+        fun finish() {
+            if (lvl >= algorithm.maxLevel) {
+                level = algorithm.maxLevel
+                experience = expNextLevel
+            } else {
+                level = lvl
+                experience = exp
+                // 修正
+                if (value <= 0) {
+                    addExperience(value)
+                }
+            }
+            future.complete(null)
+        }
+
+        fun process() {
+            getNextLevel().thenAccept {
+                if (exp >= expNextLevel) {
+                    lvl += 1
+                    exp -= expNextLevel
+                    process()
+                } else {
+                    finish()
+                }
             }
         }
+        process()
+        return future
+    }
+
+    override fun takeExperience(value: Int): CompletableFuture<Void> {
+        val algorithm = AlgorithmLevel.getInstance(this)
+        if (level <= algorithm.minLevel) {
+            level = algorithm.minLevel
+            experience = maxOf(this.experience - value, 0)
+            return CompletableFuture.completedFuture(null)
+        }
+        val future = CompletableFuture<Void>()
+        var lvl = level
+        var exp = experience - value
+        var expLastLevel = 0
+        fun getNextLevel() = algorithm.getExp(onlinePlayer, lvl - 1).thenAccept {
+            expLastLevel = if (it <= 0) Int.MAX_VALUE else it
+        }
+
+        fun finish() {
+            if (lvl <= algorithm.minLevel) {
+                level = algorithm.minLevel
+                experience = maxOf(exp, 0)
+            } else {
+                level = lvl
+                experience = exp
+                // 修正
+                if (value <= 0) {
+                    addExperience(value)
+                }
+            }
+            future.complete(null)
+        }
+
+        fun process() {
+            getNextLevel().thenAccept {
+                if (exp < 0) {
+                    lvl -= 1
+                    exp += expLastLevel
+                    process()
+                } else {
+                    finish()
+                }
+            }
+        }
+        process()
+        return future
+    }
 
     fun getSkill(immutable: ImmutableSkill): CompletableFuture<PlayerSkill> {
         return getSkill(immutable.id)
@@ -75,15 +200,15 @@ class PlayerProfile(val id: Long, val onlinePlayer: Player, route: PlayerRoute?,
     }
 
 
-    fun getRegistriedSkillOrNull(id: String): PlayerSkill? {
+    fun getRegisteredSkillOrNull(id: String): PlayerSkill? {
         return route?.getSkillOrNull(id)
     }
 
-    fun getRegistriedSkillOrNull(binding: KeyBinding): PlayerSkill? {
-        return getRegistrySkill().getValues().firstOrNull { it.binding == binding }
+    fun getRegisteredSkillOrNull(binding: KeyBinding): PlayerSkill? {
+        return getRegisteredSkill().values.firstOrNull { it.binding == binding }
     }
 
-    fun executeUpdatedDefaultSkill() : CompletableFuture<Void> {
+    fun executeUpdatedDefaultSkill(): CompletableFuture<Void> {
         if (route != null) {
             return CompletableFuture.allOf(*route!!.getImmutableSkillValues().map { this.getSkill(it) }.toTypedArray())
         }
@@ -93,12 +218,12 @@ class PlayerProfile(val id: Long, val onlinePlayer: Player, route: PlayerRoute?,
     /**
      * 获取已经注册的技能
      */
-    fun getRegistrySkill(): Registry<String, PlayerSkill> {
+    fun getRegisteredSkill(): Map<String, PlayerSkill> {
         // 如果 route 不存在
         if (route == null) {
             error("You must specify a route")
         }
-        return route!!.getRegistrySkill()
+        return route!!.getRegisteredSkill()
     }
 
 }

@@ -4,7 +4,7 @@ import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.module.attribute.AttributeDriver
+import com.gitee.planners.module.compat.attribute.AttributeDriver
 import com.gitee.planners.module.kether.commandInt
 import com.gitee.planners.module.kether.commandObjectiveOrSender
 import taboolib.common.util.asList

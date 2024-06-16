@@ -13,7 +13,7 @@ import taboolib.platform.util.sendLang
 
 object RouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml") {
 
-    override fun getElements(player: Player): List<ImmutableRoute> {
+    override fun getElements(player: Player): Collection<ImmutableRoute> {
         return player.plannersProfile.route!!.getBranches().map { it as ImmutableRoute }
     }
 

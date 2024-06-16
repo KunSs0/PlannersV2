@@ -1,6 +1,8 @@
 __option__:
   name: "战士"
   originate: swordsman
+  algorithm:
+    level: def0
   icon:
     material: DIAMOND_SWORD
     name: "职业: 战士"

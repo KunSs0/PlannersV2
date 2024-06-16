@@ -5,7 +5,10 @@ import com.germ.germplugin.api.RootType
 import com.germ.germplugin.api.dynamic.DynamicBase
 import com.germ.germplugin.api.dynamic.effect.GermEffectPart
 import com.germ.germplugin.api.dynamic.effect.GermEffectParticle
+import com.germ.germplugin.api.event.GermSrcPreReloadEvent
 import org.bukkit.configuration.ConfigurationSection
+import taboolib.common.platform.event.OptionalEvent
+import taboolib.common.platform.event.SubscribeEvent
 import java.util.*
 
 object GermEffectManager {
@@ -42,6 +45,14 @@ object GermEffectManager {
         val clone = effect.clone()
         clone.setIndexName(id)
         return clone
+    }
+
+    /**
+     * 当萌芽资源更新时 清空缓存
+     */
+    @SubscribeEvent(bind = "com.germ.germplugin.api.event.GermSrcPreReloadEvent")
+    fun e(opt: OptionalEvent) {
+        cache.clear()
     }
 
 }

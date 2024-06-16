@@ -37,7 +37,7 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
     }
 
     override fun metaKeys(): Set<String> {
-        return this.getImmutableRegistry().getKeys()
+        return this.getImmutableRegistry().keys
     }
 
     override fun getMetadata(id: String): Metadata? {

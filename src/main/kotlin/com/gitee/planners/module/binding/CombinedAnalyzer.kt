@@ -1,8 +1,6 @@
 package com.gitee.planners.module.binding
 
-import com.gitee.planners.api.KeyBindingAPI
-import com.gitee.planners.api.common.registry.AbstractRegistry
-import com.gitee.planners.api.common.registry.defaultRegistry
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.action.CombinedEvent
 import com.gitee.planners.api.job.KeyBinding
 import org.bukkit.entity.Player
@@ -23,7 +21,7 @@ class CombinedAnalyzer {
 
     companion object {
 
-        private val builtin = defaultRegistry<Player, CombinedAnalyzer>()
+        private val builtin = mutableMapOf<Player, CombinedAnalyzer>()
 
         fun processAction(player: Player,type: InteractionActionBukkitType) {
             processAction(player,InteractionActionBukkitToken(type))
@@ -47,7 +45,7 @@ class CombinedAnalyzer {
         }
 
         fun getInferKeyBindingCombined(action: InteractionAction): List<KeyBinding> {
-            return KeyBindingAPI.getValues().filter {
+            return Registries.KEYBINDING.values().filter {
                 (it as Combined).mapping.getOrNull(0) == action.code
             }
         }

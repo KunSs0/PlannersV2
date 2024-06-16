@@ -1,6 +1,6 @@
 package com.gitee.planners.module.kether.common
 
-import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
@@ -66,7 +66,7 @@ object ActionCooldown : MultipleKetherParser("cooldown", "cd") {
     }
 
     private fun getImmutableSkill(opt: Optional<String>, frame: ScriptFrame): ImmutableSkill {
-        return RegistryBuiltin.SKILL.get(opt.orElseGet {
+        return Registries.SKILL.get(opt.orElseGet {
             val ctx = frame.getEnvironmentContext()
             (ctx as? ImmutableSkillContext)?.skill?.id ?: error("")
         })

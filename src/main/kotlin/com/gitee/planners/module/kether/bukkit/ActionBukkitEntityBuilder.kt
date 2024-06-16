@@ -159,7 +159,7 @@ object ActionBukkitEntityBuilder : MultipleKetherParser("entity") {
         if (spawner is AbstractBukkitEntityAnimated<*>) {
             (spawner as AbstractBukkitEntityAnimated<Entity>).instance = entity
             spawner.instance.setMeta("@animated", this)
-            spawner.getImmutableRegistry().getValues().filterIsInstance<AnimatedMeta<Any>>().forEach {
+            spawner.getImmutableRegistry().values.filterIsInstance<AnimatedMeta<Any>>().forEach {
                 it.onUpdate(spawner, it.any())
             }
         }

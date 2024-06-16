@@ -1,7 +1,7 @@
 package com.gitee.planners.api.job
 
-import com.gitee.planners.api.common.registry.Sortable
-import com.gitee.planners.api.common.registry.Unique
+import com.gitee.planners.api.common.Sortable
+import com.gitee.planners.api.common.Unique
 
 interface KeyBinding : Unique, Sortable {
 

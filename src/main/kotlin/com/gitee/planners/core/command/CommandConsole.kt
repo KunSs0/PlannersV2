@@ -1,6 +1,6 @@
 package com.gitee.planners.core.command
 
-import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.Registries
 import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.api.job.target.adaptTarget
 import org.bukkit.command.ConsoleCommandSender
@@ -14,17 +14,17 @@ object CommandConsole {
     @CommandBody
     val cast = subCommand {
         dynamic("id") {
-            suggest { RegistryBuiltin.SKILL.getKeys().toList() }
+            suggest { Registries.SKILL.keys().toList() }
 
             execute<ConsoleCommandSender> { sender, context, argument ->
-                val skill = RegistryBuiltin.SKILL.get(argument)
+                val skill = Registries.SKILL.get(argument)
                 ImmutableSkillContext(sender.adaptTarget(), skill, 1).call()
                 sender.sendMessage("casted ${skill.id}")
             }
 
             dynamic("level", optional = true) {
                 execute<ConsoleCommandSender> { sender, context, argument ->
-                    val skill = RegistryBuiltin.SKILL.get(context["id"])
+                    val skill = Registries.SKILL.get(context["id"])
                     ImmutableSkillContext(sender.adaptTarget(), skill, argument.cint).call()
                     sender.sendMessage("casted ${skill.id}")
                 }

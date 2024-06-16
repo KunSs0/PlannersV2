@@ -1,6 +1,6 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.Condition
 import com.gitee.planners.api.job.Job
 import com.gitee.planners.api.job.Route
@@ -38,7 +38,7 @@ class ImmutableRoute(private val parent: Router, private val config: Configurati
     }
 
     override fun getJob(): Job {
-        return RegistryBuiltin.JOB.getOrNull(id) ?: error("Couldn't find job with id $id")
+        return Registries.JOB.getOrNull(id) ?: error("Couldn't find job with id $id")
     }
 
     override fun isInfer(player: Player, options: KetherScriptOptions): Condition.VerifyInfo {

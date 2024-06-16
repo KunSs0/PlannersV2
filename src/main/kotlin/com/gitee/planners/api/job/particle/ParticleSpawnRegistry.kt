@@ -1,11 +1,11 @@
 package com.gitee.planners.api.job.particle
 
-import com.gitee.planners.api.common.registry.AbstractRegistry
-import com.gitee.planners.api.common.registry.RunningClassRegistriesVisitor
 import com.gitee.planners.module.particle.particle.ParticleSpawner
+import com.gitee.planners.util.RunningClassRegistriesVisitor
+import com.gitee.planners.util.builtin.MutableRegistryInMap
 import taboolib.common.platform.Awake
 
-object ParticleSpawnRegistry : AbstractRegistry<String, ParticleSpawner>() {
+object ParticleSpawnRegistry : MutableRegistryInMap<String, ParticleSpawner>() {
 
     fun getDefault(): ParticleSpawner {
         return this["minecraft"]
@@ -16,7 +16,7 @@ object ParticleSpawnRegistry : AbstractRegistry<String, ParticleSpawner>() {
 
         override fun visit(instance: ParticleSpawner) {
             instance.namespace.forEach { id ->
-                this.registry[id] = instance
+                this.builtin[id] = instance
             }
         }
 

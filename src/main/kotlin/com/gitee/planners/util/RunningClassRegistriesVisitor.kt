@@ -1,0 +1,25 @@
+package com.gitee.planners.util
+
+import com.gitee.planners.util.builtin.Builtin
+import taboolib.common.LifeCycle
+import taboolib.common.inject.ClassVisitor
+import java.util.function.Supplier
+
+abstract class RunningClassRegistriesVisitor<T>(val clazz: Class<T>, val builtin: Builtin<String, T>) : ClassVisitor(0) {
+
+    override fun getLifeCycle(): LifeCycle {
+        return LifeCycle.LOAD
+    }
+    @Suppress("UNCHECKED_CAST")
+    override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
+        if (this.clazz.isAssignableFrom(clazz)) {
+            this.visit(instance?.get() as? T ?: return)
+        }
+    }
+
+    open fun visit(instance: T) {
+        builtin[getId(instance)] = instance
+    }
+
+    abstract fun getId(instance: T): String
+}

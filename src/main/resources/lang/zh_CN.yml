@@ -5,3 +5,16 @@ player-route-invalid: '&3&l< &b&l｡◕‿◕｡&3&l > &c还未选择职业'
 
 player-transfer-invalid: '&3&l< &b&l｡◕‿◕｡&3&l > &f转职条件不满足,无法转职'
 player-transfer-success: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功转职 {0}'
+
+command-experience-add: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 添加 {1} 经验'
+command-experience-set: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 设置 {1} 经验'
+command-experience-take: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 减少 {1} 经验'
+
+command-level-add: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 添加 {1} 等级'
+command-level-set: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 设置 {1} 等级'
+command-level-take: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 减少 {1} 等级'
+
+command-magicpoint-add: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 添加 {1} 法力值'
+command-magicpoint-set: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 设置 {1} 法力值'
+command-magicpoint-take: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 减少 {1} 法力值'
+command-magicpoint-reset: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 重置法力值'

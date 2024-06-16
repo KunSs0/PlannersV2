@@ -1,6 +1,6 @@
 package com.gitee.planners.module.currency
 
-import com.gitee.planners.api.common.registry.Unique
+import com.gitee.planners.api.common.Unique
 import org.bukkit.entity.Player
 
 interface OpenConvertibleCurrency : Unique {

@@ -23,7 +23,7 @@ abstract class SingletonChoiceUI<T>(name: String) : AutomationBaseUI(name) {
 
     abstract fun onClick(event: ClickEvent, element: T)
 
-    abstract fun getElements(player: Player): List<T>
+    abstract fun getElements(player: Player): Collection<T>
 
     open fun onClose(player: Player) {}
 
@@ -32,7 +32,7 @@ abstract class SingletonChoiceUI<T>(name: String) : AutomationBaseUI(name) {
         return BaseUI.linked<T>(title) {
             rows(this@SingletonChoiceUI.rows)
             slots(this@SingletonChoiceUI.slots.get())
-            elements { this@SingletonChoiceUI.getElements(player) }
+            elements { this@SingletonChoiceUI.getElements(player).toList() }
 
             onGenerate { player, element, index, slot ->
                 this@SingletonChoiceUI.onGenerate(player, element, index, slot)

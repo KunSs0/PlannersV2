@@ -1,6 +1,6 @@
 package com.gitee.planners.module.binding
 
-import com.gitee.planners.api.common.registry.Unique
+import com.gitee.planners.api.common.Unique
 
 enum class InteractionActionBukkitType(override val id: String) : Unique {
 

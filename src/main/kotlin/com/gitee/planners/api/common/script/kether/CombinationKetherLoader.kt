@@ -1,15 +1,13 @@
 package com.gitee.planners.api.common.script.kether
 
-import com.gitee.planners.api.common.registry.Plugin
+import com.gitee.planners.api.common.Plugin
 import org.bukkit.Bukkit
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
-import taboolib.common.platform.function.info
 import taboolib.common.platform.function.warning
 import taboolib.library.reflex.ClassMethod
 import taboolib.module.kether.printKetherErrorMessage
-import taboolib.module.kether.runKether
 import java.util.function.Supplier
 
 

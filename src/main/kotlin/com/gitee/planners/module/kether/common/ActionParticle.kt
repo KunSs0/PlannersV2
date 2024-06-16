@@ -35,7 +35,7 @@ object ActionParticle : MultipleKetherParser("particle") {
             val (particle, id) = if (nameSplit.size == 1) {
                 ParticleSpawnRegistry.getDefault() to nameSplit[0]
             } else {
-                ParticleSpawnRegistry.get(nameSplit[0]) to nameSplit[1]
+                ParticleSpawnRegistry[nameSplit[0]] to nameSplit[1]
             }
             val bukkitParticle = BukkitParticle(
                 particle,

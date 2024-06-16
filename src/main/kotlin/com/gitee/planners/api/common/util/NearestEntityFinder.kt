@@ -1,6 +1,5 @@
 package com.gitee.planners.api.common.util
 
-import com.gitee.planners.api.common.registry.defaultRegistry
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity

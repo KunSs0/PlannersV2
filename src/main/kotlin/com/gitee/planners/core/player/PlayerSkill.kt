@@ -1,7 +1,6 @@
 package com.gitee.planners.core.player
 
-import com.gitee.planners.api.KeyBindingAPI
-import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
@@ -12,7 +11,7 @@ import taboolib.common.platform.function.submitAsync
 class PlayerSkill(var index: Long, private val skillId: String, level: Int, private var bindingId: String?) : Skill {
 
     val immutable: ImmutableSkill
-        get() = RegistryBuiltin.SKILL.getOrNull(skillId) ?: error("Couldn't find skill with id $skillId'")
+        get() = Registries.SKILL.getOrNull(skillId) ?: error("Couldn't find skill with id $skillId'")
 
     var level = level
         set(value) {
@@ -21,7 +20,7 @@ class PlayerSkill(var index: Long, private val skillId: String, level: Int, priv
         }
 
     var binding: KeyBinding?
-        get() = if (bindingId != null) KeyBindingAPI.getOrNull(bindingId!!) else null
+        get() = if (bindingId != null) Registries.KEYBINDING.getOrNull(bindingId!!) else null
         set(value) {
             bindingId = value?.id
             submitAsync { Database.INSTANCE.updateSkill(this@PlayerSkill) }

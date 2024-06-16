@@ -1,34 +1,34 @@
 package com.gitee.planners.core.player
 
-import com.gitee.planners.api.RegistryBuiltin
-import com.gitee.planners.api.common.registry.MutableRegistry
-import com.gitee.planners.api.common.registry.Registry
-import com.gitee.planners.api.common.registry.defaultRegistry
-import com.gitee.planners.api.common.registry.mutableRegistry
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.job.*
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.core.config.level.Algorithm
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
-class PlayerRoute(val index: Long, private val routerId: String, private val current: Node, skills: List<PlayerSkill>) :
+class PlayerRoute(val bindingId: Long, private val routerId: String, private val current: Node, skills: List<PlayerSkill>) :
     Route, Job {
 
-    private val router: Router
-        get() = RegistryBuiltin.ROUTER.getOrNull(routerId) ?: error("Could not find router with id $routerId")
+    val router: Router
+        get() = Registries.ROUTER.getOrNull(routerId) ?: error("Could not find router with id $routerId")
 
     private val route: Route
         get() = router.getRouteOrNull(current.route)!!
 
     private val job: Job
         @JvmName("job0")
-        get() = RegistryBuiltin.JOB.getOrNull(current.route) ?: error("Couldn't find job with id ${current.route}'")
+        get() = Registries.JOB.getOrNull(current.route) ?: error("Couldn't find job with id ${current.route}'")
+
+    val algorithmLevel: Algorithm?
+        get() = router.algorithmLevel
 
     override val id: String
         get() = routerId
 
-    private val skills = mutableRegistry(skills.map { it.id to it }.toMap())
+    private val skills = mutableMapOf(*skills.map { it.id to it }.toTypedArray())
 
     override val name: String
         get() = job.name
@@ -41,7 +41,7 @@ class PlayerRoute(val index: Long, private val routerId: String, private val cur
         this.skills[skill.id] = skill
     }
 
-    fun getRegistrySkill(): Registry<String, PlayerSkill> {
+    fun getRegisteredSkill(): Map<String, PlayerSkill> {
         return skills
     }
 

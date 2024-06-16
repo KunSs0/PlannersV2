@@ -1,8 +1,8 @@
 package com.gitee.planners.module.currency
 
-import com.gitee.planners.api.common.registry.AbstractRegistry
+import com.gitee.planners.util.builtin.MutableRegistryInMap
 
-object Currencies : AbstractRegistry<String, OpenConvertibleCurrency>() {
+object Currencies : MutableRegistryInMap<String, OpenConvertibleCurrency>() {
 
 
 

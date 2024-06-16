@@ -1,8 +1,7 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.Job
-import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
@@ -27,11 +26,11 @@ class ImmutableJob(private val config: Configuration) : Job {
     }
 
     fun getImmutableSkillValues(): List<ImmutableSkill> {
-        return RegistryBuiltin.SKILL.getValues().filter { it.id in immutableSkillKeys }
+        return Registries.SKILL.values().filter { it.id in immutableSkillKeys }
     }
 
     override fun getSkillOrNull(id: String): ImmutableSkill? {
-        return RegistryBuiltin.SKILL.getOrNull(id)
+        return Registries.SKILL.getOrNull(id)
     }
 
     override fun getVariableOrNull(id: String): Variable? {

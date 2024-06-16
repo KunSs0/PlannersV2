@@ -1,5 +1,6 @@
 package com.gitee.planners
 
+import com.gitee.planners.api.Registries
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import taboolib.common.platform.Platform
@@ -47,6 +48,7 @@ object Planners : Plugin() {
     override fun onEnable() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.colored().forEach(::info)
+        Registries.init()
     }
 
 }

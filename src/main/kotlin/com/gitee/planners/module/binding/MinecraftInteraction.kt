@@ -2,6 +2,7 @@ package com.gitee.planners.module.binding
 
 import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.player.PlayerSkillEvent
 import com.gitee.planners.api.job.KeyBinding
@@ -26,20 +27,20 @@ object MinecraftInteraction {
     }
 
     fun clearInventory(player: Player) {
-        KeyBindingAPI.getValues().forEach { binding ->
-            val indexOf = KeyBindingAPI.indexOf(binding)
+        Registries.KEYBINDING.values().forEach { binding ->
+            val indexOf = Registries.KEYBINDING.values().indexOf(binding)
             player.inventory.setItem(indexOf, null)
         }
     }
 
     fun updateInventory(player: Player) = updateInventory(player.plannersProfile)
 
-    fun updateInventory(profile: PlayerProfile) = KeyBindingAPI.getValues().forEach { binding ->
+    fun updateInventory(profile: PlayerProfile) = Registries.KEYBINDING.values().forEach { binding ->
         updateBinding(profile,binding)
     }
 
     fun updateBinding(profile: PlayerProfile,binding: KeyBinding) {
-        val skill = profile.getRegistriedSkillOrNull(binding)
+        val skill = profile.getRegisteredSkillOrNull(binding)
         if (skill != null) {
             val formatter = KeyBindingAPI.createIconFormatter(profile.onlinePlayer, skill)
             updateBinding(profile.onlinePlayer,binding,formatter.build())
@@ -47,7 +48,7 @@ object MinecraftInteraction {
     }
 
     fun updateBinding(player: Player, binding: KeyBinding,itemStack: ItemStack) {
-        val indexOf = KeyBindingAPI.indexOf(binding)
+        val indexOf = Registries.KEYBINDING.values().indexOf(binding)
         player.inventory.setItem(indexOf, itemStack)
     }
 

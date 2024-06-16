@@ -1,13 +1,16 @@
 package com.gitee.planners.core.command
 
 import com.gitee.planners.api.ProfileAPI.plannersProfile
-import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
+import taboolib.common.platform.function.submitAsync
+import taboolib.common.platform.service.PlatformExecutor
+import taboolib.common.util.random
 import taboolib.expansion.createHelper
 
 @CommandHeader("planners", aliases = ["pl", "ps"], permission = "planners.command")
@@ -26,10 +29,13 @@ object Command {
     val metadata = CommandMetadata
 
     @CommandBody
+    val profile = CommandProfile
+
+    @CommandBody
     val reload = subCommand {
         execute<ProxyCommandSender> { sender, context, argument ->
             PluginReloadEvents.Pre().call()
-            RegistryBuiltin.handleReload()
+            Registries.handleReload()
             PluginReloadEvents.Post().call()
             sender.sendMessage("Reloaded.")
         }
@@ -39,10 +45,10 @@ object Command {
     val console = CommandConsole
 
     fun withImmutableSkill(block: ProxyCommandSender.(player: Player, skill: ImmutableSkill) -> Unit): SimpleCommandBody {
-        return withUnique("id", { RegistryBuiltin.SKILL.getValues() }, block)
+        return withUnique("id", { Registries.SKILL.values().toList() }, block)
     }
 
     fun withPlayerSkill(block: ProxyCommandSender.(player: Player, skill: PlayerSkill) -> Unit): SimpleCommandBody {
-        return withUnique("id", { it.plannersProfile.getRegistrySkill().getValues() }, block)
+        return withUnique("id", { it.plannersProfile.getRegisteredSkill().values.toList() }, block)
     }
 }

@@ -1,6 +1,6 @@
 package com.gitee.planners.module.binding
 
-import com.gitee.planners.api.common.registry.Unique
+import com.gitee.planners.api.common.Unique
 import taboolib.library.configuration.ConfigurationSection
 
 abstract class Combined(val config: ConfigurationSection) : Unique {

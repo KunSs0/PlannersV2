@@ -1,6 +1,6 @@
 package com.gitee.planners.core.command
 
-import com.gitee.planners.api.common.registry.Unique
+import com.gitee.planners.api.common.Unique
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*

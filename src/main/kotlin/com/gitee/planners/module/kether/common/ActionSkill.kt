@@ -1,7 +1,7 @@
 package com.gitee.planners.module.kether.common
 
 import com.gitee.planners.api.ProfileAPI.plannersProfile
-import com.gitee.planners.api.RegistryBuiltin
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
@@ -28,7 +28,7 @@ object ActionSkill : MultipleKetherParser("skill") {
         ).apply(it) { id, type, level, sender ->
             now {
                 if (type == PlayupType.FORCE) {
-                    val skill = RegistryBuiltin.SKILL.get(id)
+                    val skill = Registries.SKILL.get(id)
                     sender.forEach { ImmutableSkillContext(it, skill, level).call() }
                 } else if (type == PlayupType.RELATIVE) {
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
@@ -36,10 +36,10 @@ object ActionSkill : MultipleKetherParser("skill") {
 
                     }
                 } else if (type == PlayupType.INVOKE) {
-                    val skill = RegistryBuiltin.SKILL.get(id)
+                    val skill = Registries.SKILL.get(id)
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
                         val player = entity.instance as? Player ?: return@forEach
-                        val i = player.plannersProfile.getRegistriedSkillOrNull(id)?.level ?: return@forEach
+                        val i = player.plannersProfile.getRegisteredSkillOrNull(id)?.level ?: return@forEach
                         ImmutableSkillContext(entity, skill, i).call()
                     }
                 }
@@ -53,7 +53,7 @@ object ActionSkill : MultipleKetherParser("skill") {
         val force = KetherHelper.combinedKetherParser {
             it.group(text(), commandInt("level", 1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
                 now {
-                    val skill = RegistryBuiltin.SKILL.get(id)
+                    val skill = Registries.SKILL.get(id)
                     objective.forEach {
                         ImmutableSkillContext(it, skill, level).call()
                     }
@@ -65,7 +65,7 @@ object ActionSkill : MultipleKetherParser("skill") {
         val invoke = KetherHelper.combinedKetherParser {
             it.group(text(), commandInt("level", -1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
                 now {
-                    val skill = RegistryBuiltin.SKILL.get(id)
+                    val skill = Registries.SKILL.get(id)
                     objective.forEach {
                         val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
                         ImmutableSkillContext(it, skill, i).call()
@@ -77,7 +77,7 @@ object ActionSkill : MultipleKetherParser("skill") {
     }
 
     fun getSkillLevelWithTarget(target: Target<*>, id: String): Int? {
-        return ((target as? TargetBukkitEntity)?.instance as? Player)?.plannersProfile?.getRegistriedSkillOrNull(id)?.level
+        return ((target as? TargetBukkitEntity)?.instance as? Player)?.plannersProfile?.getRegisteredSkillOrNull(id)?.level
     }
 
 

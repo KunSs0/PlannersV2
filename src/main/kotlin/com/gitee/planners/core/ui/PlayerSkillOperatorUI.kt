@@ -45,8 +45,8 @@ object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.ym
         }
     }
 
-    override fun getElements(player: Player): List<PlayerSkill> {
-        return player.plannersProfile.getRegistrySkill().getValues()
+    override fun getElements(player: Player): Collection<PlayerSkill> {
+        return player.plannersProfile.getRegisteredSkill().values
     }
 
 

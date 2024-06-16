@@ -1,18 +1,17 @@
 package com.gitee.planners.api.job.selector
 
-import com.gitee.planners.api.common.registry.AbstractRegistry
-import com.gitee.planners.api.common.registry.RunningClassRegistriesVisitor
+import com.gitee.planners.util.RunningClassRegistriesVisitor
+import com.gitee.planners.util.builtin.MutableRegistryInMap
 import taboolib.common.platform.Awake
 
-object SelectorRegistry : AbstractRegistry<String, Selector>() {
-
+object SelectorRegistry : MutableRegistryInMap<String, Selector>() {
 
     @Awake
     class Visitor : RunningClassRegistriesVisitor<Selector>(Selector::class.java, SelectorRegistry) {
 
         override fun visit(instance: Selector) {
             instance.namespace.forEach { id ->
-                this.registry[id] = instance
+                this.builtin[id] = instance
             }
         }
 

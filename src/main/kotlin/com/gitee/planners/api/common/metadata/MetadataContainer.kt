@@ -1,7 +1,5 @@
 package com.gitee.planners.api.common.metadata
 
-import com.gitee.planners.api.common.registry.MutableRegistry
-import com.gitee.planners.api.common.registry.mutableRegistry
 
 abstract class MetadataContainer(map: Map<String, Metadata> = emptyMap()) {
 
@@ -37,8 +35,8 @@ abstract class MetadataContainer(map: Map<String, Metadata> = emptyMap()) {
         }
     }
 
-    fun getImmutableRegistry(): MutableRegistry<String, Metadata> {
-        return mutableRegistry(table.filter { !it.value.isTimeout() })
+    fun getImmutableRegistry(): Map<String, Metadata> {
+        return mapOf(*table.map { it.key to it.value }.toTypedArray())
     }
 
     fun copyMetaDataTo(container: MetadataContainer) { // Quick clone

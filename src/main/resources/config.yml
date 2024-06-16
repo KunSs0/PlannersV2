@@ -9,8 +9,37 @@ database:
     table: planners_v2
 
 settings:
+  magic-point:
+    resume:
+      # 法力值的恢复的运算表达式
+      expression: "math 1 + random 1 to 2"
+      # 法力值的恢复的更新任务的轮询周期,单位tick
+      update-tick: 20
+    upper-limit:
+      # 法力值的运算表达式
+      expression: "math player level * 2 + 100"
+      # 最大法力值的更新任务的轮询周期,单位tick
+      update-tick: 20
+  level:
+    # 同步原版等级
+    synchronize: true
+    # 原版经验求兼容
+    original-hook: true
+    # 等级隔离
+    # all = 全职业统一
+    # router = 职业路线独立
+    # job = 职业独立
+    isolation: all
+    # 当 isolation 为 all 时,该选项生效
+    algorithm: def0
   cooler:
     use: memory
+  minecraft:
+    interaction-action:
+      enable: true
+      empty-skill:
+        material: STONE
+        name: '空技能 | 待学习'
   bukkit-launch:
     unimpeded-types:
       - AIR
