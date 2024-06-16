@@ -13,6 +13,9 @@ import com.gitee.planners.module.kether.getEnvironmentContext
 import org.bukkit.entity.Player
 import taboolib.common5.Coerce
 import taboolib.module.kether.ScriptFrame
+import taboolib.module.kether.actionFuture
+import taboolib.module.kether.expects
+import taboolib.module.kether.scriptParser
 import java.util.Optional
 
 @CombinationKetherParser.Used
@@ -37,6 +40,13 @@ object ActionCooldown : MultipleKetherParser("cooldown", "cd") {
         }
     }
 
+    fun p() = scriptParser {
+        val token = it.expects("true", "false")
+        actionFuture {
+            it.complete(token)
+        }
+    }
+
     val get = main
 
     // cooldown reset [skill <id>] [at objective:TargetContainer(sender)]
@@ -44,20 +54,13 @@ object ActionCooldown : MultipleKetherParser("cooldown", "cd") {
         Cooler.INSTANCE.set(player, skill, 0)
     }
 
-    // cooldown add [skill <id>] <value> [at objective:TargetContainer(sender)]
+    // cooldown add <value> [skill <id>] [at objective:TargetContainer(sender)]
     val add = process { player, skill, data ->
         val last = Cooler.INSTANCE.get(player, skill)
-        // 已经结束冷却了 = 0 + data
-        if (last <= System.currentTimeMillis()) {
-            Cooler.INSTANCE.set(player, skill, Coerce.toInteger(data))
-        }
-        // 反之 = last + data
-        else {
-            Cooler.INSTANCE.set(player, skill, Coerce.toInteger(last + data))
-        }
+        Cooler.INSTANCE.set(player, skill, Coerce.toInteger(last + data))
     }
 
-    // cooldown set [skill <id>] <value> [at objective:TargetContainer(sender)]
+    // cooldown set <value> [skill <id>] [at objective:TargetContainer(sender)]
     val set = process { player, skill, data ->
         Cooler.INSTANCE.set(player, skill, Coerce.toInteger(data))
     }
@@ -86,10 +89,10 @@ object ActionCooldown : MultipleKetherParser("cooldown", "cd") {
     private fun process(func: (player: Player, skill: ImmutableSkill, data: Long) -> Unit) =
         KetherHelper.combinedKetherParser {
             it.group(
-                command("skill", then = text()).optional(),
                 long(),
+                command("skill", then = text()).optional(),
                 commandObjectiveOrSender()
-            ).apply(it) { skill, data, objective ->
+            ).apply(it) { data, skill, objective ->
                 now {
                     val immutableSkill = getImmutableSkill(skill, this)
                     objective.filterIsInstance<TargetBukkitEntity>().mapNotNull { it.instance as? Player }.forEach {

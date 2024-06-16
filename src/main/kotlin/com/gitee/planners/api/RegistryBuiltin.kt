@@ -1,12 +1,10 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.api.common.registry.DeepTrackConfigurationRegistry
-import com.gitee.planners.api.common.registry.ReloadableRegistry
-import com.gitee.planners.api.common.registry.Unique
-import com.gitee.planners.api.common.registry.deepTrackRegistry
+import com.gitee.planners.api.common.registry.*
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableRouter
 import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.module.currency.DefaultOpenConvertibleCurrency
 import taboolib.common.platform.Awake
 import taboolib.module.configuration.Configuration
 
@@ -23,6 +21,10 @@ object RegistryBuiltin {
 
     val ROUTER = deepTrackRegistry("router", listOf("soldier.yml")) {
         ImmutableRouter(this)
+    }
+
+    val CURRENCY = singletonRegistry("currency.yml") {
+        DefaultOpenConvertibleCurrency(this)
     }
 
     fun handleReload() {

@@ -2,6 +2,7 @@ package com.gitee.planners.core.skill.cooler
 
 import com.gitee.planners.api.job.Skill
 import org.bukkit.entity.Player
+import kotlin.math.min
 
 class MemoryCooler : Cooler {
 
@@ -14,9 +15,9 @@ class MemoryCooler : Cooler {
     override fun get(player: Player, skill: Skill): Long {
         val path = "${player.uniqueId}-${skill.id}"
         if (map.containsKey(path)) {
-            return ((System.currentTimeMillis() - map[path]!!) / 50).coerceAtLeast(0)
+            return maxOf(map[path]!! - System.currentTimeMillis(), 0) / 50
         }
-        return -1
+        return 0
     }
 
 

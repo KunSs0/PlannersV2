@@ -4,12 +4,12 @@ import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.ProfileAPI
 import com.gitee.planners.api.ProfileAPI.plannersProfile
 import com.gitee.planners.core.player.PlayerSkill
-import com.gitee.planners.util.configNodeToList
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import taboolib.common.util.asList
 import taboolib.common.util.replaceWithOrder
 import taboolib.module.ui.ClickEvent
+import taboolib.platform.compat.VaultService
 import taboolib.platform.util.buildItem
 
 object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.yml") {
@@ -27,6 +27,7 @@ object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.ym
 
     override fun onClick(event: ClickEvent, element: PlayerSkill) {
         val player = event.clicker
+        VaultService
         // 打开快捷键修改
         if (event.clickEvent().isRightClick) {
             KeyBindingsEditorUI.choice(player) {
@@ -34,11 +35,11 @@ object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.ym
                 this.openTo(player)
                 // 解绑快捷键
                 if (element.binding != null && element.binding == it) {
-                    ProfileAPI.requestModifiedSkillBinding(player.plannersProfile,element,null)
+                    ProfileAPI.setSkillBinding(player.plannersProfile,element,null)
                 }
                 // 更新快捷键
                 else {
-                    ProfileAPI.requestModifiedSkillBinding(player.plannersProfile,element,it)
+                    ProfileAPI.setSkillBinding(player.plannersProfile,element,it)
                 }
             }
         }

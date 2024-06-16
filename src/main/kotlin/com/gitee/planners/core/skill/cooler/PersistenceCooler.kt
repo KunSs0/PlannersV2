@@ -18,9 +18,9 @@ class PersistenceCooler : Cooler {
     override fun get(player: Player, skill: Skill): Long {
         val metadata = adaptTarget<TargetBukkitEntity>(player).getMetadata(skill.id)
         if (metadata == null) {
-            return -1
+            return 0
         }
-        return ((System.currentTimeMillis() - metadata.asLong()) / 50).coerceAtLeast(0)
+        return maxOf(metadata.asLong() - System.currentTimeMillis(), 0) / 50
     }
 
 

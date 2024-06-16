@@ -62,8 +62,13 @@ class TargetContainerParser(private val actions: List<QuestAction<out Any>>? = e
                     reader.mark()
                     // 拿出一个选择器命令
                     val token = reader.nextToken()
-                    val filterable = token.startsWith("@!")
-
+                    // 如果不是选择器 则退出选择器解析
+                    if (token[0] != '@') {
+                        reader.reset()
+                        break
+                    }
+                    // 是否是过滤选择器
+                    val filterable = token[1] == '!'
                     val selector =
                         SelectorRegistry.getOrNull(if (filterable) token.substring(2) else token.substring(1))
                     // 如果没有捕捉到一个合适的选择器 退出选择器解析

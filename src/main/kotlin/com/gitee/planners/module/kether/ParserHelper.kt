@@ -82,8 +82,10 @@ fun ParserHolder.objective(): Parser<TargetContainer> {
     }
 }
 
-fun ParserHolder.commandObjective(expect: Array<String> = TargetContainerParser.DEFAULT_PREFIX,
-                                  type: LeastType = LeastType.EMPTY): Parser<TargetContainer> {
+fun ParserHolder.commandObjective(
+    expect: Array<String> = TargetContainerParser.DEFAULT_PREFIX,
+    type: LeastType = LeastType.EMPTY
+): Parser<TargetContainer> {
     return Parser.frame { r ->
         val expects = if (expect.isEmpty()) {
             TargetContainerParser.DEFAULT_PREFIX
@@ -98,23 +100,23 @@ fun ParserHolder.commandObjective(expect: Array<String> = TargetContainerParser.
 }
 
 fun ParserHolder.commandObjectiveOrSender(vararg expect: String): Parser<TargetContainer> {
-    return commandObjective(arrayOf(*expect),LeastType.SENDER)
+    return commandObjective(arrayOf(*expect), LeastType.SENDER)
 }
 
-fun ParserHolder.commandObjectiveOrOrigin(vararg expect: String) : Parser<TargetContainer> {
-    return commandObjective(arrayOf(*expect),LeastType.ORIGIN)
+fun ParserHolder.commandObjectiveOrOrigin(vararg expect: String): Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect), LeastType.ORIGIN)
 }
 
-fun ParserHolder.commandObjectiveOrEmpty(vararg expect: String) : Parser<TargetContainer> {
-    return commandObjective(arrayOf(*expect),LeastType.EMPTY)
+fun ParserHolder.commandObjectiveOrEmpty(vararg expect: String): Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect), LeastType.EMPTY)
 }
 
-fun ParserHolder.commandObjectiveOrConsole(vararg expect: String) : Parser<TargetContainer> {
-    return commandObjective(arrayOf(*expect),LeastType.CONSOLE)
+fun ParserHolder.commandObjectiveOrConsole(vararg expect: String): Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect), LeastType.CONSOLE)
 }
 
 inline fun <reified T : Enum<T>> getEnumWithIdOrNull(name: String): T? {
-    return T::class.java.enumConstants.firstOrNull { it.name.equals(name, ignoreCase = true) }
+    return T::class.java.enumConstants.firstOrNull { it.name.replace(".","_").equals(name, ignoreCase = true) }
 }
 
 inline fun <reified T : Enum<T>> getEnumWithId(name: String): T {
@@ -159,6 +161,10 @@ fun ParserHolder.commandInt(name: String, defaultValue: Int = 0): Parser<Int> {
     return command(name, then = int()).option().defaultsTo(defaultValue)
 }
 
+fun ParserHolder.commandLong(name: String, defaultValue: Long = 0L): Parser<Long> {
+    return command(name, then = long()).option().defaultsTo(defaultValue)
+}
+
 fun ParserHolder.commandBool(token: String, defaultValue: Boolean = false): Parser<Boolean> {
     return command(token, then = bool()).option().defaultsTo(defaultValue)
 }
@@ -178,7 +184,10 @@ fun ParserHolder.commandVector(token: String, defaultValue: Vector = Vector(0, 0
 /**
  * 模糊匹配 [] -> [] , "" -> []
  */
-inline fun <reified T> ParserHolder.tokenListOf(uppercase: Boolean = true,crossinline block: (String) -> T): Parser<List<T>> {
+inline fun <reified T> ParserHolder.tokenListOf(
+    uppercase: Boolean = true,
+    crossinline block: (String) -> T
+): Parser<List<T>> {
     return Parser.frame { r ->
         val list = ArrayList<String>()
         try {

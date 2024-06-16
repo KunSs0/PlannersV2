@@ -6,9 +6,7 @@ import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.event.player.PlayerSkillEvent
 import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.api.profile.ProfileOperatorImpl
-import com.gitee.planners.api.profile.ProfileOperator
 import com.gitee.planners.core.database.Database
-import com.gitee.planners.core.database.DatabaseSQL
 import com.gitee.planners.core.player.PlayerProfile
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
@@ -18,7 +16,6 @@ import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.submitAsync
 import taboolib.platform.util.onlinePlayers
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
 
 object ProfileAPI : AbstractRegistry<UUID, PlayerProfile>() {
 
@@ -30,16 +27,13 @@ object ProfileAPI : AbstractRegistry<UUID, PlayerProfile>() {
     val Player.plannersProfile: PlayerProfile
         get() = getOrNull(this.uniqueId) ?: error("Player $name unloaded.")
 
-    /**
-     * 请求修改技能等级 会经过事件
-     */
-    fun requestModifiedSkillLevel(profile: PlayerProfile, skill: PlayerSkill, to: Int) {
+    fun setSkillLevel(profile: PlayerProfile, skill: PlayerSkill, to: Int) {
         if (PlayerSkillEvent.LevelChange(profile, skill, skill.level, to).call()) {
             skill.level = to
         }
     }
 
-    fun requestModifiedSkillBinding(profile: PlayerProfile, skill: PlayerSkill, binding: KeyBinding?) {
+    fun setSkillBinding(profile: PlayerProfile, skill: PlayerSkill, binding: KeyBinding?) {
         PlayerSkillEvent.BindingChange(profile, skill, binding).call()
         // 如果 binding 为 null 代表解绑
         if (binding == null) {
@@ -49,7 +43,7 @@ object ProfileAPI : AbstractRegistry<UUID, PlayerProfile>() {
         else {
             val registriedSkill = profile.getRegistriedSkillOrNull(binding)
             if (registriedSkill != null) {
-                requestModifiedSkillBinding(profile, registriedSkill, null)
+                setSkillBinding(profile, registriedSkill, null)
             }
             skill.binding = binding
         }

@@ -1,0 +1,6 @@
+money:
+  name: '金币'
+  action:
+    hook: balance get
+    withdraw: balance take &arg
+    deposit: balance give &arg
