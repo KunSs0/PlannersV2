@@ -20,6 +20,11 @@ object GermEffectManager {
         return mixture(UUID.randomUUID().toString(), effect)
     }
 
+    fun get(path: String, index: String, type: RootType): GermEffectPart<*> {
+        val effect = cache.computeIfAbsent(path) { create(path, type) }
+        return mixture(index, effect)
+    }
+
     fun create(path: String, type: RootType): GermEffectPart<*> {
         val split = path.split(".")
         return create(split[0], split[1], type)

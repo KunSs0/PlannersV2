@@ -15,7 +15,10 @@ import taboolib.module.kether.*
 object ActionMetadata : OperationKetherParser("metadata") {
 
     @Suppress("NAME_SHADOWING")
-    @KetherEditor.Document(value = "metadata <id> [def <value>] [at objective:TargetContainer(sender)]", result = Void::class)
+    @KetherEditor.Document(
+        value = "metadata <id> [def <value>] [at objective:TargetContainer(sender)]",
+        result = Void::class
+    )
     val main = argumentKetherParser("get") { argument ->
         // 使用 字符串代替 null
         val defaultValue = this.catchParsedAction("def", "__NULL__")
@@ -25,15 +28,16 @@ object ActionMetadata : OperationKetherParser("metadata") {
                 this.run(defaultValue).thenAccept { defaultValue ->
                     this.runTargetContainer(container).thenAccept {
                         val defaultValue = if (defaultValue == "__NULL__") null else defaultValue
-                        f.complete(it.filterIsInstance<TargetContainerization>().first().getMetadata(id)?.any() ?: defaultValue)
+                        val data = it.filterIsInstance<TargetContainerization>().first().getMetadata(id)?.any() ?: defaultValue
+                        f.complete(data)
                     }.except { null }
                 }
             }
         }
     }
 
-    @KetherEditor.Document("metadata <id> to <value:Any> [timeout: long(-1)] [at objective:TargetContainer(sender)]")
-    val to = argumentKetherParser { argument ->
+    @KetherEditor.Document("metadata <id> to <value: any> [timeout: long(-1)] [at objective:TargetContainer(sender)]")
+    val to = argumentKetherParser("set") { argument ->
         val data = this.nextParsedAction()
         val timeout = this.catchParsedAction("timeout", -1)
         val container = this.expectTargetContainerParsedAction(LeastType.SENDER)
@@ -53,7 +57,7 @@ object ActionMetadata : OperationKetherParser("metadata") {
         }
     }
 
-    @KetherEditor.Document("metadata <id> add <value:Number> [at objective:TargetContainer(sender)]")
+    @KetherEditor.Document("metadata <id> add <value: number> [at objective:TargetContainer(sender)]")
     val add = argumentKetherParser { argument ->
         val data = this.nextParsedAction()
         val container = this.expectTargetContainerParsedAction(LeastType.SENDER)

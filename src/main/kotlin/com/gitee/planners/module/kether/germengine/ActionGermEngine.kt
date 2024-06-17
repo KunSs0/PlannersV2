@@ -29,25 +29,44 @@ object ActionGermEngine : MultipleKetherParser("germengine") {
     val effect = object : MultipleKetherParser("effect") {
 
 
-        @KetherEditor.Document("germengine effect send <name> [apply ([ProxyGermAnimation])] [at objective:TargetContainer(sender)]")
+        /**
+         * index 为当前特效的索引 id,方便删除特效 如果不传入默认为随机生成一串uuid
+         */
+        @KetherEditor.Document("germengine effect send <name> [index: (uuid.random)] [apply ([ProxyGermAnimation])] [at objective:TargetContainer(sender)]")
         val send = KetherHelper.combinedKetherParser {
             it.group(
                 text(),
+                command("index", then = text()).optional(),
                 command("apply", then = anyAsList()).optional(),
-                commandObjective()
-            ).apply(it) { namespace, animations, objective ->
+                commandObjectiveOrSender()
+            ).apply(it) { namespace, index, animations, objective ->
                 now {
-                    val data = GermEffectManager.get(namespace, RootType.EFFECT)
+                    val index = index.orElseGet { UUID.randomUUID().toString() }
+                    val data = GermEffectManager.get(namespace, index, RootType.EFFECT)
                     animations.orElse(mutableListOf()).filterIsInstance<ProxyGermAnimation>().forEach { animation ->
                         (data as? IAnimatable<*>)?.addAnimation(animation.create())
                     }
                     objective.forEach { target ->
-                        info("send effect $target $data")
                         if (target is TargetBukkitEntity) {
                             onlinePlayers.forEach { data.spawnToEntity(it, target.instance) }
                         } else if (target is TargetLocation<*>) {
                             onlinePlayers.forEach { data.spawnToLocation(it, target.getBukkitLocation()) }
                         }
+                    }
+                    data
+                }
+            }
+        }
+
+        /**
+         * 删除指定index的特效
+         */
+        @KetherEditor.Document("germengine effect remove <index> [at objective:TargetContainer(online players)]")
+        val remove = KetherHelper.combinedKetherParser {
+            it.group(text(), commandObjectOrOnlinePlayers()).apply(it) { index, objective ->
+                now {
+                    objective.filterIsInstance<TargetBukkitEntity>().forEach {
+                        GermPacketAPI.removeEffect(it.instance as? Player ?: return@forEach, index)
                     }
                 }
             }

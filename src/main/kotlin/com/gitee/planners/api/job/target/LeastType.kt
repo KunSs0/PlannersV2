@@ -10,6 +10,12 @@ import taboolib.module.kether.ScriptFrame
  */
 enum class LeastType {
 
+    ONLINE_PLAYERS {
+        override fun getTargetContainer(frame: ScriptFrame): TargetContainer {
+            return TargetContainer.of(*Bukkit.getOnlinePlayers().map { it.adaptTarget() }.toTypedArray())
+        }
+    },
+
     // 释放者方案
     SENDER {
         override fun getTargetContainer(frame: ScriptFrame): TargetContainer {

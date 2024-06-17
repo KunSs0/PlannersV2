@@ -99,6 +99,10 @@ fun ParserHolder.commandObjective(
     }
 }
 
+fun ParserHolder.commandObjectOrOnlinePlayers(vararg expect: String): Parser<TargetContainer> {
+    return commandObjective(arrayOf(*expect), LeastType.ONLINE_PLAYERS)
+}
+
 fun ParserHolder.commandObjectiveOrSender(vararg expect: String): Parser<TargetContainer> {
     return commandObjective(arrayOf(*expect), LeastType.SENDER)
 }
