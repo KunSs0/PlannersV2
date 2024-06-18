@@ -45,8 +45,8 @@ object ScriptEventHandler {
                 // 对技能做出处理
                 val ctx = if (compiled is ImmutableSkill) {
                     // 如果是玩家 则转为技能释放上下文
-                    val level = if (sender is TargetBukkitEntity && sender.instance is Player && (sender.instance as Player).plannersLoaded) {
-                        (sender.instance as Player).plannersProfile.getRegisteredSkillOrNull(compiled.id)?.level ?: 0
+                    val level = if (sender is TargetBukkitEntity && sender.instance is Player && sender.instance.plannersLoaded) {
+                        sender.instance.plannersProfile.getRegisteredSkillOrNull(compiled.id)?.level ?: 0
                     } else {
                         0
                     }
@@ -57,7 +57,7 @@ object ScriptEventHandler {
                 runKether {
                     // 关联异步逻辑
                     ctx.async = listener.async
-                    // 再event运行环境下，如果非异步行为，强制设置为now
+                    // 在event运行环境下，如果非异步行为，强制设置为now
                     if (!ctx.async) {
                         ctx.now = true
                     }
