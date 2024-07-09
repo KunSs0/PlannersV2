@@ -1,11 +1,16 @@
 __option__:
   name: "裂地斩"
+  icon-formatter:
+    material: DIAMOND_SWORD
+    name: "裂地斩"
+    lore:
+      - "biubiubiu"
+  variables:
+    cooldown: 100
+    mp: 10
+    test: math 1 + 2
 
 action:
   def main = {
     tell "技能释放成功"
-  }
-
-  def handleHit = {
-    tell inline "on hit {{ &target }}"
   }

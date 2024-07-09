@@ -7,6 +7,7 @@ import com.gitee.planners.api.job.target.TargetBukkitEntity
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
 import taboolib.library.kether.Quest
+import taboolib.library.kether.Quest.Block
 import taboolib.module.kether.ScriptOptions
 import java.util.concurrent.CompletableFuture
 
@@ -44,6 +45,10 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
                 this@AbstractComplexScriptContext.createOptions(func)
             )
         }
+    }
+
+    open fun run(options: KetherScriptOptions): CompletableFuture<Any> {
+        return platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.createOptions())
     }
 
     open fun createOptions(block: ScriptOptions.ScriptOptionsBuilder.() -> Unit = {}): KetherScriptOptions {

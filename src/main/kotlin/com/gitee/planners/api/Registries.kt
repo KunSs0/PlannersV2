@@ -33,7 +33,7 @@ object Registries {
     }
 
     val CURRENCY = createDeepMultiBuiltin("module/currency", "example.yml") {
-        DefaultOpenConvertibleCurrency(it as Configuration)
+        DefaultOpenConvertibleCurrency(it)
     }
 
     val LEVEL = createDeepMultiBuiltin("module/level", "example.yml") {

@@ -9,10 +9,9 @@ import taboolib.module.configuration.util.mapValue
 
 class DefaultOpenConvertibleCurrency(val root: ConfigurationSection) : OpenConvertibleCurrency {
 
-    override val id = root.getString("id")!!
+    override val id = root.name
 
     override val name = root.getString("name")!!
-
 
     val actions = root.mapValue {
         SingletonKetherScript(it.toString())
