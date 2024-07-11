@@ -60,6 +60,10 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         return instance.location.z
     }
 
+    override fun add(x: Double, y: Double, z: Double) {
+
+    }
+
     override fun sendMessage(message: String) {
         instance.sendMessage(message)
     }
