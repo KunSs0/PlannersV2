@@ -3,8 +3,6 @@ package com.gitee.planners.core.player
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
 import com.gitee.planners.api.common.metadata.createMetadata
-import com.gitee.planners.api.common.metadata.metadata
-import com.gitee.planners.api.event.player.PlayerLevelChangeEvent
 import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.Leveling
@@ -15,23 +13,26 @@ import taboolib.common.platform.function.submitAsync
 import taboolib.common5.cfloat
 import java.util.concurrent.CompletableFuture
 
-class PlayerProfile(val id: Long, val onlinePlayer: Player, route: PlayerRoute?, map: Map<String, Metadata>) :
+class PlayerTemplate(val id: Long, val onlinePlayer: Player, route: PlayerRoute?, map: Map<String, Metadata>) :
     MetadataContainer(map), Leveling {
 
     var route = route
         set(value) {
             // 如果是要清空 route 则删除当前的技能
             if (value == null && field != null) {
-                submitAsync {
-                    val skills = field!!.getImmutableSkillValues().mapNotNull { field!!.getSkillOrNull(it) }
-                    Database.INSTANCE.deleteSkill(*skills.toTypedArray())
+                val skills = field!!.getImmutableSkillValues().mapNotNull { field!!.getSkillOrNull(it) }
+                // 删除已经学习的技能
+                if (skills.isNotEmpty()) {
+                    submitAsync {
+                        Database.INSTANCE.deleteSkill(*skills.toTypedArray())
+                    }
                 }
             }
             // 赋值
             field = value
             // 保存 route
             submitAsync {
-                Database.INSTANCE.updateRoute(this@PlayerProfile)
+                Database.INSTANCE.updateRoute(this@PlayerTemplate)
             }
         }
 

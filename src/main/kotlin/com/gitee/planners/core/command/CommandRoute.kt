@@ -1,11 +1,9 @@
 package com.gitee.planners.core.command
 
-import com.gitee.planners.api.ProfileAPI
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.core.ui.RouteTransferUI
 import com.gitee.planners.core.ui.RouterSelectUI
 import taboolib.common.platform.command.CommandBody
-import taboolib.common.platform.command.subCommand
 import taboolib.platform.util.sendLang
 
 object CommandRoute {
@@ -17,8 +15,8 @@ object CommandRoute {
 
     @CommandBody
     val transfer = with { player ->
-        val plannersProfile = player.plannersProfile
-        if (plannersProfile.route == null) {
+        val plannersTemplate = player.plannersTemplate
+        if (plannersTemplate.route == null) {
             player.sendLang("player-route-invalid")
             return@with
         }
@@ -27,7 +25,7 @@ object CommandRoute {
 
     @CommandBody
     val clear = with { player ->
-        player.plannersProfile.route = null
+        player.plannersTemplate.route = null
         player.sendLang("player-route-clear")
     }
 

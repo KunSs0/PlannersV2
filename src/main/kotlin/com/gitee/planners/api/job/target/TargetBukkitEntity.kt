@@ -1,6 +1,6 @@
 package com.gitee.planners.api.job.target
 
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.entity.ProxyBukkitEntity
 import com.gitee.planners.api.common.metadata.EntityMetadataManager
 import com.gitee.planners.api.common.metadata.Metadata
@@ -76,7 +76,7 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
 
     private fun getMetadataContainer(): MetadataContainer {
         return if (instance is Player) {
-            instance.plannersProfile
+            instance.plannersTemplate
         }
         // 通过代理实体获取元数据容器
         else {

@@ -5,7 +5,7 @@ import com.gitee.planners.api.common.metadata.MetadataTypeToken
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
-import com.gitee.planners.core.player.PlayerProfile
+import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
@@ -68,18 +68,18 @@ class DatabaseSQL : Database {
     }
 
     // 该方法最好运行在异步 否则向数据库插入数据时会耗时
-    override fun getPlayerProfile(player: Player): PlayerProfile {
+    override fun getPlayerProfile(player: Player): PlayerTemplate {
         // 如果拿不到当前 route 则代表玩家还未选择 router
         val route = getRoute(player)
         val metadataMap = getMetadataMap(player)
-        return PlayerProfile(getUserId(player).id, player, route, metadataMap)
+        return PlayerTemplate(getUserId(player).id, player, route, metadataMap)
     }
 
-    override fun updateRoute(profile: PlayerProfile) {
-        val userId = getUserId(profile.onlinePlayer).id
+    override fun updateRoute(template: PlayerTemplate) {
+        val userId = getUserId(template.onlinePlayer).id
         tableUser.update(dataSource) {
             where { "id" eq userId }
-            set("route", profile.route?.bindingId)
+            set("route", template.route?.bindingId)
         }
     }
 
@@ -168,16 +168,16 @@ class DatabaseSQL : Database {
         }
     }
 
-    override fun updateMetadata(profile: PlayerProfile, id: String, metadata: Metadata) {
+    override fun updateMetadata(template: PlayerTemplate, id: String, metadata: Metadata) {
 
         // 虚空节点 || 节点超时 删除
         if (metadata is MetadataTypeToken.Void || metadata.isTimeout()) {
-            tableMetadata.delete(dataSource) { whereWithMetadata(profile, id) }
+            tableMetadata.delete(dataSource) { whereWithMetadata(template, id) }
         }
         // 更新节点
-        else if (tableMetadata.find(dataSource) { whereWithMetadata(profile, id) }) {
+        else if (tableMetadata.find(dataSource) { whereWithMetadata(template, id) }) {
             tableMetadata.update(dataSource) {
-                whereWithMetadata(profile, id)
+                whereWithMetadata(template, id)
                 set("type", metadata.clazz.name)
                 set("token", Metadata.Loader.toJson(metadata))
                 set("stop_time", metadata.timeoutTick)
@@ -186,7 +186,7 @@ class DatabaseSQL : Database {
         // 插入节点
         else {
             tableMetadata.nullableInsert(dataSource) {
-                set("user", profile.id)
+                set("user", template.id)
                 set("node", id)
                 set("type", metadata.clazz.name)
                 set("token", Metadata.Loader.toJson(metadata))
@@ -195,16 +195,16 @@ class DatabaseSQL : Database {
         }
     }
 
-    fun ActionFilterable.whereWithMetadata(profile: PlayerProfile, id: String) {
+    fun ActionFilterable.whereWithMetadata(template: PlayerTemplate, id: String) {
         return where {
-            "user" eq profile.id
+            "user" eq template.id
             "node" eq id
         }
     }
 
-    override fun createPlayerSkill(profile: PlayerProfile, skill: Skill): CompletableFuture<PlayerSkill> {
+    override fun createPlayerSkill(template: PlayerTemplate, skill: Skill): CompletableFuture<PlayerSkill> {
         val future = CompletableFuture<PlayerSkill>()
-        val route = profile.route?.bindingId ?: error("Player ${profile.onlinePlayer.name} not find route")
+        val route = template.route?.bindingId ?: error("Player ${template.onlinePlayer.name} not find route")
         if (skill is ImmutableSkill) {
             tableSkill.insert(dataSource, "route", "node", "level") {
                 value(
@@ -249,14 +249,14 @@ class DatabaseSQL : Database {
     }
 
     override fun createPlayerJob(
-        profile: PlayerProfile,
+        template: PlayerTemplate,
         parentId: Long,
         route: ImmutableRoute
     ): CompletableFuture<PlayerRoute> {
         val future = CompletableFuture<PlayerRoute>()
         val node = PlayerRoute.Node(parentId, route.id)
         tableRoute.insert(dataSource, "user", "router", "parent", "route") {
-            value(profile.id, route.routerId, node.parentId, node.route)
+            value(template.id, route.routerId, node.parentId, node.route)
             onFinally {
                 future.complete(PlayerRoute(getId(generatedKeys), route.routerId, node, emptyList()))
             }
@@ -264,8 +264,8 @@ class DatabaseSQL : Database {
         return future
     }
 
-    override fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
-        return createPlayerJob(profile, profile.route?.bindingId ?: -1L, route)
+    override fun createPlayerJob(template: PlayerTemplate, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
+        return createPlayerJob(template, template.route?.bindingId ?: -1L, route)
     }
 
     private fun getId(resultSet: ResultSet): Long {

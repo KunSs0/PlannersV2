@@ -1,16 +1,15 @@
 package com.gitee.planners.core.config.level
 
-import com.gitee.planners.api.ProfileAPI
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.player.PlayerExperienceEvent
 import com.gitee.planners.api.event.player.PlayerLevelChangeEvent
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
-import com.gitee.planners.core.player.PlayerProfile
+import com.gitee.planners.core.player.PlayerTemplate
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerExpChangeEvent
 import taboolib.common.platform.event.SubscribeEvent
-import taboolib.common5.cfloat
 import taboolib.module.configuration.ConfigNode
 import taboolib.module.configuration.lazyConversion
 
@@ -35,47 +34,47 @@ object AlgorithmLevel {
 
     @SubscribeEvent
     internal fun e(e: PlayerProfileLoadedEvent) {
-        syncingUpdated(e.profile)
+        syncingUpdated(e.template)
     }
 
     @SubscribeEvent(ignoreCancelled = true)
     internal fun e(e: PlayerExperienceEvent.Increment) {
-        syncingUpdated(e.profile)
+        syncingUpdated(e.template)
     }
 
 
     @SubscribeEvent(ignoreCancelled = true)
     internal fun e(e: PlayerExperienceEvent.Decrement) {
-        syncingUpdated(e.profile)
+        syncingUpdated(e.template)
     }
 
     @SubscribeEvent(ignoreCancelled = true)
     internal fun e(e: PlayerExperienceEvent.Set) {
-        syncingUpdated(e.profile)
+        syncingUpdated(e.template)
     }
 
     @SubscribeEvent(ignoreCancelled = true)
     internal fun e(e: PlayerLevelChangeEvent) {
-        syncingUpdated(e.profile, e.to)
+        syncingUpdated(e.template, e.to)
     }
 
     @SubscribeEvent
     fun e(e: PlayerExpChangeEvent) {
         if (originHook) {
-            ProfileAPI.addExperience(e.player, e.amount)
+            PlayerTemplateAPI.addExperience(e.player, e.amount)
             e.amount = 0
         }
     }
 
     fun syncingUpdated(player: Player) {
-        syncingUpdated(player.plannersProfile)
+        syncingUpdated(player.plannersTemplate)
     }
 
-    fun syncingUpdated(profile: PlayerProfile, level: Int) {
-        val player = profile.onlinePlayer
+    fun syncingUpdated(template: PlayerTemplate, level: Int) {
+        val player = template.onlinePlayer
         if (synchronize) {
             player.level = level
-            val progress = maxOf(0f, minOf(1f, profile.experience.toFloat() / profile.experienceMax.toFloat()))
+            val progress = maxOf(0f, minOf(1f, template.experience.toFloat() / template.experienceMax.toFloat()))
             player.exp = progress
         }
     }
@@ -83,35 +82,36 @@ object AlgorithmLevel {
     /**
      * 同步更新
      */
-    fun syncingUpdated(profile: PlayerProfile) {
-        syncingUpdated(profile, profile.level)
+    fun syncingUpdated(template: PlayerTemplate) {
+        syncingUpdated(template, template.level)
     }
 
-    fun getInstance(profile: PlayerProfile): Algorithm {
-        if (isolation.get() == Isolation.ALL && profile.route == null) {
-            error("Player route is null.")
-        }
-        return if (isolation.get() != Isolation.ALL) {
-            profile.route!!.algorithmLevel ?: default ?: error("Player route algorithm is null.")
+    fun getInstance(template: PlayerTemplate): Algorithm {
+        return if (isolation.get() == Isolation.ROUTER && template.route != null) {
+            template.route!!.router.algorithmLevel ?: error("Player router algorithm is null.")
+        } else if (isolation.get() == Isolation.JOB && template.route != null) {
+            template.route!!.algorithmLevel ?: error("Player job algorithm is null.")
         } else {
             default ?: error("Default algorithm is null.")
         }
     }
 
-    fun getStoragePathInIsolation(profile: PlayerProfile, node: String): String {
+    fun getStoragePathInIsolation(template: PlayerTemplate, node: String): String {
         val builder = StringBuilder("@$node")
-        if (isolation.get() == Isolation.ROUTER) {
-            builder.append(".${profile.route!!.router.id}")
+        if (isolation.get() == Isolation.ROUTER && template.route != null) {
+            builder.append(".${template.route!!.router.id}")
         }
-        if (isolation.get() == Isolation.JOB) {
-            builder.append(".${profile.route!!.router.id}.${profile.route!!.bindingId}")
+        if (isolation.get() == Isolation.JOB && template.route != null) {
+            builder.append(".${template.route!!.router.id}.${template.route!!.bindingId}")
         }
         return builder.toString()
     }
 
     enum class Isolation {
 
-        ALL, ROUTER, JOB
+        ALL,
+        ROUTER,
+        JOB
 
     }
 

@@ -37,6 +37,10 @@ open class TargetBukkitLocation(override val instance: Location) : TargetLocatio
             .filterIsInstance<LivingEntity>()
     }
 
+    override fun add(x: Double, y: Double, z: Double) {
+        this.instance.add(x, y, z)
+    }
+
     override fun toString(): String {
         return "TargetBukkitLocation(instance=$instance)"
     }

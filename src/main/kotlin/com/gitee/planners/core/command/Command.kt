@@ -1,6 +1,6 @@
 package com.gitee.planners.core.command
 
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.core.config.ImmutableSkill
@@ -8,9 +8,6 @@ import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
-import taboolib.common.platform.function.submitAsync
-import taboolib.common.platform.service.PlatformExecutor
-import taboolib.common.util.random
 import taboolib.expansion.createHelper
 
 @CommandHeader("planners", aliases = ["pl", "ps"], permission = "planners.command")
@@ -49,6 +46,6 @@ object Command {
     }
 
     fun withPlayerSkill(block: ProxyCommandSender.(player: Player, skill: PlayerSkill) -> Unit): SimpleCommandBody {
-        return withUnique("id", { it.plannersProfile.getRegisteredSkill().values.toList() }, block)
+        return withUnique("id", { it.plannersTemplate.getRegisteredSkill().values.toList() }, block)
     }
 }

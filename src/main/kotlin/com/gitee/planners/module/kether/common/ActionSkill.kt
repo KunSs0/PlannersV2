@@ -1,6 +1,6 @@
 package com.gitee.planners.module.kether.common
 
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
@@ -39,7 +39,7 @@ object ActionSkill : MultipleKetherParser("skill") {
                     val skill = Registries.SKILL.get(id)
                     sender.filterIsInstance<TargetBukkitEntity>().forEach { entity ->
                         val player = entity.instance as? Player ?: return@forEach
-                        val i = player.plannersProfile.getRegisteredSkillOrNull(id)?.level ?: return@forEach
+                        val i = player.plannersTemplate.getRegisteredSkillOrNull(id)?.level ?: return@forEach
                         ImmutableSkillContext(entity, skill, i).call()
                     }
                 }
@@ -77,7 +77,7 @@ object ActionSkill : MultipleKetherParser("skill") {
     }
 
     fun getSkillLevelWithTarget(target: Target<*>, id: String): Int? {
-        return ((target as? TargetBukkitEntity)?.instance as? Player)?.plannersProfile?.getRegisteredSkillOrNull(id)?.level
+        return ((target as? TargetBukkitEntity)?.instance as? Player)?.plannersTemplate?.getRegisteredSkillOrNull(id)?.level
     }
 
 

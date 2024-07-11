@@ -35,6 +35,10 @@ class TargetTabooLocation(val location: Location) : TargetLocation<Location> {
         return location.z
     }
 
+    override fun add(x: Double, y: Double, z: Double) {
+        location.add(x,y,z)
+    }
+
 
     override fun getNearbyLivingEntities(vector: Vector): List<LivingEntity> {
         return getBukkitWorld()!!

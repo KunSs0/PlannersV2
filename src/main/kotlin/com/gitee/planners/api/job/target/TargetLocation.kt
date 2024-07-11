@@ -12,13 +12,15 @@ interface TargetLocation<T> : Target<T> {
 
     fun getBukkitWorld(): World?
 
-    fun getBukkitLocation() : Location
+    fun getBukkitLocation(): Location
 
     fun getX(): Double
 
     fun getY(): Double
 
     fun getZ(): Double
+
+    fun add(x: Double, y: Double, z: Double)
 
     fun getNearbyLivingEntities(vector: Vector): List<LivingEntity>
 

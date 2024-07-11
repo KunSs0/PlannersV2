@@ -1,14 +1,12 @@
 package com.gitee.planners.module.magic
 
 import com.gitee.planners.Planners
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.createMetadata
 import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.common.script.SingletonKetherScript
 import com.gitee.planners.module.magic.MagicPoint.magicPoint
 import org.bukkit.entity.Player
-import taboolib.common.LifeCycle
-import taboolib.common.platform.Awake
 import taboolib.common.platform.function.submitAsync
 import taboolib.common.platform.service.PlatformExecutor
 import taboolib.common5.cint
@@ -25,15 +23,15 @@ class DefaultMagicPointProvider : MagicPointProvider {
     var taskResume: PlatformExecutor.PlatformTask? = null
 
     override fun getPoint(player: Player): Int {
-        return player.plannersProfile["@magic.point"]?.asInt() ?: 0
+        return player.plannersTemplate["@magic.point"]?.asInt() ?: 0
     }
 
     override fun setPoint(player: Player, magicPoint: Int) {
-        player.plannersProfile["@magic.point"] = createMetadata(minOf(magicPoint, getPointInUpperLimit(player)), -1)
+        player.plannersTemplate["@magic.point"] = createMetadata(minOf(magicPoint, getPointInUpperLimit(player)), -1)
     }
 
     override fun getPointInUpperLimit(player: Player): Int {
-        return player.plannersProfile["@magic.point.max"]?.asInt() ?: 0
+        return player.plannersTemplate["@magic.point.max"]?.asInt() ?: 0
     }
 
     fun close() {
@@ -43,7 +41,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     fun setPointInUpperLimit(player: Player, magicPoint: Int) {
-        player.plannersProfile["@magic.point.max"] = createMetadata(magicPoint, -1)
+        player.plannersTemplate["@magic.point.max"] = createMetadata(magicPoint, -1)
     }
 
     init {
@@ -74,8 +72,8 @@ class DefaultMagicPointProvider : MagicPointProvider {
 
     fun executeUpdateTask(player: Player) {
         expressionResume.get().run(KetherScriptOptions.common(player)).thenAccept { data ->
-            val profile = player.plannersProfile
-            profile.magicPoint += (data?.cint ?: 0)
+            val template = player.plannersTemplate
+            template.magicPoint += (data?.cint ?: 0)
         }
     }
 

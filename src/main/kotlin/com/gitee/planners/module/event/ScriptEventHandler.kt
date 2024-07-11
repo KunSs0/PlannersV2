@@ -1,7 +1,7 @@
 package com.gitee.planners.module.event
 
-import com.gitee.planners.api.ProfileAPI.plannersLoaded
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersLoaded
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.script.ComplexCompiledScript
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.job.target.TargetBukkitEntity
@@ -46,7 +46,7 @@ object ScriptEventHandler {
                 val ctx = if (compiled is ImmutableSkill) {
                     // 如果是玩家 则转为技能释放上下文
                     val level = if (sender is TargetBukkitEntity && sender.instance is Player && sender.instance.plannersLoaded) {
-                        sender.instance.plannersProfile.getRegisteredSkillOrNull(compiled.id)?.level ?: 0
+                        sender.instance.plannersTemplate.getRegisteredSkillOrNull(compiled.id)?.level ?: 0
                     } else {
                         0
                     }

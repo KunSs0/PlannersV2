@@ -1,6 +1,6 @@
 package com.gitee.planners.module.kether
 
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
@@ -25,7 +25,7 @@ object ActionProfile : MultipleKetherParser("profile") {
                     val entity = objective
                         .filterIsInstance<TargetBukkitEntity>()
                         .firstOrNull { it.instance is Player }
-                    Optional.ofNullable((entity?.instance as? Player)?.plannersProfile?.magicPoint).orElseGet { -1 }
+                    Optional.ofNullable((entity?.instance as? Player)?.plannersTemplate?.magicPoint).orElseGet { -1 }
                 }
             }
         }
@@ -40,7 +40,7 @@ object ActionProfile : MultipleKetherParser("profile") {
                     objective.filterIsInstance<TargetBukkitEntity>().forEach {
                         val player = it.instance as? Player
                         if (player != null) {
-                            player.plannersProfile.magicPoint = value
+                            player.plannersTemplate.magicPoint = value
                         }
                     }
                 }
@@ -54,7 +54,7 @@ object ActionProfile : MultipleKetherParser("profile") {
                     objective.filterIsInstance<TargetBukkitEntity>().forEach {
                         val player = it.instance as? Player
                         if (player != null) {
-                            player.plannersProfile.magicPoint += value
+                            player.plannersTemplate.magicPoint += value
                         }
                     }
                 }
@@ -68,7 +68,7 @@ object ActionProfile : MultipleKetherParser("profile") {
                     objective.filterIsInstance<TargetBukkitEntity>().forEach {
                         val player = it.instance as? Player
                         if (player != null) {
-                            player.plannersProfile.magicPoint -= value
+                            player.plannersTemplate.magicPoint -= value
                         }
                     }
                 }
@@ -84,29 +84,29 @@ object ActionProfile : MultipleKetherParser("profile") {
                 val entity = objective
                     .filterIsInstance<TargetBukkitEntity>()
                     .firstOrNull { it.instance is Player }
-                Optional.ofNullable((entity?.instance as? Player)?.plannersProfile?.magicPointInUpperLimit).orElseGet { -1 }
+                Optional.ofNullable((entity?.instance as? Player)?.plannersTemplate?.magicPointInUpperLimit).orElseGet { -1 }
             }
         }
     }
 
     @KetherEditor.Document("profile job")
     val job = processNow {
-        it.plannersProfile.route?.getJob()?.id
+        it.plannersTemplate.route?.getJob()?.id
     }
 
     @KetherEditor.Document("profile level")
     val level = processNow {
-        it.plannersProfile.level
+        it.plannersTemplate.level
     }
 
     @KetherEditor.Document("profile experience")
     val experience = processNow {
-        it.plannersProfile.experience
+        it.plannersTemplate.experience
     }
 
     @KetherEditor.Document("profile experience.max")
     val experienceMax = processNow("experience.max", "max.experience", "experience-max", "max-exp", "max.exp") {
-        it.plannersProfile.experienceMax
+        it.plannersTemplate.experienceMax
     }
 
     private fun processNow(vararg id: String, func: (Player) -> Any?) = KetherHelper.simpleKetherNow(*id) {

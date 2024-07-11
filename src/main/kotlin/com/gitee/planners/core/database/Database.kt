@@ -4,8 +4,7 @@ import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.event.DatabaseInitEvent
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.config.ImmutableRoute
-import com.gitee.planners.core.config.ImmutableSkill
-import com.gitee.planners.core.player.PlayerProfile
+import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.util.configNodeTo
@@ -34,20 +33,20 @@ interface Database {
 
     }
 
-    fun getPlayerProfile(player: Player): PlayerProfile
+    fun getPlayerProfile(player: Player): PlayerTemplate
 
-    fun updateRoute(profile: PlayerProfile)
+    fun updateRoute(template: PlayerTemplate)
 
-    fun updateMetadata(profile: PlayerProfile, id: String, metadata: Metadata)
+    fun updateMetadata(template: PlayerTemplate, id: String, metadata: Metadata)
 
     fun deleteSkill(vararg skill: PlayerSkill)
 
     fun updateSkill(skill: PlayerSkill)
 
-    fun createPlayerSkill(profile: PlayerProfile, skill: Skill): CompletableFuture<PlayerSkill>
+    fun createPlayerSkill(template: PlayerTemplate, skill: Skill): CompletableFuture<PlayerSkill>
 
-    fun createPlayerJob(profile: PlayerProfile, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute>
+    fun createPlayerJob(template: PlayerTemplate, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute>
 
-    fun createPlayerJob(profile: PlayerProfile, route: ImmutableRoute): CompletableFuture<PlayerRoute>
+    fun createPlayerJob(template: PlayerTemplate, route: ImmutableRoute): CompletableFuture<PlayerRoute>
 
 }

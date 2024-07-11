@@ -1,18 +1,18 @@
 package com.gitee.planners.api.event.player
 
-import com.gitee.planners.core.player.PlayerProfile
+import com.gitee.planners.core.player.PlayerTemplate
 import taboolib.platform.type.BukkitProxyEvent
 
-abstract class PlayerExperienceEvent(val profile: PlayerProfile) : BukkitProxyEvent() {
+abstract class PlayerExperienceEvent(val template: PlayerTemplate) : BukkitProxyEvent() {
 
-    val player = profile.onlinePlayer
+    val player = template.onlinePlayer
 
-    class Increment(profile: PlayerProfile, var amount: Int) : PlayerExperienceEvent(profile)
+    class Increment(template: PlayerTemplate, var amount: Int) : PlayerExperienceEvent(template)
 
-    class Decrement(profile: PlayerProfile, var amount: Int) : PlayerExperienceEvent(profile)
+    class Decrement(template: PlayerTemplate, var amount: Int) : PlayerExperienceEvent(template)
 
-    class Set(profile: PlayerProfile, var value: Int) : PlayerExperienceEvent(profile)
+    class Set(template: PlayerTemplate, var value: Int) : PlayerExperienceEvent(template)
 
-    class Updated(profile: PlayerProfile) : PlayerExperienceEvent(profile)
+    class Updated(template: PlayerTemplate) : PlayerExperienceEvent(template)
 
 }
