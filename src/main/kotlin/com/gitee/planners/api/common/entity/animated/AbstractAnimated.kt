@@ -12,7 +12,7 @@ import taboolib.common.util.Vector
 import taboolib.common5.*
 import taboolib.module.kether.runKether
 
-abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated {
+abstract class AbstractAnimated : Animated, MetadataContainer(), Animated.Updated {
 
     val listeners = mutableListOf<AnimatedListener>()
 
@@ -20,7 +20,7 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
         this.listeners += listener
     }
 
-    override fun emit(event: AnimatedEvent,context: AbstractComplexScriptContext) {
+    override fun emit(event: AnimatedEvent, context: AbstractComplexScriptContext) {
         val compiled = context.compiled
         val platform = context.platform
         val options = context.createOptions {
@@ -30,7 +30,7 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
             val script = compiled.compiledScript()
             compiled.getBlockScript(listener.binding).ifPresent {
                 runKether {
-                    platform.run("${script.id}_${listener.binding}",script,it, options)
+                    platform.run("${script.id}_${listener.binding}", script, it, options)
                 }
             }
         }
@@ -45,24 +45,41 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
     }
 
     override fun handleUpdate(metadata: AnimatedMeta.CoerceMeta<Any>) {
-        metadata.onUpdate(this,metadata.any())
+        metadata.onUpdate(this, metadata.any())
     }
 
 
-    fun AbstractAnimated.text(id: String, defaultValue: String, onUpdate: Animated.(data: String) -> Unit = {}): AnimatedMeta.CoerceMeta<String> {
+    fun AbstractAnimated.text(
+        id: String,
+        defaultValue: String,
+        onUpdate: Animated.(data: String) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<String> {
         return createBaked(id, defaultValue, parser = { this.toString() }, onUpdate)
     }
 
-    fun AbstractAnimated.int(id: String, defaultValue: Int = 0, onUpdate: Animated.(data: Int) -> Unit = {}): AnimatedMeta.CoerceMeta<Int> {
+    fun AbstractAnimated.int(
+        id: String,
+        defaultValue: Int = 0,
+        onUpdate: Animated.(data: Int) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<Int> {
         return createBaked(id, defaultValue, parser = { this.cint }, onUpdate)
     }
 
-    fun AbstractAnimated.long(id: String, defaultValue: Long = 0, onUpdate: Animated.(data: Long) -> Unit = {}): AnimatedMeta.CoerceMeta<Long> {
+    fun AbstractAnimated.long(
+        id: String,
+        defaultValue: Long = 0,
+        onUpdate: Animated.(data: Long) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<Long> {
         return createBaked(id, defaultValue, parser = { this.clong }, onUpdate)
     }
 
 
-    fun AbstractAnimated.strictInt(id: String, defaultValue: Int = 0, min: Int = 0, onUpdate: Animated.(data: Int) -> Unit = {}): AnimatedMeta.CoerceMeta<Int> {
+    fun AbstractAnimated.strictInt(
+        id: String,
+        defaultValue: Int = 0,
+        min: Int = 0,
+        onUpdate: Animated.(data: Int) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<Int> {
         val parser: Any.() -> Int = {
             val value = this.cint
             if (value < min) {
@@ -77,21 +94,37 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
         return createBaked(id, defaultValue, parser, onUpdate)
     }
 
-    fun AbstractAnimated.double(id: String, defaultValue: Double = 0.0, onUpdate: Animated.(data: Double) -> Unit = {}): AnimatedMeta.CoerceMeta<Double> {
+    fun AbstractAnimated.double(
+        id: String,
+        defaultValue: Double = 0.0,
+        onUpdate: Animated.(data: Double) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<Double> {
         return createBaked(id, defaultValue, parser = { this.cdouble }, onUpdate)
     }
 
-    fun AbstractAnimated.float(id: String, defaultValue: Float = 0f, onUpdate: Animated.(data: Float) -> Unit = {}): AnimatedMeta.CoerceMeta<Float> {
+    fun AbstractAnimated.float(
+        id: String,
+        defaultValue: Float = 0f,
+        onUpdate: Animated.(data: Float) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<Float> {
         return createBaked(id, defaultValue, parser = { this.cfloat }, onUpdate)
     }
 
 
-    fun AbstractAnimated.bool(id: String, defaultValue: Boolean = false, onUpdate: Animated.(data: Boolean) -> Unit = {}): AnimatedMeta.CoerceMeta<Boolean> {
+    fun AbstractAnimated.bool(
+        id: String,
+        defaultValue: Boolean = false,
+        onUpdate: Animated.(data: Boolean) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<Boolean> {
         return createBaked(id, defaultValue, parser = { this.cbool }, onUpdate)
     }
 
 
-    fun AbstractAnimated.vector(id: String, defaultValue: Vector, onUpdate: Animated.(data: Vector) -> Unit): AnimatedMeta.CoerceMeta<Vector> {
+    fun AbstractAnimated.vector(
+        id: String,
+        defaultValue: Vector,
+        onUpdate: Animated.(data: Vector) -> Unit
+    ): AnimatedMeta.CoerceMeta<Vector> {
         return createBaked(id, defaultValue, parser = { this as Vector }, onUpdate)
     }
 
@@ -99,9 +132,14 @@ abstract class AbstractAnimated : Animated, MetadataContainer(),Animated.Updated
         return createBaked(id, TargetContainer(), parser = { this as TargetContainer })
     }
 
-    inline fun <reified T : Any> AbstractAnimated.createBaked(id: String, defaultValue: T, noinline parser: Any.() -> T, noinline onUpdate: Animated.(data: T) -> Unit = {}): AnimatedMeta.CoerceMeta<T> {
+    inline fun <reified T : Any> AbstractAnimated.createBaked(
+        id: String,
+        defaultValue: T,
+        noinline parser: Any.() -> T,
+        noinline onUpdate: Animated.(data: T) -> Unit = {}
+    ): AnimatedMeta.CoerceMeta<T> {
         val unboxJavaToKotlin = unboxJavaToKotlin(T::class.java)
-        val meta = AnimatedMeta.CoerceMeta(id, unboxJavaToKotlin, defaultValue, parser, onUpdate)
+        val meta = AnimatedMeta.CoerceMeta(this, id, unboxJavaToKotlin, defaultValue, parser, onUpdate)
         this@createBaked[id] = meta
         return meta
     }
