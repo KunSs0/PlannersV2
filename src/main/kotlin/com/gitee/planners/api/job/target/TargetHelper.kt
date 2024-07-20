@@ -1,6 +1,7 @@
 package com.gitee.planners.api.job.target
 
 import org.bukkit.Location
+import org.bukkit.block.Block
 import org.bukkit.command.CommandSender
 import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.entity.Entity
@@ -14,6 +15,10 @@ inline fun <reified T : Target<*>> adaptTarget(any: Any): T {
 
         is Location -> {
             any.adaptTarget() as T
+        }
+
+        is Block -> {
+            TargetBlock(any) as T
         }
 
         else -> throw IllegalStateException("Target ${any::class.java.name} is not supported")
