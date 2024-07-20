@@ -13,6 +13,7 @@ import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import taboolib.common.util.Vector
+import taboolib.common5.cdouble
 import java.util.*
 
 class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
@@ -60,8 +61,16 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         return instance.location.z
     }
 
-    override fun add(x: Double, y: Double, z: Double) {
+    override fun getYaw(): Double {
+        return instance.location.yaw.cdouble
+    }
 
+    override fun getPitch(): Double {
+        return instance.location.pitch.cdouble
+    }
+
+    override fun add(x: Double, y: Double, z: Double) {
+        instance.teleport(instance.location.add(x,y,z))
     }
 
     override fun sendMessage(message: String) {

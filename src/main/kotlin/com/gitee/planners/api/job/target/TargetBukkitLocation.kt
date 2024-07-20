@@ -4,6 +4,7 @@ import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.LivingEntity
 import taboolib.common.util.Vector
+import taboolib.common5.cdouble
 
 open class TargetBukkitLocation(override val instance: Location) : TargetLocation<Location> {
 
@@ -25,6 +26,14 @@ open class TargetBukkitLocation(override val instance: Location) : TargetLocatio
 
     override fun getZ(): Double {
         return instance.z
+    }
+
+    override fun getYaw(): Double {
+        return instance.yaw.cdouble
+    }
+
+    override fun getPitch(): Double {
+        return instance.pitch.cdouble
     }
 
     override fun getBukkitLocation(): Location {

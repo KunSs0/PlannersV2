@@ -20,6 +20,10 @@ interface TargetLocation<T> : Target<T> {
 
     fun getZ(): Double
 
+    fun getYaw(): Double
+
+    fun getPitch(): Double
+
     fun add(x: Double, y: Double, z: Double)
 
     fun getNearbyLivingEntities(vector: Vector): List<LivingEntity>

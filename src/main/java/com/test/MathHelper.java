@@ -7,7 +7,7 @@ public class MathHelper {
     }
 
     public static Integer get() {
-        return new Integer(10);
+        return 10;
     }
 
 }

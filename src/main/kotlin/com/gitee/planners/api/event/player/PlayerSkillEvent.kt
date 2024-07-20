@@ -17,4 +17,6 @@ abstract class PlayerSkillEvent(val template: PlayerTemplate, val skill: PlayerS
 
     class BindingChange(template: PlayerTemplate, skill: PlayerSkill, val binding: KeyBinding?) : PlayerSkillEvent(template, skill)
 
+    class CoolChange(template: PlayerTemplate,skill: PlayerSkill,val cool: Int) : PlayerSkillEvent(template, skill)
+
 }
