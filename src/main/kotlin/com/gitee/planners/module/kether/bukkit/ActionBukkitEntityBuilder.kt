@@ -47,7 +47,7 @@ object ActionBukkitEntityBuilder : MultipleKetherParser("entity") {
     @KetherEditor.Document("entity spawn <animated> [at objective:TargetContainer(sender)]")
     val spawn = KetherHelper.combinedKetherParser {
         it.group(any(), commandObjectiveOrOrigin()).apply(it) { animated, objective ->
-            animated as? BukkitEntityBuilder ?: error("Animated object is not supported")
+            animated as? EntitySpawner ?: error("Animated object is not supported")
             now {
                 val container =
                     TargetContainer.of(*objective.map { this.createBukkitEntity(animated, it) }.toTypedArray())

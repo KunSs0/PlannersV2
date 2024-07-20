@@ -39,43 +39,55 @@ object ScriptEventHandler {
         }
         if (wrapped is ScriptBukkitEventWrapped<*>) {
             wrapped as ScriptBukkitEventWrapped<T>
-            listener.mapping = registerBukkitListener(wrapped.bind, listener.priority, listener.ignoreCancelled) { event ->
-                val compiled = listener.compiled
-                val sender = wrapped.getSender(event) ?: return@registerBukkitListener
-                // 对技能做出处理
-                val ctx = if (compiled is ImmutableSkill) {
-                    // 如果是玩家 则转为技能释放上下文
-                    val level = if (sender is TargetBukkitEntity && sender.instance is Player && sender.instance.plannersLoaded) {
-                        sender.instance.plannersTemplate.getRegisteredSkillOrNull(compiled.id)?.level ?: 0
+            listener.mapping =
+                registerBukkitListener(wrapped.bind, listener.priority, listener.ignoreCancelled) { event ->
+                    val compiled = listener.compiled
+                    val sender = wrapped.getSender(event) ?: return@registerBukkitListener
+                    // 对技能做出处理
+                    val ctx = if (compiled is ImmutableSkill) {
+                        // 如果是玩家 则转为技能释放上下文
+                        val level =
+                            if (sender is TargetBukkitEntity && sender.instance is Player && sender.instance.plannersLoaded) {
+                                sender.instance.plannersTemplate.getRegisteredSkillOrNull(compiled.id)?.level ?: 0
+                            } else {
+                                0
+                            }
+                        ImmutableSkillContext(sender, compiled, level)
                     } else {
-                        0
+                        CompiledScriptContext(sender, compiled)
                     }
-                    ImmutableSkillContext(sender,compiled,level)
-                } else {
-                    CompiledScriptContext(sender,compiled)
+                    runKether {
+                        // 关联异步逻辑
+                        ctx.async = listener.async
+                        // 在event运行环境下，如果非异步行为，强制设置为now
+                        if (!ctx.async) {
+                            ctx.now = true
+                        }
+                        ctx.call(listener.block) {
+                            context {
+                                this.set("id", listener.id)
+                                wrapped.handle(event, this)
+                            }
+                        }
+                    }
                 }
-                runKether {
-                    // 关联异步逻辑
-                    ctx.async = listener.async
-                    // 在event运行环境下，如果非异步行为，强制设置为now
-                    if (!ctx.async) {
-                        ctx.now = true
-                    }
-                    ctx.call(listener.block) {
-                        context { wrapped.handle(event, this) }
-                    }
-                }
-            }
         }
         listeners += listener
     }
 
-    fun registerListener(compiled: ComplexCompiledScript,id: String,block: String,event: String,ignoreCancelled: Boolean,priority: EventPriority,async: Boolean = true) : ScriptBlockListener? {
+    fun registerListener(
+        compiled: ComplexCompiledScript,
+        id: String,
+        block: String,
+        event: String,
+        ignoreCancelled: Boolean,
+        priority: EventPriority,
+        async: Boolean = true
+    ): ScriptBlockListener? {
         val optional = compiled.compiledScript().getBlock(block)
         if (optional.isPresent) {
-            val listener = ScriptBlockListener(id,compiled, optional.get(), event, priority, ignoreCancelled, async)
+            val listener = ScriptBlockListener(id, compiled, optional.get(), event, priority, ignoreCancelled, async)
             registerListener<Event>(listener)
-            println("register listener $listener")
             return listener
         }
         return null
@@ -88,10 +100,10 @@ object ScriptEventHandler {
     fun registerListenerForScript(compiled: ComplexCompiledScript) {
         val script = compiled.compiledScript()
         script.getBlock("onload").ifPresent { block ->
-           runKether {
-               val context = CompiledScriptContext(Bukkit.getConsoleSender().adaptTarget(), compiled)
-               compiled.platform().run(UUID.randomUUID().toString(),script,block, context.createOptions())
-           }
+            runKether {
+                val context = CompiledScriptContext(Bukkit.getConsoleSender().adaptTarget(), compiled)
+                compiled.platform().run(UUID.randomUUID().toString(), script, block, context.createOptions())
+            }
         }
     }
 
@@ -108,6 +120,10 @@ object ScriptEventHandler {
     fun unregisterListener(listener: ScriptBlockListener) {
         unregisterListener(listener.mapping)
         listeners -= listener
+    }
+
+    fun unregisterListener(id: String) {
+        this.unregisterListener(getListenerById(id) ?: return)
     }
 
     fun getListeners(wrapped: ScriptEventWrapped<*>): List<ScriptBlockListener> {

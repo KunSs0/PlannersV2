@@ -37,7 +37,7 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
     }
 
     open fun call(block: Quest.Block, func: ScriptOptions.ScriptOptionsBuilder.() -> Unit = { }) {
-        submit(async = async) {
+        submit(async = async, now = now) {
             platform.run(
                 trackId,
                 compiled.compiledScript(),

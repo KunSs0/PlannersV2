@@ -36,18 +36,22 @@ object MinecraftInteraction {
     fun updateInventory(player: Player) = updateInventory(player.plannersTemplate)
 
     fun updateInventory(template: PlayerTemplate) = Registries.KEYBINDING.values().forEach { binding ->
-        updateBinding(template,binding)
+        updateBinding(template, binding)
     }
 
     fun updateBinding(template: PlayerTemplate, binding: KeyBinding) {
+        if (template.route == null) {
+            return
+        }
+
         val skill = template.getRegisteredSkillOrNull(binding)
         if (skill != null) {
             val formatter = KeyBindingAPI.createIconFormatter(template.onlinePlayer, skill)
-            updateBinding(template.onlinePlayer,binding,formatter.build())
+            updateBinding(template.onlinePlayer, binding, formatter.build())
         }
     }
 
-    fun updateBinding(player: Player, binding: KeyBinding,itemStack: ItemStack) {
+    fun updateBinding(player: Player, binding: KeyBinding, itemStack: ItemStack) {
         val indexOf = Registries.KEYBINDING.values().indexOf(binding)
         player.inventory.setItem(indexOf, itemStack)
     }
@@ -56,7 +60,7 @@ object MinecraftInteraction {
         val binding = skill.binding ?: return
         val player = template.onlinePlayer
         val formatter = KeyBindingAPI.createIconFormatter(player, skill)
-        updateBinding(template.onlinePlayer,binding,formatter.build())
+        updateBinding(template.onlinePlayer, binding, formatter.build())
     }
 
     fun execute(func: () -> Unit) {
