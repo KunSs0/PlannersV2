@@ -5,7 +5,7 @@ import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.module.kether.bukkit.ActionBukkitDamage.setKiller
+import com.gitee.planners.module.kether.bukkit.damageable.ActionDamage.setKiller
 import com.gitee.planners.module.kether.commandObjectiveOrEmpty
 import com.gitee.planners.module.kether.commandObjectiveOrSender
 import org.bukkit.Bukkit
@@ -26,10 +26,12 @@ object ActionAttack : MultipleKetherParser("attack") {
         it.group(text(),commandObjectiveOrEmpty(),commandObjectiveOrSender("source")).apply(it) { attr, objective, killer ->
             val template = attr.split(",")
             val killer = killer.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance as? LivingEntity
+
             now {
+                var alldamage = 0.0
                 if (killer == null) {
                     warning("No killer found.")
-                    return@now
+                    return@now alldamage
                 }
                 val source = AttributeAPI.getAttributeSource(template)
                 val data = AttributeAPI.getAttrData(killer)
@@ -49,10 +51,13 @@ object ActionAttack : MultipleKetherParser("attack") {
                     }
                     handle.sendAttributeMessage()
                     entity.damage(handle.getDamage(killer))
+                    alldamage += handle.getDamage(killer)
                     if (handle.getDamage(entity) > 0.0) {
                         killer.damage(handle.getDamage(entity))
                     }
                 }
+                AttributeAPI.takeSourceAttribute(data,"@planners_skill")
+                return@now alldamage
             }
         }
     }

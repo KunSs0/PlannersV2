@@ -1,10 +1,8 @@
 package com.gitee.planners.module.magic
 
-import com.gitee.planners.api.common.metadata.createMetadata
-import com.gitee.planners.core.player.PlayerProfile
+import com.gitee.planners.core.player.PlayerTemplate
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
-import taboolib.common.util.unsafeLazy
 
 object MagicPoint {
 
@@ -23,10 +21,10 @@ object MagicPoint {
         }
     }
 
-    val PlayerProfile.magicPointInUpperLimit: Int
+    val PlayerTemplate.magicPointInUpperLimit: Int
         get() = INSTANCE.getPointInUpperLimit(this.onlinePlayer)
 
-    var PlayerProfile.magicPoint: Int
+    var PlayerTemplate.magicPoint: Int
         get() = INSTANCE.getPoint(this.onlinePlayer)
         set(value) {
             INSTANCE.setPoint(this.onlinePlayer, value)

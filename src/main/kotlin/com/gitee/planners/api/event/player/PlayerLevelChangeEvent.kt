@@ -1,10 +1,10 @@
 package com.gitee.planners.api.event.player
 
-import com.gitee.planners.core.player.PlayerProfile
+import com.gitee.planners.core.player.PlayerTemplate
 import taboolib.platform.type.BukkitProxyEvent
 
-class PlayerLevelChangeEvent(val profile: PlayerProfile, val form: Int, var to: Int) : BukkitProxyEvent() {
+class PlayerLevelChangeEvent(val template: PlayerTemplate, val form: Int, var to: Int) : BukkitProxyEvent() {
 
-    val player = profile.onlinePlayer
+    val player = template.onlinePlayer
 
 }

@@ -1,6 +1,6 @@
 package com.gitee.planners.api.job.target
 
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.entity.ProxyBukkitEntity
 import com.gitee.planners.api.common.metadata.EntityMetadataManager
 import com.gitee.planners.api.common.metadata.Metadata
@@ -13,6 +13,7 @@ import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import taboolib.common.util.Vector
+import taboolib.common5.cdouble
 import java.util.*
 
 class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
@@ -60,6 +61,18 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         return instance.location.z
     }
 
+    override fun getYaw(): Double {
+        return instance.location.yaw.cdouble
+    }
+
+    override fun getPitch(): Double {
+        return instance.location.pitch.cdouble
+    }
+
+    override fun add(x: Double, y: Double, z: Double) {
+        instance.teleport(instance.location.add(x,y,z))
+    }
+
     override fun sendMessage(message: String) {
         instance.sendMessage(message)
     }
@@ -76,7 +89,7 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
 
     private fun getMetadataContainer(): MetadataContainer {
         return if (instance is Player) {
-            instance.plannersProfile
+            instance.plannersTemplate
         }
         // 通过代理实体获取元数据容器
         else {

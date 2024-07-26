@@ -1,8 +1,8 @@
 package com.gitee.planners.core.ui
 
 import com.gitee.planners.api.KeyBindingAPI
-import com.gitee.planners.api.ProfileAPI
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -35,18 +35,18 @@ object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.ym
                 this.openTo(player)
                 // 解绑快捷键
                 if (element.binding != null && element.binding == it) {
-                    ProfileAPI.setSkillBinding(player.plannersProfile,element,null)
+                    PlayerTemplateAPI.setSkillBinding(player.plannersTemplate,element,null)
                 }
                 // 更新快捷键
                 else {
-                    ProfileAPI.setSkillBinding(player.plannersProfile,element,it)
+                    PlayerTemplateAPI.setSkillBinding(player.plannersTemplate,element,it)
                 }
             }
         }
     }
 
     override fun getElements(player: Player): Collection<PlayerSkill> {
-        return player.plannersProfile.getRegisteredSkill().values
+        return player.plannersTemplate.getRegisteredSkill().values
     }
 
 

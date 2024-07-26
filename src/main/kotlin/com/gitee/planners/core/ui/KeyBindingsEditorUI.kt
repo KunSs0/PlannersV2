@@ -1,7 +1,7 @@
 package com.gitee.planners.core.ui
 
 import com.gitee.planners.api.KeyBindingAPI
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.KeyBinding
 import org.bukkit.entity.Player
@@ -26,8 +26,8 @@ object KeyBindingsEditorUI : SingletonChoiceUI<KeyBinding>("key-bindings-editor.
     }
 
     override fun onGenerate(player: Player, element: KeyBinding, index: Int, slot: Int): ItemStack {
-        val profile = player.plannersProfile
-        val skill = profile.getRegisteredSkillOrNull(element)
+        val template = player.plannersTemplate
+        val skill = template.getRegisteredSkillOrNull(element)
         return if (skill == null) {
             buildItem(iconFill.get()) {
                 name = name?.replaceWithOrder(element.name)

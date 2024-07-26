@@ -1,7 +1,7 @@
 package com.gitee.planners.core.ui
 
-import com.gitee.planners.api.ProfileAPI
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.util.replaceInfix
@@ -14,7 +14,7 @@ import taboolib.platform.util.sendLang
 object RouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml") {
 
     override fun getElements(player: Player): Collection<ImmutableRoute> {
-        return player.plannersProfile.route!!.getBranches().map { it as ImmutableRoute }
+        return player.plannersTemplate.route!!.getBranches().map { it as ImmutableRoute }
     }
 
     override fun onClick(event: ClickEvent, element: ImmutableRoute) {
@@ -25,9 +25,9 @@ object RouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml")
             player.sendLang("player-transfer-invalid")
             return
         }
-        val profile = player.plannersProfile
-        ProfileAPI.OPERATOR.createPlayerRoute(profile,element).thenAccept {
-            profile.route = it
+        val template = player.plannersTemplate
+        PlayerTemplateAPI.OPERATOR.createPlayerRoute(template,element).thenAccept {
+            template.route = it
             player.sendLang("player-transfer-success", element.getJob().name)
         }
     }

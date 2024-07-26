@@ -1,12 +1,12 @@
 package com.gitee.planners.module.binding
 
 import com.gitee.planners.api.KeyBindingAPI
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.player.PlayerSkillEvent
 import com.gitee.planners.api.job.KeyBinding
-import com.gitee.planners.core.player.PlayerProfile
+import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.util.configNodeTo
 import org.bukkit.entity.Player
@@ -33,30 +33,34 @@ object MinecraftInteraction {
         }
     }
 
-    fun updateInventory(player: Player) = updateInventory(player.plannersProfile)
+    fun updateInventory(player: Player) = updateInventory(player.plannersTemplate)
 
-    fun updateInventory(profile: PlayerProfile) = Registries.KEYBINDING.values().forEach { binding ->
-        updateBinding(profile,binding)
+    fun updateInventory(template: PlayerTemplate) = Registries.KEYBINDING.values().forEach { binding ->
+        updateBinding(template, binding)
     }
 
-    fun updateBinding(profile: PlayerProfile,binding: KeyBinding) {
-        val skill = profile.getRegisteredSkillOrNull(binding)
+    fun updateBinding(template: PlayerTemplate, binding: KeyBinding) {
+        if (template.route == null) {
+            return
+        }
+
+        val skill = template.getRegisteredSkillOrNull(binding)
         if (skill != null) {
-            val formatter = KeyBindingAPI.createIconFormatter(profile.onlinePlayer, skill)
-            updateBinding(profile.onlinePlayer,binding,formatter.build())
+            val formatter = KeyBindingAPI.createIconFormatter(template.onlinePlayer, skill)
+            updateBinding(template.onlinePlayer, binding, formatter.build())
         }
     }
 
-    fun updateBinding(player: Player, binding: KeyBinding,itemStack: ItemStack) {
+    fun updateBinding(player: Player, binding: KeyBinding, itemStack: ItemStack) {
         val indexOf = Registries.KEYBINDING.values().indexOf(binding)
         player.inventory.setItem(indexOf, itemStack)
     }
 
-    fun updateInventory(profile: PlayerProfile, skill: PlayerSkill) {
+    fun updateInventory(template: PlayerTemplate, skill: PlayerSkill) {
         val binding = skill.binding ?: return
-        val player = profile.onlinePlayer
+        val player = template.onlinePlayer
         val formatter = KeyBindingAPI.createIconFormatter(player, skill)
-        updateBinding(profile.onlinePlayer,binding,formatter.build())
+        updateBinding(template.onlinePlayer, binding, formatter.build())
     }
 
     fun execute(func: () -> Unit) {
@@ -66,7 +70,7 @@ object MinecraftInteraction {
     @SubscribeEvent
     fun e(e: PlayerSkillEvent.LevelChange) {
         execute {
-            updateInventory(e.profile, e.skill)
+            updateInventory(e.template, e.skill)
         }
     }
 

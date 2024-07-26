@@ -21,6 +21,11 @@ private fun actionLong() = coerce("long", Coerce::toLong)
 @CombinationKetherParser.Used
 private fun actionFloat() = coerce("float", Coerce::toFloat)
 
+// boolean bool
+@KetherEditor.Document(value = "bool <value:Any>", result = Boolean::class)
+@CombinationKetherParser.Used
+private fun actionBool() = coerce("bool", Coerce::toBoolean)
+
 private fun <T> coerce(id: String, convert: Any?.() -> T) = KetherHelper.combinedKetherParser(id) {
     it.group(any()).apply(it) { value ->
         now { convert(value) }

@@ -57,6 +57,18 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
         return proxy.getZ()
     }
 
+    override fun getYaw(): Double {
+        return proxy.getYaw()
+    }
+
+    override fun getPitch(): Double {
+        return proxy.getPitch()
+    }
+
+    override fun add(x: Double, y: Double, z: Double) {
+        proxy.add(x, y, z)
+    }
+
     override fun getNearbyLivingEntities(vector: Vector): List<LivingEntity> {
         return proxy.getNearbyLivingEntities(vector)
     }

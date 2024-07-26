@@ -1,6 +1,6 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.api.ProfileAPI.plannersProfile
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.config.ImmutableSkill
@@ -34,7 +34,7 @@ object PlannersAPI {
         }
         // 检查魔法值
         val magicPoint = skill.getVariableOrNull("mp")?.get(createSimpleOptions(player, skill), PARSE_INT)
-        if (magicPoint != null && magicPoint > player.plannersProfile.magicPoint) {
+        if (magicPoint != null && magicPoint > player.plannersTemplate.magicPoint) {
             return ExecutableResult.magicPointInsufficient()
         }
 
@@ -45,7 +45,7 @@ object PlannersAPI {
         }
         // 扣除魔法值
         if (magicPoint != null) {
-            player.plannersProfile.magicPoint -= magicPoint
+            player.plannersTemplate.magicPoint -= magicPoint
         }
         createImmutableContext(player, skill).call()
         return ExecutableResult.successful()

@@ -28,12 +28,10 @@ object ActionDragonCore : MultipleKetherParser("dragoncore") {
             now {
                 objective.forEach {
                     val id = UUID.randomUUID().toString()
-                    val posOrEntityId = if (it is TargetBukkitEntity) {
-                        it.instance.uniqueId.toString()
-                    } else if (it is TargetLocation<*>) {
-                        "${it.getWorld()},${it.getX()},${it.getY()},${it.getZ()}"
-                    } else {
-                        return@forEach
+                    val posOrEntityId = when (it){
+                        is TargetBukkitEntity -> it.instance.uniqueId.toString()
+                        is TargetLocation<*> -> "${it.getWorld()},${it.getX()},${it.getY()},${it.getZ()}"
+                        else -> return@forEach
                     }
                     Bukkit.getOnlinePlayers().forEach {
                         PacketSender.addParticle(

@@ -7,6 +7,7 @@ import taboolib.common.platform.Platform
 import taboolib.common.platform.Plugin
 import taboolib.common.platform.function.adaptCommandSender
 import taboolib.common.platform.function.info
+import taboolib.common.platform.function.warning
 import taboolib.module.chat.colored
 import taboolib.module.configuration.Config
 import taboolib.module.configuration.ConfigNode
@@ -34,7 +35,14 @@ object Planners : Plugin() {
 
     @ConfigNode("settings.bukkit-launch.unimpeded-types")
     val unimpededTypes = ConfigNodeTransfer<List<String>, List<Material>> {
-        this.map { Material.valueOf(it.uppercase().replace(".", "_")) }
+        this.mapNotNull {
+            try {
+                Material.valueOf(it.uppercase().replace(".", "_"))
+            }catch (e: Exception) {
+                warning("Unknown material type: $it")
+                return@mapNotNull null
+            }
+        }
     }
 
     /**
