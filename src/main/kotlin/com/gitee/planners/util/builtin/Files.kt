@@ -1,6 +1,5 @@
 package com.gitee.planners.util.builtin
 
-import com.gitee.mmoiforge.util.BuiltinHash
 import taboolib.common.platform.function.getDataFolder
 import taboolib.common.platform.function.releaseResourceFile
 import taboolib.library.configuration.ConfigurationSection

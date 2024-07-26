@@ -1,6 +1,4 @@
-package com.gitee.mmoiforge.util
-
-import com.gitee.planners.util.builtin.Builtin
+package com.gitee.planners.util.builtin
 
 open class BuiltinHash<T, V> : Builtin<T, V> {
 
