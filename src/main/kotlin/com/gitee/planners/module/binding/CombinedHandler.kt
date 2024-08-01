@@ -1,19 +1,18 @@
 package com.gitee.planners.module.binding
 
-import com.germ.germplugin.api.event.GermKeyDownEvent
-import com.germ.germplugin.api.event.GermKeyUpEvent
-import org.bukkit.event.player.PlayerDropItemEvent
+import com.gitee.planners.api.PlannersAPI
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
+import com.gitee.planners.api.event.action.CombinedEvent
+import com.gitee.planners.api.job.KeyBinding
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerToggleSneakEvent
 import org.bukkit.event.player.PlayerToggleSprintEvent
 import org.bukkit.inventory.EquipmentSlot
-import taboolib.common.platform.event.OptionalEvent
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.platform.event.PlayerJumpEvent
 import taboolib.platform.util.isLeftClick
-import taboolib.platform.util.isRightClick
 
-object DefaultListener {
+object CombinedHandler {
 
     @SubscribeEvent
     fun handleSneaking(e: PlayerToggleSneakEvent) {
@@ -52,15 +51,14 @@ object DefaultListener {
         }
     }
 
-    @SubscribeEvent(bind = "com.germ.germplugin.api.event")
-    fun handleKeydown(opt: OptionalEvent) {
-        val e = opt.get<GermKeyDownEvent>()
-        InteractionActionKey(e.keyType.name,InteractionActionKey.Type.PRESS)
-    }
-
-    @SubscribeEvent(bind = "com.germ.germplugin.api.event")
-    fun handleKeyup(opt: OptionalEvent) {
-        val e = opt.get<GermKeyUpEvent>()
-        InteractionActionKey(e.keyType.name,InteractionActionKey.Type.RELEASE)
+    @SubscribeEvent
+    fun e(e: CombinedEvent.Close) {
+        val combined = e.combined
+        if (combined is KeyBinding) {
+            val skill = e.player.plannersTemplate.getRegisteredSkillOrNull(combined)
+            if (skill != null) {
+                PlannersAPI.cast(e.player, skill)
+            }
+        }
     }
 }

@@ -1,8 +1,8 @@
 package com.gitee.planners.core.command
 
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.core.ui.RouteTransferUI
-import com.gitee.planners.core.ui.RouterSelectUI
+import com.gitee.planners.core.ui.PlayerRouteTransferUI
+import com.gitee.planners.core.ui.PlayerRouterSelectUI
 import taboolib.common.platform.command.CommandBody
 import taboolib.platform.util.sendLang
 
@@ -10,7 +10,7 @@ object CommandRoute {
 
     @CommandBody
     val open = with { player ->
-        RouterSelectUI.openTo(player)
+        PlayerRouterSelectUI.openTo(player)
     }
 
     @CommandBody
@@ -20,7 +20,7 @@ object CommandRoute {
             player.sendLang("player-route-invalid")
             return@with
         }
-        RouteTransferUI.openTo(player)
+        PlayerRouteTransferUI.openTo(player)
     }
 
     @CommandBody

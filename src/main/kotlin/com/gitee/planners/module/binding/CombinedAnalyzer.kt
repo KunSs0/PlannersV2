@@ -93,6 +93,11 @@ class CombinedAnalyzer {
         val samples = combined.mapping
 
         override fun pressIn(action: InteractionAction): Boolean {
+            // 等待超时
+            if (pointer == samples.size) {
+                return false
+            }
+
             if (samples[pointer] == action.code) {
                 pointer++
             }

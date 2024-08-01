@@ -9,7 +9,6 @@ import taboolib.common.platform.Awake
 import taboolib.common.platform.function.releaseResourceFile
 import taboolib.common.platform.function.warning
 import taboolib.common5.FileWatcher
-import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.reflex.ClassField
 import taboolib.library.xseries.XItemStack
@@ -27,6 +26,28 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
 
     @Option("__option__.title")
     val title = "Chest"
+
+    @Option("*")
+    val decorateIcon = decorateIcon()
+
+    override fun openTo(player: Player) {
+        player.openInventory(setDecorateIcon(decorateIcon.get(), display(player).build()))
+    }
+
+    fun decorateIcon() = simpleConfigNodeTo<Configuration, List<Icon>> {
+        this.getKeys(false).filter { it != "__option__" }.map {
+            Icon(this.getConfigurationSection(it)!!)
+        }
+    }
+
+    fun setDecorateIcon(icons: List<Icon>, inventory: Inventory): Inventory {
+        icons.forEach { icon ->
+            icon.slots.forEach {
+                inventory.setItem(it, icon.icon)
+            }
+        }
+        return inventory
+    }
 
     @Target(AnnotationTarget.FIELD)
     @Retention(AnnotationRetention.RUNTIME)
@@ -56,10 +77,9 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
             return SimpleConfigNodeTransfer { block(this) }
         }
 
-
     }
 
-    class DecorateIcon(config: ConfigurationSection) {
+    class Icon(config: ConfigurationSection) {
 
         val slots = if (config.isInt("slot")) {
             listOf(config.getInt("slot"))

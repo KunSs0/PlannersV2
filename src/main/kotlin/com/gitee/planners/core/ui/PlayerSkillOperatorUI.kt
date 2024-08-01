@@ -27,7 +27,6 @@ object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.ym
 
     override fun onClick(event: ClickEvent, element: PlayerSkill) {
         val player = event.clicker
-        VaultService
         // 打开快捷键修改
         if (event.clickEvent().isRightClick) {
             KeyBindingsEditorUI.choice(player) {

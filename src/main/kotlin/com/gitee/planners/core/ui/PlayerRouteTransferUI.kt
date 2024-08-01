@@ -11,7 +11,7 @@ import taboolib.library.xseries.XMaterial
 import taboolib.module.ui.ClickEvent
 import taboolib.platform.util.sendLang
 
-object RouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml") {
+object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml") {
 
     override fun getElements(player: Player): Collection<ImmutableRoute> {
         return player.plannersTemplate.route!!.getBranches().map { it as ImmutableRoute }

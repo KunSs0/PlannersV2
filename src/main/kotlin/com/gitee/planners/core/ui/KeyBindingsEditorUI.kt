@@ -20,7 +20,7 @@ object KeyBindingsEditorUI : SingletonChoiceUI<KeyBinding>("key-bindings-editor.
 
     private val callback = mutableMapOf<Player, Consumer<KeyBinding>>()
 
-    @Option("__option__.fill-icon")
+    @Option("__option__.icon-fill")
     val iconFill = simpleConfigNodeTo<ConfigurationSection, ItemStack> {
         XItemStack.deserialize(this)
     }

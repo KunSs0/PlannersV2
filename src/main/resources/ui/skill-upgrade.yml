@@ -1,0 +1,15 @@
+__option__:
+  rows: 1
+  title: "技能升级"
+  icon-current:
+    slot: 3
+    material: STONE
+  icon-preview-next:
+    slot: 5
+    material: STONE
+
+icon-#:
+  slots: [ 0, 1, 2, 4, 6, 7 ]
+  material: STAINED_GLASS_PANE
+  damage: 7
+

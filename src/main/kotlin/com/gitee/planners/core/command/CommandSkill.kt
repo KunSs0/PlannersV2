@@ -3,6 +3,7 @@ package com.gitee.planners.core.command
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.Registries
 import com.gitee.planners.core.ui.PlayerSkillOperatorUI
+import com.gitee.planners.core.ui.PlayerSkillUpgradeUI
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
 import taboolib.common5.cint
@@ -12,6 +13,11 @@ object CommandSkill {
     @CommandBody
     val open = with { player ->
         PlayerSkillOperatorUI.openTo(player)
+    }
+
+    @CommandBody
+    val upgrade = Command.withImmutableSkill { player, skill ->
+        PlayerSkillUpgradeUI.open(player, skill)
     }
 
     @CommandBody

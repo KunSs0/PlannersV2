@@ -10,6 +10,9 @@ import taboolib.common.platform.function.submitAsync
 
 class PlayerSkill(var index: Long, private val skillId: String, level: Int, private var bindingId: String?) : Skill {
 
+    override val name: String
+        get() = immutable.name
+
     val immutable: ImmutableSkill
         get() = Registries.SKILL.getOrNull(skillId) ?: error("Couldn't find skill with id $skillId'")
 

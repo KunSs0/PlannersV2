@@ -192,7 +192,7 @@ class PlayerTemplate(val id: Long, val onlinePlayer: Player, route: PlayerRoute?
         }
         // 如果没有学习 则添加一个新的（这时候并未在数据库内添加）
         if (!route!!.hasSkill(id)) {
-            Database.INSTANCE.createPlayerSkill(this, route!!.getImmutableSkill(id)!!).thenApply {
+            return Database.INSTANCE.createPlayerSkill(this, route!!.getImmutableSkill(id)!!).thenApply {
                 route!!.registerSkill(it)
                 it
             }

@@ -11,7 +11,7 @@ import taboolib.module.ui.ClickEvent
 import taboolib.platform.util.buildItem
 import taboolib.platform.util.sendLang
 
-object RouterSelectUI : SingletonChoiceUI<ImmutableRouter>("router-select.yml") {
+object PlayerRouterSelectUI : SingletonChoiceUI<ImmutableRouter>("router-select.yml") {
 
     override fun getElements(player: Player): Collection<ImmutableRouter> {
         return Registries.ROUTER.values()

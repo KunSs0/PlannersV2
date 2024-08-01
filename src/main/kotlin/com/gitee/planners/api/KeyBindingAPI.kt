@@ -13,4 +13,8 @@ object KeyBindingAPI {
         return DynamicSkillIcon(player.adaptTarget(), skill.immutable, skill.level)
     }
 
+    fun createIconFormatter(player: Player,skill: PlayerSkill,level: Int): IconFormatter {
+        return DynamicSkillIcon(player.adaptTarget(), skill.immutable, level)
+    }
+
 }

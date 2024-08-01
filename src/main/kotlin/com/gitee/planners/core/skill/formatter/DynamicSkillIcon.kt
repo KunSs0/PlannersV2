@@ -7,20 +7,35 @@ import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
+import taboolib.common.util.unsafeLazy
+import taboolib.module.kether.KetherFunction
 
-class DynamicSkillIcon(sender: Target<*>, skill: ImmutableSkill,level: Int = 1) : AbstractSkillIcon(sender, skill, level) {
+class DynamicSkillIcon(sender: Target<*>, skill: ImmutableSkill, level: Int = 1) :
+    AbstractSkillIcon(sender, skill, level) {
+
+    val context by unsafeLazy {
+        ImmutableSkillContext(sender, skill, level)
+    }
 
     override fun parse(text: String?): String {
-        val script = SingletonKetherScript(text)
-        val context = ImmutableSkillContext(sender, skill, level)
-        return script.run(context.createOptions()).getNow(null).toString()
+        if (text == null) {
+            return ""
+        }
+
+        // parse the text
+        return KetherFunction.reader.replaceNested(text.trim()) {
+            SingletonKetherScript(this).run(context.createOptions())
+                .getNow(null)
+                .toString()
+        }
     }
 
     companion object {
 
-        fun build(player: Player, skill: PlayerSkill) = build(player,skill.immutable,skill.level)
+        fun build(player: Player, skill: PlayerSkill) = build(player, skill.immutable, skill.level)
 
-        fun build(player: Player,skill: ImmutableSkill,level: Int = 1) = DynamicSkillIcon(player.adaptTarget(), skill,level).build()
+        fun build(player: Player, skill: ImmutableSkill, level: Int = 1) =
+            DynamicSkillIcon(player.adaptTarget(), skill, level).build()
 
     }
 

@@ -1,5 +1,6 @@
 package com.gitee.planners.core.skill.cooler
 
+import com.gitee.planners.api.event.player.PlayerSkillCooldownEvent
 import com.gitee.planners.api.job.Skill
 import org.bukkit.entity.Player
 import kotlin.math.min
@@ -9,7 +10,11 @@ class MemoryCooler : Cooler {
     private val map = mutableMapOf<String, Long>()
 
     override fun set(player: Player, skill: Skill, durationTick: Int) {
-        map["${player.uniqueId}-${skill.id}"] = durationTick * 50 + System.currentTimeMillis()
+        val event = PlayerSkillCooldownEvent.Set(player, skill, durationTick)
+        if (event.call()) {
+            map["${player.uniqueId}-${skill.id}"] = event.ticks * 50 + System.currentTimeMillis()
+        }
+
     }
 
     override fun get(player: Player, skill: Skill): Long {

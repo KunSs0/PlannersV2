@@ -4,4 +4,6 @@ import com.gitee.planners.api.common.Unique
 
 interface Skill : Unique, VariableProvider {
 
+    val name: String
+
 }

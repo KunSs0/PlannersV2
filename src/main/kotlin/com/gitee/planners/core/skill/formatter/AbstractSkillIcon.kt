@@ -3,6 +3,7 @@ package com.gitee.planners.core.skill.formatter
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.core.config.ImmutableSkill
 import org.bukkit.inventory.ItemStack
+import taboolib.module.chat.colored
 import taboolib.module.kether.runKether
 import taboolib.platform.util.buildItem
 
@@ -13,8 +14,9 @@ abstract class AbstractSkillIcon(val sender: Target<*>, val skill: ImmutableSkil
         return buildItem(skill.icon!!) {
             runKether {
                 this.name = parse(name)
+                val newList = parse(this.lore)
                 this.lore.clear()
-                this.lore += parse(this.lore)
+                this.lore += newList.colored()
             }
         }
 
