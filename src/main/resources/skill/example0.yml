@@ -5,6 +5,11 @@ __option__:
     name: "裂地斩"
     lore:
       - "biubiubiu"
+  upgrade-condition:
+    0:
+      money: 100
+    "1-2":
+      money: 200
   variables:
     cooldown: 100
     mp: 10

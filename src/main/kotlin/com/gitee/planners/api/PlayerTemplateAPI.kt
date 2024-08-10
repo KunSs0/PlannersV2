@@ -90,7 +90,11 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     fun addExperience(template: PlayerTemplate, amount: Int) {
         val event = PlayerExperienceEvent.Increment(template, amount)
         if (event.call()) {
+            val level0 = template.level
             template.addExperience(amount).thenAccept {
+                if (level0 != template.level) {
+                    PlayerLevelChangeEvent(template, level0, template.level).call()
+                }
                 PlayerExperienceEvent.Updated(template).call()
             }
         }
@@ -107,7 +111,11 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     fun takeExperience(template: PlayerTemplate, amount: Int) {
         val event = PlayerExperienceEvent.Decrement(template, amount)
         if (event.call()) {
+            val level0 = template.level
             template.takeExperience(amount).thenAccept {
+                if (level0 != template.level) {
+                    PlayerLevelChangeEvent(template, level0, template.level).call()
+                }
                 PlayerExperienceEvent.Updated(template).call()
             }
         }

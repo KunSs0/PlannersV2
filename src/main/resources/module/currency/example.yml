@@ -1,6 +1,11 @@
 money:
   name: '金币'
   action:
+    # 余额查询
     hook: balance get
+    # 余额提取
     withdraw: balance take &arg
+    # 余额存入
     deposit: balance give &arg
+    # 余额设置
+    set: balance set &arg

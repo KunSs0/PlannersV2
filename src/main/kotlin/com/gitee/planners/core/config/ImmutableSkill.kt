@@ -13,22 +13,28 @@ import taboolib.common.platform.function.postpone
 import taboolib.common.platform.function.registerLifeCycleTask
 import taboolib.common5.cdouble
 import taboolib.common5.cint
+import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import taboolib.module.configuration.util.mapSection
 
 class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
+    /** 技能ID */
     override val id = config.file!!.nameWithoutExtension
 
+    /** 技能名称 */
     override val name: String = config.getString("__option__.name", id)!!
 
     private val option = config.getOption()
 
+    /** 技能图标 */
     val icon = option.getItemStack("icon-formatter")
 
+    /** 技能分类 */
     val category = option.getString("category", "*")!!
 
+    /** 技能是否异步运行 */
     override val async = option.getBoolean("async", true)
 
     val action = config.getString("action", config.getString("run", "tell none"))!!
@@ -38,7 +44,13 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
         val split = it.name.split("-")
         val begin = split[0].toInt()
         val end = split.getOrElse(1) { "$begin" }.cint
-        IndexedUpgrade(begin, end, it.mapValueWithId { _, value -> value.cdouble })
+        IndexedUpgrade(begin, end, it.mapValueWithId { _, value ->
+            if (value is ConfigurationSection) {
+                IndexedUpgrade.Amount(value.getString("experience", "0")!!, value.getBoolean("mark", false))
+            } else {
+                IndexedUpgrade.Amount(value.toString(), false)
+            }
+        })
     }
 
     fun getConditionAsUpgrade(index: Int): IndexedUpgrade? {
@@ -92,7 +104,12 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
         return "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
     }
 
-    class IndexedUpgrade(val begin: Int, val end: Int, args: Map<String, Double>) : HashMap<String, Double>(args)
+    class IndexedUpgrade(val begin: Int, val end: Int, args: Map<String, Amount>) {
+
+
+        class Amount(val experience: String, val mark: Boolean)
+
+    }
 
 
 }
