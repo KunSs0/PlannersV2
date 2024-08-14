@@ -54,8 +54,8 @@ private fun actionFunction() = KetherHelper.combinedKetherParser("inline", "func
         now {
             val context = this.getEnvironmentContext()
             val options = if (context is AbstractComplexScriptContext) {
-                context.createOptions {
-                    vars(deepVars())
+                context.optionsBuilder {
+                    it.vars(deepVars())
                 }
             } else {
                 KetherScriptOptions.create {

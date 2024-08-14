@@ -38,7 +38,7 @@ interface ComplexScriptPlatform {
 
     }
 
-    class DefaultComplexScriptPlatform : ComplexScriptPlatform {
+    open class DefaultComplexScriptPlatform : ComplexScriptPlatform {
 
         private val cache = KetherShell.Cache()
 

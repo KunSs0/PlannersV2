@@ -104,10 +104,9 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
         return "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
     }
 
-    class IndexedUpgrade(val begin: Int, val end: Int, args: Map<String, Amount>) {
+    class IndexedUpgrade(val begin: Int, val end: Int, val args: Map<String, Amount>) {
 
-
-        class Amount(val experience: String, val mark: Boolean)
+        class Amount(experience: String, val mark: Boolean) : SingletonKetherScript(experience)
 
     }
 

@@ -102,7 +102,7 @@ object ScriptEventHandler {
         script.getBlock("onload").ifPresent { block ->
             runKether {
                 val context = CompiledScriptContext(Bukkit.getConsoleSender().adaptTarget(), compiled)
-                compiled.platform().run(UUID.randomUUID().toString(), script, block, context.createOptions())
+                compiled.platform().run(UUID.randomUUID().toString(), script, block, context.optionsBuilder())
             }
         }
     }

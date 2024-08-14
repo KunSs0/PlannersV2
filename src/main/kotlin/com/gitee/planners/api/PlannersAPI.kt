@@ -52,7 +52,7 @@ object PlannersAPI {
     }
 
     private fun createSimpleOptions(player: Player, skill: PlayerSkill): KetherScriptOptions {
-        return createImmutableContext(player, skill).createOptions()
+        return createImmutableContext(player, skill).optionsBuilder()
     }
 
     private fun createImmutableContext(player: Player, skill: ImmutableSkill, level: Int): ImmutableSkillContext {

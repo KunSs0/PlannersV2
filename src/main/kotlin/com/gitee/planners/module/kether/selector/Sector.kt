@@ -10,8 +10,16 @@ import com.gitee.planners.module.kether.commandObjectiveOrOrigin
 import com.gitee.planners.module.kether.getTargetContainer
 import com.gitee.planners.util.syncing
 
+/**
+ * 扇形选择器
+ *
+ * @see SectorNearestEntityFinder
+ */
 object Sector : AbstractSelector("sector") {
 
+    /**
+     * sector <radius:double> <angle:double> [yaw:double] [at objective:TargetContainer(sender)]
+     */
     override fun select() = KetherHelper.combinedKetherParser {
         it.group(actionDouble(), actionDouble(), command("yaw", then = text()).option(),commandObjectiveOrOrigin()).apply(it) { radius, angle, yaw,objective ->
             val origin = objective.filterIsInstance<TargetLocation<*>>().firstOrNull()?.getBukkitLocation()?.clone()

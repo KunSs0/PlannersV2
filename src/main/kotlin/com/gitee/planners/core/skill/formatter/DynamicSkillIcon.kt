@@ -24,7 +24,7 @@ class DynamicSkillIcon(sender: Target<*>, skill: ImmutableSkill, level: Int = 1)
 
         // parse the text
         return KetherFunction.reader.replaceNested(text.trim()) {
-            SingletonKetherScript(this).run(context.createOptions())
+            SingletonKetherScript(this).run(context.optionsBuilder())
                 .getNow(null)
                 .toString()
         }

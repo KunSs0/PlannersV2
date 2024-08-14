@@ -7,9 +7,9 @@ import com.gitee.planners.api.job.target.TargetBukkitEntity
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
 import taboolib.library.kether.Quest
-import taboolib.library.kether.Quest.Block
 import taboolib.module.kether.ScriptOptions
 import java.util.concurrent.CompletableFuture
+import java.util.function.Consumer
 
 abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: ComplexCompiledScript) :
     AbstractContext(sender) {
@@ -28,7 +28,7 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
 
         val future = CompletableFuture<Any>()
         submit(async = async) {
-            platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.createOptions())
+            platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.optionsBuilder())
                 .thenAccept {
                     future.complete(it)
                 }
@@ -42,16 +42,16 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
                 trackId,
                 compiled.compiledScript(),
                 block,
-                this@AbstractComplexScriptContext.createOptions(func)
+                this@AbstractComplexScriptContext.optionsBuilder(func)
             )
         }
     }
 
     open fun run(options: KetherScriptOptions): CompletableFuture<Any> {
-        return platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.createOptions())
+        return platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.optionsBuilder())
     }
 
-    open fun createOptions(block: ScriptOptions.ScriptOptionsBuilder.() -> Unit = {}): KetherScriptOptions {
+    open fun optionsBuilder(block: Consumer<ScriptOptions.ScriptOptionsBuilder> = Consumer { }): KetherScriptOptions {
         return KetherScriptOptions.create {
             namespace(compiled.namespaces())
             // set sender
@@ -60,7 +60,7 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
             }
             // 注入变量
             this.vars("@running-environment-context" to this@AbstractComplexScriptContext)
-            block(this)
+            block.accept(this)
         }
     }
 }

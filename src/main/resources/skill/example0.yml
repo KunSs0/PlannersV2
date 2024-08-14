@@ -1,21 +1,26 @@
 __option__:
   name: "裂地斩"
+
   icon-formatter:
     material: DIAMOND_SWORD
     name: "裂地斩"
     lore:
-      - "biubiubiu"
-  upgrade-condition:
-    0:
-      money: 100
-    "1-2":
-      money: 200
+      - "技能等级 {{ ctx skill level }}"
+      - "技能伤害 {{ lazy *damage }}"
   variables:
     cooldown: 100
-    mp: 10
-    test: math 1 + 2
-
-action:
+    damage: math 32 * ctx skill level + 100
+  upgrade:
+    condition:
+      0-100:
+        money: math 100.0 * ctx skill level + 32.5
+action: |-
   def main = {
     tell "技能释放成功"
+    sleep 1.5s
+    cooldown add 200
+  }
+
+  def handleHit = {
+    tell inline "on hit {{ &target }}"
   }

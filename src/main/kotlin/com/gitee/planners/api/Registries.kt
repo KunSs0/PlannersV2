@@ -5,12 +5,11 @@ import com.gitee.planners.core.config.ImmutableKeyBinding
 import com.gitee.planners.core.config.ImmutableRouter
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.level.Algorithm
-import com.gitee.planners.module.currency.DefaultOpenConvertibleCurrency
+import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
 import com.gitee.planners.util.builtin.AutoReloadable
 import com.gitee.planners.util.builtin.createDeepMultiBuiltin
 import com.gitee.planners.util.builtin.createDeepSingleBuiltin
 import com.gitee.planners.util.builtin.createSingleMultiBuiltin
-import taboolib.common.platform.Awake
 import taboolib.module.configuration.Configuration
 
 object Registries {
@@ -33,7 +32,7 @@ object Registries {
     }
 
     val CURRENCY = createDeepMultiBuiltin("module/currency", "example.yml") {
-        DefaultOpenConvertibleCurrency(it)
+        OpenConvertibleCurrencyImpl(it)
     }
 
     val LEVEL = createDeepMultiBuiltin("module/level", "example.yml") {

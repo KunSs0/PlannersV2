@@ -8,7 +8,7 @@ abstract class AbstractSkillContext(sender: Target<*>, val skill: ImmutableSkill
     val variables = skill.getVariables().map {
         it.key to lazy {
             // 注入基础配置项 但不注入变量
-            it.value.run(super.createOptions { })
+            it.value.run(super.optionsBuilder { })
         }
     }.toMap()
 
