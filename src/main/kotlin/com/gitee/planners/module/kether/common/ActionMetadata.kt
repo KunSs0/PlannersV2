@@ -28,7 +28,7 @@ object ActionMetadata : OperationKetherParser("metadata") {
                 this.run(defaultValue).thenAccept { defaultValue ->
                     this.runTargetContainer(container).thenAccept {
                         val defaultValue = if (defaultValue == "__NULL__") null else defaultValue
-                        val data = it.filterIsInstance<TargetContainerization>().first().getMetadata(id)?.any() ?: defaultValue
+                        val data = it.filterIsInstance<TargetContainerization>().firstOrNull()?.getMetadata(id)?.any() ?: defaultValue
                         f.complete(data)
                     }.except { null }
                 }

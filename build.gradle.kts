@@ -34,11 +34,14 @@ taboolib {
     version {
         taboolib = "6.1.2-beta7"
     }
+
+    relocate("ink.ptms.um", "com.gitee.module.um")
 }
 
 repositories {
     mavenCentral()
     mavenLocal()
+
 }
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
@@ -49,6 +52,8 @@ repositories {
     mavenCentral()
 }
 dependencies {
+    // nms-all
+    compileOnly("ink.ptms.core:v11902:11902-all:mapped")
     compileOnly("ink.ptms.core:v11902:11902-minimize:mapped")
     compileOnly("ink.ptms.core:v11902:11902-minimize:universal")
 
@@ -61,7 +66,11 @@ dependencies {
     compileOnly("org.ejml:ejml-simple:0.41")
     compileOnly("org.ejml:ejml-fdense:0.41")
     compileOnly("public:ModelEngine:2.5.1")
+    taboo("ink.ptms:um:1.0.9")
 
+    testCompileOnly("org.ejml:ejml-core:0.41")
+    testCompileOnly("org.ejml:ejml-simple:0.41")
+    testCompileOnly("org.ejml:ejml-fdense:0.41")
     compileOnly("com.mojang:datafixerupper:4.0.26")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))

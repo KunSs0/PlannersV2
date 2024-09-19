@@ -15,7 +15,8 @@ import org.bukkit.entity.Player
 import taboolib.common.util.Vector
 import java.util.*
 
-class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
+class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>,
+    TargetContainerization {
 
 
     override fun getUniqueId(): UUID {
@@ -84,7 +85,7 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         }
         // 通过代理实体获取元数据容器
         else {
-            EntityMetadataManager.get(ProxyBukkitEntity(instance))
+            EntityMetadataManager[ProxyBukkitEntity(instance)]
         }
     }
 
@@ -98,6 +99,19 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
 
     override fun toString(): String {
         return "TargetBukkitEntity(instance=$instance)"
+    }
+
+    override fun hashCode(): Int {
+        return instance.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Target<*>
+
+        return instance == other.instance
     }
 
 

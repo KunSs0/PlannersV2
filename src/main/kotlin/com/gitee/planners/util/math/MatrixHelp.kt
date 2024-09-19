@@ -18,7 +18,6 @@ fun createZeroMatrix(): SimpleMatrix {
     val map = (0 until 4).map { doubleArrayOf(0.0, 0.0, 0.0, 0.0) }.toTypedArray()
     return SimpleMatrix(map)
 }
-
 /**
  * Rotate the matrix around the given axis
  *
@@ -28,24 +27,35 @@ fun createZeroMatrix(): SimpleMatrix {
 fun SimpleMatrix.rotate(angle: Double, axis: Int): SimpleMatrix {
     val cos = cos(angle)
     val sin = sin(angle)
-    val (x, y, z) = when (axis) {
-        0 -> Triple(1, 2, 3)
-        1 -> Triple(2, 3, 1)
-        2 -> Triple(3, 1, 2)
-        else -> throw IllegalArgumentException("Axis has to be 0, 1 or 2")
-    }
-    return this.mult(
-        SimpleMatrix(
+    val rotationMatrix = when (axis) {
+        0 -> SimpleMatrix(
             arrayOf(
-                doubleArrayOf(if (x == 1) 1.0 else cos, if (y == 1) -sin else 0.0, if (z == 1) sin else 0.0, 0.0),
-                doubleArrayOf(if (x == 2) 0.0 else sin, if (y == 2) 1.0 else cos, if (z == 2) -sin else 0.0, 0.0),
-                doubleArrayOf(if (x == 3) 0.0 else -sin, if (y == 3) sin else 0.0, if (z == 3) 1.0 else cos, 0.0),
+                doubleArrayOf(1.0, 0.0, 0.0, 0.0),
+                doubleArrayOf(0.0, cos, -sin, 0.0),
+                doubleArrayOf(0.0, sin, cos, 0.0),
                 doubleArrayOf(0.0, 0.0, 0.0, 1.0)
             )
         )
-    )
+        1 -> SimpleMatrix(
+            arrayOf(
+                doubleArrayOf(cos, 0.0, sin, 0.0),
+                doubleArrayOf(0.0, 1.0, 0.0, 0.0),
+                doubleArrayOf(-sin, 0.0, cos, 0.0),
+                doubleArrayOf(0.0, 0.0, 0.0, 1.0)
+            )
+        )
+        2 -> SimpleMatrix(
+            arrayOf(
+                doubleArrayOf(cos, -sin, 0.0, 0.0),
+                doubleArrayOf(sin, cos, 0.0, 0.0),
+                doubleArrayOf(0.0, 0.0, 1.0, 0.0),
+                doubleArrayOf(0.0, 0.0, 0.0, 1.0)
+            )
+        )
+        else -> throw IllegalArgumentException("Axis has to be 0, 1 or 2")
+    }
+    return this.mult(rotationMatrix)
 }
-
 fun SimpleMatrix.rotate(angle: Double, axis: Vector): SimpleMatrix {
     val cos = cos(angle)
     val sin = sin(angle)
@@ -70,7 +80,7 @@ fun SimpleMatrix.rotate(angle: Double, axis: Vector): SimpleMatrix {
         cos + z * z * (1 - cos),
         0.0
     )
-    return this.mult(SimpleMatrix(arrayOf(row1,row2,row3, doubleArrayOf(0.0, 0.0, 0.0, 1.0))))
+    return this.mult(SimpleMatrix(arrayOf(row1, row2, row3, doubleArrayOf(0.0, 0.0, 0.0, 1.0))))
 }
 
 /**
@@ -104,6 +114,16 @@ fun SimpleMatrix.translate(x: Double, y: Double, z: Double): SimpleMatrix {
         )
     )
 }
+
+/**
+ * Transform a vector using the matrix
+ */
+fun SimpleMatrix.transform(x: Double, y: Double, z: Double, w: Double): Vector {
+    val result = this.mult(SimpleMatrix(4, 1, true, doubleArrayOf(x, y, z, w)))
+    return Vector(result[0, 0], result[1, 0], result[2, 0])
+}
+
+
 
 /**
  * Apply the identity matrix

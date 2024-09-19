@@ -1,5 +1,6 @@
 package com.gitee.planners.core.command
 
+import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.core.ui.PlayerRouteTransferUI
 import com.gitee.planners.core.ui.PlayerRouterSelectUI
@@ -11,6 +12,19 @@ object CommandRoute {
     @CommandBody
     val open = with { player ->
         PlayerRouterSelectUI.openTo(player)
+    }
+
+    @CommandBody
+    val select = withInImmutableRouter { player, element ->
+        val route = element.originate ?: error("Route originate does not exist")
+        // 选择职业
+
+
+        PlayerTemplateAPI.setPlayerRoute(player, route).thenAccept {
+            if (it != null) {
+                player.sendLang("player-route-selected", it.name)
+            }
+        }
     }
 
     @CommandBody

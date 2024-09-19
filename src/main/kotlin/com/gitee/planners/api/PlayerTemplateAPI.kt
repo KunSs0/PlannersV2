@@ -4,7 +4,9 @@ import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.player.*
 import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.api.template.ProfileOperatorImpl
+import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.database.Database
+import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.module.magic.MagicPoint.magicPoint
@@ -17,6 +19,7 @@ import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.submitAsync
 import taboolib.platform.util.onlinePlayers
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
 
@@ -27,6 +30,28 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
 
     val Player.plannersTemplate: PlayerTemplate
         get() = getOrNull(this.uniqueId) ?: error("Player $name unloaded.")
+
+    /**
+     * 设置玩家角色
+     *
+     * @param player 玩家
+     * @param route 路线
+     *
+     * @return CompletableFuture<PlayerRoute>
+     */
+    fun setPlayerRoute(player: Player, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
+        val template = player.plannersTemplate
+        if (PlayerRouteEvent.Pre(template, route).call()) {
+            return PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, route).thenApply {
+                template.route = it
+                PlayerRouteEvent.Post(template, it).call()
+
+                it
+            }
+        }
+
+        return CompletableFuture.completedFuture(null)
+    }
 
     fun addMagicPoint(player: Player, amount: Int) {
         val event = PlayerMagicPointEvent.Increase(player.plannersTemplate, amount)

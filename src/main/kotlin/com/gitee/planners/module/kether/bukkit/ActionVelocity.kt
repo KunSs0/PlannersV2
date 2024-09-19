@@ -7,6 +7,8 @@ import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import com.gitee.planners.module.kether.actionVector
 import com.gitee.planners.module.kether.commandObjectiveOrSender
+import com.gitee.planners.util.math.createIdentityMatrix
+import com.gitee.planners.util.math.rotate
 import org.bukkit.entity.LivingEntity
 import org.bukkit.util.Vector
 import taboolib.common5.Coerce
@@ -14,8 +16,8 @@ import taboolib.common5.Coerce
 @CombinationKetherParser.Used
 object ActionVelocity : MultipleKetherParser("velocity") {
 
-    // velocity spurt <vector> [at objective:TargetContainer(sender)]
-    val spurt = process { entity, original, increment ->
+    // velocity move <vector> [at objective:TargetContainer(sender)]
+    val move = process { entity, original, increment ->
         val vector1 = entity.location.direction.setY(0).normalize()
         val vector2 = vector1.clone().crossProduct(Vector(0, 1, 0))
         vector1.multiply(increment.z)

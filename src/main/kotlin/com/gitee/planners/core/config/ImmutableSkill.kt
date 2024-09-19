@@ -11,6 +11,7 @@ import com.gitee.planners.util.mapValueWithId
 import taboolib.common.LifeCycle
 import taboolib.common.platform.function.postpone
 import taboolib.common.platform.function.registerLifeCycleTask
+import taboolib.common.util.asList
 import taboolib.common5.cdouble
 import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
@@ -32,7 +33,7 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
     val icon = option.getItemStack("icon-formatter")
 
     /** 技能分类 */
-    val category = option.getString("category", "*")!!
+    val categories = option["category", "*"]!!.asList()
 
     /** 技能是否异步运行 */
     override val async = option.getBoolean("async", true)

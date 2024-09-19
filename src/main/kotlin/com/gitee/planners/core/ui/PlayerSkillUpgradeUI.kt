@@ -4,6 +4,9 @@ import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
+import com.gitee.planners.api.common.script.KetherScript.Companion.PARSER_DOUBLE
+import com.gitee.planners.api.common.script.KetherScript.Companion.PARSER_INT
+import com.gitee.planners.api.common.script.KetherScript.Companion.getNow
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.api.template.ProfileOperator
 import com.gitee.planners.api.template.ProfileOperatorImpl
@@ -155,7 +158,7 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
                 warning("Unsupported currency ${it.key}")
                 return@forEach
             }
-            val data = it.value.get(ctx.optionsBuilder()) { it.cdouble }
+            val data = it.value.getNow(ctx.optionsBuilder(), PARSER_DOUBLE)
             currency.take(player, data)
         }
     }
@@ -178,7 +181,7 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
                 warning("Unsupported currency $node")
                 return@all false
             }
-            val data = amount.get(context.optionsBuilder()) { it.cint }
+            val data = amount.getNow(context.optionsBuilder(), PARSER_DOUBLE)
             currency.get(player) >= data
         }
     }
@@ -200,7 +203,7 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
                             newList += "Unsupported currency $node"
                             return@formatLine
                         }
-                        val data = amount.get(context.optionsBuilder()) { it.cint }
+                        val data = amount.getNow(context.optionsBuilder(), PARSER_INT)
                         // 渲染变量
                         newList += submitIconConditionFormatter.get()
                             .replaceWithOrder(currency.name, currency.get(player), data)

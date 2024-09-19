@@ -2,6 +2,8 @@ package com.gitee.planners.module.currency
 
 import com.gitee.planners.api.common.script.ComplexCompiledScript
 import com.gitee.planners.api.common.script.ComplexScriptPlatform
+import com.gitee.planners.api.common.script.KetherScript.Companion.PARSER_DOUBLE
+import com.gitee.planners.api.common.script.KetherScript.Companion.getNow
 import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.common.script.SingletonKetherScript
 import com.gitee.planners.api.common.script.kether.KetherHelper
@@ -15,14 +17,9 @@ import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.util.mapValue
 import java.util.concurrent.CompletableFuture
+import java.util.function.Function
 
 class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConvertibleCurrency {
-
-    companion object {
-
-        private val CODEC_DOUBLE: (Any?) -> Double = { it.cdouble }
-
-    }
 
     override val id = root.name
 
@@ -38,7 +35,7 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
             return 0.0
         }
 
-        return actions["hook"]!!.getNow(player, CODEC_DOUBLE)
+        return actions["hook"]!!.getNow(player, PARSER_DOUBLE)
     }
 
     override fun give(player: Player, amount: Double): Boolean {
@@ -102,8 +99,8 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
             })
         }
 
-        fun <T> getNow(sender: Player, parser: (Any?) -> T): T {
-            return get(newCtx(sender).optionsBuilder(), parser)
+        inline fun <reified T> getNow(sender: Player, parser: Function<Any?, T>): T {
+            return getNow(newCtx(sender).optionsBuilder(), parser)
         }
 
         /**
@@ -112,7 +109,7 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
          * @param player 玩家
          * @param action 动作
          */
-        private fun newCtx(player: Player): CompiledScriptContext {
+        fun newCtx(player: Player): CompiledScriptContext {
             return CompiledScriptContext(adaptTarget(player), this)
         }
 

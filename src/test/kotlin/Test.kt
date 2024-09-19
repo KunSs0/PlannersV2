@@ -1,13 +1,12 @@
-
-
 object Test {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val block = ShapeBlock(3.0, 3.0, 3.0)
 
-        val finder = NearestEntityFinder(Vector(0, 0, 0))
-        val vectors = finder.request(listOf(Vector(0.0, 1.81, 0.0)))
-        println(vectors)
+        block.build(0.0f).forEach { (type, vector) ->
+            println("$type -> $vector")
+        }
     }
 
 

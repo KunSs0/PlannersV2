@@ -13,12 +13,13 @@ import com.gitee.planners.api.job.target.TargetBukkitEntity
 import com.gitee.planners.module.kether.commandEnum
 import com.gitee.planners.module.kether.commandInt
 import com.gitee.planners.module.kether.commandObjective
+import com.gitee.planners.module.kether.commandObjectiveOrSender
 import org.bukkit.entity.Player
 
 @CombinationKetherParser.Used
 object ActionSkill : MultipleKetherParser("skill") {
 
-    @KetherEditor.Document("skill cast <id> [type: relative] [level: 1] [at objective:TargetContainer(sender)]")
+    @KetherEditor.Document("skill cast0 <id> [type: relative] [level: 1] [at objective:TargetContainer(sender)]")
     val cast0 = KetherHelper.combinedKetherParser {
         it.group(
             text(),
@@ -51,33 +52,48 @@ object ActionSkill : MultipleKetherParser("skill") {
 
         // 强制释放 不计入冷却，可传入等级，不传入等级相对自身技能等级释放
         val force = KetherHelper.combinedKetherParser {
-            it.group(text(), commandInt("level", 1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
-                now {
-                    val skill = Registries.SKILL.get(id)
-                    objective.forEach {
-                        ImmutableSkillContext(it, skill, level).call()
+            it.group(text(), commandInt("level", 1), commandObjective(type = LeastType.SENDER))
+                .apply(it) { id, level, objective ->
+                    now {
+                        val skill = Registries.SKILL.get(id)
+                        objective.forEach {
+                            ImmutableSkillContext(it, skill, level).call()
+                        }
                     }
                 }
-            }
         }
 
         // 调用释放，技能必须释放者存在，会计入冷却（跟随等级参数），可传入等级，不传入等级相对自身技能等级释放
         val invoke = KetherHelper.combinedKetherParser {
-            it.group(text(), commandInt("level", -1), commandObjective(type = LeastType.SENDER)).apply(it) { id, level, objective ->
-                now {
-                    val skill = Registries.SKILL.get(id)
-                    objective.forEach {
-                        val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
-                        ImmutableSkillContext(it, skill, i).call()
+            it.group(text(), commandInt("level", -1), commandObjective(type = LeastType.SENDER))
+                .apply(it) { id, level, objective ->
+                    now {
+                        val skill = Registries.SKILL.get(id)
+                        objective.forEach {
+                            val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
+                            ImmutableSkillContext(it, skill, i).call()
+                        }
                     }
                 }
-            }
         }
 
     }
 
+    @KetherEditor.Document("skill level <id> [at objective:TargetContainer(sender)]")
+    val level = KetherHelper.combinedKetherParser {
+        it.group(text(), commandObjectiveOrSender()).apply(it) { id, objective ->
+            now {
+                objective.map { getSkillLevelWithTarget(it, id) ?: 0 }
+            }
+        }
+    }
+
     fun getSkillLevelWithTarget(target: Target<*>, id: String): Int? {
-        return ((target as? TargetBukkitEntity)?.instance as? Player)?.plannersTemplate?.getRegisteredSkillOrNull(id)?.level
+        val player = (target as? TargetBukkitEntity)?.instance as? Player
+        if (player == null) {
+            return null
+        }
+        return player.plannersTemplate.getRegisteredSkillOrNull(id)?.level
     }
 
 

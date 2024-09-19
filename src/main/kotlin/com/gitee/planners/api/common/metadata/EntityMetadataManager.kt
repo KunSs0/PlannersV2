@@ -9,15 +9,15 @@ import taboolib.common.platform.function.registerBukkitListener
 
 object EntityMetadataManager : MutableRegistryInMap<ProxyEntity<*>, MetadataContainer>() {
 
-    override fun get(id: ProxyEntity<*>): MetadataContainer {
-        if (id.isDead()) {
-            error("Entity $id is dead")
+    override fun get(key: ProxyEntity<*>): MetadataContainer {
+        if (key.isDead()) {
+            error("Entity $key is dead")
         }
-        if (!this.containsKey(id)) {
-            this[id] = EntityMetadataContainer(id)
+        if (!this.containsKey(key)) {
+            this[key] = EntityMetadataContainer(key)
         }
 
-        return get(id)
+        return super.get(key)
     }
 
     fun delete(id: ProxyEntity<*>) {
