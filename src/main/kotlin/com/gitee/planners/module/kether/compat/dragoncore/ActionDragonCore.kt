@@ -3,16 +3,15 @@ package com.gitee.planners.module.kether.compat.dragoncore
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
-import com.gitee.planners.api.job.target.TargetBlock
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import com.gitee.planners.api.job.target.TargetLocation
 import com.gitee.planners.module.kether.actionVector
 import com.gitee.planners.module.kether.commandObjective
 import eos.moe.dragoncore.api.CoreAPI
 import eos.moe.dragoncore.network.PacketSender
-import org.bukkit.Bukkit
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import taboolib.platform.util.onlinePlayers
 import java.util.*
 
 object ActionDragonCore : MultipleKetherParser("dragoncore") {
@@ -28,14 +27,20 @@ object ActionDragonCore : MultipleKetherParser("dragoncore") {
             now {
                 objective.forEach {
                     val id = UUID.randomUUID().toString()
-                    val posOrEntityId = if (it is TargetBukkitEntity) {
-                        it.instance.uniqueId.toString()
-                    } else if (it is TargetLocation<*>) {
-                        "${it.getWorld()},${it.getX()},${it.getY()},${it.getZ()}"
-                    } else {
-                        return@forEach
+                    val posOrEntityId = when (it) {
+                        is TargetBukkitEntity -> {
+                            it.instance.uniqueId.toString()
+                        }
+
+                        is TargetLocation<*> -> {
+                            "${it.getWorld()},${it.getX()},${it.getY()},${it.getZ()}"
+                        }
+
+                        else -> {
+                            return@forEach
+                        }
                     }
-                    Bukkit.getOnlinePlayers().forEach {
+                    onlinePlayers.forEach {
                         PacketSender.addParticle(
                             it,
                             scheme,
@@ -147,6 +152,57 @@ object ActionDragonCore : MultipleKetherParser("dragoncore") {
                 }
             }
 
+
+    }
+
+    val sync = object : MultipleKetherParser("sync") {
+
+        @KetherEditor.Document("dragoncore sync send <map> [selector: TargetContainer(sender)]")
+        val send =
+            KetherHelper.combinedKetherParser {
+                it.group(text(), commandObjective()).apply(it) { map, objective ->
+                    now {
+                        objective.filterIsInstance<TargetBukkitEntity>().forEach {
+                            val player = it.instance as? Player ?: return@forEach
+                            PacketSender.sendSyncPlaceholder(player, map.split(" ").associate { it.split(",").let { it[0] to it[1] } })
+                        }
+                    }
+                }
+            }
+
+        @KetherEditor.Document("dragoncore sync delete <name> <isStartWith> [selector: TargetContainer(sender)]")
+        val delete =
+            KetherHelper.combinedKetherParser {
+                it.group(text(), bool(), commandObjective()).apply(it) { name, isStartWith, objective ->
+                    now {
+                        objective.filterIsInstance<TargetBukkitEntity>().forEach {
+                            val player = it.instance as? Player ?: return@forEach
+                            PacketSender.sendDeletePlaceholderCache(player, name, isStartWith)
+                        }
+                    }
+                }
+            }
+
+        val remove = delete
+
+    }
+
+    val entityfunction = object : MultipleKetherParser("entityfunction") {
+
+        @KetherEditor.Document("dragoncore entityfunction <function> [selector: TargetContainer(sender)]")
+        val send =
+            KetherHelper.combinedKetherParser {
+                it.group(text(), commandObjective()).apply(it) { function, objective ->
+                    now {
+                        objective.filterIsInstance<TargetBukkitEntity>().forEach {
+                            val entity = it.instance as? LivingEntity ?: return@forEach
+                            onlinePlayers.forEach {
+                                PacketSender.runEntityAnimationFunction(it, entity.uniqueId, function)
+                            }
+                        }
+                    }
+                }
+            }
 
     }
 
