@@ -16,5 +16,9 @@ import taboolib.common.env.RuntimeDependency
                 value = "!org.ejml:ejml-fdense:0.41",
                 test = "!org.ejml.generic.GenericMatrixOps_F32"
         ),
+        RuntimeDependency(
+                value = "!org.ejml:ejml-ddense:0.41",
+                test = "!org.ejml.generic.GenericMatrixOps_F64"
+        ),
 )
 object SimpleMatrixLoader

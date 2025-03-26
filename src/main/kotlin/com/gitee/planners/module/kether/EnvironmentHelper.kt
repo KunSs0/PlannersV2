@@ -14,6 +14,10 @@ fun ScriptFrame.getEnvironmentContext(): Context {
     return this.deepVars()["@running-environment-context"] as? Context ?: error("Error running environment !")
 }
 
+fun ScriptFrame.ctx(): Context {
+    return getEnvironmentContext()
+}
+
 inline fun <reified T> Context.castUnsafely(): T? {
     return this as? T
 }

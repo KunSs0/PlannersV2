@@ -2,7 +2,11 @@ package com.gitee.planners.module.kether.selector
 
 import com.gitee.planners.api.common.Axis
 import com.gitee.planners.api.common.script.kether.KetherHelper
+import com.gitee.planners.api.common.script.kether.SimpleKetherParser
+import com.gitee.planners.api.job.selector.Selector
+import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
+import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.api.job.target.TargetLocation
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.*
@@ -20,6 +24,13 @@ import taboolib.common.platform.function.info
 import taboolib.common.util.Vector
 import taboolib.common5.Quat
 import taboolib.common5.cdouble
+import taboolib.library.kether.Parser
+import taboolib.module.kether.ParserHolder.bool
+import taboolib.module.kether.ParserHolder.command
+import taboolib.module.kether.ParserHolder.defaultsTo
+import taboolib.module.kether.ParserHolder.now
+import taboolib.module.kether.ParserHolder.option
+import taboolib.module.kether.ScriptFrame
 import taboolib.module.navigation.BoundingBox
 import taboolib.module.navigation.NMS
 import taboolib.module.navigation.toCommonVector
@@ -29,18 +40,26 @@ import taboolib.platform.util.onlinePlayers
 /**
  * 矩形选择器
  */
-object RectangleBody : AbstractSelector("rectangle") {
+object RectangleBody : AbstractSelector("rectangle","ra"),Selector.Filterable {
 
     /**
      * rectangle <width> <height> <depth> [offset "<x> <y> <z>"] [debug bool]
      */
-    override fun select() = KetherHelper.combinedKetherParser {
+    override fun select() = process {
+        getTargetContainer() += it
+    }
+
+    override fun filter() = process {
+        getTargetContainer().removeAll(it)
+    }
+
+    fun process(func: ScriptFrame.(List<Target<*>>) -> Unit) = KetherHelper.combinedKetherParser {
         it.group(
             actionDouble(),
             actionDouble(),
             actionDouble(),
             command("offset", then = actionVector()).option().defaultsTo(Vector()),
-            command("debug", then = bool()).option().defaultsTo(false)
+            command("debug", then = bool()).option().defaultsTo(false),
         ).apply(it) { width, height, depth, offset, isDebug ->
             now {
                 val block = ShapeBlock(width, height, depth, offset)
@@ -51,7 +70,7 @@ object RectangleBody : AbstractSelector("rectangle") {
                 if (isDebug) {
                     block.drawTest(center.getBukkitLocation())
                 }
-                getTargetContainer() += block.find(center.getBukkitLocation()).map(::adaptTarget)
+                func(this, block.find(center.getBukkitLocation()).map(::adaptTarget))
             }
         }
     }
@@ -140,7 +159,7 @@ object RectangleBody : AbstractSelector("rectangle") {
                 boundingBox.getYSize(),
                 boundingBox.getZSize()
             )
-            println("find abb 'width=${boundingBox.getXSize()},height=${boundingBox.getYSize()},depth=${boundingBox.getZSize()}' = $entities")
+//            println("find abb 'width=${boundingBox.getXSize()},height=${boundingBox.getYSize()},depth=${boundingBox.getZSize()}' = $entities")
             // 从aabb实体集里找到obb内的实体
             return entities.filter {
                 val point = Vector(location.x, location.y, location.z)

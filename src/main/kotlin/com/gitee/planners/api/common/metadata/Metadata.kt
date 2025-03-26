@@ -1,5 +1,6 @@
 package com.gitee.planners.api.common.metadata
 
+import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import com.gitee.planners.util.unboxJavaToKotlin
 import com.google.gson.*
 import taboolib.common.LifeCycle
@@ -7,6 +8,7 @@ import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
 import taboolib.common.util.Vector
 import taboolib.common.util.unsafeLazy
+import taboolib.library.reflex.ReflexClass
 import java.lang.reflect.Type
 import java.util.function.Supplier
 
@@ -94,13 +96,12 @@ interface Metadata {
             return builder
         }
 
-        override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
-            if (Serializable::class.java.isAssignableFrom(clazz) && !clazz.isInterface) {
-                val serializable = (instance?.get() ?: clazz.newInstance()) as Serializable<*>
+        override fun visitEnd(clazz: ReflexClass) {
+            if (Serializable::class.java.isAssignableFrom(clazz.toClass()) && !clazz.structure.isInterface) {
+                val serializable = (clazz.getInstance() ?: clazz.newInstance()) as Serializable<*>
                 table[unboxJavaToKotlin(serializable.type())] = serializable
             }
         }
-
     }
 
 }

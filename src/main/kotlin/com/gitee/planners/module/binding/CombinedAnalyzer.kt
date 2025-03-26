@@ -51,10 +51,16 @@ class CombinedAnalyzer {
         }
 
         fun createInference(combined: Combined): Inference {
-            return if (combined.matchingType == Combined.MatchingType.STRICT) {
-                Strict(combined)
-            } else {
-                Fuzzy(combined)
+            return when (combined.matchingType) {
+                Combined.MatchingType.STRICT -> {
+                    Strict(combined)
+                }
+                Combined.MatchingType.FUZZY -> {
+                    Fuzzy(combined)
+                }
+                Combined.MatchingType.NONE -> {
+                    None(combined)
+                }
             }
         }
 
@@ -67,6 +73,18 @@ class CombinedAnalyzer {
         fun isClosedWithRequestTick(): Boolean
 
         fun pressIn(action: InteractionAction): Boolean
+
+    }
+
+    class None(override val combined: Combined) : Inference {
+
+        override fun isClosedWithRequestTick(): Boolean {
+            return false
+        }
+
+        override fun pressIn(action: InteractionAction): Boolean {
+            return false
+        }
 
     }
 

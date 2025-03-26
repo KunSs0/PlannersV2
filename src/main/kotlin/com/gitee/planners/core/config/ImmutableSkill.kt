@@ -39,7 +39,7 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
     override val async = option.getBoolean("async", true)
 
     val action = config.getString("action", config.getString("run", "tell none"))!!
-
+    
     /** 升级条件 */
     val conditionAsUpgrade = option.mapSection("upgrade.condition") {
         val split = it.name.split("-")

@@ -17,8 +17,8 @@ object InWorld : AbstractSelector("inworld", "inWorld", "in-world") {
     override fun select() = KetherHelper.combinedKetherParser {
         it.group(bukkitWorldParser(), commandEnumListOf<EntityType>("type")).apply(it) { worlds, types ->
             now {
-                val entities =
-                    worlds.flatMap { it.entities }.filter { !it.isDead && (types.isEmpty() || it.type in types) }
+                val entities = worlds.flatMap(World::getEntities)
+                    .filter { !it.isDead && (types.isEmpty() || it.type in types) }
                 getTargetContainer() += entities.map { it.adaptTarget() }
             }
         }

@@ -1,9 +1,11 @@
 package com.gitee.planners.util.builtin
 
+import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
 import taboolib.library.reflex.ClassField
+import taboolib.library.reflex.ReflexClass
 import java.util.function.Supplier
 
 interface AutoReloadable {
@@ -25,18 +27,18 @@ interface AutoReloadable {
         }
 
         /** 在 LOAD 阶段 唤醒 */
-        override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
-            if (Builtin::class.java.isAssignableFrom(clazz) && clazz.isAnnotationPresent(Load::class.java)) {
-                val registry = instance?.get() ?: return
+        override fun visitEnd(clazz: ReflexClass) {
+            if (Builtin::class.java.isAssignableFrom(clazz.toClass()) && clazz.hasAnnotation(Load::class.java)) {
+                val registry = clazz.getInstance() ?: return
                 if (registry is AutoReloadable) {
                     visit(registry)
                 }
             }
         }
 
-        override fun visit(field: ClassField, clazz: Class<*>, instance: Supplier<*>?) {
+        override fun visit(field: ClassField, owner: ReflexClass) {
             if (AutoReloadable::class.java.isAssignableFrom(field.fieldType) && field.name != "INSTANCE") {
-                visit(field.get(instance?.get() ?: return) as AutoReloadable)
+                visit(field.get(owner.getInstance() ?: return) as AutoReloadable)
             }
         }
 

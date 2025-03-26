@@ -11,8 +11,10 @@ import taboolib.module.kether.ScriptFrame
 import taboolib.module.kether.expects
 import java.util.concurrent.CompletableFuture
 
-class TargetContainerParser(private val actions: List<QuestAction<out Any>>? = emptyList(), val type: LeastType) :
-    QuestAction<TargetContainer>() {
+class TargetContainerParser(
+    private val actions: List<QuestAction<out Any>>? = emptyList(),
+    val type: LeastType
+) : QuestAction<TargetContainer>() {
 
     override fun process(frame: ScriptFrame): CompletableFuture<TargetContainer> {
         // 填充容器
@@ -69,14 +71,22 @@ class TargetContainerParser(private val actions: List<QuestAction<out Any>>? = e
                     }
                     // 是否是过滤选择器
                     val filterable = token[1] == '!'
-                    val selector =
-                        SelectorRegistry.getOrNull(if (filterable) token.substring(2) else token.substring(1))
+                    val namespace = if (filterable) {
+                        token.substring(2)
+                    } else {
+                        token.substring(1)
+                    }
+                    val selector = SelectorRegistry.getOrNull(namespace)
                     // 如果没有捕捉到一个合适的选择器 退出选择器解析
                     if (selector == null) {
                         reader.reset()
                         break
                     }
-                    val action = if (filterable) (selector as Selector.Filterable).filter() else selector.select()
+                    val action = if (filterable) {
+                        (selector as Selector.Filterable).filter()
+                    } else {
+                        selector.select()
+                    }
                     selectors.add(action.run().resolve(reader))
                 }
                 // 如果 actions 为空 则尝试至少捕获一个变量

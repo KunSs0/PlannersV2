@@ -48,6 +48,19 @@ object ActionVector : MultipleKetherParser("vector") {
         }
     }
 
+    val main = KetherHelper.combinedKetherParser() {
+        it.group(commandObjectiveOrSender()).apply(it) { objective ->
+            now {
+                val instance = objective.filterIsInstance<TargetBukkitEntity>()
+                if (instance.isEmpty()) {
+                    return@now Vector(0, 0, 0)
+                }
+
+                instance.first().instance.location.toVector()
+            }
+        }
+    }
+
     /**
      * 返回一个 Vector 对象
      * 支持 ~ 符号表示相对位置
@@ -60,11 +73,11 @@ object ActionVector : MultipleKetherParser("vector") {
         it.group(text(), text(), text(), commandObjectiveOrOrigin()).apply(it) { x, y, z, origin ->
             now {
                 val origin = origin.filterIsInstance<TargetLocation<*>>().firstOrNull()
-                        ?: this.getEnvironmentContext().origin.cast()
+                    ?: this.getEnvironmentContext().origin.cast()
                 Vector(
-                        parseVector(x, origin?.getX() ?: 0.0),
-                        parseVector(y, origin?.getY() ?: 0.0),
-                        parseVector(z, origin?.getZ() ?: 0.0),
+                    parseVector(x, origin?.getX() ?: 0.0),
+                    parseVector(y, origin?.getY() ?: 0.0),
+                    parseVector(z, origin?.getZ() ?: 0.0),
                 ) // Return the vector
             }
         }
@@ -81,13 +94,13 @@ object ActionVector : MultipleKetherParser("vector") {
         it.group(commandObjectiveOrSender("of"), commandDouble("scale", 1.0)).apply(it) { targets, scale ->
             now {
                 val entity = targets.filterIsInstance<TargetBukkitEntity>().firstOrNull()?.instance
-                        ?: error("No entity found")
+                    ?: error("No entity found")
                 val yaw = Math.toRadians(entity.location.yaw.toDouble())
                 val pitch = Math.toRadians(entity.location.pitch.toDouble())
                 Vector(
-                        -kotlin.math.sin(yaw) * cos(pitch),
-                        -kotlin.math.sin(pitch),
-                        cos(yaw) * cos(pitch)
+                    -kotlin.math.sin(yaw) * cos(pitch),
+                    -kotlin.math.sin(pitch),
+                    cos(yaw) * cos(pitch)
                 ).normalize().multiply(scale)
             }
         }

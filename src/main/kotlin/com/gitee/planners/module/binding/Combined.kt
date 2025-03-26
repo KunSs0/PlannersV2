@@ -22,7 +22,7 @@ abstract class Combined(val config: ConfigurationSection) : Unique {
 
     enum class MatchingType {
 
-        STRICT, FUZZY
+        STRICT, FUZZY, NONE
 
     }
 

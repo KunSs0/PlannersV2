@@ -2,38 +2,29 @@ import io.izzel.taboolib.gradle.*
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.12"
+    id("io.izzel.taboolib") version "2.0.18"
     id("org.jetbrains.kotlin.jvm") version "1.8.22"
 }
 
 taboolib {
     env {
-        // 安装模块
-        install(
-            KETHER,
-            LANG,
-            CHAT,
-            CONFIGURATION,
-            NMS,
-            NMS_UTIL,
-            UI,
-            EXPANSION_COMMAND_HELPER,
-            UNIVERSAL,
-            BUKKIT,
-            BUKKIT_UTIL,
-            BUKKIT_HOOK,
-            NAVIGATION,
-            BUKKIT_XSERIES,
-            DATABASE,
-            AI,
-            EXPANSION_PLAYER_FAKE_OP,
-            METRICS
-        )
-        install("module-nms-util-unstable")
+        install(Basic)
+        install(Bukkit)
+        install(BukkitUI)
+        install(CommandHelper)
+        install(BukkitHook)
+        install(XSeries)
+        install(MinecraftEffect)
+        install(Kether)
+        install(Metrics)
+        install(BukkitNavigation)
+        install(Database)
+        install(DatabasePlayer)
+        install(BukkitNMSEntityAI)
+        install(BukkitFakeOp)
     }
-    version {
-        taboolib = "6.1.2-beta7"
-    }
+
+    version { taboolib = "6.2.0-beta18" }
 
     relocate("ink.ptms.um", "com.gitee.module.um")
 }
@@ -41,21 +32,17 @@ taboolib {
 repositories {
     mavenCentral()
     mavenLocal()
-
 }
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
     destinationDirectory = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
-repositories {
-    mavenCentral()
-}
 dependencies {
-    // nms-all
-    compileOnly("ink.ptms.core:v11902:11902-all:mapped")
-    compileOnly("ink.ptms.core:v11902:11902-minimize:mapped")
-    compileOnly("ink.ptms.core:v11902:11902-minimize:universal")
+
+    compileOnly("ink.ptms:nms-all:1.0.0")
+    compileOnly("ink.ptms.core:v12004:12004:mapped")
+    compileOnly("ink.ptms.core:v12004:12004:universal")
 
     compileOnly("com.google.code.gson:gson:2.8.9")
     // https://mvnrepository.com/artifact/com.google.guava/guava
@@ -65,8 +52,11 @@ dependencies {
     compileOnly("org.ejml:ejml-core:0.41")
     compileOnly("org.ejml:ejml-simple:0.41")
     compileOnly("org.ejml:ejml-fdense:0.41")
+    compileOnly("org.ejml:ejml-ddense:0.41")
     compileOnly("public:ModelEngine:2.5.1")
-    taboo("ink.ptms:um:1.0.9")
+    compileOnly("public:WorldGuard:7.0.7")
+    compileOnly("com.sk89q.worldedit:WorldEdit:7")
+    taboo("ink.ptms:um:1.0.0-beta-18")
 
     testCompileOnly("org.ejml:ejml-core:0.41")
     testCompileOnly("org.ejml:ejml-simple:0.41")

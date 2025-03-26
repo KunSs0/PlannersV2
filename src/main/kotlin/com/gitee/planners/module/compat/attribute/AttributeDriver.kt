@@ -1,11 +1,12 @@
 package com.gitee.planners.module.compat.attribute
 
 import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
 import taboolib.common.platform.function.info
-import java.util.function.Supplier
+import taboolib.library.reflex.ReflexClass
 
 interface AttributeDriver {
 
@@ -41,9 +42,10 @@ interface AttributeDriver {
         }
 
         @Suppress("NAME_SHADOWING")
-        override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
-            if (AttributeDriver::class.java.isAssignableFrom(clazz) && clazz != AttributeDriver::class.java) {
-                val instance = instance?.get() ?: return
+        override fun visitEnd(clazz: ReflexClass) {
+
+            if (AttributeDriver::class.java.isAssignableFrom(clazz.toClass())) {
+                val instance = clazz.getInstance() ?: return
                 if ((instance as AttributeDriver).authorizeEnable()) {
                     INSTANCES.add(instance)
                     info("AttributeDriver load driver: ${clazz.simpleName}")

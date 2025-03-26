@@ -3,17 +3,26 @@ package com.gitee.planners.util
 import com.gitee.planners.util.builtin.Builtin
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
+import taboolib.library.reflex.ReflexClass
 import java.util.function.Supplier
 
 abstract class RunningClassRegistriesVisitor<T>(val clazz: Class<T>, val builtin: Builtin<String, T>) : ClassVisitor(0) {
 
+    companion object {
+
+        fun ReflexClass.toClass(): Class<*> {
+            return this.structure.owner.getter.get() as Class<*>
+        }
+
+    }
+
     override fun getLifeCycle(): LifeCycle {
         return LifeCycle.LOAD
     }
-    @Suppress("UNCHECKED_CAST")
-    override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
-        if (this.clazz.isAssignableFrom(clazz)) {
-            this.visit(instance?.get() as? T ?: return)
+
+    override fun visitEnd(clazz: ReflexClass) {
+        if (this.clazz.isAssignableFrom(clazz.toClass())) {
+            this.visit(clazz.getInstance() as? T ?: return)
         }
     }
 

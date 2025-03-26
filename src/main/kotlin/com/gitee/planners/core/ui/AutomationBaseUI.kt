@@ -1,6 +1,7 @@
 package com.gitee.planners.core.ui
 
 import com.gitee.planners.util.Reflex
+import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import taboolib.common.LifeCycle
@@ -11,6 +12,7 @@ import taboolib.common.platform.function.warning
 import taboolib.common5.FileWatcher
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.reflex.ClassField
+import taboolib.library.reflex.ReflexClass
 import taboolib.library.xseries.XItemStack
 import taboolib.module.configuration.*
 import java.util.function.Supplier
@@ -98,9 +100,9 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
             return LifeCycle.INIT
         }
 
-        override fun visitEnd(clazz: Class<*>, instance: Supplier<*>?) {
-            if (BaseUI::class.java.isAssignableFrom(clazz) && instance != null) {
-                val automationBaseUI = instance.get() as? AutomationBaseUI ?: return
+        override fun visitEnd(clazz: ReflexClass) {
+            if (BaseUI::class.java.isAssignableFrom(clazz.toClass()) && clazz.getInstance() != null) {
+                val automationBaseUI = clazz.getInstance() as? AutomationBaseUI ?: return
                 val path = automationBaseUI.path
                 if (ConfigLoader.files.containsKey(path)) {
                     automationBaseUI.config = ConfigLoader.files[path]!!.configuration
@@ -117,12 +119,12 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
                     val nodeFile = ConfigNodeFile(conf, file)
                     // 自动重载节点
                     conf.onReload {
-                        nodeFile.nodes.forEach { visitOption(it, clazz, instance) }
+                        nodeFile.nodes.forEach { visitOption(it, clazz.toClass()) { clazz.getInstance() } }
                     }
                     ConfigLoader.files[path] = nodeFile
                 }
-                Reflex.getFieldsWithSuperclass(clazz).forEach { field ->
-                    visitOption(field, clazz, instance)
+                Reflex.getFieldsWithSuperclass(clazz.toClass()).forEach { field ->
+                    visitOption(field, clazz.toClass()) { clazz.getInstance() }
                 }
             }
         }
