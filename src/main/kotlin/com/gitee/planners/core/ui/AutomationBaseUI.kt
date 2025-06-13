@@ -1,7 +1,6 @@
 package com.gitee.planners.core.ui
 
 import com.gitee.planners.util.Reflex
-import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import taboolib.common.LifeCycle

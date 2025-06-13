@@ -1,6 +1,5 @@
 package com.gitee.planners.api.common.metadata
 
-import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import com.gitee.planners.util.unboxJavaToKotlin
 import com.google.gson.*
 import taboolib.common.LifeCycle

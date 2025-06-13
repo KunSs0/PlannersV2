@@ -11,6 +11,7 @@ taboolib {
         install(Basic)
         install(Bukkit)
         install(BukkitUI)
+        install(BukkitUtil)
         install(CommandHelper)
         install(BukkitHook)
         install(XSeries)
@@ -24,7 +25,7 @@ taboolib {
         install(BukkitFakeOp)
     }
 
-    version { taboolib = "6.2.0-beta18" }
+    version { taboolib = "6.2.3" }
 
     relocate("ink.ptms.um", "com.gitee.module.um")
 }
@@ -35,7 +36,7 @@ repositories {
 }
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
-    destinationDirectory = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
+//    destinationDirectory = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
 dependencies {

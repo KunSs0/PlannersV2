@@ -1,7 +1,6 @@
 package com.gitee.planners.api.common.script.kether
 
 import com.gitee.planners.api.common.Plugin
-import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import com.gitee.planners.util.checkPlugin
 import org.bukkit.Bukkit
 import taboolib.common.LifeCycle

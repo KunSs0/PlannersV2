@@ -8,14 +8,6 @@ import java.util.function.Supplier
 
 abstract class RunningClassRegistriesVisitor<T>(val clazz: Class<T>, val builtin: Builtin<String, T>) : ClassVisitor(0) {
 
-    companion object {
-
-        fun ReflexClass.toClass(): Class<*> {
-            return this.structure.owner.getter.get() as Class<*>
-        }
-
-    }
-
     override fun getLifeCycle(): LifeCycle {
         return LifeCycle.LOAD
     }

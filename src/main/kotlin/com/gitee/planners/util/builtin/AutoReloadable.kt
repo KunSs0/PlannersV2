@@ -1,6 +1,5 @@
 package com.gitee.planners.util.builtin
 
-import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake

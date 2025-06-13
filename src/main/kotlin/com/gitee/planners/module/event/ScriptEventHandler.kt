@@ -9,7 +9,6 @@ import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.context.CompiledScriptContext
 import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.core.config.ImmutableSkill
-import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.Event

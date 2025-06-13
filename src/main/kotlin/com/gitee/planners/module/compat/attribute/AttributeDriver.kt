@@ -1,7 +1,6 @@
 package com.gitee.planners.module.compat.attribute
 
 import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.util.RunningClassRegistriesVisitor.Companion.toClass
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake

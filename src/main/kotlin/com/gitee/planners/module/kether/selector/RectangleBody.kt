@@ -18,13 +18,13 @@ import org.bukkit.Location
 import org.bukkit.Particle
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
-import taboolib.common.platform.ProxyParticle
 import taboolib.common.platform.function.adaptPlayer
 import taboolib.common.platform.function.info
 import taboolib.common.util.Vector
 import taboolib.common5.Quat
 import taboolib.common5.cdouble
 import taboolib.library.kether.Parser
+import taboolib.library.xseries.ProxyParticle
 import taboolib.module.kether.ParserHolder.bool
 import taboolib.module.kether.ParserHolder.command
 import taboolib.module.kether.ParserHolder.defaultsTo
@@ -297,9 +297,8 @@ object RectangleBody : AbstractSelector("rectangle","ra"),Selector.Filterable {
                 val px = x1 + dx * i
                 val py = y1 + dy * i
                 val pz = z1 + dz * i
-
                 // 在计算出的位置生成粒子，这里使用了火焰粒子，你可以根据需要更改
-                ProxyParticle.FLAME.sendTo(adaptPlayer(sender), taboolib.common.util.Location(null, px, py, pz))
+//                ProxyParticle.FLAME.sendTo(adaptPlayer(sender), taboolib.common.util.Location(null, px, py, pz))
             }
         }
     }
