@@ -1,0 +1,58 @@
+__option__:
+  # 技能名称
+  name: "耐力"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: GOLDEN_APPLE
+    # 显示名称
+    name: "耐力"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "生命值上限提升 {{ lazy *health_bonus }}"
+      - "法力值上限提升 {{ lazy *mana_bonus }}"
+      - "生命回复速度提升 {{ lazy *regen_bonus }}%"
+      - "被动技能：提升生存能力"
+  # 技能分类
+  category: 
+    - "战士"
+    - "被动技能"
+  # 变量定义
+  variables:
+    # 生命值上限加成
+    health_bonus: math 20 + ctx skill level * 5
+    # 法力值上限加成
+    mana_bonus: math 10 + ctx skill level * 3
+    # 生命回复速度加成百分比
+    regen_bonus: math 10 + ctx skill level * 2
+    # 属性持续时间(永久)
+    duration: -1
+# 技能脚本
+action: |
+  def main = {
+    # 被动技能在学习时自动激活
+    call activatePassive
+  }
+  def activatePassive = {
+    # 添加生命值上限加成属性
+    attribute add "耐力_生命值上限" duration lazy duration 生命值上限+lazy health_bonus at @self
+    # 添加法力值上限加成属性
+    attribute add "耐力_法力值上限" duration lazy duration 法力值上限+lazy mana_bonus at @self
+    # 添加生命回复速度加成属性
+    attribute add "耐力_生命回复" duration lazy duration 生命回复+lazy regen_bonus at @self
+    # 发送激活消息
+    tell "耐力被动技能已激活！"
+  }
+  def deactivatePassive = {
+    # 移除生命值上限加成属性
+    attribute remove "耐力_生命值上限"
+    # 移除法力值上限加成属性
+    attribute remove "耐力_法力值上限"
+    # 移除生命回复速度加成属性
+    attribute remove "耐力_生命回复"
+    # 发送停用消息
+    tell "耐力被动技能已停用。"
+  }

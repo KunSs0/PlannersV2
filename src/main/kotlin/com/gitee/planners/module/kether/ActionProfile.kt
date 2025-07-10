@@ -109,7 +109,7 @@ object ActionProfile : MultipleKetherParser("profile") {
         it.plannersTemplate.experienceMax
     }
 
-    private fun processNow(vararg id: String, func: (Player) -> Any?) = KetherHelper.simpleKetherNow(*id) {
+    fun processNow(vararg id: String, func: (Player) -> Any?) = KetherHelper.simpleKetherNow(*id) {
         val sender = getEnvironmentContext().sender.cast<TargetBukkitEntity>()
         if (sender == null) {
             error("No sender selected.")

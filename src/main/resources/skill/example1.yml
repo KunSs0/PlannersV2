@@ -7,9 +7,10 @@ __option__:
     damage: math 32 * ctx skill level + 100
     rectX: array [ 4, 1, 3, 4 ]
     rectZ: array [ 2, 4, 3, 3 ]
+
 action: |-
   def main = {
-    set idx to metadata "x1.status" 
+    set idx to metadata "x1.status" def 0
     set x to lazy &rectX[idx]
     set z to lazy &rectZ[idx]
     tell inline "idx={{ &idx }},x={{ &x }}, z={{ &z }}"

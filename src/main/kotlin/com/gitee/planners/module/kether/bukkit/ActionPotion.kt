@@ -33,6 +33,7 @@ object ActionPotion : MultipleKetherParser("potion") {
                     warning("Invalid potion effect ID: $id")
                     return@now
                 }
+                println("potion effect: $xPotion, level: $level, duration: $duration, objective: ${objective.size}")
 
                 val potionEffect = PotionEffect(xPotion.get()!!, Coerce.toInteger(duration * 20L), level)
                 objective.filterIsInstance<TargetBukkitEntity>().forEach { target ->

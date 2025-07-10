@@ -1,0 +1,105 @@
+__option__:
+  # 技能名称
+  name: "闪电箭"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: BLAZE_ROD
+    # 显示名称
+    name: "闪电箭"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "技能伤害 {{ lazy *damage }}"
+      - "冷却时间 {{ lazy *cooldown }}秒"
+      - "消耗法力 {{ lazy *mp_cost }}"
+      - "瞬间释放闪电攻击敌人并造成麻痹效果"
+  # 技能分类
+  category: 
+    - "法师"
+    - "小技能"
+    - "雷系"
+  # 变量定义
+  variables:
+    # 冷却时间(tick)
+    cooldown: 60
+    # 伤害计算公式
+    damage: math 55 + ctx skill level * 14
+    # 法力消耗
+    mp_cost: 35
+    # 射程
+    range: 25.0
+    # 麻痹时间(tick)
+    stun_duration: 30
+    # 技能权重
+    skill_weight: 1.3
+# 技能脚本
+action: |
+  def main = {
+    # 检查玩家状态是否允许释放技能
+    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+      # 重置冷却时间并退出
+      cooldown reset
+      exit success
+    }
+    # 检查法力值是否足够
+    if check profile mp < lazy mp_cost then {
+      tell "法力不足！"
+      cooldown reset
+      exit success
+    }
+    # 初始化玩家状态
+    call initPlayerState
+    # 等待施法时间
+    wait 0.2s
+    # 释放闪电
+    call castLightningBolt
+    # 等待后摇时间
+    wait 0.1s
+    # 结束技能效果
+    call endSkill
+  }
+  def initPlayerState = {
+    # 消耗法力值
+    profile mp take lazy mp_cost
+    # 设置前摇状态
+    metadata 状态 to 前摇_闪电箭 timeout 8
+    # 播放施法动画
+    command inline "gp model cast {{ player name }} mage_lightning_cast_animation" as console
+    # 播放施法音效
+    command inline "gp sound play {{ player name }} mage_lightning_cast_sound player" as console
+    # 播放施法特效
+    command inline "gp effect spawn {{ player name }} mage_lightning_cast_effect {{ player name }}闪电施法特效 {{ sender }}" as console
+  }
+  def castLightningBolt = {
+    # 检查是否仍在前摇状态
+    if not check metadata 状态 contains 前摇_闪电箭 then {
+      exit success
+    }
+    # 播放闪电音效
+    command inline "gp sound play {{ player name }} mage_lightning_strike_sound player" as console
+    # 获取目标位置
+    set target_location to player look location distance lazy range
+    # 选择目标区域的敌人
+    set targets to select @rectangle 1 3 1 at &target_location debug false @their
+    # 对目标造成伤害
+    ap-attack 技能权重+lazy skill_weight,雷选择+18 at &targets
+    # 对目标施加麻痹效果
+    metadata 控制 to 麻痹 timeout lazy stun_duration at &targets
+    # 播放闪电击中特效
+    mythic mob signal LightningStrike at &target_location
+    # 生成闪电效果
+    command inline "summon lightning_bolt {{ &target_location }}" as console
+    # 播放雷电特效
+    command inline "gp effect spawn {{ player name }} mage_lightning_strike_effect 闪电击中特效 {{ &target_location }}" as console
+    # 设置后摇状态
+    metadata 状态 to 后摇_闪电箭 timeout 4
+  }
+  def endSkill = {
+    # 停止施法动画
+    command inline "gp model stop {{ player name }} mage_lightning_cast_animation" as console
+    # 停止施法特效
+    command inline "gp effect stop {{ player name }} mage_lightning_cast_effect" as console
+  }

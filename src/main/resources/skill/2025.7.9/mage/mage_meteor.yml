@@ -1,0 +1,123 @@
+__option__:
+  # 技能名称
+  name: "流星术"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: MAGMA_BLOCK
+    # 显示名称
+    name: "流星术"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "技能伤害 {{ lazy *damage }}"
+      - "冷却时间 {{ lazy *cooldown }}秒"
+      - "消耗法力 {{ lazy *mp_cost }}"
+      - "召唤流星从天而降造成大范围伤害"
+  # 技能分类
+  category: 
+    - "法师"
+    - "大技能"
+    - "火系"
+  # 变量定义
+  variables:
+    # 冷却时间(tick)
+    cooldown: 400
+    # 伤害计算公式
+    damage: math 200 + ctx skill level * 40
+    # 法力消耗
+    mp_cost: 120
+    # 射程
+    range: 30.0
+    # 爆炸半径
+    explosion_radius: 6.0
+    # 燃烧时间(tick)
+    burn_duration: 100
+    # 技能权重
+    skill_weight: 3.0
+# 技能脚本
+action: |
+  def main = {
+    # 检查玩家状态是否允许释放技能
+    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+      # 重置冷却时间并退出
+      cooldown reset
+      exit success
+    }
+    # 检查法力值是否足够
+    if check profile mp < lazy mp_cost then {
+      tell "法力不足！"
+      cooldown reset
+      exit success
+    }
+    # 初始化玩家状态
+    call initPlayerState
+    # 等待施法时间
+    wait 2.0s
+    # 召唤流星
+    call summonMeteor
+    # 等待后摇时间
+    wait 0.5s
+    # 结束技能效果
+    call endSkill
+  }
+  def initPlayerState = {
+    # 消耗法力值
+    profile mp take lazy mp_cost
+    # 设置前摇状态
+    metadata 状态 to 前摇_流星术 timeout 50
+    # 播放施法动画
+    command inline "gp model cast {{ player name }} mage_meteor_cast_animation" as console
+    # 播放施法音效
+    command inline "gp sound play {{ player name }} mage_meteor_cast_sound player" as console
+    # 播放施法特效
+    command inline "gp effect spawn {{ player name }} mage_meteor_cast_effect {{ player name }}流星施法特效 {{ sender }}" as console
+    # 添加缓慢效果防止移动
+    command inline "effect {{ player name }} slow 10 8" as console
+    # 发送提示消息
+    tell "正在召唤流星..."
+  }
+  def summonMeteor = {
+    # 检查是否仍在前摇状态
+    if not check metadata 状态 contains 前摇_流星术 then {
+      exit success
+    }
+    # 播放流星降落音效
+    command inline "gp sound play {{ player name }} mage_meteor_fall_sound player" as console
+    # 获取目标位置
+    set target_location to player look location distance lazy range
+    # 播放流星降落特效
+    command inline "gp effect spawn {{ player name }} mage_meteor_fall_effect 流星降落特效 {{ &target_location }}" as console
+    # 等待流星降落
+    wait 1.5s
+    # 流星撞击
+    call meteorImpact at &target_location
+  }
+  def meteorImpact = {
+    # 播放撞击音效
+    command inline "gp sound play {{ player name }} mage_meteor_impact_sound player" as console
+    # 选择爆炸范围内的敌人
+    set targets to select @circle lazy explosion_radius at &target_location debug false @their
+    # 对目标造成伤害
+    ap-attack 技能权重+lazy skill_weight,火选择+35 at &targets
+    # 对目标施加燃烧效果
+    command inline "effect {{ &targets }} wither lazy burn_duration 2" as console
+    # 播放爆炸特效
+    mythic mob signal MeteorExplosion at &target_location
+    # 播放火焰特效
+    command inline "gp effect spawn {{ player name }} mage_meteor_explosion_effect 流星爆炸特效 {{ &target_location }}" as console
+    # 生成爆炸效果
+    command inline "summon tnt {{ &target_location }}" as console
+    # 设置后摇状态
+    metadata 状态 to 后摇_流星术 timeout 12
+  }
+  def endSkill = {
+    # 移除缓慢效果
+    command inline "effect {{ player name }} slow 0" as console
+    # 停止施法动画
+    command inline "gp model stop {{ player name }} mage_meteor_cast_animation" as console
+    # 停止施法特效
+    command inline "gp effect stop {{ player name }} mage_meteor_cast_effect" as console
+  }

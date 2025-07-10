@@ -1,0 +1,18 @@
+__option__:
+  # 职业名称
+  name: 战士
+  # 职业技能列表
+  skill:
+    # 小技能 - 基础攻击技能
+    - warrior_slash_strike      # 斩击
+    - warrior_shield_bash       # 盾击
+    - warrior_power_strike      # 重击
+    # 大技能 - 强力技能
+    - warrior_whirlwind         # 旋风斩
+    - warrior_berserker_rage    # 狂暴之怒
+    # 被动技能
+    - warrior_combat_mastery    # 战斗精通
+    - warrior_armor_expertise   # 护甲专精
+    - warrior_weapon_mastery    # 武器精通
+    - warrior_battle_instinct   # 战斗本能
+    - warrior_endurance         # 耐力

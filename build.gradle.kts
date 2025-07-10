@@ -2,7 +2,7 @@ import io.izzel.taboolib.gradle.*
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.18"
+    id("io.izzel.taboolib") version "2.0.23"
     id("org.jetbrains.kotlin.jvm") version "1.8.22"
 }
 
@@ -36,7 +36,7 @@ repositories {
 }
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
-//    destinationDirectory = file("F:/Server/Spigot 1.12.2 - Minigame/plugins")
+//    destinationDirectory = file("F:\\minecraft\\server\\paper-1.12.2\\plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
 dependencies {

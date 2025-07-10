@@ -1,0 +1,18 @@
+__option__:
+  # 职业名称
+  name: 守护者
+  # 职业技能列表
+  skill:
+    # 小技能 - 基础防御技能
+    - guardian_shield_wall      # 盾墙
+    - guardian_taunt            # 嘲讽
+    - guardian_heal_light       # 轻度治疗
+    # 大技能 - 强力防御技能
+    - guardian_divine_shield    # 神圣护盾
+    - guardian_mass_heal        # 群体治疗
+    # 被动技能
+    - guardian_armor_mastery    # 护甲精通
+    - guardian_shield_expertise # 盾牌专精
+    - guardian_healing_aura     # 治疗光环
+    - guardian_damage_reduction # 伤害减免
+    - guardian_threat_control   # 威胁控制

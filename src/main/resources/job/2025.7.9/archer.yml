@@ -1,0 +1,18 @@
+__option__:
+  # 职业名称
+  name: 射手
+  # 职业技能列表
+  skill:
+    # 小技能 - 基础射击技能
+    - archer_precise_shot       # 精准射击
+    - archer_rapid_fire         # 连射
+    - archer_explosive_arrow    # 爆炸箭
+    # 大技能 - 强力射击技能
+    - archer_arrow_rain         # 箭雨
+    - archer_piercing_shot      # 穿透射击
+    # 被动技能
+    - archer_bow_mastery        # 弓箭精通
+    - archer_eagle_eye          # 鹰眼
+    - archer_wind_guidance      # 风之引导
+    - archer_arrow_recovery     # 箭矢回收
+    - archer_range_extension    # 射程延伸

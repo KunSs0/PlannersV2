@@ -1,0 +1,58 @@
+__option__:
+  # 技能名称
+  name: "法术强度"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: ENCHANTED_BOOK
+    # 显示名称
+    name: "法术强度"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "法术伤害提升 {{ lazy *spell_damage }}%"
+      - "法术暴击率提升 {{ lazy *crit_rate }}%"
+      - "法术暴击伤害提升 {{ lazy *crit_damage }}%"
+      - "被动技能：提升法术威力"
+  # 技能分类
+  category: 
+    - "法师"
+    - "被动技能"
+  # 变量定义
+  variables:
+    # 法术伤害提升百分比
+    spell_damage: math 15 + ctx skill level * 4
+    # 法术暴击率提升百分比
+    crit_rate: math 3 + ctx skill level * 1
+    # 法术暴击伤害提升百分比
+    crit_damage: math 20 + ctx skill level * 5
+    # 属性持续时间(永久)
+    duration: -1
+# 技能脚本
+action: |
+  def main = {
+    # 被动技能在学习时自动激活
+    call activatePassive
+  }
+  def activatePassive = {
+    # 添加法术伤害提升属性
+    attribute add "法术强度_法术伤害" duration lazy duration 法术伤害+lazy spell_damage at @self
+    # 添加法术暴击率提升属性
+    attribute add "法术强度_法术暴击率" duration lazy duration 法术暴击率+lazy crit_rate at @self
+    # 添加法术暴击伤害提升属性
+    attribute add "法术强度_法术暴击伤害" duration lazy duration 法术暴击伤害+lazy crit_damage at @self
+    # 发送激活消息
+    tell "法术强度被动技能已激活！"
+  }
+  def deactivatePassive = {
+    # 移除法术伤害提升属性
+    attribute remove "法术强度_法术伤害"
+    # 移除法术暴击率提升属性
+    attribute remove "法术强度_法术暴击率"
+    # 移除法术暴击伤害提升属性
+    attribute remove "法术强度_法术暴击伤害"
+    # 发送停用消息
+    tell "法术强度被动技能已停用。"
+  }

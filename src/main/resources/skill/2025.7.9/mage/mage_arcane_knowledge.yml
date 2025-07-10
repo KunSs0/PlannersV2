@@ -1,0 +1,58 @@
+__option__:
+  # 技能名称
+  name: "奥术知识"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: KNOWLEDGE_BOOK
+    # 显示名称
+    name: "奥术知识"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "技能冷却减少 {{ lazy *cooldown_reduction }}%"
+      - "经验获取提升 {{ lazy *exp_bonus }}%"
+      - "技能升级消耗减少 {{ lazy *upgrade_discount }}%"
+      - "被动技能：提升学习和施法能力"
+  # 技能分类
+  category: 
+    - "法师"
+    - "被动技能"
+  # 变量定义
+  variables:
+    # 技能冷却减少百分比
+    cooldown_reduction: math 5 + ctx skill level * 2
+    # 经验获取提升百分比
+    exp_bonus: math 10 + ctx skill level * 3
+    # 技能升级消耗减少百分比
+    upgrade_discount: math 5 + ctx skill level * 2
+    # 属性持续时间(永久)
+    duration: -1
+# 技能脚本
+action: |
+  def main = {
+    # 被动技能在学习时自动激活
+    call activatePassive
+  }
+  def activatePassive = {
+    # 添加技能冷却减少属性
+    attribute add "奥术知识_冷却减少" duration lazy duration 技能冷却减少+lazy cooldown_reduction at @self
+    # 添加经验获取提升属性
+    attribute add "奥术知识_经验加成" duration lazy duration 经验获取+lazy exp_bonus at @self
+    # 添加技能升级消耗减少属性
+    attribute add "奥术知识_升级折扣" duration lazy duration 升级消耗减少+lazy upgrade_discount at @self
+    # 发送激活消息
+    tell "奥术知识被动技能已激活！"
+  }
+  def deactivatePassive = {
+    # 移除技能冷却减少属性
+    attribute remove "奥术知识_冷却减少"
+    # 移除经验获取提升属性
+    attribute remove "奥术知识_经验加成"
+    # 移除技能升级消耗减少属性
+    attribute remove "奥术知识_升级折扣"
+    # 发送停用消息
+    tell "奥术知识被动技能已停用。"
+  }

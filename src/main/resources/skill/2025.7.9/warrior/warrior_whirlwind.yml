@@ -1,0 +1,106 @@
+__option__:
+  # 技能名称
+  name: "旋风斩"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: GOLDEN_SWORD
+    # 显示名称
+    name: "旋风斩"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "技能伤害 {{ lazy *damage }}"
+      - "冷却时间 {{ lazy *cooldown }}秒"
+      - "消耗法力 {{ lazy *mp_cost }}"
+      - "旋转攻击周围所有敌人"
+  # 技能分类
+  category: 
+    - "战士"
+    - "大技能"
+  # 变量定义
+  variables:
+    # 冷却时间(tick)
+    cooldown: 300
+    # 伤害计算公式
+    damage: math 120 + ctx skill level * 25
+    # 法力消耗
+    mp_cost: 80
+    # 攻击半径
+    attack_radius: 4.0
+    # 旋转次数
+    spin_count: 3
+    # 技能权重
+    skill_weight: 2.0
+# 技能脚本
+action: |
+  def main = {
+    # 检查玩家状态是否允许释放技能
+    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+      # 重置冷却时间并退出
+      cooldown reset
+      exit success
+    }
+    # 检查法力值是否足够
+    if check profile mp < lazy mp_cost then {
+      tell "法力不足！"
+      cooldown reset
+      exit success
+    }
+    # 初始化玩家状态
+    call initPlayerState
+    # 等待前摇时间
+    wait 0.3s
+    # 执行旋风斩
+    call executeWhirlwind
+    # 等待后摇时间
+    wait 0.5s
+    # 结束技能效果
+    call endSkill
+  }
+  def initPlayerState = {
+    # 消耗法力值
+    profile mp take lazy mp_cost
+    # 设置前摇状态
+    metadata 状态 to 前摇_旋风斩 timeout 20
+    # 播放技能动画
+    command inline "gp model cast {{ player name }} warrior_whirlwind_animation" as console
+    # 播放音效
+    command inline "gp sound play {{ player name }} warrior_whirlwind_sound player" as console
+    # 添加缓慢效果
+    command inline "effect {{ player name }} slow 3 8" as console
+    # 播放旋风特效
+    command inline "gp effect spawn {{ player name }} warrior_whirlwind_effect {{ player name }}旋风特效 {{ sender }}" as console
+  }
+  def executeWhirlwind = {
+    # 检查是否仍在前摇状态
+    if not check metadata 状态 contains 前摇_旋风斩 then {
+      exit success
+    }
+    # 执行多次旋转攻击
+    set spin_counter to 0
+    while check &spin_counter < lazy spin_count then {
+      # 选择周围的敌人
+      set targets to select @circle lazy attack_radius debug false @their
+      # 对目标造成伤害
+      ap-attack 技能权重+lazy skill_weight,斩选择+25 at &targets
+      # 播放击中特效
+      mythic mob signal WhirlwindImpact at &targets
+      # 增加旋转计数
+      set spin_counter to math &spin_counter + 1
+      # 等待下次旋转
+      wait 0.4s
+    }
+    # 设置后摇状态
+    metadata 状态 to 后摇_旋风斩 timeout 12
+  }
+  def endSkill = {
+    # 移除缓慢效果
+    command inline "effect {{ player name }} slow 0" as console
+    # 停止动画
+    command inline "gp model stop {{ player name }} warrior_whirlwind_animation" as console
+    # 停止特效
+    command inline "gp effect stop {{ player name }} warrior_whirlwind_effect" as console
+  }

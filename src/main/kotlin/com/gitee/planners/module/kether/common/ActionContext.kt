@@ -61,6 +61,11 @@ object ActionContext : MultipleKetherParser("ctx", "context") {
 
         }
 
+        @KetherEditor.Document("ctx skill name")
+        val name = KetherHelper.simpleKetherNow {
+            (getEnvironmentContext() as? ImmutableSkillContext)?.skill?.name ?: ""
+        }
+
     }
 
 }

@@ -1,0 +1,51 @@
+__option__:
+  # 技能名称
+  name: "武器精通"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: ENCHANTED_BOOK
+    # 显示名称
+    name: "武器精通"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "武器伤害提升 {{ lazy *weapon_damage }}%"
+      - "攻击速度提升 {{ lazy *attack_speed }}%"
+      - "被动技能：提升武器使用熟练度"
+  # 技能分类
+  category: 
+    - "战士"
+    - "被动技能"
+  # 变量定义
+  variables:
+    # 武器伤害提升百分比
+    weapon_damage: math 5 + ctx skill level * 2
+    # 攻击速度提升百分比
+    attack_speed: math 3 + ctx skill level * 1
+    # 属性持续时间(永久)
+    duration: -1
+# 技能脚本
+action: |
+  def main = {
+    # 被动技能在学习时自动激活
+    call activatePassive
+  }
+  def activatePassive = {
+    # 添加武器伤害提升属性
+    attribute add "武器精通_武器伤害" duration lazy duration 武器伤害+lazy weapon_damage at @self
+    # 添加攻击速度提升属性
+    attribute add "武器精通_攻击速度" duration lazy duration 攻击速度+lazy attack_speed at @self
+    # 发送激活消息
+    tell "武器精通被动技能已激活！"
+  }
+  def deactivatePassive = {
+    # 移除武器伤害提升属性
+    attribute remove "武器精通_武器伤害"
+    # 移除攻击速度提升属性
+    attribute remove "武器精通_攻击速度"
+    # 发送停用消息
+    tell "武器精通被动技能已停用。"
+  }

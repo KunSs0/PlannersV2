@@ -1,0 +1,18 @@
+__option__:
+  # 职业名称
+  name: 刺客
+  # 职业技能列表
+  skill:
+    # 小技能 - 基础刺杀技能
+    - assassin_backstab         # 背刺
+    - assassin_poison_blade     # 毒刃
+    - assassin_shadow_strike    # 暗影突袭
+    # 大技能 - 强力刺杀技能
+    - assassin_shadow_clone     # 影分身
+    - assassin_death_mark       # 死亡印记
+    # 被动技能
+    - assassin_stealth_mastery  # 潜行精通
+    - assassin_critical_strike  # 致命一击
+    - assassin_poison_immunity  # 毒素免疫
+    - assassin_shadow_step      # 暗影步法
+    - assassin_dual_wield       # 双持精通

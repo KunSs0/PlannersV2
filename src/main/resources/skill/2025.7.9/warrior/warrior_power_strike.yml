@@ -1,0 +1,102 @@
+__option__:
+  # 技能名称
+  name: "重击"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: DIAMOND_SWORD
+    # 显示名称
+    name: "重击"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "技能伤害 {{ lazy *damage }}"
+      - "冷却时间 {{ lazy *cooldown }}秒"
+      - "消耗法力 {{ lazy *mp_cost }}"
+      - "蓄力后发出强力的重击攻击"
+  # 技能分类
+  category: 
+    - "战士"
+    - "小技能"
+  # 变量定义
+  variables:
+    # 冷却时间(tick)
+    cooldown: 100
+    # 伤害计算公式
+    damage: math 80 + ctx skill level * 15
+    # 法力消耗
+    mp_cost: 35
+    # 攻击范围
+    attack_range: 3.5
+    # 击退距离
+    knockback_distance: 2.0
+    # 技能权重
+    skill_weight: 1.5
+# 技能脚本
+action: |
+  def main = {
+    # 检查玩家状态是否允许释放技能
+    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+      # 重置冷却时间并退出
+      cooldown reset
+      exit success
+    }
+    # 检查法力值是否足够
+    if check profile mp < lazy mp_cost then {
+      tell "法力不足！"
+      cooldown reset
+      exit success
+    }
+    # 初始化玩家状态
+    call initPlayerState
+    # 蓄力阶段
+    wait 0.5s
+    # 执行重击
+    call executePowerStrike
+    # 等待后摇时间
+    wait 0.3s
+    # 结束技能效果
+    call endSkill
+  }
+  def initPlayerState = {
+    # 消耗法力值
+    profile mp take lazy mp_cost
+    # 设置前摇状态
+    metadata 状态 to 前摇_重击 timeout 15
+    # 播放蓄力动画
+    command inline "gp model cast {{ player name }} warrior_power_charge_animation" as console
+    # 播放蓄力音效
+    command inline "gp sound play {{ player name }} warrior_power_charge_sound player" as console
+    # 添加缓慢效果
+    command inline "effect {{ player name }} slow 2 5" as console
+    # 播放蓄力特效
+    command inline "gp effect spawn {{ player name }} warrior_power_charge_effect {{ player name }}蓄力特效 {{ sender }}" as console
+  }
+  def executePowerStrike = {
+    # 检查是否仍在前摇状态
+    if not check metadata 状态 contains 前摇_重击 then {
+      exit success
+    }
+    # 播放攻击动画
+    command inline "gp model cast {{ player name }} warrior_power_strike_animation" as console
+    # 播放攻击音效
+    command inline "gp sound play {{ player name }} warrior_power_strike_sound player" as console
+    # 选择攻击目标
+    set targets to select @rectangle 3 2.5 lazy attack_range offset "0 0 2" debug false @their
+    # 对目标造成伤害
+    ap-attack 技能权重+lazy skill_weight,斩选择+20 at &targets
+    # 对目标施加击退效果
+    velocity move "0 0.3 lazy knockback_distance" at &targets
+    # 播放击中特效
+    mythic mob signal PowerStrikeImpact at &targets
+    # 设置后摇状态
+    metadata 状态 to 后摇_重击 timeout 8
+  }
+  def endSkill = {
+    # 移除缓慢效果
+    command inline "effect {{ player name }} slow 0" as console
+    # 停止动画
+    command inline "gp model stop {{ player name }} warrior_power_strike_animation" as console
+  }

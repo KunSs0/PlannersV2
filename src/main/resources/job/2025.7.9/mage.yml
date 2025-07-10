@@ -1,0 +1,18 @@
+__option__:
+  # 职业名称
+  name: 法师
+  # 职业技能列表
+  skill:
+    # 小技能 - 基础魔法技能
+    - mage_fireball            # 火球术
+    - mage_ice_shard           # 冰锥术
+    - mage_lightning_bolt      # 闪电箭
+    # 大技能 - 强力魔法
+    - mage_meteor              # 流星术
+    - mage_blizzard            # 暴风雪
+    # 被动技能
+    - mage_mana_mastery        # 法力精通
+    - mage_elemental_affinity  # 元素亲和
+    - mage_spell_power         # 法术强度
+    - mage_mana_shield         # 法力护盾
+    - mage_arcane_knowledge    # 奥术知识

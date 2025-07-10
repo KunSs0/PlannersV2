@@ -1,0 +1,107 @@
+__option__:
+  # 技能名称
+  name: "冰锥术"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: ICE
+    # 显示名称
+    name: "冰锥术"
+    # 描述信息
+    lore:
+      - "技能等级 {{ ctx skill level }}"
+      - "技能伤害 {{ lazy *damage }}"
+      - "冷却时间 {{ lazy *cooldown }}秒"
+      - "消耗法力 {{ lazy *mp_cost }}"
+      - "发射冰锥攻击敌人并造成减速效果"
+  # 技能分类
+  category: 
+    - "法师"
+    - "小技能"
+    - "冰系"
+  # 变量定义
+  variables:
+    # 冷却时间(tick)
+    cooldown: 50
+    # 伤害计算公式
+    damage: math 40 + ctx skill level * 10
+    # 法力消耗
+    mp_cost: 25
+    # 射程
+    range: 15.0
+    # 减速时间(tick)
+    slow_duration: 80
+    # 减速等级
+    slow_level: 3
+    # 技能权重
+    skill_weight: 1.0
+# 技能脚本
+action: |
+  def main = {
+    # 检查玩家状态是否允许释放技能
+    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+      # 重置冷却时间并退出
+      cooldown reset
+      exit success
+    }
+    # 检查法力值是否足够
+    if check profile mp < lazy mp_cost then {
+      tell "法力不足！"
+      cooldown reset
+      exit success
+    }
+    # 初始化玩家状态
+    call initPlayerState
+    # 等待施法时间
+    wait 0.3s
+    # 发射冰锥
+    call launchIceShard
+    # 等待后摇时间
+    wait 0.2s
+    # 结束技能效果
+    call endSkill
+  }
+  def initPlayerState = {
+    # 消耗法力值
+    profile mp take lazy mp_cost
+    # 设置前摇状态
+    metadata 状态 to 前摇_冰锥术 timeout 10
+    # 播放施法动画
+    command inline "gp model cast {{ player name }} mage_ice_shard_cast_animation" as console
+    # 播放施法音效
+    command inline "gp sound play {{ player name }} mage_ice_shard_cast_sound player" as console
+    # 播放施法特效
+    command inline "gp effect spawn {{ player name }} mage_ice_shard_cast_effect {{ player name }}冰锥施法特效 {{ sender }}" as console
+  }
+  def launchIceShard = {
+    # 检查是否仍在前摇状态
+    if not check metadata 状态 contains 前摇_冰锥术 then {
+      exit success
+    }
+    # 播放发射音效
+    command inline "gp sound play {{ player name }} mage_ice_shard_launch_sound player" as console
+    # 获取目标位置
+    set target_location to player look location distance lazy range
+    # 选择目标区域的敌人
+    set targets to select @rectangle 1.5 2 3 at &target_location debug false @their
+    # 对目标造成伤害
+    ap-attack 技能权重+lazy skill_weight,冰选择+12 at &targets
+    # 对目标施加减速效果
+    command inline "effect {{ &targets }} slowness lazy slow_duration lazy slow_level" as console
+    # 对目标施加冰冻状态
+    metadata 状态 to 冰冻 timeout lazy slow_duration at &targets
+    # 播放冰锥击中特效
+    mythic mob signal IceShardImpact at &targets
+    # 播放冰霜特效
+    command inline "gp effect spawn {{ player name }} mage_ice_shard_impact_effect 冰锥击中特效 {{ &target_location }}" as console
+    # 设置后摇状态
+    metadata 状态 to 后摇_冰锥术 timeout 6
+  }
+  def endSkill = {
+    # 停止施法动画
+    command inline "gp model stop {{ player name }} mage_ice_shard_cast_animation" as console
+    # 停止施法特效
+    command inline "gp effect stop {{ player name }} mage_ice_shard_cast_effect" as console
+  }
