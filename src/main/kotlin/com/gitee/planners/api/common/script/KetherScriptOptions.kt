@@ -13,10 +13,21 @@ interface KetherScriptOptions {
     companion object {
 
         /**
-         * 公共命名空间
+         * 通用的Kether选项
+         *
+         * @param player 玩家
+         *
+         * @return Kether选项
          */
         fun common(player: Player) = common(TargetBukkitEntity(player))
 
+        /**
+         * 通用的Kether选项
+         *
+         * @param sender 发送者
+         *
+         * @return Kether选项
+         */
         fun common(sender: Target<*>) = create {
             if (sender is TargetBukkitEntity && sender.instance is Player) {
                 sender(sender.instance)
@@ -24,6 +35,13 @@ interface KetherScriptOptions {
             namespace(listOf(KetherHelper.NAMESPACE_COMMON))
         }
 
+        /**
+         * 创建Kether选项
+         *
+         * @param builder 选项构建器
+         *
+         * @return Kether选项
+         */
         fun create(builder: ScriptOptions.ScriptOptionsBuilder.() -> Unit): KetherScriptOptions {
             return generic {
                 ScriptOptions.ScriptOptionsBuilder().also {
@@ -33,6 +51,13 @@ interface KetherScriptOptions {
             }
         }
 
+        /**
+         * 创建Kether选项
+         *
+         * @param func 选项构建器
+         *
+         * @return Kether选项
+         */
         fun generic(func: () -> ScriptOptions.ScriptOptionsBuilder): KetherScriptOptions {
             return object : KetherScriptOptions {
                 override fun build(): ScriptOptions.ScriptOptionsBuilder {
@@ -41,6 +66,14 @@ interface KetherScriptOptions {
             }
         }
 
+        /**
+         * 设置发送者
+         *
+         * @param player 玩家
+         * @param options 选项
+         *
+         * @return Kether选项
+         */
         fun sender(player: Player, options: KetherScriptOptions): KetherScriptOptions {
             return generic { options.build().sender(player) }
         }

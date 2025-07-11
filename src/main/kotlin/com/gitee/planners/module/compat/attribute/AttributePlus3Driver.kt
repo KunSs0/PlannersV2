@@ -12,7 +12,7 @@ import taboolib.common5.clong
 object AttributePlus3Driver : AttributeDriver {
 
 
-    override fun authorizeEnable(): Boolean {
+    override fun checkEnable(): Boolean {
         val plugin = Bukkit.getPluginManager().getPlugin("AttributePlus")
         if (plugin != null && plugin.description.version.split(".")[0] == "3") {
             return true

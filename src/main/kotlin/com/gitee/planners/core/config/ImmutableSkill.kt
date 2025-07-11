@@ -9,10 +9,8 @@ import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.common.LifeCycle
-import taboolib.common.platform.function.postpone
 import taboolib.common.platform.function.registerLifeCycleTask
 import taboolib.common.util.asList
-import taboolib.common5.cdouble
 import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
@@ -39,7 +37,12 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
     override val async = option.getBoolean("async", true)
 
     val action = config.getString("action", config.getString("run", "tell none"))!!
-    
+
+    /**
+     * 技能提供的属性
+     */
+    val attributes: List<String> = option.getStringList("hook.attributes")
+
     /** 升级条件 */
     val conditionAsUpgrade = option.mapSection("upgrade.condition") {
         val split = it.name.split("-")

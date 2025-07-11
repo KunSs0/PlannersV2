@@ -11,7 +11,7 @@ import taboolib.platform.type.BukkitProxyEvent
  * @version 1.0
  *
  */
-class PlayerRouteEvent {
+class PlayerSetRouteEvent {
 
 
     class Pre(val template: PlayerTemplate, val route: ImmutableRoute) : BukkitProxyEvent() {

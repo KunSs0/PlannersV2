@@ -41,10 +41,10 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
      */
     fun setPlayerRoute(player: Player, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
         val template = player.plannersTemplate
-        if (PlayerRouteEvent.Pre(template, route).call()) {
+        if (PlayerSetRouteEvent.Pre(template, route).call()) {
             return PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, route).thenApply {
                 template.route = it
-                PlayerRouteEvent.Post(template, it).call()
+                PlayerSetRouteEvent.Post(template, it).call()
 
                 it
             }

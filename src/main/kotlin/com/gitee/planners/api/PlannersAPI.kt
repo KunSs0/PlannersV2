@@ -3,20 +3,16 @@ package com.gitee.planners.api
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.script.KetherScript.Companion.PARSER_INT
 import com.gitee.planners.api.common.script.KetherScript.Companion.getNow
-import com.gitee.planners.api.common.script.KetherScriptOptions
-import com.gitee.planners.api.event.player.PlayerRouteEvent
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
+import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
-import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.module.magic.MagicPoint.magicPoint
 import org.bukkit.entity.Player
-import taboolib.common5.cint
 import java.util.concurrent.CompletableFuture
 
 object PlannersAPI {
@@ -30,6 +26,39 @@ object PlannersAPI {
      */
     fun cast(player: Player, skill: ImmutableSkill, level: Int): CompletableFuture<Any> {
         return newCtx(player, skill, level).call()
+    }
+
+    /**
+     * 获取技能变量
+     *
+     * @param player 玩家
+     * @param skill 技能
+     * @param variable 变量
+     * @return 变量值
+     */
+    fun getVariableValue(player: Player,skill: ImmutableSkill,variable: Variable): CompletableFuture<Any?> {
+        // 取现在的等级
+        val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
+        val newCtx = newCtx(player, skill, level)
+
+        return variable.run(newCtx.optionsBuilder())
+    }
+
+    /**
+     * 获取技能变量
+     *
+     * @param player 玩家
+     * @param skill 技能
+     * @param id 变量id
+     * @return 变量值
+     */
+    fun getVariableValue(player: Player, skill: ImmutableSkill, id: String): CompletableFuture<Any?> {
+        val variable = skill.getVariableOrNull(id)
+        if (variable == null) {
+            error("Variable $id not found in skill ${skill.id}")
+        }
+
+        return getVariableValue(player, skill, variable)
     }
 
     /**
@@ -66,6 +95,20 @@ object PlannersAPI {
         ctx.call()
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()
+    }
+
+    /**
+     * 创建技能上下文
+     *
+     * @param player 玩家
+     * @param skill 技能
+     *
+     * @return ImmutableSkillContext
+     */
+    fun newCtx(player: Player,skill: ImmutableSkill): ImmutableSkillContext {
+        val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
+
+        return newCtx(player, skill, level)
     }
 
     /**

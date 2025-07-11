@@ -21,6 +21,11 @@ class ImmutableJob(private val config: Configuration) : Job {
 
     private val immutableSkillKeys = option.getStringList("skill")
 
+    /**
+     * 职业提供的属性
+     */
+    val attributes: List<String> = option.getStringList("hook.attributes")
+
     override fun hasSkill(id: String): Boolean {
         return this.immutableSkillKeys.contains(id)
     }
