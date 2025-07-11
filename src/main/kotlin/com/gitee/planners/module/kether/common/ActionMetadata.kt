@@ -37,7 +37,7 @@ object ActionMetadata : OperationKetherParser("metadata") {
     }
 
     @KetherEditor.Document("metadata <id> to <value: any> [timeout: long(-1)] [at objective:TargetContainer(sender)]")
-    val to = argumentKetherParser("set") { argument ->
+    val to = argumentKetherParser { argument ->
         val data = this.nextParsedAction()
         val timeout = this.catchParsedAction("timeout", -1)
         val container = this.expectTargetContainerParsedAction(LeastType.SENDER)
