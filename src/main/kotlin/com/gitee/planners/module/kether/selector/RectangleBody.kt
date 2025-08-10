@@ -21,6 +21,7 @@ import org.bukkit.entity.Player
 import taboolib.common.platform.function.adaptPlayer
 import taboolib.common.platform.function.info
 import taboolib.common.util.Vector
+import taboolib.common.util.runSync
 import taboolib.common5.Quat
 import taboolib.common5.cdouble
 import taboolib.library.kether.Parser
@@ -153,12 +154,14 @@ object RectangleBody : AbstractSelector("rectangle","ra"),Selector.Filterable {
             val map = build(Vector(location.x, location.y, location.z), location.yaw)
             val boundingBox = getBoundingBox(map)
             // 找到aabb内的所有实体
-            val entities = location.world!!.getNearbyEntities(
-                location,
-                boundingBox.getXSize(),
-                boundingBox.getYSize(),
-                boundingBox.getZSize()
-            )
+            val entities = runSync {
+                location.world!!.getNearbyEntities(
+                    location,
+                    boundingBox.getXSize(),
+                    boundingBox.getYSize(),
+                    boundingBox.getZSize()
+                )
+            }
 //            println("find abb 'width=${boundingBox.getXSize()},height=${boundingBox.getYSize()},depth=${boundingBox.getZSize()}' = $entities")
             // 从aabb实体集里找到obb内的实体
             return entities.filter {

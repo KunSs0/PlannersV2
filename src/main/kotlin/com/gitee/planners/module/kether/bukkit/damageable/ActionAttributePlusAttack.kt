@@ -18,21 +18,24 @@ import org.serverct.ersha.api.AttributeAPI
 import org.serverct.ersha.attribute.AttributeHandle
 import org.serverct.ersha.attribute.data.AttributeData
 import org.serverct.ersha.attribute.data.AttributeSource
+import taboolib.common.platform.function.submit
 import taboolib.common.platform.function.warning
+import taboolib.common.util.runSync
 import taboolib.library.kether.QuestActionParser
 import taboolib.module.kether.combinationParser
 import taboolib.platform.util.setMeta
 
-@KetherEditor.Document("ap-attack <attribute_source:String> [at objective:TargetContainer(empty)] [source objective:TargetContainer(sender)]")
+@KetherEditor.Document("ap-attack <attribute_source:String> [isolation/iso false] [at objective:TargetContainer(empty)] [source objective:TargetContainer(sender)]")
 @CombinationKetherParser.Used
 object ActionAttributePlusAttack : SimpleKetherParser("ap-attack") {
     override fun run(): QuestActionParser {
         return combinationParser {
             it.group(
                 text(),
+                command("isolation", "iso", then = bool()).option().defaultsTo(false),
                 commandObjectiveOrEmpty(),
                 commandObjectiveOrSender("source")
-            ).apply(it) { ele, objective, source ->
+            ).apply(it) { ele, isolation, objective, source ->
                 val sender = source
                     .filterIsInstance<TargetBukkitEntity>()
                     .firstOrNull()?.instance as? LivingEntity
@@ -42,15 +45,17 @@ object ActionAttributePlusAttack : SimpleKetherParser("ap-attack") {
                         warning("Action attack source not correctly defined")
                         return@now damage
                     }
-
-                    val data: AttributeData = AttributeAPI.getAttrData(sender)
-                        .operationAttribute(
-                            AttributeAPI.getAttributeSource(ele.split(",")),
-                            AttributeSource.OperationType.ADD,
-                            "@planners_skill"
-                        )
-
-
+                    // 是否隔离，如果隔离，则不会读取攻击者的属性
+                    val data: AttributeData = if (isolation) {
+                        AttributeData.create(sender)
+                    } else {
+                        AttributeAPI.getAttrData(sender)
+                    }
+                    data.operationAttribute(
+                        AttributeAPI.getAttributeSource(ele.split(",")),
+                        AttributeSource.OperationType.ADD,
+                        "@planners_skill"
+                    )
 
                     TargetCapturedEvent.damaged(ctx(), objective).filterIsInstance<TargetBukkitEntity>()
                         .map(TargetBukkitEntity::instance).forEach { entity ->
@@ -62,9 +67,11 @@ object ActionAttributePlusAttack : SimpleKetherParser("ap-attack") {
                             if (entity is LivingEntity) {
                                 val env =
                                     EntityDamageByEntityEvent(sender, entity, EntityDamageEvent.DamageCause.CUSTOM, 0.0)
-                                val handle = AttributeHandle(data, AttributeAPI.getAttrData(entity))
+
+                                val handle = runSync { AttributeHandle(data, AttributeAPI.getAttrData(entity)) }
                                     .init(env, false, true)
                                     .handleAttackOrDefenseAttribute()
+
                                 if (!env.isCancelled && !handle.isCancelled) {
                                     val finalDamage = handle.getDamage(sender)
                                     if (finalDamage > entity.health) {
@@ -73,15 +80,24 @@ object ActionAttributePlusAttack : SimpleKetherParser("ap-attack") {
                                     }
 
                                     handle.sendAttributeMessage()
-                                    entity.damage(finalDamage)
+                                    runSync {
+                                        entity.damage(finalDamage)
+                                    }
                                     // 触发玩家攻击实体事件
                                     if (sender is Player) {
-                                        PlayerDamageEntityEvent(sender, entity, finalDamage,EntityDamageEvent.DamageCause.CUSTOM).call()
+                                        PlayerDamageEntityEvent(
+                                            sender,
+                                            entity,
+                                            finalDamage,
+                                            EntityDamageEvent.DamageCause.CUSTOM
+                                        ).call()
                                     }
                                     damage += finalDamage
 
                                     if (handle.getDamage(entity) > 0.0) {
-                                        sender.damage(handle.getDamage(entity))
+                                        submit {
+                                            sender.damage(handle.getDamage(entity))
+                                        }
                                     }
                                 }
                             }

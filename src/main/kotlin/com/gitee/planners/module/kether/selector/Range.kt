@@ -9,6 +9,7 @@ import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.getEnvironmentContext
 import com.gitee.planners.module.kether.getTargetContainer
 import taboolib.common.util.Vector
+import taboolib.common.util.runSync
 import taboolib.module.kether.combinationParser
 
 object Range : AbstractSelector("range") {
@@ -18,7 +19,10 @@ object Range : AbstractSelector("range") {
         it.group(double()).apply(it) { r ->
             now {
                 val vector = Vector(r, r, r)
-                val entities = getEnvironmentContext().origin.castUnsafely<TargetLocation<*>>().getNearbyLivingEntities(vector)
+                val unsafely = getEnvironmentContext().origin.castUnsafely<TargetLocation<*>>()
+                val entities = runSync {
+                    unsafely.getNearbyLivingEntities(vector)
+                }
                 this.getTargetContainer() += entities.map { it.adaptTarget() }
             }
         }

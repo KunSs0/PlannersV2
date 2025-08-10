@@ -3,10 +3,11 @@ package com.gitee.planners.module.kether.bukkit
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.SimpleKetherParser
 import com.gitee.planners.api.job.target.*
-import com.gitee.planners.module.kether.enum
 import com.gitee.planners.module.kether.commandObjective
+import com.gitee.planners.module.kether.enum
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import taboolib.common.platform.function.submit
 import taboolib.expansion.fakeOp
 import taboolib.library.kether.QuestActionParser
 import taboolib.module.kether.combinationParser
@@ -19,10 +20,15 @@ object ActionBukkitCommand : SimpleKetherParser("command") {
             it.group(
                 text(),
                 command("as", then = enum<SenderType>()).option().defaultsTo(SenderType.PLAYER),
+                command("async", then = bool()).option().defaultsTo(false),
                 commandObjective(type = LeastType.SENDER)
-            ).apply(it) { command, senderType, objective ->
+            ).apply(it) { command, senderType, async, objective ->
                 now {
-                    objective.filterIsInstance<TargetCommandSender<*>>().forEach { senderType!!.dispatchCommand(it, command) }
+                    submit(async = async) {
+                        objective.filterIsInstance<TargetCommandSender<*>>().forEach {
+                            senderType!!.dispatchCommand(it, command)
+                        }
+                    }
                 }
             }
         }

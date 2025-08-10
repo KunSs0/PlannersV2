@@ -6,14 +6,11 @@ import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
-import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.module.kether.commandEnum
-import com.gitee.planners.module.kether.commandInt
-import com.gitee.planners.module.kether.commandObjective
-import com.gitee.planners.module.kether.commandObjectiveOrSender
+import com.gitee.planners.module.kether.*
+import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import org.bukkit.entity.Player
 
 @CombinationKetherParser.Used
@@ -65,16 +62,20 @@ object ActionSkill : MultipleKetherParser("skill") {
 
         // 调用释放，技能必须释放者存在，会计入冷却（跟随等级参数），可传入等级，不传入等级相对自身技能等级释放
         val invoke = KetherHelper.combinedKetherParser {
-            it.group(text(), commandInt("level", -1), commandObjective(type = LeastType.SENDER))
-                .apply(it) { id, level, objective ->
-                    now {
-                        val skill = Registries.SKILL.get(id)
-                        objective.forEach {
-                            val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
-                            ImmutableSkillContext(it, skill, i).call()
-                        }
+            it.group(
+                text(),
+                commandInt("level", -1),
+                commandBool("cooled", true),
+                commandObjective(type = LeastType.SENDER)
+            ).apply(it) { id, level, cooled, objective ->
+                now {
+                    val skill = Registries.SKILL.get(id)
+                    objective.forEach {
+                        val i = if (level == -1) getSkillLevelWithTarget(it, id) ?: 1 else 1
+                        ImmutableSkillContext(it, skill, i).call()
                     }
                 }
+            }
         }
 
     }
