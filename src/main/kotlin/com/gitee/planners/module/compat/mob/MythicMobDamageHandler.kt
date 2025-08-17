@@ -1,21 +1,76 @@
 package com.gitee.planners.module.compat.mob
 
 import com.gitee.planners.api.event.player.PlayerDamageEntityEvent
+import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.TargetContainerization
+import com.gitee.planners.api.job.target.TargetEntity
+import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.util.checkPluginClass
+import io.lumine.mythic.bukkit.MythicBukkit
+import io.lumine.mythic.core.mobs.ActiveMob
 import io.lumine.xikage.mythicmobs.MythicMobs
 import io.lumine.xikage.mythicmobs.adapters.bukkit.BukkitAdapter
+import io.lumine.xikage.mythicmobs.skills.placeholders.Placeholder
+import io.lumine.xikage.mythicmobs.skills.placeholders.PlaceholderManager
+import io.lumine.xikage.mythicmobs.skills.placeholders.PlaceholderMeta
+import org.bukkit.Bukkit
+import org.bukkit.entity.Entity
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import taboolib.common.LifeCycle
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.info
+import taboolib.common.platform.function.registerLifeCycleTask
 import taboolib.common.util.unsafeLazy
+import taboolib.common5.cint
 import taboolib.platform.util.attacker
+import java.util.function.BiFunction
 
 object MythicMobDamageHandler {
 
     private val isEnable by unsafeLazy {
-        checkPluginClass("io.lumine.xikage.mythicmobs.MythicMobs")
+        Bukkit.getPluginManager().getPlugin("MythicMobs") != null
+    }
+
+    private val version by unsafeLazy {
+        Bukkit.getPluginManager().getPlugin("MythicMobs")!!.description.version.split(".").map { it.cint }
+    }
+
+    init {
+        registerLifeCycleTask(LifeCycle.ENABLE) {
+            if (isEnable) {
+                if (version[0] == 4) {
+                    MythicMobs.inst().placeholderManager.register("caster.pl.metadata", Placeholder.meta(object : BiFunction<PlaceholderMeta,String,String> {
+
+                        override fun apply(metadata: PlaceholderMeta, args: String): String {
+                            val adaptTarget = adaptTarget<TargetEntity<*>>(metadata.caster.entity)
+                            if (adaptTarget !is TargetContainerization) {
+                                return "null"
+                            }
+
+                            return adaptTarget.getMetadata(args).toString();
+                        }
+                    }))
+                }
+                // v5
+                else if (version[0] == 5) {
+                    MythicBukkit.inst().placeholderManager.register("caster.pl.metadata", io.lumine.mythic.core.skills.placeholders.Placeholder.meta(object : BiFunction<io.lumine.mythic.core.skills.placeholders.PlaceholderMeta,String,String> {
+
+                        override fun apply(metadata: io.lumine.mythic.core.skills.placeholders.PlaceholderMeta, args: String): String {
+                            val adaptTarget = adaptTarget<TargetEntity<*>>(metadata.caster.entity)
+                            if (adaptTarget !is TargetContainerization) {
+                                return "null"
+                            }
+
+                            return adaptTarget.getMetadata(args).toString();
+                        }
+                    }))
+                }
+
+            }
+        }
     }
 
     @SubscribeEvent
@@ -24,17 +79,57 @@ object MythicMobDamageHandler {
         info(" isEnable: $isEnable")
         info(" damager: ${e.player}")
         if (isEnable && e.cause == EntityDamageEvent.DamageCause.CUSTOM) {
-            val instance = MythicMobs.inst().mobManager.getMythicMobInstance(e.entity)
-            info(" instance: $instance")
-            if (instance == null) {
-                return
+            // v4
+            if (version[0] == 4) {
+                processThreatUpdateV4(e.player,e.entity,e.damage)
             }
-            if (instance.threatTable == null) {
-                return
+            // v5
+            else if (version[0] == 5) {
+                processThreatUpdateV5(e.player,e.entity,e.damage)
+            } else {
+                info("MythicMobDamageHandler: Unsupported MythicMobs version ${version.joinToString(".")}")
             }
-            instance.threatTable.threatGain(BukkitAdapter.adapt(e.player), e.damage)
-            info("Threat gain: ${e.damage} by ${e.player.name} to ${e.entity.name}")
         }
+    }
+
+    /**
+     * 处理 MythicMob 的威胁更新
+     *
+     * @param attacker 攻击者
+     * @param entity 被攻击的实体
+     * @param damage 伤害值
+     */
+    private fun processThreatUpdateV5(attacker: LivingEntity, entity: Entity, damage: Double) {
+        val instance = MythicBukkit.inst().mobManager.getMythicMobInstance(entity)
+        info(" instance: $instance")
+        if (instance == null) {
+            return
+        }
+        if (instance.threatTable == null) {
+            return
+        }
+        instance.threatTable.threatGain(io.lumine.mythic.bukkit.BukkitAdapter.adapt(attacker), damage)
+        info("Threat gain: ${damage} by ${attacker.name} to ${entity.name}")
+    }
+
+    /**
+     * 处理 MythicMob 的威胁更新
+     *
+     * @param attacker 攻击者
+     * @param entity 被攻击的实体
+     * @param damage 伤害值
+     */
+    private fun processThreatUpdateV4(attacker: LivingEntity,entity: Entity,damage: Double) {
+        val instance = MythicMobs.inst().mobManager.getMythicMobInstance(entity)
+        info(" instance: $instance")
+        if (instance == null) {
+            return
+        }
+        if (instance.threatTable == null) {
+            return
+        }
+        instance.threatTable.threatGain(BukkitAdapter.adapt(attacker), damage)
+        info("Threat gain: ${damage} by ${attacker.name} to ${entity.name}")
     }
 
 }
