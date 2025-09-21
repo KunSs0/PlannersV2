@@ -18,6 +18,7 @@ import taboolib.common.platform.Schedule
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.info
 import taboolib.common.platform.function.submitAsync
+import taboolib.common5.util.startsWithAny
 import taboolib.platform.util.onlinePlayers
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -301,7 +302,11 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     private fun handleMetadataUpdater() {
         onlinePlayers.forEach { player ->
             val template = this.getOrNull(player.uniqueId) ?: return@forEach
-            template.release().forEach { (key, data) ->
+            template.release().forEach inner@{ (key, data) ->
+                // 内置字段不保存
+                if (key.startsWith("__")) {
+                    return@inner
+                }
                 Database.INSTANCE.updateMetadata(template, key, data)
             }
         }

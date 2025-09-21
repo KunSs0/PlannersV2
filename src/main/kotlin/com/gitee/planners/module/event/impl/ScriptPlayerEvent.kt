@@ -3,14 +3,13 @@ package com.gitee.planners.module.event.impl
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.module.event.ScriptBukkitEventWrapped
-import com.gitee.planners.module.event.ScriptEventWrapped
+import com.gitee.planners.module.event.ScriptBukkitEventHolder
 import org.bukkit.event.player.AsyncPlayerChatEvent
 import org.bukkit.event.player.PlayerEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import taboolib.module.kether.ScriptContext
 
-abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventWrapped<T> {
+abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() {
 
     override fun getSender(event: T): Target<*>? {
         return event.player.adaptTarget()
@@ -28,7 +27,7 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventWrapped<T> {
 
     }
 
-    object Joined : ScriptBukkitEventWrapped<PlayerProfileLoadedEvent> {
+    object Joined : ScriptBukkitEventHolder<PlayerProfileLoadedEvent>() {
 
         override val name = "joined"
 

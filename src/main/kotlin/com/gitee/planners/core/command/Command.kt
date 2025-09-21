@@ -3,9 +3,9 @@ package com.gitee.planners.core.command
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
+import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
-import com.gitee.planners.module.kether.selector.RectangleBody
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
@@ -31,12 +31,20 @@ object Command {
 
     @CommandBody
     val test = subCommand {
-        execute<Player> { player, context, argument ->
-//            val shapeBlock = RectangleBody.ShapeBlock(10.0, 5.0, 2.0)
-//            shapeBlock.drawTest(player)
-//            shapeBlock.find(player)
+        dynamic("state") {
+            suggest { Registries.STATE.keys().toList() }
 
-            player.sendMessage("Test.")
+            execute<Player> { player, context, argument ->
+                val state = Registries.STATE.getOrNull(argument)
+                if (state == null) {
+                    player.sendMessage("State '$argument' not found.")
+                    return@execute
+                }
+                // 测试添加状态
+                player.adaptTarget().addState(state)
+
+                player.sendMessage("Test.")
+            }
         }
     }
 

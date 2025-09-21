@@ -4,7 +4,7 @@ import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getAnimated
-import com.gitee.planners.module.event.ScriptBukkitEventWrapped
+import com.gitee.planners.module.event.ScriptBukkitEventHolder
 import com.gitee.planners.module.event.animated.DamageEventModifier
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -17,7 +17,7 @@ import taboolib.platform.util.attacker
 import taboolib.platform.util.getMetaFirst
 import taboolib.platform.util.hasMeta
 
-abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventWrapped<T> {
+abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>() {
 
     override fun getSender(event: T): Target<*>? {
         return (event.entity as? Player)?.adaptTarget()

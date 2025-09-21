@@ -24,6 +24,11 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
     /** 是否立即执行 如果为true则忽略async，同步当前线程执行 */
     var now = false
 
+    /**
+     * 调用脚本
+     *
+     * @return 返回值
+     */
     override fun call(): CompletableFuture<Any> {
 
         val future = CompletableFuture<Any>()
@@ -36,6 +41,12 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
         return future
     }
 
+    /**
+     * 调用脚本区块
+     *
+     * @param block 脚本区块
+     * @param func 脚本选项
+     */
     open fun call(block: Quest.Block, func: ScriptOptions.ScriptOptionsBuilder.() -> Unit = { }) {
         submit(async = async, now = now) {
             platform.run(
@@ -47,8 +58,15 @@ abstract class AbstractComplexScriptContext(sender: Target<*>, val compiled: Com
         }
     }
 
+    /**
+     * 调用脚本
+     *
+     * @param func 脚本选项
+     */
+    open fun call(func: ScriptOptions.ScriptOptionsBuilder.() -> Unit = { }) = run(this@AbstractComplexScriptContext.optionsBuilder(func))
+
     open fun run(options: KetherScriptOptions): CompletableFuture<Any> {
-        return platform.run(trackId, compiled.compiledScript(), this@AbstractComplexScriptContext.optionsBuilder())
+        return platform.run(trackId, compiled.compiledScript(), options)
     }
 
     open fun optionsBuilder(block: Consumer<ScriptOptions.ScriptOptionsBuilder> = Consumer { }): KetherScriptOptions {

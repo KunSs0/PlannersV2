@@ -1,23 +1,26 @@
 package com.gitee.planners.module.entity.animated
 
 import com.gitee.planners.api.common.metadata.Metadata
+import com.gitee.planners.api.common.metadata.MetadataTypeToken
+import com.gitee.planners.api.common.metadata.createMetadata
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import com.gitee.planners.api.job.target.TargetCommandSender
 import com.gitee.planners.api.job.target.TargetContainerization
 import com.gitee.planners.api.job.target.TargetEntity
+import com.gitee.planners.core.config.State
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import taboolib.common.util.Vector
-import taboolib.module.nms.getI18nName
 import java.util.*
 
 /**
  * Bukkit 实体实例 Animated
  */
-class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntityAnimated<Entity>(),TargetEntity<Entity>,TargetCommandSender<Entity>,TargetContainerization {
+class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntityAnimated<Entity>(),
+    TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
 
     private val proxy = TargetBukkitEntity(instance)
 
@@ -31,6 +34,18 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
 
     override fun getBukkitEyeLocation(): Location {
         return proxy.getBukkitEyeLocation()
+    }
+
+    override fun hasState(state: State): Boolean {
+        return proxy.hasState(state)
+    }
+
+    override fun addState(state: State) {
+        return proxy.addState(state)
+    }
+
+    override fun removeState(state: State) {
+        return proxy.removeState(state)
     }
 
     override fun getWorld(): String {

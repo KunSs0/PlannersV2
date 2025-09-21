@@ -63,7 +63,6 @@ object ActionAttributePlusAttack : SimpleKetherParser("ap-attack") {
                             if (sender == entity) {
                                 return@forEach
                             }
-
                             if (entity is LivingEntity) {
                                 val env =
                                     EntityDamageByEntityEvent(sender, entity, EntityDamageEvent.DamageCause.CUSTOM, 0.0)

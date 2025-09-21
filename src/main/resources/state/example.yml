@@ -1,0 +1,14 @@
+state0:
+  priority: 0
+  name: "眩晕"
+  trigger:
+    chat:
+      action: |-
+        tell "chat"
+        state detach ~
+    "state-attach":
+      action: |-
+        tell "我被眩晕了"
+    "state-detach":
+      action: |-
+        tell "我已解除眩晕!"

@@ -1,9 +1,6 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.core.config.ImmutableJob
-import com.gitee.planners.core.config.ImmutableKeyBinding
-import com.gitee.planners.core.config.ImmutableRouter
-import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.core.config.*
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
 import com.gitee.planners.util.builtin.AutoReloadable
@@ -41,6 +38,10 @@ object Registries {
 
     val KEYBINDING = createSingleMultiBuiltin("key-binding.yml") {
         ImmutableKeyBinding(it)
+    }
+
+    val STATE = createDeepMultiBuiltin("state", "example.yml") {
+        ImmutableState(it)
     }
 
     fun handleReload() {

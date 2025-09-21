@@ -2,7 +2,7 @@ import io.izzel.taboolib.gradle.*
 
 plugins {
     java
-    id("io.izzel.taboolib") version "2.0.23"
+    id("io.izzel.taboolib") version "2.0.27"
     id("org.jetbrains.kotlin.jvm") version "1.8.22"
 }
 
@@ -25,7 +25,7 @@ taboolib {
         install(BukkitFakeOp)
     }
 
-    version { taboolib = "6.2.3" }
+    version { taboolib = "6.2.3-e102d76" }
 
     relocate("ink.ptms.um", "com.gitee.module.um")
 }
