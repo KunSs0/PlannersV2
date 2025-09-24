@@ -10,7 +10,7 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
     object Attach : ScriptEntityState<EntityStateEvent.Attach.Post>() {
 
-        override val name: String = "state-attach"
+        override val name: String = "state attach"
 
         override val bind: Class<EntityStateEvent.Attach.Post> = EntityStateEvent.Attach.Post::class.java
 
@@ -22,7 +22,7 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
     object Detach : ScriptEntityState<EntityStateEvent.Detach.Post>() {
 
-        override val name: String = "state-detach"
+        override val name: String = "state detach"
 
         override val bind: Class<EntityStateEvent.Detach.Post> = EntityStateEvent.Detach.Post::class.java
 

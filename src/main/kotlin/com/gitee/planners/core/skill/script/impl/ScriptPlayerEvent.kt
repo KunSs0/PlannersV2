@@ -1,6 +1,7 @@
 package com.gitee.planners.core.skill.script.impl
 
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
+import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
@@ -114,6 +115,19 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() 
         override val name: String = "player toggle sneak"
 
         override val bind: Class<PlayerToggleSprintEvent> = PlayerToggleSprintEvent::class.java
+
+    }
+
+    // 玩家释放技能
+    object CastSkill: ScriptBukkitEventHolder<PlayerSkillCastEvent.Post>() {
+
+        override val name: String = "player cast skill"
+
+        override val bind: Class<PlayerSkillCastEvent.Post> = PlayerSkillCastEvent.Post::class.java
+
+        override fun getSender(event: PlayerSkillCastEvent.Post): Target<*>? {
+            return adaptTarget(event.player)
+        }
 
     }
 
