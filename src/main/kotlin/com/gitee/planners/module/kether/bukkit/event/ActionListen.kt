@@ -3,8 +3,8 @@ package com.gitee.planners.module.kether.bukkit.event
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
-import com.gitee.planners.module.event.ScriptCallback
-import com.gitee.planners.module.event.ScriptEventLoader
+import com.gitee.planners.core.skill.script.ScriptCallback
+import com.gitee.planners.core.skill.script.ScriptEventLoader
 import com.gitee.planners.module.kether.commandBool
 import com.gitee.planners.module.kether.commandEnum
 import com.gitee.planners.module.kether.context.AbstractComplexScriptContext

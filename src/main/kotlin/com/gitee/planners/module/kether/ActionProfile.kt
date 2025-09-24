@@ -7,8 +7,8 @@ import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.Target.Companion.cast
 import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.module.magic.MagicPoint.magicPoint
-import com.gitee.planners.module.magic.MagicPoint.magicPointInUpperLimit
+import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
+import com.gitee.planners.core.player.magic.MagicPoint.magicPointInUpperLimit
 import org.bukkit.entity.Player
 import java.util.Optional
 

@@ -3,9 +3,9 @@ package com.gitee.planners.module.kether.bukkit.event
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
-import com.gitee.planners.module.event.ScriptBukkitEventHolder.Companion.getWrappedEvent
-import com.gitee.planners.module.event.animated.AbstractCancellableEvent
-import com.gitee.planners.module.event.animated.DamageEventModifier
+import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder.Companion.getWrappedEvent
+import com.gitee.planners.core.skill.script.animated.AbstractCancellableEvent
+import com.gitee.planners.core.skill.script.animated.DamageEventModifier
 
 @CombinationKetherParser.Used
 object ActionEvent : MultipleKetherParser("event") {

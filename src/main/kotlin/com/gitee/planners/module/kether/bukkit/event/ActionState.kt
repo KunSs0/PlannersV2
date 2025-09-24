@@ -7,8 +7,6 @@ import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.api.job.target.TargetEntity
 import com.gitee.planners.core.config.State
-import com.gitee.planners.module.event.ScriptBukkitEventHolder.Companion.getWrappedEvent
-import com.gitee.planners.module.event.animated.AbstractEventModifier
 import com.gitee.planners.module.kether.commandObjectiveOrSender
 import taboolib.common.PrimitiveIO.warning
 import taboolib.module.kether.ScriptFrame

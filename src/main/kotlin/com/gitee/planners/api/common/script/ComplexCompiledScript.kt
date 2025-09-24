@@ -1,6 +1,6 @@
 package com.gitee.planners.api.common.script
 
-import com.gitee.planners.module.event.ScriptEventLoader
+import com.gitee.planners.core.skill.script.ScriptEventLoader
 import taboolib.library.kether.Quest
 import taboolib.module.kether.*
 import taboolib.module.kether.Script

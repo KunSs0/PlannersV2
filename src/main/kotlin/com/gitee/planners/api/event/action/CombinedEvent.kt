@@ -1,8 +1,8 @@
 package com.gitee.planners.api.event.action
 
-import com.gitee.planners.module.binding.Combined
-import com.gitee.planners.module.binding.CombinedAnalyzer
-import com.gitee.planners.module.binding.InteractionAction
+import com.gitee.planners.core.skill.binding.Combined
+import com.gitee.planners.core.skill.binding.CombinedAnalyzer
+import com.gitee.planners.core.skill.binding.InteractionAction
 import org.bukkit.entity.Player
 import taboolib.platform.type.BukkitProxyEvent
 
