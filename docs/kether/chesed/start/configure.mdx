@@ -1,0 +1,107 @@
+---
+sidebar_position: 4
+---
+
+# 配置插件
+若插件成功安装，你将会在服务端插件目录下看到一个名为 `Aiyatsbus` 的目录，其结构如下。
+```
+Chesed
+├── config.yml ················· 主要配置文件
+├── gems.yml ··················· 辅助道具配置文件
+├── lang ······················· 语言文件
+│   └── zh_CN.yml
+└── ui ························· 页面配置
+    ├── gem.yml ················ 辅助道具显示与获取页面配置
+    └── separator.yml ·········· 卸魔台页面配置
+```
+
+## 主要配置文件
+打开主要配置文件 `config.yml` 后，你将看到如下内容：
+```yaml
+Settings:
+  # 拥有该权限的玩家才能附魔, 留空为不限制
+  permission: "chesed.use"
+  # 符文设定
+  gem:
+    # 是否可在铁砧中修改
+    # 即便允许修改, 在菜单中上传符文再返还的话, 返回的也是修改之前的
+    modifiable: false
+    # 自定义 NBT 节点名称
+    # 插件会向宝石的物品里插入一条 NBT 数据, 值为宝石的 ID
+    # 这样来实现宝石的判定
+    # 你可以改为 EnchantSeparator 的 NBT 节点名 deenchant_assist 来兼容旧插件宝石数据
+    nbt: "chesed_gem"
+  # 插件菜单设定
+  menu:
+    # 是否使用虚拟化, 也就是发包界面, 默认为 false 也就是关闭
+    # 1.20.5 及以上版本不支持虚拟化界面, 开了也没用
+    virtualize: false
+  # 解析规则
+  rule:
+    # 每次解析物品的前几个附魔, 只有解析到的附魔可以卸魔
+    amount: 2
+    level:
+      # 是否开启按照等级排序
+      enable: true
+      # 是否由等级从低到高排序? 反之则为从高到低排序
+      from-low: true
+    rarity:
+      # 是否按照附魔稀有度排序?
+      # 目前支持真更多附魔插件, 例如 Aiyatsbus, NereusOpus, EcoEnchants
+      # 不支持 AdvancedEnchantments 这类附魔插件
+      enable: false
+  # 规定一些卸魔台
+  # 点击对应坐标的方块即可打开卸魔台, 无需脚本方块插件
+  separators:
+    - "world_name~1,1,1"
+  # 卸魔相关设定
+  deenchant:
+    # 基本机制
+    mechanisms:
+      # 成功率
+      # order 代表一次性解析中的第几个附魔
+      # 默认公式代表, 解析的第一个附魔成功率为 90%, 第二个为 80%, 依次递减
+      success-rate: "100-10*{order}"
+      # 卸魔完毕后得到的书本上的附魔对应等级
+      # 默认公示代表, 例如你剑上有锋利 5 附魔, 卸魔成功之后将会得到锋利 4 附魔书
+      level: "{level}-1"
+    # 禁止卸魔的附魔列表, 以下列举了两种形式
+    # ID: 附魔的 Key, 例如锋利为 sharpness, 立方为 blast_mining
+    # 该 ID 一般都能在更多附魔插件中看到
+    blacklist: [ ]
+#     - "ID:等级"
+#     - "ID"
+    # 卸魔代价
+    # 以下公式中, level 代表拆卸前等级, maxLevel 代表附魔最大等级, order 代表一次性解析中的第几个附魔
+    price:
+      # 经验等级
+      exp-level:
+        enable: true
+        # 具体花费公式
+        cost: "30*({level}/{maxLevel})*{order}"
+      vault:
+        enable: false
+        cost: "3000*({level}/{maxLevel})*{order}"
+      player-points:
+        enable: false
+        cost: "3000*({level}/{maxLevel})*{order}"
+    # 特权设定
+    privilege:
+      # 如果拥有该权限, 卸魔后书本附魔的等级将维持卸魔前原等级, 不受公式影响
+      keep-level: "chesed.keep-level"
+      # 成功率增幅器, 默认的是 ×110% 和 ×125%
+      success-rate:
+        - "chesed.rate.110:{value}*1.1"
+        - "chesed.rate.125:{value}*1.25"
+      # 卸魔代价折扣器, 默认的是 ×90% 和 ×75%
+      discount:
+        - "chesed.discount.90:{value}*0.9"
+        - "chesed.discount.75:{value}*0.75"
+      # 一次性更多的附魔解析数量, 默认的是 +1 和 +2
+      analyze-amount:
+        - "chesed.analyze.1:{value}+1"
+        - "chesed.analyze.2:{value}+2"
+```
+
+这里有个配置需要解释一下:
+- 特权设定。成功率增幅、卸魔代价折扣以及更多的附魔解析数量，其配置都是 `权限:公式`，中间用英文冒号分割。

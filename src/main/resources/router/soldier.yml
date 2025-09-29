@@ -20,7 +20,9 @@ __option__:
 
 swordsman:
   # 分支 可以多分支转职
-  branch: blade-master
+  branch:
+    - blade-master
+    - grand-master
 
 blade-master:
   branch: grand-master

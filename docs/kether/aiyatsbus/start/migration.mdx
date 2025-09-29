@@ -1,0 +1,27 @@
+---
+sidebar_position: 999
+---
+
+# 数据迁移
+
+你可以从其他插件迁移附魔数据到 Aiyatsbus，但这种操作会有一定的风险。
+
+## EcoEnchants
+
+你需要安装 [AiyatsbusLibreforge](https://github.com/PolarAstrum/aiyatsbus-libreforge) 和 [eco](https://github.com/Auxilor/eco/releases) 才能迁移附魔数据。
+
+启动成功后，将 `plugin/EcoEnchants/enchants` 文件夹下的内容全部复制到 `plugin/AiyatsbusLibreforge/enchantments`，并重启服务器。
+
+随后可以直接加载 EcoEnchants 附魔，插件会自动迁移，您也可以使用 eco 触发器编写新的附魔。
+
+:::tip
+
+EcoEnchants 附魔仅可在 `plugin/AiyatsbusLibreforge/enchantments` 目录下运行。
+
+:::
+
+:::caution
+
+截止到 `2025/2/15`，目前完全不可以迁移 `repairing`、`replenish`、`soulbound` 这三个附魔，同样不能迁移的 `permanence_curse` 附魔在 Aiyatsbus 默认附魔包中有替代。
+
+:::

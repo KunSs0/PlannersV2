@@ -1,0 +1,84 @@
+---
+sidebar_position: 1
+---
+
+# 安装 Git
+
+:::tip
+
+如果你是付费用户，那么可以跳过这一步。
+
+:::
+
+Git 是一个分布式版本控制系统，广泛用于软件开发和项目管理。本指南将帮助您在不同操作系统上安装 Git。
+
+```
+本文档由 Claude 生成。
+```
+
+## Windows 安装
+
+1. 访问 Git 官方网站：https://git-scm.com/download/win
+2. 下载适合您系统的安装程序（32 位或 64 位）。
+3. 运行下载的安装程序，按照安装向导的提示进行操作。
+4. 在安装过程中，建议保留默认选项，除非您有特殊需求。
+5. 安装完成后，打开命令提示符或 PowerShell，输入 `git --version` 来验证安装是否成功。
+
+## macOS 安装
+
+1. 安装 Homebrew（如果尚未安装）：
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+2. 使用 Homebrew 安装 Git：
+   ```bash
+   brew install git
+   ```
+3. 安装完成后，在终端中输入 `git --version` 来验证安装是否成功。
+
+## Linux 安装
+
+对于大多数 Linux 发行版，您可以使用包管理器来安装 Git。
+
+### Ubuntu 或 Debian
+
+```bash
+sudo apt update
+sudo apt install git
+```
+
+### Fedora
+
+```bash
+sudo dnf install git
+```
+
+### CentOS 或 RHEL
+
+```bash
+sudo yum install git
+```
+
+安装完成后，在终端中输入 `git --version` 来验证安装是否成功。
+
+## 配置 Git
+
+安装完 Git 后，建议进行一些基本配置：
+
+1. 设置用户名：
+   ```bash
+   git config --global user.name "您的名字"
+   ```
+
+2. 设置邮箱：
+   ```bash
+   git config --global user.email "您的邮箱@example.com"
+   ```
+
+这些设置将用于您的 Git 提交。
+
+## 结语
+
+现在您已经成功安装了 Git，可以开始使用这个强大的版本控制工具了。如果您是 Git 新手，建议阅读官方文档或参加在线教程以熟悉基本概念和命令。
+
+祝您使用 Git 愉快！

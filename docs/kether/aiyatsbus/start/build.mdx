@@ -1,0 +1,67 @@
+---
+sidebar_position: 2
+---
+
+# 构建插件
+
+:::tip
+
+如果你是付费用户，那么可以跳过这一步。
+
+:::
+
+从 [Aiyatsbus 仓库](https://github.com/MCStarrySky/aiyatsbus) 中克隆完整项目在你的工作环境中。
+
+```bash
+git clone --depth=1 https://github.com/MCStarrySky/aiyatsbus
+```
+
+## 构建
+
+```bash title="1. 构建"
+gradlew build
+```
+
+```bash
+Executing 'build'...
+
+> Configure project :
+> Apply "com.mcstarrysky.aiyatsbus:common:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:common-impl:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:module-bukkit:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:module-compat:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:module-ingame:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:module-kether:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:module-language:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:module-nms:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:module-registration:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:nms-common:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:nms-v12005:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:registration-legacy:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:registration-v12004-paper:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:registration-v12004-vanilla:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:registration-v12100-paper:1.0.0"
+> Apply "com.mcstarrysky.aiyatsbus:registration-v12100-vanilla:1.0.0"
+
+> Task :compileKotlin NO-SOURCE
+> Task :compileJava NO-SOURCE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :jar
+> Task :taboolibMainTask
+> Task :assemble
+> Task :compileTestKotlin NO-SOURCE
+> Task :compileTestJava NO-SOURCE
+> Task :processTestResources NO-SOURCE
+> Task :testClasses UP-TO-DATE
+> Task :test NO-SOURCE
+> Task :check UP-TO-DATE
+> Task :build
+
+...
+
+BUILD SUCCESSFUL in 7s
+73 actionable tasks: 23 executed, 50 up-to-date
+```
+
+在这之后，插件文件位于 `plugin/build/libs/Aiyatsbus-1.0.0.jar`。

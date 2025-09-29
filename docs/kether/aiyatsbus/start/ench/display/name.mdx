@@ -1,0 +1,28 @@
+---
+sidebar_position: 2
+---
+
+# 前后缀
+
+这部分内容涉及附魔名称的前后缀配置。
+
+```yaml
+display:
+  format:
+    previous: "{default_previous}  &7{是否充能完毕}(&e{当前累计}&7/&a{击杀累计}&7)"
+    subsequent: "\n描述: &7{description}"
+```
+
+## 前缀
+
+即 `previous`、默认不填为 `{default_previous}`，即 **附魔展示配置** 中配置的前缀，也就是名称和等级。
+
+## 后缀
+
+即 `subsequent`，默认为 `{default_subsequent}`，即另起一行写描述。
+
+:::tip
+
+可使用 `\n` 进行换行。
+
+:::

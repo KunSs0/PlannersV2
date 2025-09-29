@@ -1,0 +1,23 @@
+---
+sidebar_position: 999
+---
+
+# 数据迁移
+
+你可以从 EnchantSeparator 迁移数据到 Chesed。
+
+## 如何进行迁移？
+- 关闭服务器，删除 EnchantSeparator 但保留数据文件夹。安装 Chesed 后启动服务器。
+- 输入 /chesed migrate 命令即可迁移，您之前的辅助道具配置、配置文件配置等全都会直接迁移过来。
+
+## 注意
+- 新版本插件命令是 /chesed，输入这个即可查看命令详情
+- 以前的老命令 /es gui 和 /es deenchant 依旧可用，暂时没有给予辅助道具的命令，请等待下个版本
+
+## 备注
+/es deenchant 这个命令不再是玩家默认拥有的权限了，请给予以下两个权限：
+```yaml
+chesed.command
+chesed.command.menu
+```
+如果您还需要给予玩家其他子命令权限，就是：chesed.command.子命令名

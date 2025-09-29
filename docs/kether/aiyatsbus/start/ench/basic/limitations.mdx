@@ -1,0 +1,37 @@
+---
+sidebar_position: 6
+---
+
+# 限制配置
+
+这部分内容涉及附魔的限制配置。
+
+```yaml
+limitations:
+  - "CONFLICT_ENCHANT:脉络"
+```
+
+附魔的限制配置是一个 `List`，其中每一行为一条限制。一条限制由 **冒号** 分割，冒号左面为限制类型，右面为限制内容。
+
+## 限制类型
+
+| 节点            | 描述                       | 示例                    |
+|-----------------|----------------------------|------------------------|
+| `TARGET`        | 附魔对象要求，如锋利只能应用于斧、剑 | `TARGET` |
+| `MAX_CAPABILITY`| 限制词条数，如一把剑最多有 `12` 个附魔（默认）           | `MAX_CAPABILITY` |
+| `DISABLE_WORLD` | 世界限制，如 `world_the_end` | `DISABLE_WORLD` |
+| `SLOT` | 槽位限制，如 `HAND` | `SLOT` |
+| `PAPI_EXPRESSION`            | Papi 表达式限制 | `PAPI_EXPRESSION:%player_level% >= 30` |
+| `PERMISSION`    | 权限限制，必须拥有某个权限才可使用 | `PERMISSION:aiyatsbus.use` |
+| `CONFLICT_ENCHANT` | 冲突附魔，如 `锋利`。填写 `*` 则与全部附魔都冲突 | `CONFLICT_ENCHANT:锋利` |
+| `CONFLICT_GROUP` | 冲突附魔组 | `CONFLICT_ENCHANT:原版增伤类附魔` |
+| `DEPENDENCE_ENCHANT` | 依赖附魔 | `DEPENDENCE_ENCHANT:锋利` |
+| `DEPENDENCE_GROUP` | 依赖附魔组 | `DEPENDENCE_GROUP:原版增伤类附魔` |
+
+默认情况下，不管用户是否配置，我们都会检测 `TARGET`、`MAX_CAPABILITY`、`DISABLE_WORLD`、`SLOT` 这四个限制条件，所以无需配置这四个。
+
+:::tip
+
+即便配置了，插件也不会读取这四个限制条件的配置值。
+
+:::

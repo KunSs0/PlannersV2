@@ -1,0 +1,74 @@
+---
+sidebar_position: 1
+---
+
+# 安装 Gradle
+
+:::tip
+
+如果你是付费用户，那么可以跳过这一步。
+
+:::
+
+Gradle 是一个强大的构建工具，广泛应用于 Java、Kotlin 等项目的构建和依赖管理。它提供了灵活的配置方式和高效的构建性能，使得项目管理变得更加简单和高效。
+
+```
+本文档由 Claude 生成。
+```
+
+## 安装步骤
+
+### 1. 检查 Java 环境
+
+在安装 Gradle 之前，请确保您的系统已经安装了 Java Development Kit（JDK）。Gradle 需要 JDK 8 或更高版本。
+
+可以通过在终端中运行以下命令来检查 Java 版本：
+
+```bash
+java -version
+```
+
+### 2. 下载 Gradle
+
+访问 Gradle 官方网站（https://gradle.org/releases/），选择并下载最新版本的 Gradle 二进制发行版。
+
+### 3. 解压文件
+
+将下载的 ZIP 文件解压到您选择的目录中。例如：
+
+- Windows：`C:\Gradle\`
+- macOS/Linux：`/opt/gradle/`
+
+### 4. 配置环境变量
+
+将 Gradle 的 bin 目录添加到系统的 PATH 环境变量中：
+
+- Windows：
+  1. 右键点击"此电脑"，选择"属性"
+  2. 点击"高级系统设置"
+  3. 点击"环境变量"
+  4. 在"系统变量"中找到 PATH，点击"编辑"
+  5. 添加 Gradle bin 目录路径（如 `C:\Gradle\gradle-x.x\bin`）
+
+- macOS/Linux：
+  在 `~/.bash_profile` 或 `~/.zshrc` 文件中添加以下行：
+  ```bash
+  export PATH=$PATH:/opt/gradle/gradle-x.x/bin
+  ```
+
+### 5. 验证安装
+
+重新打开终端，运行以下命令验证 Gradle 是否安装成功：
+
+```bash
+gradle -v
+```
+
+
+如果安装成功，您将看到 Gradle 的版本信息。
+
+## 结语
+
+恭喜您已成功安装 Gradle！现在您可以开始使用这个强大的构建工具来管理您的项目了。如果在安装过程中遇到任何问题，请查阅 Gradle 官方文档或寻求社区帮助。
+
+祝您使用愉快！

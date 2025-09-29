@@ -1,0 +1,50 @@
+---
+sidebar_position: 1
+---
+
+# 变量配置
+
+这部分内容涉及附魔的变量配置，示例如下：
+
+```yaml
+variables:
+  leveled:
+    伤害增加百分比: "%:15.0*{level}"
+    比例:
+      1: 50
+      2: 67
+      3: 75
+      unit: "%"
+  player_related:
+    逆天变量: "%player_level%*999"
+  modifiable:
+    当前累计: test_current_total=0
+    是否充能完毕: (NBT)can_discharge=充能中
+  ordinary:
+    require-full-charge: true
+```
+
+:::tip
+
+上面这个是我瞎凑的，不要直接用，只是作为示例参考。
+
+:::
+
+## 节点介绍
+
+附魔的变量总共分为四种类型。
+
+| 节点  |  英文名           | 描述                       |
+|-----------------|-----------|-----------------|
+| 等级相关 | `leveled`        | 与等级强相关，可通过附魔等级计算数值                   |
+| 玩家相关 | `player_related`| 与玩家强相关，可使用 PlaceholderAPI 变量计算数值           |
+| 物品相关 | `modifiable`            | 与物品强相关，可读写物品 NBT/PDC 数据实现成长型附魔 |
+| 常量 | `ordinary`          | 不变的参数，一般情况可视作附魔配置或功能开关配置                    |
+
+:::tip
+
+除 **等级** 变量外，其他变量之间无法相互计算。
+
+:::
+
+详见子页面。
