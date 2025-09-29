@@ -10,7 +10,7 @@ interface Builtin<T, V> {
 
     fun getOrNull(key: T): V?
 
-    fun remove(key: T): V
+    fun remove(key: T): V?
 
     fun keys(): Set<T>
 

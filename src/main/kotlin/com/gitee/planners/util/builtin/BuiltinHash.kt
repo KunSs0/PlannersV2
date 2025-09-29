@@ -12,8 +12,8 @@ open class BuiltinHash<T, V> : Builtin<T, V> {
         return map[key]
     }
 
-    override fun remove(key: T): V {
-        return map.remove(key)!!
+    override fun remove(key: T): V? {
+        return map.remove(key)
     }
 
     override fun keys(): Set<T> {

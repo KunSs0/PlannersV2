@@ -5,15 +5,15 @@ import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.TargetContainer
-import com.gitee.planners.module.entity.animated.BukkitEntityBuilder
-import com.gitee.planners.module.entity.animated.BukkitProjectileBuilder
+import com.gitee.planners.core.skill.entity.animated.BukkitEntityBuilder
+import com.gitee.planners.core.skill.entity.animated.BukkitProjectileBuilder
 import com.gitee.planners.module.kether.context.AbstractComplexScriptContext
 import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getAnimated
 import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getCasterContext
 import com.gitee.planners.module.kether.bukkit.ActionBukkitEntityBuilder.getCasterTarget
 import com.gitee.planners.module.kether.commandFloat
 import com.gitee.planners.module.kether.enum
-import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
+import com.gitee.planners.core.skill.entity.animated.event.AnimatedEntityEvent
 import org.bukkit.event.entity.ProjectileHitEvent
 import taboolib.common.platform.event.SubscribeEvent
 

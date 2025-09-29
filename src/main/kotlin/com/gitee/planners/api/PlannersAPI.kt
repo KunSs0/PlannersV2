@@ -11,7 +11,7 @@ import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.module.kether.context.ImmutableSkillContext
-import com.gitee.planners.module.magic.MagicPoint.magicPoint
+import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
 import org.bukkit.entity.Player
 import java.util.concurrent.CompletableFuture
 

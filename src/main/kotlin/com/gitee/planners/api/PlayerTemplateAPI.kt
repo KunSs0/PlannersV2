@@ -9,14 +9,16 @@ import com.gitee.planners.core.database.Database
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerSkill
-import com.gitee.planners.module.magic.MagicPoint.magicPoint
-import com.gitee.planners.module.magic.MagicPoint.magicPointInUpperLimit
+import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
+import com.gitee.planners.core.player.magic.MagicPoint.magicPointInUpperLimit
 import com.gitee.planners.util.builtin.MutableRegistryInMap
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerJoinEvent
 import taboolib.common.platform.Schedule
 import taboolib.common.platform.event.SubscribeEvent
+import taboolib.common.platform.function.info
 import taboolib.common.platform.function.submitAsync
+import taboolib.common5.util.startsWithAny
 import taboolib.platform.util.onlinePlayers
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -53,6 +55,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         return CompletableFuture.completedFuture(null)
     }
 
+    /**
+     * 添加魔法点数
+     *
+     * @param player 玩家
+     * @param amount 增加的魔法点数
+     */
     fun addMagicPoint(player: Player, amount: Int) {
         val event = PlayerMagicPointEvent.Increase(player.plannersTemplate, amount)
         if (event.call()) {
@@ -60,6 +68,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 减少魔法点数
+     *
+     * @param player 玩家
+     * @param amount 减少的魔法点数
+     */
     fun takeMagicPoint(player: Player, amount: Int) {
         val event = PlayerMagicPointEvent.Decrease(player.plannersTemplate, amount)
         if (event.call()) {
@@ -67,6 +81,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 设置魔法点数
+     *
+     * @param player 玩家
+     * @param to 目标魔法点数
+     */
     fun setMagicPoint(player: Player, to: Int) {
         val event = PlayerMagicPointEvent.Set(player.plannersTemplate, to)
         if (event.call()) {
@@ -74,30 +94,71 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 重置魔法点数
+     *
+     * @param player 玩家
+     */
     fun resetMagicPoint(player: Player) {
         setMagicPoint(player, player.plannersTemplate.magicPointInUpperLimit)
     }
 
+    /**
+     * 添加玩家等级
+     *
+     * @param player 玩家
+     * @param amount 增加的等级
+     */
     fun addLevel(player: Player, amount: Int) {
         addLevel(player.plannersTemplate, amount)
     }
 
+    /**
+     * 设置玩家等级
+     *
+     * @param player 玩家
+     * @param to 目标等级
+     */
     fun setLevel(player: Player, to: Int) {
         setLevel(player.plannersTemplate, to)
     }
 
+    /**
+     * 添加玩家经验
+     *
+     * @param player 玩家
+     * @param amount 增加的经验值
+     */
     fun addExperience(player: Player, amount: Int) {
         addExperience(player.plannersTemplate, amount)
     }
 
+    /**
+     * 设置玩家经验
+     *
+     * @param player 玩家
+     * @param value 目标经验值
+     */
     fun setExperience(player: Player, value: Int) {
         setExperience(player.plannersTemplate, value)
     }
 
+    /**
+     * 减少玩家经验
+     *
+     * @param player 玩家
+     * @param amount 减少的经验值
+     */
     fun takeExperience(player: Player, amount: Int) {
         takeExperience(player.plannersTemplate, amount)
     }
 
+    /**
+     * 添加玩家等级
+     *
+     * @param template 玩家模板
+     * @param amount 增加的等级
+     */
     fun addLevel(template: PlayerTemplate, amount: Int) {
         val event = PlayerLevelChangeEvent(template, template.level, template.level + amount)
         if (event.call()) {
@@ -105,6 +166,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 设置玩家等级
+     *
+     * @param template 玩家模板
+     * @param to 目标等级
+     */
     fun setLevel(template: PlayerTemplate, to: Int) {
         val event = PlayerLevelChangeEvent(template, template.level, to)
         if (event.call()) {
@@ -112,6 +179,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 添加玩家经验
+     *
+     * @param template 玩家模板
+     * @param amount 增加的经验值
+     */
     fun addExperience(template: PlayerTemplate, amount: Int) {
         val event = PlayerExperienceEvent.Increment(template, amount)
         if (event.call()) {
@@ -125,6 +198,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 设置玩家经验
+     *
+     * @param template 玩家模板
+     * @param value 目标经验值
+     */
     fun setExperience(template: PlayerTemplate, value: Int) {
         val event = PlayerExperienceEvent.Set(template, value)
         if (event.call()) {
@@ -133,6 +212,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 减少玩家经验
+     *
+     * @param template 玩家模板
+     * @param amount 减少的经验值
+     */
     fun takeExperience(template: PlayerTemplate, amount: Int) {
         val event = PlayerExperienceEvent.Decrement(template, amount)
         if (event.call()) {
@@ -146,12 +231,26 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         }
     }
 
+    /**
+     * 设置技能等级
+     *
+     * @param template 玩家模板
+     * @param skill 技能
+     * @param to 目标等级
+     */
     fun setSkillLevel(template: PlayerTemplate, skill: PlayerSkill, to: Int) {
         if (PlayerSkillEvent.LevelChange(template, skill, skill.level, to).call()) {
             skill.level = to
         }
     }
 
+    /**
+     * 设置技能绑定
+     *
+     * @param template 玩家模板
+     * @param skill 技能
+     * @param binding 快捷键绑定
+     */
     fun setSkillBinding(template: PlayerTemplate, skill: PlayerSkill, binding: KeyBinding?) {
         PlayerSkillEvent.BindingChange(template, skill, binding).call()
         // 如果 binding 为 null 代表解绑
@@ -179,6 +278,7 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
 //                 更新到玩家默认技能实例
                 template.executeUpdatedDefaultSkill().thenAccept {
                     this@PlayerTemplateAPI[e.player.uniqueId] = template
+                    info("Loaded player profile for ${e.player.name} (${e.player.uniqueId})")
                     PlayerProfileLoadedEvent(template).call()
                 }
             }
@@ -202,7 +302,11 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     private fun handleMetadataUpdater() {
         onlinePlayers.forEach { player ->
             val template = this.getOrNull(player.uniqueId) ?: return@forEach
-            template.release().forEach { (key, data) ->
+            template.release().forEach inner@{ (key, data) ->
+                // 内置字段不保存
+                if (key.startsWith("__")) {
+                    return@inner
+                }
                 Database.INSTANCE.updateMetadata(template, key, data)
             }
         }

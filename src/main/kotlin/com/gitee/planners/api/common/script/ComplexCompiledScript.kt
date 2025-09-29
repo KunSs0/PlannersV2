@@ -1,7 +1,6 @@
 package com.gitee.planners.api.common.script
 
-import com.gitee.planners.api.common.script.kether.KetherHelper
-import com.gitee.planners.module.event.ScriptEventHandler
+import com.gitee.planners.core.skill.script.ScriptEventLoader
 import taboolib.library.kether.Quest
 import taboolib.module.kether.*
 import taboolib.module.kether.Script
@@ -28,7 +27,7 @@ interface ComplexCompiledScript {
                 complex.parseKetherScript(namespaces())
             }!!
             platform().getCache().scriptMap[source()] = quest
-            ScriptEventHandler.registerListenerForScript(this@ComplexCompiledScript)
+            ScriptEventLoader.registerListener(this@ComplexCompiledScript)
             return quest
         }
 

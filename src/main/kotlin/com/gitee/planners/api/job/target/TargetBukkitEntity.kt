@@ -5,6 +5,8 @@ import com.gitee.planners.api.common.entity.ProxyBukkitEntity
 import com.gitee.planners.api.common.metadata.EntityMetadataManager
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
+import com.gitee.planners.api.event.entity.EntityStateEvent
+import com.gitee.planners.core.config.State
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
@@ -13,11 +15,13 @@ import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import taboolib.common.util.Vector
+import taboolib.platform.util.*
 import java.util.*
 
 class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>,
     TargetContainerization {
 
+    private val stateMap = mutableMapOf<String, State>()
 
     override fun getUniqueId(): UUID {
         return instance.uniqueId
@@ -95,6 +99,41 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
 
     override fun setMetadata(id: String, data: Metadata) {
         getMetadataContainer()[id] = data
+    }
+
+
+    override fun hasState(state: State): Boolean {
+        if (state.isStatic) {
+            return true
+        }
+
+        val metadataValue = this.instance.getMetaFirstOrNull("pl.state.${state.id}")
+        if (metadataValue == null) {
+            return false
+        }
+
+        return metadataValue.asBoolean()
+    }
+
+    override fun addState(state: State) {
+        if (hasState(state)) {
+            return
+        }
+        if (EntityStateEvent.Attach.Pre(this,state).call()) {
+            this.instance.setMeta("pl.state.${state.id}", true)
+            EntityStateEvent.Attach.Post(this,state).call()
+        }
+
+    }
+
+    override fun removeState(state: State) {
+        if (state.isStatic || !hasState(state)) {
+            return
+        }
+        if (EntityStateEvent.Detach.Pre(this,state).call()) {
+            this.instance.removeMeta("pl.state.${state.id}")
+            EntityStateEvent.Detach.Post(this,state).call()
+        }
     }
 
     override fun toString(): String {

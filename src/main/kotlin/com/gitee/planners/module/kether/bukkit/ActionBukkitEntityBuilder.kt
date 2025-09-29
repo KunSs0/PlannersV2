@@ -15,11 +15,11 @@ import com.gitee.planners.module.kether.context.Context
 import com.gitee.planners.api.job.target.*
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.module.kether.*
-import com.gitee.planners.module.entity.animated.AbstractBukkitEntityAnimated
-import com.gitee.planners.module.entity.animated.BukkitEntityBuilder
-import com.gitee.planners.module.entity.animated.BukkitEntityInstance
-import com.gitee.planners.module.entity.animated.EntitySpawner
-import com.gitee.planners.module.entity.animated.event.AnimatedEntityEvent
+import com.gitee.planners.core.skill.entity.animated.AbstractBukkitEntityAnimated
+import com.gitee.planners.core.skill.entity.animated.BukkitEntityBuilder
+import com.gitee.planners.core.skill.entity.animated.BukkitEntityInstance
+import com.gitee.planners.core.skill.entity.animated.EntitySpawner
+import com.gitee.planners.core.skill.entity.animated.event.AnimatedEntityEvent
 import com.gitee.planners.util.syncing
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
@@ -152,7 +152,7 @@ object ActionBukkitEntityBuilder : MultipleKetherParser("entity") {
         return BukkitEntityInstance(entity)
     }
 
-    fun invokeEntitySpawn(spawner: EntitySpawner,target: Target<*>): Entity {
+    fun invokeEntitySpawn(spawner: EntitySpawner, target: Target<*>): Entity {
         val entity = spawner.create(target)
 
         // 如果是animated的话 就设置meta

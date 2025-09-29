@@ -30,6 +30,8 @@ interface ComplexScriptPlatform {
 
         val SKILL = DefaultComplexScriptPlatform()
 
+        val STATE = DefaultComplexScriptPlatform()
+
         // 配置重载时 刷新缓存
         @SubscribeEvent
         private fun onReload(e: PluginReloadEvents.Pre) {

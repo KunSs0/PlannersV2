@@ -5,6 +5,7 @@ import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import org.bukkit.entity.Player
 import taboolib.module.kether.ScriptOptions
+import java.util.function.Consumer
 
 interface KetherScriptOptions {
 
@@ -33,6 +34,22 @@ interface KetherScriptOptions {
                 sender(sender.instance)
             }
             namespace(listOf(KetherHelper.NAMESPACE_COMMON))
+        }
+
+        /**
+         * 通用的Kether选项
+         *
+         * @param player 玩家
+         * @param block 选项构建器
+         *
+         * @return Kether选项
+         */
+        fun common(sender: Target<*>,block: Consumer<ScriptOptions.ScriptOptionsBuilder>) = create {
+            if (sender is TargetBukkitEntity && sender.instance is Player) {
+                sender(sender.instance)
+            }
+            namespace(listOf(KetherHelper.NAMESPACE_COMMON))
+            block.accept(this)
         }
 
         /**
