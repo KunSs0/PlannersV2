@@ -9,6 +9,9 @@ import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
+import taboolib.common.util.asList
+import taboolib.common5.cint
+import taboolib.common5.clong
 import taboolib.expansion.createHelper
 
 @CommandHeader("planners", aliases = ["pl", "ps"], permission = "planners.command")
@@ -34,16 +37,20 @@ object Command {
         dynamic("state") {
             suggest { Registries.STATE.keys().toList() }
 
-            execute<Player> { player, context, argument ->
-                val state = Registries.STATE.getOrNull(argument)
-                if (state == null) {
-                    player.sendMessage("State '$argument' not found.")
-                    return@execute
-                }
-                // 测试添加状态
-                player.adaptTarget().addState(state)
+            dynamic("duration") {
+                suggest { listOf(1, 5, 10, 20, 30, 60, 120, 180, 240, 300, 600, 1200, 1800, 2400, 3000, 6000, 12000, 18000, 24000, 30000).asList() }
 
-                player.sendMessage("Test.")
+                execute<Player> { player, context, argument ->
+                    val state = Registries.STATE.getOrNull(context["state"])
+                    if (state == null) {
+                        player.sendMessage("State '$argument' not found.")
+                        return@execute
+                    }
+                    val duration = argument.clong
+                    // 测试添加状态
+                    player.adaptTarget().addState(state,duration, true)
+                    player.sendMessage("Test.")
+                }
             }
         }
     }

@@ -12,7 +12,7 @@ class EntityStateEvent {
      * @param entity 实体
      * @param state 状态
      */
-    abstract class Attach(val entity: Target<*>, val state: State): BukkitProxyEvent() {
+    abstract class Attach(val entity: Target<*>, val state: State) : BukkitProxyEvent() {
 
         class Pre(entity: Target<*>, state: State) : Attach(entity, state)
 
@@ -20,9 +20,7 @@ class EntityStateEvent {
 
             override val allowCancelled: Boolean
                 get() = false
-
         }
-
     }
 
     /**
@@ -31,7 +29,7 @@ class EntityStateEvent {
      * @param entity 实体
      * @param state 状态
      */
-    abstract class Detach(val entity: Target<*>, val state: State): BukkitProxyEvent() {
+    abstract class Detach(val entity: Target<*>, val state: State) : BukkitProxyEvent() {
 
         class Pre(entity: Target<*>, state: State) : Detach(entity, state)
 
@@ -39,9 +37,18 @@ class EntityStateEvent {
 
             override val allowCancelled: Boolean
                 get() = false
-
         }
-
     }
 
+    /**
+     * 实体状态自然到期时触发
+     *
+     * @param entity 实体
+     * @param state 状态
+     */
+    class End(val entity: Target<*>, val state: State) : BukkitProxyEvent() {
+
+        override val allowCancelled: Boolean
+            get() = false
+    }
 }

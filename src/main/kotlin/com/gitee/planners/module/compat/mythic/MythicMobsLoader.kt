@@ -1,4 +1,4 @@
-﻿package com.gitee.planners.module.compat.mythic
+package com.gitee.planners.module.compat.mythic
 
 import com.gitee.planners.api.Registries
 import com.gitee.planners.core.config.State

@@ -14,9 +14,14 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import taboolib.common.platform.function.info
+import taboolib.common.platform.function.submit
+import taboolib.common.platform.function.warning
+import taboolib.common.platform.service.PlatformExecutor
 import taboolib.common.util.Vector
 import taboolib.platform.util.*
 import java.util.*
+import kotlin.math.max
 
 class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>,
     TargetContainerization {
@@ -113,14 +118,36 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
     }
 
     override fun addState(state: State, duration: Long, coverBefore: Boolean) {
-        if (hasState(state) && !coverBefore) {
+        if (duration <= 0) {
+            warning("The duration of state ${state.id} must be greater than 0")
+            return
+        }
+        val alreadyHas = hasState(state)
+        if (alreadyHas && !coverBefore) {
             return
         }
         if (EntityStateEvent.Attach.Pre(this, state).call()) {
             this.instance.setMeta("pl.state.${state.id}", true)
-            val endAt = if (duration > 0) System.currentTimeMillis() + duration else -1L
-            this.instance.setMeta("pl.state.${state.id}.end", endAt)
+            this.instance.setMeta("pl.state.${state.id}.end", System.currentTimeMillis() + duration)
             EntityStateEvent.Attach.Post(this, state).call()
+            // 注册定时器任务
+            var task = this.instance.getMetaFirstOrNull("pl.state.${state.id}.task")?.value() as? PlatformExecutor.PlatformTask
+            if (task != null) {
+                task.cancel()
+            }
+            info("Registered state ${state.id} timer task")
+            task = submit(delay = duration, async = true) {
+                this@TargetBukkitEntity.endState(state)
+            }
+
+            this.instance.setMeta("pl.state.${state.id}.task", task)
+        }
+    }
+
+    private fun endState(state: State) {
+        info("State ${state.id} timer task ended")
+        if (EntityStateEvent.End(this, state).call()) {
+            this.removeState(state)
         }
     }
 
@@ -131,8 +158,7 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         if (EntityStateEvent.Detach.Pre(this, state).call()) {
             this.instance.removeMeta("pl.state.${state.id}")
             this.instance.removeMeta("pl.state.${state.id}.end")
-            this.instance.removeMeta("pl.state.${state.id}.time")
-            this.instance.removeMeta("pl.state.${state.id}.duration")
+            this.instance.removeMeta("pl.state.${state.id}.task")
             EntityStateEvent.Detach.Post(this, state).call()
         }
     }

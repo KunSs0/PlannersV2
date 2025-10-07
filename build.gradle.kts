@@ -25,6 +25,12 @@ taboolib {
         install(BukkitFakeOp)
     }
 
+    description {
+        dependencies {
+            name("MythicMobs").optional(true)
+        }
+    }
+
     version { taboolib = "6.2.3-e102d76" }
 
     relocate("ink.ptms.um", "com.gitee.module.um")

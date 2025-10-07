@@ -1,4 +1,4 @@
-﻿package com.gitee.planners.module.compat.mythic
+package com.gitee.planners.module.compat.mythic
 
 import com.gitee.planners.api.job.target.adaptTarget
 import io.lumine.xikage.mythicmobs.adapters.AbstractEntity
@@ -11,17 +11,16 @@ import taboolib.common.platform.function.warning
 
 class MythicStateDetachMechanic(config: MythicLineConfig) : SkillMechanic(config.line, config), ITargetedEntitySkill {
 
-    // 与 ActionState 的 state 参数保持对齐
     private val stateId: PlaceholderString = config.getPlaceholderString(arrayOf("state", "id"), "")
 
     override fun castAtEntity(data: SkillMetadata, target: AbstractEntity?): Boolean {
-        // 仅对存活实体生效
+        // Only applies to living entities
         if (target == null || !target.isLiving) {
             return false
         }
 
         val id = stateId.get(data, target).trim()
-        // 占位符结果可能为空，需要显式校验
+        // Placeholder may be empty, guard explicitly
         if (id.isEmpty()) {
             warning("MythicStateDetachMechanic: state parameter is empty.")
             return false

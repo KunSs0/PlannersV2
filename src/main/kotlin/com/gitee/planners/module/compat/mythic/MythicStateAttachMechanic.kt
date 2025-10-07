@@ -1,4 +1,4 @@
-﻿package com.gitee.planners.module.compat.mythic
+package com.gitee.planners.module.compat.mythic
 
 import com.gitee.planners.api.job.target.adaptTarget
 import io.lumine.xikage.mythicmobs.adapters.AbstractEntity
@@ -13,19 +13,18 @@ import kotlin.math.roundToLong
 
 class MythicStateAttachMechanic(config: MythicLineConfig) : SkillMechanic(config.line, config), ITargetedEntitySkill {
 
-    // 参数解析与 ActionState 保持一致，兼容多个键位与占位符
     private val stateId: PlaceholderString = config.getPlaceholderString(arrayOf("state", "id"), "")
     private val duration: PlaceholderDouble = config.getPlaceholderDouble(arrayOf("duration", "time", "t"), "-1")
     private val cover: Boolean = config.getBoolean(arrayOf("cover"), true)
 
     override fun castAtEntity(data: SkillMetadata, target: AbstractEntity?): Boolean {
-        // 仅对存活实体生效
+        // Only applies to living entities
         if (target == null || !target.isLiving) {
             return false
         }
 
         val id = stateId.get(data, target).trim()
-        // 占位符可能解析为空字符串，仍需兜底
+        // Placeholder may resolve to blank, validate before use
         if (id.isEmpty()) {
             warning("MythicStateAttachMechanic: state parameter is empty.")
             return false

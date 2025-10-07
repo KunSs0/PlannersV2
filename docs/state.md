@@ -100,7 +100,8 @@ state0:
 | `keydown`               | `ProxyClientKeyEvents.Down`                        | 客户端按键按下的玩家                               | — |
 | `state attach`          | `EntityStateEvent.Attach.Post`                     | 获得状态的实体                                     | — |
 | `state detach`          | `EntityStateEvent.Detach.Post`                     | 失去状态的实体                                     | — |
-
+| `state end`             | `EntityStateEvent.End`                            | 状态自然到期的实体                                   | — |
+> 状态自然到期后会触发 state end 事件，可在脚本中处理到期后的收尾逻辑。`r`n
 > `DamageEventModifier` 继承 `AbstractCancellableEvent`，通过 Animated 元字段暴露 `is-cancelled`、`source`、`damage`、`final-damage`、`cause` 等属性，可在 Kether 中读取或修改（参见 TabooLib Animated 文档）。
 
 ## 触发器上下文
@@ -159,3 +160,4 @@ Skills:
     Skills:
       - plstatedetach{state=state0} @Self
 ```
+

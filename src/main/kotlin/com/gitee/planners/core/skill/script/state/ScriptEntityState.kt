@@ -30,5 +30,14 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
         }
 
     }
+    object End : ScriptEntityState<EntityStateEvent.End>() {
 
+        override val name: String = "state end"
+
+        override val bind: Class<EntityStateEvent.End> = EntityStateEvent.End::class.java
+
+        override fun getSender(event: EntityStateEvent.End): Target<*> {
+            return event.entity
+        }
+    }
 }
