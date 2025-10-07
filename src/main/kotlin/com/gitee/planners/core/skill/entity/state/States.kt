@@ -108,7 +108,7 @@ object States {
 
             val holder = ScriptEventLoader.getHolder(trigger.on)
             if (holder == null) {
-                warning("Unknown script event: ${trigger.on} (state: ${state.id}, trigger: ${trigger.id})")
+                warning("Unknown script event: ${trigger.on} (state: ${state.id}, trigger: ${trigger.on})")
                 continue
             }
             val callbackImpl = ScriptCallbackImpl(state, trigger)

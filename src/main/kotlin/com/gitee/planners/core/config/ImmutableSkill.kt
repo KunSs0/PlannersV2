@@ -9,6 +9,7 @@ import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.common.LifeCycle
+import taboolib.common.platform.function.info
 import taboolib.common.platform.function.registerLifeCycleTask
 import taboolib.common.util.asList
 import taboolib.common5.cint
@@ -16,6 +17,8 @@ import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import taboolib.module.configuration.util.mapSection
+import taboolib.module.kether.printKetherErrorMessage
+import taboolib.module.kether.runKether
 
 class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
@@ -71,7 +74,13 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
     init {
         // 在 ENABLE 阶段 编译脚本
-        registerLifeCycleTask(LifeCycle.ENABLE) { this.compiledScript() }
+        registerLifeCycleTask(LifeCycle.ENABLE) {
+            try {
+                this.compiledScript()
+            } catch (e: Exception) {
+                e.printKetherErrorMessage(true)
+            }
+        }
     }
 
     /** 开始等级 */

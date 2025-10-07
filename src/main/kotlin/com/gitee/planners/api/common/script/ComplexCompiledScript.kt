@@ -1,6 +1,7 @@
 package com.gitee.planners.api.common.script
 
 import com.gitee.planners.core.skill.script.ScriptEventLoader
+import taboolib.common.platform.function.warning
 import taboolib.library.kether.Quest
 import taboolib.module.kether.*
 import taboolib.module.kether.Script
@@ -23,10 +24,14 @@ interface ComplexCompiledScript {
     fun compiledScript(): Script {
         if (!platform().getCache().scriptMap.containsKey(source())) {
             val complex = if (source().startsWith("def ")) source() else "def main = { ${source()} }"
-            val quest = runKether(detailError = true) {
+            val quest = try {
                 complex.parseKetherScript(namespaces())
-            }!!
-            platform().getCache().scriptMap[source()] = quest
+            }catch (e: Exception) {
+                warning("Compile error! '${this.id}'")
+                e.printKetherErrorMessage(true)
+                null
+            }
+            platform().getCache().scriptMap[source()] = quest!!
             ScriptEventLoader.registerListener(this@ComplexCompiledScript)
             return quest
         }
