@@ -1,8 +1,6 @@
 package com.gitee.planners.core.skill.entity.animated
 
 import com.gitee.planners.api.common.metadata.Metadata
-import com.gitee.planners.api.common.metadata.MetadataTypeToken
-import com.gitee.planners.api.common.metadata.createMetadata
 import com.gitee.planners.api.job.target.TargetBukkitEntity
 import com.gitee.planners.api.job.target.TargetCommandSender
 import com.gitee.planners.api.job.target.TargetContainerization
@@ -17,7 +15,7 @@ import taboolib.common.util.Vector
 import java.util.*
 
 /**
- * Bukkit 实体实例 Animated
+ * Bukkit entity instance wrapper
  */
 class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntityAnimated<Entity>(),
     TargetEntity<Entity>, TargetCommandSender<Entity>, TargetContainerization {
@@ -40,12 +38,16 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
         return proxy.hasState(state)
     }
 
-    override fun addState(state: State) {
-        return proxy.addState(state)
+    override fun isExpired(state: State): Boolean {
+        return proxy.isExpired(state)
+    }
+
+    override fun addState(state: State, duration: Long) {
+        proxy.addState(state, duration)
     }
 
     override fun removeState(state: State) {
-        return proxy.removeState(state)
+        proxy.removeState(state)
     }
 
     override fun getWorld(): String {
@@ -73,7 +75,6 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
     }
 
     override fun add(x: Double, y: Double, z: Double) {
-
     }
 
     override fun getNearbyLivingEntities(vector: Vector): List<LivingEntity> {
@@ -100,5 +101,7 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
         proxy.setMetadata(id, data)
     }
 
-
+    override fun isValid(): Boolean {
+        return instance.isValid
+    }
 }

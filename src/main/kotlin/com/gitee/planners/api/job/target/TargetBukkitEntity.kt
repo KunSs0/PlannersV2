@@ -21,8 +21,6 @@ import java.util.*
 class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, TargetCommandSender<Entity>,
     TargetContainerization {
 
-    private val stateMap = mutableMapOf<String, State>()
-
     override fun getUniqueId(): UUID {
         return instance.uniqueId
     }
@@ -39,6 +37,9 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         return (instance as? LivingEntity)?.eyeLocation ?: getBukkitLocation()
     }
 
+    override fun isValid(): Boolean {
+        return instance.isValid
+    }
 
     override fun getWorld(): String {
         return instance.world.name
@@ -51,7 +52,6 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
     override fun getBukkitLocation(): Location {
         return instance.location
     }
-
 
     override fun getX(): Double {
         return instance.location.x
@@ -66,7 +66,6 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
     }
 
     override fun add(x: Double, y: Double, z: Double) {
-
     }
 
     override fun sendMessage(message: String) {
@@ -86,9 +85,7 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
     private fun getMetadataContainer(): MetadataContainer {
         return if (instance is Player) {
             instance.plannersTemplate
-        }
-        // 通过代理实体获取元数据容器
-        else {
+        } else {
             EntityMetadataManager[ProxyBukkitEntity(instance)]
         }
     }
@@ -101,38 +98,42 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         getMetadataContainer()[id] = data
     }
 
-
     override fun hasState(state: State): Boolean {
         if (state.isStatic) {
             return true
         }
 
         val metadataValue = this.instance.getMetaFirstOrNull("pl.state.${state.id}")
-        if (metadataValue == null) {
-            return false
-        }
-
-        return metadataValue.asBoolean()
+        return metadataValue?.asBoolean() == true
     }
 
-    override fun addState(state: State) {
+    override fun isExpired(state: State): Boolean {
+        val endAt = this.instance.getMetaFirstOrNull("pl.state.${state.id}.end")?.asLong() ?: return false
+        return endAt > 0 && System.currentTimeMillis() >= endAt
+    }
+
+    override fun addState(state: State, duration: Long) {
         if (hasState(state)) {
             return
         }
-        if (EntityStateEvent.Attach.Pre(this,state).call()) {
+        if (EntityStateEvent.Attach.Pre(this, state).call()) {
             this.instance.setMeta("pl.state.${state.id}", true)
-            EntityStateEvent.Attach.Post(this,state).call()
+            val endAt = if (duration > 0) System.currentTimeMillis() + duration else -1L
+            this.instance.setMeta("pl.state.${state.id}.end", endAt)
+            EntityStateEvent.Attach.Post(this, state).call()
         }
-
     }
 
     override fun removeState(state: State) {
         if (state.isStatic || !hasState(state)) {
             return
         }
-        if (EntityStateEvent.Detach.Pre(this,state).call()) {
+        if (EntityStateEvent.Detach.Pre(this, state).call()) {
             this.instance.removeMeta("pl.state.${state.id}")
-            EntityStateEvent.Detach.Post(this,state).call()
+            this.instance.removeMeta("pl.state.${state.id}.end")
+            this.instance.removeMeta("pl.state.${state.id}.time")
+            this.instance.removeMeta("pl.state.${state.id}.duration")
+            EntityStateEvent.Detach.Post(this, state).call()
         }
     }
 
@@ -152,6 +153,4 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
 
         return instance == other.instance
     }
-
-
 }

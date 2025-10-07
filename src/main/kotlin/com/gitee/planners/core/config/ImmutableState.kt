@@ -26,7 +26,7 @@ class ImmutableState(val config: ConfigurationSection) : State {
 
     class ScriptImpl(val experience: String) : ComplexCompiledScript {
 
-        override val id: String = experience;
+        override val id: String = experience
 
         override val async: Boolean = false
 
@@ -41,8 +41,6 @@ class ImmutableState(val config: ConfigurationSection) : State {
         override fun platform(): ComplexScriptPlatform {
             return ComplexScriptPlatform.STATE
         }
-
-
     }
-
 }
+

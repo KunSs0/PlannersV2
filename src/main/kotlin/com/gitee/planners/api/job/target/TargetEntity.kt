@@ -1,37 +1,43 @@
 package com.gitee.planners.api.job.target
 
-import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.core.config.State
 import org.bukkit.Location
 import org.bukkit.entity.EntityType
 import java.util.UUID
 
-interface TargetEntity<T> : TargetLocation<T>,Target.Named {
+interface TargetEntity<T> : TargetLocation<T>, Target.Named {
 
     fun getUniqueId(): UUID
 
-    fun getEntityType() : EntityType
+    fun getEntityType(): EntityType
 
-    fun getBukkitEyeLocation() : Location
+    fun getBukkitEyeLocation(): Location
 
     /**
-     * 是否拥有状态
-     *
-     * @param state 状态
+     * Whether the underlying entity is still valid.
+     */
+    fun isValid(): Boolean
+
+    /**
+     * Check whether the entity currently holds the state.
      */
     fun hasState(state: State): Boolean
 
     /**
-     * 添加状态
-     *
-     * @param state 状态
+     * Determine whether the state is expired.
      */
-    fun addState(state: State)
+    fun isExpired(state: State): Boolean
 
     /**
-     * 移除状态
+     * Attach a state to the entity.
      *
-     * @param state 状态
+     * @param state State definition
+     * @param duration Duration in milliseconds, negative for infinite
+     */
+    fun addState(state: State, duration: Long = -1)
+
+    /**
+     * Remove a state from the entity.
      */
     fun removeState(state: State)
 }

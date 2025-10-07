@@ -10,12 +10,18 @@ import com.gitee.planners.core.skill.script.ScriptEventHolder
 import com.gitee.planners.core.skill.script.ScriptEventLoader
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
+import taboolib.common.platform.Schedule
 import taboolib.common.platform.event.EventPriority
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.warning
 import taboolib.module.kether.ScriptContext
 
 object States {
+
+    /**
+     * 正在处理的携带状态实体, 实体的状态发生改变并不会从缓存中移除, 需要在适当的时候手动移除
+     */
+    private val registryCarryStateTarget = mutableListOf<TargetEntity<*>>()
 
     /**
      * 初始化所有状态
@@ -43,6 +49,38 @@ object States {
     @SubscribeEvent
     fun e(e: PluginReloadEvents.Post) {
         init()
+    }
+
+    @Schedule
+    fun tick() {
+        val iterator = registryCarryStateTarget.iterator()
+        while (iterator.hasNext()) {
+            val target = iterator.next()
+            if (target.isValid()) {
+                iterator.remove()
+                continue
+            }
+
+            for (state in Registries.STATE.values()) {
+                // 如果实体携带该状态且状态已过期, 则移除该状态
+                if (target.hasState(state) && target.isExpired(state)) {
+                    target.removeState(state)
+                }
+            }
+        }
+    }
+
+    /**
+     * 记录携带状态的实体
+     *
+     * @param target 实体
+     */
+    fun record(target: TargetEntity<*>) {
+        if (target !in registryCarryStateTarget) {
+            registryCarryStateTarget.add(target)
+        }
+
+
     }
 
     /**
@@ -80,7 +118,7 @@ object States {
     }
 
     class ScriptCallbackImpl(val state: State, val trigger: State.Trigger) :
-        ScriptCallback(trigger.id, trigger.action, true,EventPriority.NORMAL, null, false) {
+        ScriptCallback(trigger.id, trigger.action, true, EventPriority.NORMAL, null, false) {
 
         override fun <T> call(sender: Target<*>, event: T, holder: ScriptEventHolder<T>) {
             if (sender !is TargetEntity<*>) {

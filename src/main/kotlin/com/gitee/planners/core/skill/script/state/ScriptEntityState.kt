@@ -7,7 +7,6 @@ import org.bukkit.event.Event
 
 abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
-
     object Attach : ScriptEntityState<EntityStateEvent.Attach.Post>() {
 
         override val name: String = "state attach"

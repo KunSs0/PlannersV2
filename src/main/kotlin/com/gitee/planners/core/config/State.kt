@@ -3,7 +3,7 @@ package com.gitee.planners.core.config
 import com.gitee.planners.api.common.script.ComplexCompiledScript
 
 /**
- * 状态
+ * 状态定义
  */
 interface State {
 
@@ -23,5 +23,5 @@ interface State {
     val triggers: Map<String, Trigger>
 
     class Trigger(val id: String, val on: String, val action: ComplexCompiledScript)
-
 }
+

@@ -1,14 +1,18 @@
 state0:
   priority: 0
   name: "眩晕"
+  static: true
   trigger:
-    chat:
+    "chat":
+      on: player chat
       action: |-
         tell "chat"
         state detach ~
-    "state-attach":
+    "state attach":
+      on: state attach
       action: |-
         tell "我被眩晕了"
-    "state-detach":
+    "state detach":
+      on: state detach
       action: |-
         tell "我已解除眩晕!"
