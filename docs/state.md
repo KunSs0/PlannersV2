@@ -10,10 +10,11 @@
 
 ### `state attach`
 ```
-state attach <stateId> [duration <duration:number>] [at <目标容器>]
+state attach <stateId> [duration <-1>] [cover <true>] [at <目标容器>]
 ```
 - `stateId` 需存在于 `Registries.STATE`，否则命令会中止并输出警告。
 - `duration` 可选项，单位毫秒；为 -1 时表示永久状态，与旧版本保持兼容。
+- `cover` 可选项，默认为 `true`, 表示状态会覆盖已有状态。
 - `目标容器` 默认解析为脚本 `sender`，也可通过 `at &target` 指定 TabooLib 的目标集合。
 - 成功解析的目标若为 `TargetEntity` 将触发 `EntityStateEvent.Attach.Pre/Post` 事件并调用 `addState`。
 
