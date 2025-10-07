@@ -4,15 +4,15 @@ state0:
   static: true
   trigger:
     "chat":
-      on: player chat
+      listen: player chat
       action: |-
         tell "chat"
         state detach ~
     "state attach":
-      on: state attach
+      listen: state attach
       action: |-
         tell "我被眩晕了"
     "state detach":
-      on: state detach
+      listen: state detach
       action: |-
         tell "我已解除眩晕!"

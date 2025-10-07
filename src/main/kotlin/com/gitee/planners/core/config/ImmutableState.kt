@@ -18,7 +18,7 @@ class ImmutableState(val config: ConfigurationSection) : State {
 
     override val triggers: Map<String, State.Trigger> = config.mapSection("trigger") {
         val id: String = it.name
-        val on: String = it.getString("on", it.name)!!
+        val on: String = it.getString("listen", it.name)!!
         val action = it.getString("action", "")!!
 
         State.Trigger(id, on, ScriptImpl(action))

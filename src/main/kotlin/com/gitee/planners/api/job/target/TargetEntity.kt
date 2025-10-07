@@ -34,7 +34,7 @@ interface TargetEntity<T> : TargetLocation<T>, Target.Named {
      * @param state State definition
      * @param duration Duration in milliseconds, negative for infinite
      */
-    fun addState(state: State, duration: Long = -1)
+    fun addState(state: State, duration: Long = -1, coverBefore: Boolean)
 
     /**
      * Remove a state from the entity.

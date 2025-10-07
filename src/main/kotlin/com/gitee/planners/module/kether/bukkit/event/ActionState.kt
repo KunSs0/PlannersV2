@@ -7,6 +7,7 @@ import com.gitee.planners.api.common.script.kether.MultipleKetherParser
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.api.job.target.TargetEntity
 import com.gitee.planners.core.config.State
+import com.gitee.planners.module.kether.commandBool
 import com.gitee.planners.module.kether.commandLong
 import com.gitee.planners.module.kether.commandObjectiveOrSender
 import taboolib.common.PrimitiveIO.warning
@@ -17,13 +18,14 @@ import java.util.*
 @CombinationKetherParser.Used
 object ActionState : MultipleKetherParser("state") {
 
-    @KetherEditor.Document("state attach <state: id> [duration <duration:number>] [at objective:TargetContainer(sender)]")
+    @KetherEditor.Document("state attach <state: id> [duration <-1>] [cover <false>] [at objective:TargetContainer(sender)]")
     val attach = combinationParser {
         it.group(
             text(),
             commandLong("duration", -1L),
+            commandBool("cover",true),
             commandObjectiveOrSender()
-        ).apply(it) { id, duration, objective: TargetContainer ->
+        ).apply(it) { id, duration,cover, objective: TargetContainer ->
             now {
                 val state = Registries.STATE.getOrNull(id)
                 if (state == null) {
@@ -32,7 +34,7 @@ object ActionState : MultipleKetherParser("state") {
                 }
 
                 for (target in objective.filterIsInstance<TargetEntity<*>>()) {
-                    target.addState(state, duration)
+                    target.addState(state, duration,cover)
                 }
             }
         }

@@ -19,13 +19,13 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
     }
 
-    object Detach : ScriptEntityState<EntityStateEvent.Detach.Post>() {
+    object Detach : ScriptEntityState<EntityStateEvent.Detach.Pre>() {
 
         override val name: String = "state detach"
 
-        override val bind: Class<EntityStateEvent.Detach.Post> = EntityStateEvent.Detach.Post::class.java
+        override val bind: Class<EntityStateEvent.Detach.Pre> = EntityStateEvent.Detach.Pre::class.java
 
-        override fun getSender(event: EntityStateEvent.Detach.Post): Target<*> {
+        override fun getSender(event: EntityStateEvent.Detach.Pre): Target<*> {
             return event.entity
         }
 

@@ -112,8 +112,8 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         return endAt > 0 && System.currentTimeMillis() >= endAt
     }
 
-    override fun addState(state: State, duration: Long) {
-        if (hasState(state)) {
+    override fun addState(state: State, duration: Long, coverBefore: Boolean) {
+        if (hasState(state) && !coverBefore) {
             return
         }
         if (EntityStateEvent.Attach.Pre(this, state).call()) {

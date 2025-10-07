@@ -42,8 +42,8 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
         return proxy.isExpired(state)
     }
 
-    override fun addState(state: State, duration: Long) {
-        proxy.addState(state, duration)
+    override fun addState(state: State, duration: Long, coverBefore: Boolean) {
+        proxy.addState(state, duration, coverBefore)
     }
 
     override fun removeState(state: State) {
