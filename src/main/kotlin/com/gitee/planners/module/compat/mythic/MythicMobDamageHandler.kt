@@ -1,47 +1,29 @@
-package com.gitee.planners.module.compat.mob
+package com.gitee.planners.module.compat.mythic
 
 import com.gitee.planners.api.event.player.PlayerDamageEntityEvent
-import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetContainerization
 import com.gitee.planners.api.job.target.TargetEntity
 import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.util.checkPluginClass
 import io.lumine.mythic.bukkit.MythicBukkit
-import io.lumine.mythic.core.mobs.ActiveMob
 import io.lumine.xikage.mythicmobs.MythicMobs
 import io.lumine.xikage.mythicmobs.adapters.bukkit.BukkitAdapter
 import io.lumine.xikage.mythicmobs.skills.placeholders.Placeholder
-import io.lumine.xikage.mythicmobs.skills.placeholders.PlaceholderManager
 import io.lumine.xikage.mythicmobs.skills.placeholders.PlaceholderMeta
-import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
-import org.bukkit.entity.Player
-import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import taboolib.common.LifeCycle
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.info
 import taboolib.common.platform.function.registerLifeCycleTask
-import taboolib.common.util.unsafeLazy
-import taboolib.common5.cint
-import taboolib.platform.util.attacker
 import java.util.function.BiFunction
 
 object MythicMobDamageHandler {
 
-    private val isEnable by unsafeLazy {
-        Bukkit.getPluginManager().getPlugin("MythicMobs") != null
-    }
-
-    private val version by unsafeLazy {
-        Bukkit.getPluginManager().getPlugin("MythicMobs")!!.description.version.split(".").map { it.cint }
-    }
-
     init {
         registerLifeCycleTask(LifeCycle.ENABLE) {
-            if (isEnable) {
-                if (version[0] == 4) {
+            if (MythicMobsLoader.isEnable) {
+                if (MythicMobsLoader.version[0] == 4) {
                     MythicMobs.inst().placeholderManager.register("caster.pl.metadata", Placeholder.meta(object : BiFunction<PlaceholderMeta,String,String> {
 
                         override fun apply(metadata: PlaceholderMeta, args: String): String {
@@ -55,7 +37,7 @@ object MythicMobDamageHandler {
                     }))
                 }
                 // v5
-                else if (version[0] == 5) {
+                else if (MythicMobsLoader.version[0] == 5) {
                     MythicBukkit.inst().placeholderManager.register("caster.pl.metadata", io.lumine.mythic.core.skills.placeholders.Placeholder.meta(object : BiFunction<io.lumine.mythic.core.skills.placeholders.PlaceholderMeta,String,String> {
 
                         override fun apply(metadata: io.lumine.mythic.core.skills.placeholders.PlaceholderMeta, args: String): String {
@@ -76,18 +58,18 @@ object MythicMobDamageHandler {
     @SubscribeEvent
     fun e(e: PlayerDamageEntityEvent) {
         info("MythicMobDamageHandler ")
-        info(" isEnable: $isEnable")
+        info(" isEnable: $MythicMobsLoader.isEnable")
         info(" damager: ${e.player}")
-        if (isEnable && e.cause == EntityDamageEvent.DamageCause.CUSTOM) {
+        if (MythicMobsLoader.isEnable && e.cause == EntityDamageEvent.DamageCause.CUSTOM) {
             // v4
-            if (version[0] == 4) {
+            if (MythicMobsLoader.version[0] == 4) {
                 processThreatUpdateV4(e.player,e.entity,e.damage)
             }
             // v5
-            else if (version[0] == 5) {
+            else if (MythicMobsLoader.version[0] == 5) {
                 processThreatUpdateV5(e.player,e.entity,e.damage)
             } else {
-                info("MythicMobDamageHandler: Unsupported MythicMobs version ${version.joinToString(".")}")
+                info("MythicMobDamageHandler: Unsupported MythicMobs version ${MythicMobsLoader.version.joinToString(".")}")
             }
         }
     }

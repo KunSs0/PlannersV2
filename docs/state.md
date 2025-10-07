@@ -1,4 +1,4 @@
-# Planners V2 状态管理系统指南
+﻿# Planners V2 状态管理系统指南
 
 ## 系统概述
 - 状态（State）用于在 `TargetEntity`（玩家、生物等）上附加持续效果、限制或数据标记。
@@ -131,3 +131,31 @@ state0:
 3. 使用具有辨识度的触发器 ID，并避免在同一状态内重复。
 4. 借助 `@State` 和 `state detach "~"` 复用脚本，降低硬编码 ID 的风险。
 5. 对高频事件（如 `damage`、`projectile.hit`）在脚本内增加条件判断，避免不必要的运行成本。
+## 第三方插件支持
+
+目前仅适配 MythicMobs 4.x，在插件启动阶段监听 `MythicMechanicLoadEvent` 注册自定义 mechanic，这些机制的语义与 Kether `state` 指令一致：
+
+| Mechanic 名称 | 对应行为 | 主要参数 |
+|---------------|----------|----------|
+| `plstateattach` / `pl-state-attach` | 等价 `state attach`，为目标实体附加状态 | `state`/`id`（必填），`duration`/`time`/`t`（毫秒，默认 -1），`cover`（默认 `true`） |
+| `plstatedetach` / `pl-state-detach` | 等价 `state detach`，移除状态 | `state`/`id`（必填） |
+
+> 适配逻辑位于 `com.gitee.planners.module.compat.mythic`，MythicMobs 其他版本会忽略这些 mechanic。
+
+**示例（附加状态）**
+
+```yaml
+Skills:
+  AttachState:
+    Skills:
+      - plstateattach{state=state0;duration=5000;cover=true} @Self
+```
+
+**示例（移除状态）**
+
+```yaml
+Skills:
+  DetachState:
+    Skills:
+      - plstatedetach{state=state0} @Self
+```
