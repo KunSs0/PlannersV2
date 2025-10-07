@@ -8,9 +8,11 @@ import io.lumine.xikage.mythicmobs.skills.SkillMechanic
 import io.lumine.xikage.mythicmobs.skills.SkillMetadata
 import io.lumine.xikage.mythicmobs.skills.placeholders.parsers.PlaceholderDouble
 import io.lumine.xikage.mythicmobs.skills.placeholders.parsers.PlaceholderString
+import taboolib.common.platform.Ghost
 import taboolib.common.platform.function.warning
 import kotlin.math.roundToLong
 
+@Ghost
 class MythicStateAttachMechanic(config: MythicLineConfig) : SkillMechanic(config.line, config), ITargetedEntitySkill {
 
     private val stateId: PlaceholderString = config.getPlaceholderString(arrayOf("state", "id"), "")

@@ -128,7 +128,7 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
         }
         if (EntityStateEvent.Attach.Pre(this, state).call()) {
             this.instance.setMeta("pl.state.${state.id}", true)
-            this.instance.setMeta("pl.state.${state.id}.end", System.currentTimeMillis() + duration)
+            this.instance.setMeta("pl.state.${state.id}.end", System.currentTimeMillis() + duration * 50)
             EntityStateEvent.Attach.Post(this, state).call()
             // 注册定时器任务
             var task = this.instance.getMetaFirstOrNull("pl.state.${state.id}.task")?.value() as? PlatformExecutor.PlatformTask
