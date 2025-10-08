@@ -101,8 +101,27 @@ state0:
 | `state attach`          | `EntityStateEvent.Attach.Post`                     | 获得状态的实体                                     | — |
 | `state detach`          | `EntityStateEvent.Detach.Post`                     | 失去状态的实体                                     | — |
 | `state end`             | `EntityStateEvent.End`                            | 状态自然到期的实体                                   | — |
+| `customtrigger <名称>`  | `ScriptCustomTriggerEvent`（Planners 自定义）        | 手动触发的状态实体                                   | — |
 > 状态自然到期后会触发 state end 事件，可在脚本中处理到期后的收尾逻辑。`r`n
-> `DamageEventModifier` 继承 `AbstractCancellableEvent`，通过 Animated 元字段暴露 `is-cancelled`、`source`、`damage`、`final-damage`、`cause` 等属性，可在 Kether 中读取或修改（参见 TabooLib Animated 文档）。
+
+
+## 自定义脚本触发器（ScriptCustomTrigger）
+
+自定义触发器允许在没有对应 Bukkit 事件的情况下主动驱动状态逻辑。`ScriptCustomTrigger` 事件持有者会匹配 `listen` 以 `customtrigger` 开头的触发器，并根据后缀名称分发到具体脚本。
+
+```yaml
+trigger:
+  ready:
+    listen: "customtrigger ready"
+    action: |-
+      tell "准备完成"
+```
+
+- `listen` 的后缀（示例中的 `ready`）会与事件的 `name` 字段对比；只有完全一致时脚本才会执行。
+- `ScriptCustomTriggerEvent` 的 `sender` 同样来源于状态持有者，可继续使用 Target API。
+- 触发时同样会注入 `@State` 与 `@Trigger` 变量，便于脚本读取状态定义。
+- 可通过命令 `pl state trigger <玩家> <名称>` 或在代码中调用 `States.trigger(target, name)` 主动触发，触发时会对目标当前持有的所有状态进行匹配。
+- MythicMobs 可通过 mechanic `plstatecustomtrigger` 主动调用，参数 `name`/`trigger` 对应自定义触发名。
 
 ## 触发器上下文
 
@@ -140,6 +159,7 @@ state0:
 |---------------|----------|----------|
 | `plstateattach` / `pl-state-attach` | 等价 `state attach`，为目标实体附加状态 | `state`/`id`（必填），`duration`/`time`/`t`（毫秒，默认 -1），`cover`（默认 `true`） |
 | `plstatedetach` / `pl-state-detach` | 等价 `state detach`，移除状态 | `state`/`id`（必填） |
+| `plstatecustomtrigger` / `pl-state-customtrigger` | 触发 `customtrigger <名称>` 对应的状态脚本 | `name`/`trigger`（必填） |
 
 > 适配逻辑位于 `com.gitee.planners.module.compat.mythic`，MythicMobs 其他版本会忽略这些 mechanic。
 
@@ -159,5 +179,14 @@ Skills:
   DetachState:
     Skills:
       - plstatedetach{state=state0} @Self
+```
+
+**示例（触发自定义脚本）**
+
+```yaml
+Skills:
+  CustomTrigger:
+    Skills:
+      - plstatecustomtrigger{name=ready} @Self
 ```
 

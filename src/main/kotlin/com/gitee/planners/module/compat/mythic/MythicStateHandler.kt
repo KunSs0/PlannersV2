@@ -27,6 +27,7 @@ object MythicStateHandler {
             when (event.mechanicName.lowercase(Locale.ROOT)) {
                 "plstateattach", "pl-state-attach" -> event.register(MythicStateAttachMechanic(event.config))
                 "plstatedetach", "pl-state-detach" -> event.register(MythicStateDetachMechanic(event.config))
+                "plstatecustomtrigger", "pl-state-customtrigger" -> event.register(MythicStateCustomTriggerMechanic(event.config))
             }
         }
     }
