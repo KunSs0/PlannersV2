@@ -9,6 +9,9 @@ database:
     table: planners_v2
 
 settings:
+  placeholder:
+    # 使用模式, script, literal
+    use: script
   attack:
     # 攻击保护，如果开启后无法在某些场景下攻击，这取决于插件的实现
     protect:
