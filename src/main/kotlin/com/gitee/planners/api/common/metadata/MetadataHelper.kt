@@ -1,30 +1,31 @@
 package com.gitee.planners.api.common.metadata
 
 import com.gitee.planners.util.unboxJavaToKotlin
-import kotlin.math.min
 
 
-fun createMetadata(data: Any, timeout: Long = -1): MetadataTypeToken.TypeToken {
-    return data.metadata(timeout)
-}
-
-@Suppress("NAME_SHADOWING")
-fun Any?.metadata(timeout: Long = -1): MetadataTypeToken.TypeToken {
-    // 限制timeout的最小值
-    val timeout = maxOf(timeout, -1L)
-    // 如果是null 则代表要删除metadata 直接返回空
-    if (this == null) {
+/**
+ * 创建元数据
+ *
+ * @param data Any
+ * @param timeout Long
+ * @return Metadata
+ */
+fun metadataValue(data: Any?, timeout: Long = -1): MetadataTypeToken.TypeToken {
+    if (data == null) {
         return MetadataTypeToken.Void()
     }
-    if (!Metadata.Loader.isSupported(unboxJavaToKotlin(this::class.java))) {
-        throw IllegalStateException("Metadata type ${this::class.java} is not supported.")
-    }
+    // 限制timeout的最小值
+    val timeout = maxOf(timeout, -1L)
 
+    // 检查数据类型
+    if (data !is Metadata.Unsaved && !Metadata.Loader.isSupported(unboxJavaToKotlin(data::class.java))) {
+        throw IllegalStateException("Metadata type ${data::class.java} is not supported.")
+    }
     val stopTime = if (timeout == -1L) {
         -1L
     } else {
         System.currentTimeMillis() + timeout
     }
 
-    return MetadataTypeToken.TypeToken(this::class.java, this, stopTime)
+    return MetadataTypeToken.TypeToken(data::class.java, data, stopTime)
 }

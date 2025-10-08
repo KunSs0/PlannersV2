@@ -1,6 +1,6 @@
 package com.gitee.planners.module.kether.common
 
-import com.gitee.planners.api.common.metadata.metadata
+import com.gitee.planners.api.common.metadata.metadataValue
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.OperationKetherParser
@@ -45,7 +45,7 @@ object ActionMetadata : OperationKetherParser("metadata") {
             this.run(argument).str { id ->
                 this.run(data).thenAccept { data ->
                     this.run(timeout).long { timeout ->
-                        val metadata = data.metadata(timeout * 50)
+                        val metadata = metadataValue(data,timeout * 50)
                         this.runTargetContainer(container).thenAccept {
                             it.filterIsInstance<TargetContainerization>().forEach { entity ->
                                 entity.setMetadata(id, metadata)

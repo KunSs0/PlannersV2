@@ -34,22 +34,6 @@ class BukkitEntityInstance(override var instance: Entity) : AbstractBukkitEntity
         return proxy.getBukkitEyeLocation()
     }
 
-    override fun hasState(state: State): Boolean {
-        return proxy.hasState(state)
-    }
-
-    override fun isExpired(state: State): Boolean {
-        return proxy.isExpired(state)
-    }
-
-    override fun addState(state: State, duration: Long, coverBefore: Boolean) {
-        proxy.addState(state, duration, coverBefore)
-    }
-
-    override fun removeState(state: State) {
-        proxy.removeState(state)
-    }
-
     override fun getWorld(): String {
         return proxy.getWorld()
     }

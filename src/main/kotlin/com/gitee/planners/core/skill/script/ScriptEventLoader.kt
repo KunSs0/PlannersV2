@@ -47,7 +47,14 @@ object ScriptEventLoader {
      * @return 事件包装器，若不存在则返回 null
      */
     fun getHolder(event: String): ScriptEventHolder<*>? {
-        return holders[event]
+        var holder = holders[event]
+        // 解析二级holder
+        if (holder == null) {
+            val namespace = event.split(" ")[0]
+            holder = holders[namespace]
+        }
+
+        return holder
     }
 
     /**

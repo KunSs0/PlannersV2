@@ -1,4 +1,4 @@
-package com.gitee.planners.core.config
+﻿package com.gitee.planners.core.config
 
 import com.gitee.planners.api.common.script.ComplexCompiledScript
 import com.gitee.planners.api.common.script.ComplexScriptPlatform

@@ -2,7 +2,7 @@ package com.gitee.planners.core.player
 
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
-import com.gitee.planners.api.common.metadata.createMetadata
+import com.gitee.planners.api.common.metadata.metadataValue
 import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.Leveling
@@ -42,7 +42,7 @@ class PlayerTemplate(val id: Long, val onlinePlayer: Player, route: PlayerRoute?
             ?: AlgorithmLevel.getInstance(this).minLevel
         @JvmName("level1")
         private set(value) {
-            this[AlgorithmLevel.getStoragePathInIsolation(this, "level")] = createMetadata(value)
+            this[AlgorithmLevel.getStoragePathInIsolation(this, "level")] = metadataValue(value)
         }
 
     var experience: Int
@@ -50,7 +50,7 @@ class PlayerTemplate(val id: Long, val onlinePlayer: Player, route: PlayerRoute?
         get() = this[AlgorithmLevel.getStoragePathInIsolation(this, "experience")]?.asInt() ?: 0
         @JvmName("experience1")
         private set(value) {
-            this[AlgorithmLevel.getStoragePathInIsolation(this, "experience")] = createMetadata(value)
+            this[AlgorithmLevel.getStoragePathInIsolation(this, "experience")] = metadataValue(value)
         }
 
     val experienceMax: Int

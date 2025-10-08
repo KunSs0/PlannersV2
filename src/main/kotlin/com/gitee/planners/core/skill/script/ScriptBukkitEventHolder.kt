@@ -1,5 +1,7 @@
 package com.gitee.planners.core.skill.script
 
+import com.gitee.planners.core.config.State
+import com.gitee.planners.core.skill.entity.state.ScriptCallbackImpl
 import com.gitee.planners.core.skill.script.animated.AbstractEventModifier
 import org.bukkit.event.Event
 import taboolib.common.platform.event.EventPriority
@@ -57,10 +59,24 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
     }
 
     /**
+     * 分配监听器
+     *
+     * @param callback 监听器
+     */
+    open fun getAssignCallback(state: State,trigger: State.Trigger): ScriptCallbackImpl {
+        return ScriptCallbackImpl(state,trigger)
+    }
+
+    /**
      * 注册监听器
      *
      * @param callback 监听器
      */
+    override fun register(state: State, trigger: State.Trigger) {
+        val callback = getAssignCallback(state, trigger)
+        this.register(callback)
+    }
+
     override fun register(callback: ScriptCallback) {
         if (!this.listeners.containsKey(callback.priority)) {
             this.init(callback.priority)

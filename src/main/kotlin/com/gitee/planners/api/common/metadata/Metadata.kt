@@ -103,4 +103,9 @@ interface Metadata {
         }
     }
 
+    /**
+     * 不保存的元数据
+     */
+    interface Unsaved
+
 }

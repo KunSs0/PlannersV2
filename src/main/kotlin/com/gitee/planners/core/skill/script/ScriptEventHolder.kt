@@ -2,6 +2,7 @@ package com.gitee.planners.core.skill.script
 
 import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.core.config.State
 import taboolib.module.kether.ScriptContext
 
 interface ScriptEventHolder<T> {
@@ -54,6 +55,14 @@ interface ScriptEventHolder<T> {
      * @param id 脚本id
      */
     fun getCallback(id: String): ScriptCallback?
+
+    /**
+     * 注册监听器
+     *
+     * @param state 状态
+     * @param trigger 触发器
+     */
+    fun register(state: State, trigger: State.Trigger)
 
     /**
      * 注册监听器

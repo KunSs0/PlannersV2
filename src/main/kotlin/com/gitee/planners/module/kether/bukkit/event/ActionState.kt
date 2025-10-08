@@ -4,6 +4,7 @@ import com.gitee.planners.api.Registries
 import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.MultipleKetherParser
+import com.gitee.planners.api.job.target.CapableState
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.api.job.target.TargetEntity
 import com.gitee.planners.core.config.State
@@ -33,7 +34,7 @@ object ActionState : MultipleKetherParser("state") {
                     return@now
                 }
 
-                for (target in objective.filterIsInstance<TargetEntity<*>>()) {
+                for (target in objective.filterIsInstance<CapableState>()) {
                     target.addState(state, duration,cover)
                 }
             }
@@ -46,7 +47,7 @@ object ActionState : MultipleKetherParser("state") {
             now {
                 val state = resolveState(id) ?: return@now
 
-                for (target in objective.filterIsInstance<TargetEntity<*>>()) {
+                for (target in objective.filterIsInstance<CapableState>()) {
                     target.removeState(state)
                 }
             }
@@ -61,8 +62,7 @@ object ActionState : MultipleKetherParser("state") {
         ).apply(it) { id, objective: TargetContainer ->
             now {
                 val state = resolveState(id) ?: return@now false
-                val target = objective.filterIsInstance<TargetEntity<*>>().firstOrNull()
-                    ?: return@now false
+                val target = objective.filterIsInstance<CapableState>().firstOrNull() ?: return@now false
                 target.hasState(state)
             }
         }

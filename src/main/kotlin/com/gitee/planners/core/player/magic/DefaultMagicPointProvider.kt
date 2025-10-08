@@ -2,7 +2,7 @@ package com.gitee.planners.core.player.magic
 
 import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.api.common.metadata.createMetadata
+import com.gitee.planners.api.common.metadata.metadataValue
 import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.common.script.SingletonKetherScript
 import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
@@ -27,7 +27,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     override fun setPoint(player: Player, magicPoint: Int) {
-        player.plannersTemplate["@magic.point"] = createMetadata(minOf(magicPoint, getPointInUpperLimit(player)), -1)
+        player.plannersTemplate["@magic.point"] = metadataValue(minOf(magicPoint, getPointInUpperLimit(player)), -1)
     }
 
     override fun getPointInUpperLimit(player: Player): Int {
@@ -41,7 +41,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     fun setPointInUpperLimit(player: Player, magicPoint: Int) {
-        player.plannersTemplate["@magic.point.max"] = createMetadata(magicPoint, -1)
+        player.plannersTemplate["@magic.point.max"] = metadataValue(magicPoint, -1)
     }
 
     init {
