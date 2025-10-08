@@ -1,7 +1,6 @@
 state0:
   priority: 0
   name: "眩晕"
-  static: true
   trigger:
     "chat":
       listen: player chat
@@ -16,3 +15,12 @@ state0:
       listen: state detach
       action: |-
         tell "我已解除眩晕!"
+    "state end":
+      listen: state end
+      action: |-
+        tell "state0 自然结束"
+    "c0":
+      listen: customtrigger a_0
+      action: |-
+        tell "进入自定义触发器"
+        state detach ~
