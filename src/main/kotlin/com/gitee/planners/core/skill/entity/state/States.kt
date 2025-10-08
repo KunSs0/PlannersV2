@@ -2,9 +2,14 @@ package com.gitee.planners.core.skill.entity.state
 
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
+import com.gitee.planners.api.event.script.ScriptCustomTriggerEvent
 import com.gitee.planners.api.job.target.CapableState
+import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.core.config.State
+import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
+import com.gitee.planners.core.skill.script.ScriptCallback
 import com.gitee.planners.core.skill.script.ScriptEventLoader
+import org.bukkit.event.Event
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.Schedule
@@ -85,7 +90,11 @@ object States {
      */
     private fun unload(state: State) {
         for (trigger in state.triggers.values) {
-            val holder = ScriptEventLoader.getHolder(trigger.listen) ?: continue
+            val holder = ScriptEventLoader.getHolder(trigger.listen) as? ScriptBukkitEventHolder<Event>
+            if (holder == null) {
+                continue
+            }
+
             val callback = holder.getCallback(trigger.id)
             if (callback != null) {
                 holder.unregister(callback)
@@ -107,7 +116,21 @@ object States {
                 continue
             }
 
-            holder.register(state,trigger)
+            holder.register(state, trigger)
         }
     }
+
+    /**
+     * 触发自定义状态
+     *
+     * @param sender 发送者
+     * @param name 状态名称
+     */
+    fun trigger(sender: Target<*>, name: String) {
+        if (sender !is CapableState) {
+            return
+        }
+        ScriptCustomTriggerEvent(sender, name).call()
+    }
+
 }

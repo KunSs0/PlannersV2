@@ -14,7 +14,7 @@ class TargetStateHolder(val state: State, val duration: Long, val cb: Runnable?)
 
     // 状态是否过期
     val isExpired: Boolean
-        get() = !isValid && System.currentTimeMillis() >= end
+        get() = !isValid || System.currentTimeMillis() >= end
 
 
     // 定时任务
@@ -50,9 +50,7 @@ class TargetStateHolder(val state: State, val duration: Long, val cb: Runnable?)
          * @param duration 持续时间
          */
         fun create(state: State, duration: Long, cb: Runnable?): TargetStateHolder {
-            val end = System.currentTimeMillis() + duration * 50
-
-            return TargetStateHolder(state, end, cb)
+            return TargetStateHolder(state, duration, cb)
         }
 
         /**

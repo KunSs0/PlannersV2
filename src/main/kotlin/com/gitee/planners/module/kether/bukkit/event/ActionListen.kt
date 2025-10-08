@@ -4,6 +4,7 @@ import com.gitee.planners.api.common.script.KetherEditor
 import com.gitee.planners.api.common.script.kether.CombinationKetherParser
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.core.skill.script.ScriptCallback
+import com.gitee.planners.core.skill.script.ScriptEventHolder
 import com.gitee.planners.core.skill.script.ScriptEventLoader
 import com.gitee.planners.module.kether.commandBool
 import com.gitee.planners.module.kether.commandEnum
@@ -32,7 +33,7 @@ object ActionListen {
             now {
                 val id = UUID.randomUUID().toString()
                 val context = getEnvironmentContext() as AbstractComplexScriptContext
-                val holder = ScriptEventLoader.getHolder(eventId)
+                val holder = ScriptEventLoader.getHolder(eventId) as? ScriptEventHolder<Any>
                 if (holder == null) {
                     warning("The event holder of '$eventId' is not found.")
                     return@now
@@ -42,7 +43,7 @@ object ActionListen {
                     warning("The block script of '$blockId' is not found.")
                     return@now
                 }
-                val callback = ScriptCallback(id, context.compiled, ignoreCancelled, priority, block, async)
+                val callback = ScriptCallback<Any>(id, context.compiled, ignoreCancelled, priority, block, async)
                 holder.register(callback)
             }
         }
@@ -64,13 +65,13 @@ object ActionListen {
     }
 
     @KetherProperty(bind = ScriptCallback::class)
-    fun getWrappedEvent() = object : ScriptProperty<ScriptCallback>("scriptblocklistener.operator") {
+    fun getWrappedEvent() = object : ScriptProperty<ScriptCallback<Any>>("scriptblocklistener.operator") {
 
-        override fun write(instance: ScriptCallback, key: String, value: Any?): OpenResult {
+        override fun write(instance: ScriptCallback<Any>, key: String, value: Any?): OpenResult {
             return OpenResult.failed()
         }
 
-        override fun read(instance: ScriptCallback, key: String): OpenResult {
+        override fun read(instance: ScriptCallback<Any>, key: String): OpenResult {
             return when (key) {
 
                 "id" -> OpenResult.successful(instance.id)

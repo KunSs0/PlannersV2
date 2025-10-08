@@ -16,7 +16,7 @@ object ScriptCustomTrigger : ScriptBukkitEventHolder<ScriptCustomTriggerEvent>()
         return event.sender
     }
 
-    override fun getAssignCallback(state: State, trigger: State.Trigger): ScriptCallbackImpl {
+    override fun getAssignCallback(state: State, trigger: State.Trigger): ScriptCallbackImpl<ScriptCustomTriggerEvent> {
         return ScriptCustomCallbackImpl(state, trigger)
     }
 

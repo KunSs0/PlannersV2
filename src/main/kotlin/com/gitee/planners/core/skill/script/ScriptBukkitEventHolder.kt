@@ -14,7 +14,7 @@ import java.util.*
 
 abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
 
-    private val callbacks = mutableListOf<ScriptCallback>()
+    private val callbacks = mutableListOf<ScriptCallback<T>>()
 
     private val listeners = mutableMapOf<EventPriority,ProxyListener>()
 
@@ -38,7 +38,7 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
         }
     }
 
-    protected fun call(event: T, callback: ScriptCallback) {
+    protected fun call(event: T, callback: ScriptCallback<T>) {
         val sender = this.getSender(event)
         if (sender == null) {
             return
@@ -54,7 +54,7 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
         ctx["event"] = getModifier(event)
     }
 
-    override fun getCallback(id: String): ScriptCallback? {
+    override fun getCallback(id: String): ScriptCallback<T>? {
         return callbacks.firstOrNull { it.id == id }
     }
 
@@ -63,7 +63,7 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
      *
      * @param callback 监听器
      */
-    open fun getAssignCallback(state: State,trigger: State.Trigger): ScriptCallbackImpl {
+    open fun getAssignCallback(state: State,trigger: State.Trigger): ScriptCallbackImpl<T> {
         return ScriptCallbackImpl(state,trigger)
     }
 
@@ -77,7 +77,7 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
         this.register(callback)
     }
 
-    override fun register(callback: ScriptCallback) {
+    override fun register(callback: ScriptCallback<T>) {
         if (!this.listeners.containsKey(callback.priority)) {
             this.init(callback.priority)
         }
@@ -91,7 +91,7 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
      *
      * @param callback 监听器
      */
-    override fun unregister(callback: ScriptCallback) {
+    override fun unregister(callback: ScriptCallback<T>) {
         callbacks -= callback
     }
 

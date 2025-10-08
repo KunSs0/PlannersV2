@@ -8,12 +8,12 @@ import com.gitee.planners.core.skill.script.ScriptEventHolder
 import taboolib.common.platform.event.EventPriority
 import taboolib.module.kether.ScriptContext
 
-open class ScriptCallbackImpl(val state: State, val trigger: State.Trigger) :
-    ScriptCallback(trigger.id, trigger.action, true, EventPriority.NORMAL, null, false) {
+open class ScriptCallbackImpl<T>(val state: State, val trigger: State.Trigger) :
+    ScriptCallback<T>(trigger.id, trigger.action, true, EventPriority.NORMAL, null, false) {
 
 
 
-    override fun <T> call(sender: Target<*>, event: T, holder: ScriptEventHolder<T>) {
+    override fun call(sender: Target<*>, event: T, holder: ScriptEventHolder<T>) {
         if (sender !is CapableState) {
             return
         }

@@ -16,7 +16,7 @@ import taboolib.module.kether.ScriptContext
 import taboolib.module.kether.ScriptOptions
 import taboolib.module.kether.runKether
 
-open class ScriptCallback(
+open class ScriptCallback<T> (
     val id: String,
     val compiled: ComplexCompiledScript,
     val ignoreCancelled: Boolean,
@@ -37,7 +37,7 @@ open class ScriptCallback(
      * @param event 事件
      * @param holder 事件持有者
      */
-    open fun <T> call(sender: Target<*>, event: T, holder: ScriptEventHolder<T>) {
+    open fun call(sender: Target<*>, event: T, holder: ScriptEventHolder<T>) {
         if (this.closed) {
             return
         }

@@ -7,7 +7,7 @@ import org.bukkit.Bukkit
 import org.bukkit.command.ConsoleCommandSender
 
 class TargetConsoleCommandSender(val console: ConsoleCommandSender) : TargetCommandSender<ConsoleCommandSender>,
-    TargetContainerization, CapableState {
+    TargetContainerization {
 
     override val instance = console
 
@@ -25,26 +25,6 @@ class TargetConsoleCommandSender(val console: ConsoleCommandSender) : TargetComm
 
     override fun setMetadata(id: String, data: Metadata) {
         container[id] = data
-    }
-
-    override fun isValid(): Boolean {
-        return true
-    }
-
-    override fun addState(state: State, duration: Long, coverBefore: Boolean) {
-
-    }
-
-    override fun removeState(state: State) {
-        TODO("Not yet implemented")
-    }
-
-    override fun hasState(state: State): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun isExpired(state: State): Boolean {
-        TODO("Not yet implemented")
     }
 
     override fun toString(): String {

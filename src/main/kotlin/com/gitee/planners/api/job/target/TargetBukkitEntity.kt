@@ -107,7 +107,7 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
             return true
         }
 
-        return isExpired(state)
+        return TargetStateHolder.parse(this.getMetadata(state.path())) != null
     }
 
     override fun isExpired(state: State): Boolean {
@@ -138,9 +138,9 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
                 this@TargetBukkitEntity.endState(state)
             }
             newHolder.init()
-            EntityStateEvent.Attach.Post(this, state).call()
 
             this.setMetadata(state.path(), metadataValue(newHolder))
+            EntityStateEvent.Attach.Post(this, state).call()
         }
     }
 
@@ -152,9 +152,14 @@ class TargetBukkitEntity(override val instance: Entity) : TargetEntity<Entity>, 
     }
 
     override fun removeState(state: State) {
-        if (state.isStatic || !hasState(state)) {
+        if (state.isStatic) {
             return
         }
+        val holder = TargetStateHolder.parse(this.getMetadata(state.path()))
+        if (holder == null) {
+            return
+        }
+
         if (EntityStateEvent.Detach.Pre(this, state).call()) {
             this.setMetadata(state.path(), metadataValue(null))
             EntityStateEvent.Detach.Post(this, state).call()

@@ -5,6 +5,7 @@ import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.module.kether.context.CompiledScriptContext
 import org.bukkit.Bukkit
+import org.bukkit.event.Event
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
@@ -15,7 +16,7 @@ import java.util.*
 
 object ScriptEventLoader {
 
-    private val holders = mutableMapOf<String, ScriptEventHolder<*>>()
+    private val holders = mutableMapOf<String, ScriptEventHolder<out Any>>()
 
     /**
      * 为脚本注册onload监听器
@@ -64,11 +65,11 @@ object ScriptEventLoader {
      *
      * @return 回调函数，若不存在则返回 null
      */
-    fun getCallback(id: String): ScriptCallback? {
+    fun getCallback(id: String): ScriptCallback<Any>? {
         for (holder in holders.values) {
             val callback = holder.getCallback(id)
             if (callback != null) {
-                return callback
+                return callback as ScriptCallback<Any>
             }
         }
 
@@ -80,7 +81,7 @@ object ScriptEventLoader {
      *
      * @param wrapped 事件包装器
      */
-    fun registerHolder(wrapped: ScriptBukkitEventHolder<*>) {
+    fun registerHolder(wrapped: ScriptBukkitEventHolder<Event>) {
         holders[wrapped.name] = wrapped
 
         wrapped.init()
@@ -94,7 +95,7 @@ object ScriptEventLoader {
 
         override fun visitEnd(clazz: ReflexClass) {
             if (ScriptBukkitEventHolder::class.java.isAssignableFrom(clazz.toClass())) {
-                val wrapped = clazz.getInstance() as? ScriptBukkitEventHolder<*> ?: return
+                val wrapped = clazz.getInstance() as? ScriptBukkitEventHolder<Event> ?: return
                 registerHolder(wrapped)
             }
         }

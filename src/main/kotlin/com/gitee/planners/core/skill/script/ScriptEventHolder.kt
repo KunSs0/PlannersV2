@@ -54,7 +54,7 @@ interface ScriptEventHolder<T> {
      *
      * @param id 脚本id
      */
-    fun getCallback(id: String): ScriptCallback?
+    fun getCallback(id: String): ScriptCallback<T>?
 
     /**
      * 注册监听器
@@ -69,12 +69,12 @@ interface ScriptEventHolder<T> {
      *
      * @param callback 监听器
      */
-    fun register(callback: ScriptCallback)
+    fun register(callback: ScriptCallback<T>)
 
     /**
      * 注销监听器
      *
      * @param callback 监听器
      */
-    fun unregister(callback: ScriptCallback)
+    fun unregister(callback: ScriptCallback<T>)
 }

@@ -33,6 +33,9 @@ object Command {
     val profile = CommandProfile
 
     @CommandBody
+    val state = CommandState
+
+    @CommandBody
     val test = subCommand {
         dynamic("state") {
             suggest { Registries.STATE.keys().toList() }
