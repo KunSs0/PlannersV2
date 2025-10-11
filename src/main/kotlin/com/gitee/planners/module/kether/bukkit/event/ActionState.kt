@@ -9,6 +9,7 @@ import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.api.job.target.TargetEntity
 import com.gitee.planners.core.config.State
 import com.gitee.planners.module.kether.commandBool
+import com.gitee.planners.module.kether.commandInt
 import com.gitee.planners.module.kether.commandLong
 import com.gitee.planners.module.kether.commandObjectiveOrSender
 import taboolib.common.PrimitiveIO.warning
@@ -19,14 +20,14 @@ import java.util.*
 @CombinationKetherParser.Used
 object ActionState : MultipleKetherParser("state") {
 
-    @KetherEditor.Document("state attach <state: id> [duration <-1>] [cover <false>] [at objective:TargetContainer(sender)]")
+    @KetherEditor.Document("state attach|mount <state: id> [duration <-1>] [refresh <true>] [at objective:TargetContainer(sender)]")
     val attach = combinationParser {
         it.group(
             text(),
             commandLong("duration", -1L),
-            commandBool("cover",true),
+            commandBool("refresh", true),
             commandObjectiveOrSender()
-        ).apply(it) { id, duration,cover, objective: TargetContainer ->
+        ).apply(it) { id, duration, refresh, objective: TargetContainer ->
             now {
                 val state = Registries.STATE.getOrNull(id)
                 if (state == null) {
@@ -35,14 +36,27 @@ object ActionState : MultipleKetherParser("state") {
                 }
 
                 for (target in objective.filterIsInstance<CapableState>()) {
-                    target.addState(state, duration,cover)
+                    target.attachState(state, duration, refresh)
                 }
             }
         }
     }
 
-    @KetherEditor.Document("state detach <state: id> [at objective:TargetContainer(sender)]")
+    @KetherEditor.Document("state detach <state: id> [layer <1>] [at objective:TargetContainer(sender)]")
     val detach = combinationParser {
+        it.group(text(), commandInt("layer", 1), commandObjectiveOrSender()).apply(it) { id, layer, objective: TargetContainer ->
+            now {
+                val state = resolveState(id) ?: return@now
+
+                for (target in objective.filterIsInstance<CapableState>()) {
+                    target.detachState(state, layer)
+                }
+            }
+        }
+    }
+
+    @KetherEditor.Document("state close <state: id> [at objective:TargetContainer(sender)]")
+    val close = combinationParser {
         it.group(text(), commandObjectiveOrSender()).apply(it) { id, objective: TargetContainer ->
             now {
                 val state = resolveState(id) ?: return@now

@@ -1,192 +1,127 @@
-﻿# Planners V2 状态管理系统指南
+# Planners V2 状态系统说明
 
-## 系统概述
-- 状态（State）用于在 `TargetEntity`（玩家、生物等）上附加持续效果、限制或数据标记。
-- 配置文件位于 `src/main/resources/state/`。每个 `.yml` 文件可以定义一个或多个状态条目，键名即状态 ID。
-- 插件启动或执行 `planners reload` 时，`Registries.STATE` 会读取所有文件并生成 `ImmutableState` 实例。`States` 组件随后把每个状态的触发器注册到脚本事件系统。
-- 运行时通过实体元数据 `pl.state.<id>` 记录状态持有情况，并存储附加时间戳用于过期检测。静态状态（`static: true`）被视为永久存在，不参与元数据存储。
+本说明涵盖状态（State）在 Planners V2 中的配置、脚本指令、事件回调以及层数管理等最新行为。
 
-## 状态相关脚本命令
+## 系统概览
+
+- 状态配置位于 `src/main/resources/state/`。每个 `.yml` 文件可定义多个状态，节点名即状态 ID。
+- 执行 `planners reload` 时会重新载入配置，并通过 `Registries.STATE` 暴露于运行时。
+- 非静态状态会在实体元数据 `pl.state.<id>` 下维护 `TargetStateHolder`，记录层数与剩余时间；静态状态 (`static: true`) 视为常驻，不会被系统移除。
+- 状态支持叠层，可通过 `max-layer` 限制上限；超过上限时仅根据 `refreshDuration` 决定是否刷新时间。
+
+## Kether 指令
+
+所有 `state` 指令均注册在 `planners-common` 命名空间，脚本中可直接调用。
 
 ### `state attach`
+
+```kether
+state attach <stateId> [duration <-1>] [refresh <true>] [at <目标容器>]
 ```
-state attach <stateId> [duration <-1>] [cover <true>] [at <目标容器>]
-```
-- `stateId` 需存在于 `Registries.STATE`，否则命令会中止并输出警告。
-- `duration` 可选项，单位毫秒；为 -1 时表示永久状态，与旧版本保持兼容。
-- `cover` 可选项，默认为 `true`, 表示状态会覆盖已有状态。
-- `目标容器` 默认解析为脚本 `sender`，也可通过 `at &target` 指定 TabooLib 的目标集合。
-- 成功解析的目标若为 `TargetEntity` 将触发 `EntityStateEvent.Attach.Pre/Post` 事件并调用 `addState`。
+
+- `stateId`：必须存在于 `Registries.STATE`。
+- `duration`：持续时间（tick）；-1 代表由调用方或配置提供默认值。
+- `refresh`：当状态已存在时是否刷新剩余时间，默认 `true`。
+- `at`：可选目标容器，未指定时默认使用脚本 `sender`。
+- 实际调用 `CapableState.attachState`，首次挂载会触发 `EntityStateEvent.Mount` 与 `Attach`，后续叠层只触发 `Attach`。
 
 ### `state detach`
-```
-state detach <stateId|~> [at <目标容器>]
-```
-- `~` 可从上下文读取当前状态 ID（`@State`），等价于显式写出该 ID。
-- 静态状态无法移除，命令会直接返回。
-- 仅对解析到的 `TargetEntity` 生效，逐个调用 `removeState`，并在命中时触发 `EntityStateEvent.Detach`。
 
-### `state has`
+```kether
+state detach <stateId|~> [layer <1>] [at <目标容器>]
 ```
+
+- `stateId` 或 `~`：`~` 会优先读取脚本变量 `@State`，否则解析文本。
+- `layer`：要移除的层数，默认 `1`；传入 `999` 表示一次性清空。
+- 执行 `CapableState.detachState`，触发 `EntityStateEvent.Detach`，当层数归零时额外触发 `EntityStateEvent.Close`。
+
+### `state close`
+
+```kether
+state close <stateId|~> [at <目标容器>]
+```
+
+- 强制移除指定状态，直接触发 `CapableState.removeState`。
+- 会依次广播 `EntityStateEvent.Detach` 与 `EntityStateEvent.Close`。
+
+### `state has` / `state contains`
+
+```kether
 state has <stateId|~> [at <目标容器>]
 ```
-- `stateId` 同上，支持使用 `~` 占位符。
-- 仅检查解析到的首个 `TargetEntity`；若目标为空或缺少该状态返回 `false`。
-- 命令返回布尔值，可用于判定语句或逻辑组合。
 
-### `state contains`
-```
-state contains <stateId|~> [at <目标容器>]
-```
-- 行为与 `state has` 等价，提供更贴近日常表述的别名。
-- 可与 `if`、`and` 等脚本语句组合，实现更语义化的状态判断。
+- 判断目标是否拥有指定状态（忽略层数与剩余时间）。
+- `state contains` 为同义指令。
 
-## 状态配置结构
-
-### 文件示例
-`src/main/resources/state/example.yml`（插件默认附带）
+## 配置示例
 
 ```yaml
 state0:
   priority: 0
+  max-layer: 3
   name: "眩晕"
-  static: true
+  static: false
   trigger:
-    chat:
-      action: |-
-        tell "chat"
-        state detach ~
     "state-attach":
+      listen: state attach
       action: |-
-        tell "我被眩晕了"
+        tell "眩晕层数增加"
     "state-detach":
+      listen: state detach
       action: |-
-        tell "我已解除眩晕!"
+        tell "眩晕层数减少"
+    "state-mount":
+      listen: state mount
+      action: |-
+        tell "首次获得眩晕"
+    "state-close":
+      listen: state close
+      action: |-
+        tell "完全解除眩晕"
+    "state-end":
+      listen: state end
+      action: |-
+        tell "眩晕自然结束"
 ```
 
-默认示例通过 `chat`、`state-attach`、`state-detach` 三个触发器演示状态生命周期；若需要与上表提供的事件名对齐，可为触发器显式声明 `on` 字段（如 `on: "player chat"`、`on: "state attach"`）。
+| 字段        | 类型   | 默认值   | 说明                                   |
+|-------------|--------|----------|----------------------------------------|
+| `priority`  | double | `0.0`    | 状态优先级，数值越大越先执行。         |
+| `max-layer` | int    | `无上限` | 可叠加的最大层数，至少为 `1`。         |
+| `static`    | bool   | `false`  | 静态状态不会被系统自动移除。           |
+| `name`      | string | `id`     | 展示名称，用于界面或日志。             |
+| `trigger`   | section| —        | 触发器集合，键为自定义触发器 ID。     |
 
-### 字段说明
+## 事件与脚本绑定
 
-| 字段        | 类型   | 默认值 | 说明 |
-|-------------|--------|--------|------|
-| `priority`  | double | `0.0`  | 状态优先级，值越大越先执行。|
-| `static`    | bool   | `false`| 静态状态始终视为已附着，不会因计时而移除。|
-| `name`      | string | `id`   | 展示名称，常用于 UI 或日志。|
-| `trigger`   | section| —      | 触发器配置集合，键名即触发器 ID。|
+| 事件类                         | 触发时机                                 | 备注                       |
+|--------------------------------|------------------------------------------|----------------------------|
+| `EntityStateEvent.Attach`      | 每次成功执行 `attachState` 后            | 兼容旧行为。               |
+| `EntityStateEvent.Detach`      | 调用 `detachState` 或 `removeState` 后   | 永远会在层数减少时触发。   |
+| `EntityStateEvent.Mount`       | 状态层数由 0 → 1 时                      | 监听首次挂载。             |
+| `EntityStateEvent.Close`       | 状态层数从正数降为 0 时                  | 监听完全移除。             |
+| `EntityStateEvent.End`         | 计时器到期且未被取消时                   | 结束流程仍会走 `removeState`。 |
 
-> 状态持续时长不再由配置文件提供，需在脚本调用 `state attach` 时通过 `duration` 参数控制。
+脚本事件注册位于 `com.gitee.planners.core.skill.script.state.ScriptEntityState`，提供 `state attach/detach/mount/close/end` 等监听名称。
 
-## 可用脚本事件
+## 运行时行为要点
 
-下表列出了 `com.gitee.planners.core.skill.script` 提供的事件名称及上下文。只有当 `sender` 可以转换为 `TargetEntity` 且确实持有该状态时，`States.ScriptCallbackImpl` 才会执行对应触发器。
+- `attachState`：首次挂载会创建 `TargetStateHolder`，注册到期任务；到期后由回调调用 `removeState`。
+- 达到 `max-layer` 后再次调用 `attachState` 时，仅在 `refreshDuration=true` 时刷新剩余时间。
+- `detachState`：按层数递减；当层数降为 0 时触发 `Detach` 与 `Close`，并清理元数据。
+- `removeState`：无视层数直接移除，用于过期或强制清理。
+- `States.tick` 会在实体过期时调用 `removeState`，确保层数归零并触发事件。
 
-| `on` 值                 | Bukkit 事件类型                                    | `sender` 来源                                      | 额外上下文键 |
-|-------------------------|----------------------------------------------------|----------------------------------------------------|--------------|
-| `damage`                | `EntityDamageByEntityEvent`                        | 攻击者（玩家）                                     | `event`（`DamageEventModifier`），`damager`，`entity` |
-| `damaged`               | `EntityDamageByEntityEvent`                        | 受击的玩家                                         | 同 `damage` |
-| `death`                 | `PlayerDeathEvent`                                 | 死亡的玩家                                         | `attacker`（`LivingEntity`），`message` |
-| `projectile.hit`        | `ProjectileHitEvent`                               | 发射该投射物的玩家                                 | `entity`（投射物），`target`（命中目标 `Target`），`block`（命中方块位置） |
-| `player join`           | `PlayerJoinEvent`                                  | 加入服务器的玩家                                   | — |
-| `player joined`         | `PlayerProfileLoadedEvent`（Planners 自定义）      | 档案加载完成的玩家                                 | — |
-| `player quit`           | `PlayerEvent`（当前实现绑定 `PlayerJoinEvent`）    | 玩家（待替换为离线事件）                           | — |
-| `player chat`           | `AsyncPlayerChatEvent`                             | 发送消息的玩家                                     | — |
-| `player attack`         | `EntityDamageByEntityEvent`                        | 攻击者（玩家）                                     | — |
-| `player damaged`        | `EntityDamageByEntityEvent`                        | 受击的玩家                                         | — |
-| `player toggle sprint`  | `PlayerToggleSprintEvent`                          | 切换疾跑的玩家                                     | — |
-| `player toggle sneak`   | `PlayerToggleSprintEvent`（待更换为潜行事件）      | 切换状态的玩家                                     | — |
-| `player cast skill`     | `PlayerSkillCastEvent.Post`                        | 释放技能的玩家                                     | — |
-| `keyup`                 | `ProxyClientKeyEvents.Up`                          | 客户端按键释放的玩家                               | — |
-| `keydown`               | `ProxyClientKeyEvents.Down`                        | 客户端按键按下的玩家                               | — |
-| `state attach`          | `EntityStateEvent.Attach.Post`                     | 获得状态的实体                                     | — |
-| `state detach`          | `EntityStateEvent.Detach.Post`                     | 失去状态的实体                                     | — |
-| `state end`             | `EntityStateEvent.End`                            | 状态自然到期的实体                                   | — |
-| `customtrigger <名称>`  | `ScriptCustomTriggerEvent`（Planners 自定义）        | 手动触发的状态实体                                   | — |
-> 状态自然到期后会触发 state end 事件，可在脚本中处理到期后的收尾逻辑。`r`n
+## MythicMobs 兼容
 
+| Mechanic 名称                       | 功能说明           | 主要参数                                   |
+|------------------------------------|--------------------|--------------------------------------------|
+| `plstateattach` / `pl-state-attach` | 等价 `state attach` | `state`/`id`、`duration`/`time`、`refresh` |
+| `plstatedetach` / `pl-state-detach` | 层数卸载/全清      | `state`/`id`、`layer`（默认 999，即全清）  |
+| `plstatecustomtrigger`             | 触发自定义脚本事件 | `name`/`trigger`                            |
 
-## 自定义脚本触发器（ScriptCustomTrigger）
+## 调试建议
 
-自定义触发器允许在没有对应 Bukkit 事件的情况下主动驱动状态逻辑。`ScriptCustomTrigger` 事件持有者会匹配 `listen` 以 `customtrigger` 开头的触发器，并根据后缀名称分发到具体脚本。
-
-```yaml
-trigger:
-  ready:
-    listen: "customtrigger ready"
-    action: |-
-      tell "准备完成"
-```
-
-- `listen` 的后缀（示例中的 `ready`）会与事件的 `name` 字段对比；只有完全一致时脚本才会执行。
-- `ScriptCustomTriggerEvent` 的 `sender` 同样来源于状态持有者，可继续使用 Target API。
-- 触发时同样会注入 `@State` 与 `@Trigger` 变量，便于脚本读取状态定义。
-- 可通过命令 `pl state trigger <玩家> <名称>` 或在代码中调用 `States.trigger(target, name)` 主动触发，触发时会对目标当前持有的所有状态进行匹配。
-- MythicMobs 可通过 mechanic `plstatecustomtrigger` 主动调用，参数 `name`/`trigger` 对应自定义触发名。
-
-## 触发器上下文
-
-- `@State`：当前触发的 `State` 实例，可读取元数据或配合 `state detach "~"` 使用。
-- `@Trigger`：当前触发器的 `State.Trigger` 数据，包含触发器 ID 与 `on` 值。
-- `event`：可选的 `AbstractEventModifier`，具体类型取决于事件持有者。
-- 其他键由事件持有者注入，例如 `damager`、`entity`、`attacker`、`message`、`target`、`block` 等。
-- `sender`：脚本命令上下文中的 `TargetEntity`，通常与事件主体一致，可继续调用 Target API。
-
-## 状态生命周期与过期机制
-
-- `TargetBukkitEntity.addState` 会在实体元数据中标记 `pl.state.<id>` 并记录当前时间；成功时依次广播 `EntityStateEvent.Attach.Pre/Post`。
-- `TargetBukkitEntity.removeState` 在状态非静态且仍被持有时清除元数据，并广播 `EntityStateEvent.Detach.Pre/Post`。
-- `TargetBukkitEntity.isExpired` 会读取实体元数据中的结束时间，完全由 `state attach` 传入的持续时长控制；`States.tick` 会清理超时状态，并在必要时调用 `States.record(target)`。
-- 若需手动控制持续时间，可在触发器脚本中记录剩余时间并调用 `state detach "~"`。
-
-## 调试与测试
-
-- `planners test <stateId>`：把指定状态附加到执行该命令的玩家，便于快速验证触发器。
-- `planners reload`：重新加载所有注册表（包括状态定义），会触发 `PluginReloadEvents.Pre/Post`，从而卸载并重建状态监听器。
-- 开发阶段可在触发器脚本内使用 `print` 或自定义日志输出，观察上下文变量的实际值。
-
-## 最佳实践
-
-1. 让每个状态保持单一职责，便于组合与复用。
-2. 合理设置 `priority`，确保互斥或依赖的状态按预期顺序执行。
-3. 使用具有辨识度的触发器 ID，并避免在同一状态内重复。
-4. 借助 `@State` 和 `state detach "~"` 复用脚本，降低硬编码 ID 的风险。
-5. 对高频事件（如 `damage`、`projectile.hit`）在脚本内增加条件判断，避免不必要的运行成本。
-## 第三方插件支持
-
-目前仅适配 MythicMobs 4.x，在插件启动阶段监听 `MythicMechanicLoadEvent` 注册自定义 mechanic，这些机制的语义与 Kether `state` 指令一致：
-
-| Mechanic 名称 | 对应行为 | 主要参数 |
-|---------------|----------|----------|
-| `plstateattach` / `pl-state-attach` | 等价 `state attach`，为目标实体附加状态 | `state`/`id`（必填），`duration`/`time`/`t`（毫秒，默认 -1），`cover`（默认 `true`） |
-| `plstatedetach` / `pl-state-detach` | 等价 `state detach`，移除状态 | `state`/`id`（必填） |
-| `plstatecustomtrigger` / `pl-state-customtrigger` | 触发 `customtrigger <名称>` 对应的状态脚本 | `name`/`trigger`（必填） |
-
-> 适配逻辑位于 `com.gitee.planners.module.compat.mythic`，MythicMobs 其他版本会忽略这些 mechanic。
-
-**示例（附加状态）**
-
-```yaml
-Skills:
-  AttachState:
-    Skills:
-      - plstateattach{state=state0;duration=5000;cover=true} @Self
-```
-
-**示例（移除状态）**
-
-```yaml
-Skills:
-  DetachState:
-    Skills:
-      - plstatedetach{state=state0} @Self
-```
-
-**示例（触发自定义脚本）**
-
-```yaml
-Skills:
-  CustomTrigger:
-    Skills:
-      - plstatecustomtrigger{name=ready} @Self
-```
-
+1. 使用 `planners test <stateId> <duration>` 快速挂载状态，配合 `state detach/close` 验证层数变化。
+2. 在脚本中结合 `state has` 做前置判断，避免达到上限后重复调用。
+3. 监听 `state mount` 与 `state close` 事件，记录首次挂载与完全移除的关键节点。*** End Patch

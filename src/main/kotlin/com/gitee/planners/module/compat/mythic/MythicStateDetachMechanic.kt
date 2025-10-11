@@ -14,6 +14,7 @@ import taboolib.common.platform.function.warning
 class MythicStateDetachMechanic(config: MythicLineConfig) : SkillMechanic(config.line, config), ITargetedEntitySkill {
 
     private val stateId: PlaceholderString = config.getPlaceholderString(arrayOf("state", "id"), "")
+    private val layer: Int = config.getInteger(arrayOf("layer"), 999)
 
     override fun castAtEntity(data: SkillMetadata, target: AbstractEntity?): Boolean {
         // Only applies to living entities
@@ -30,7 +31,11 @@ class MythicStateDetachMechanic(config: MythicLineConfig) : SkillMechanic(config
 
         val state = MythicMobsLoader.resolveStateOrWarn(id) ?: return false
         val targetEntity = target.bukkitEntity?.adaptTarget() ?: return false
-        targetEntity.removeState(state)
+        if (layer >= 999) {
+            targetEntity.removeState(state)
+        } else {
+            targetEntity.detachState(state, layer)
+        }
         return true
     }
 }

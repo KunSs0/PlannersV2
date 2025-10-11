@@ -51,7 +51,7 @@ object Command {
                     }
                     val duration = argument.clong
                     // 测试添加状态
-                    player.adaptTarget().addState(state,duration, true)
+                    player.adaptTarget().attachState(state, duration, true)
                     player.sendMessage("Test.")
                 }
             }

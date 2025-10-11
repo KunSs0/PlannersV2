@@ -17,7 +17,7 @@ class MythicStateAttachMechanic(config: MythicLineConfig) : SkillMechanic(config
 
     private val stateId: PlaceholderString = config.getPlaceholderString(arrayOf("state", "id"), "")
     private val duration: PlaceholderDouble = config.getPlaceholderDouble(arrayOf("duration", "time", "t"), "-1")
-    private val cover: Boolean = config.getBoolean(arrayOf("cover"), true)
+    private val refresh: Boolean = config.getBoolean(arrayOf("cover", "refresh"), true)
 
     override fun castAtEntity(data: SkillMetadata, target: AbstractEntity?): Boolean {
         // Only applies to living entities
@@ -36,7 +36,7 @@ class MythicStateAttachMechanic(config: MythicLineConfig) : SkillMechanic(config
         val targetEntity = target.bukkitEntity?.adaptTarget() ?: return false
 
         val durationMs = runCatching { duration.get(data, target) }.getOrElse { -1.0 }.roundToLong()
-        targetEntity.addState(state, durationMs, cover)
+        targetEntity.attachState(state, durationMs, refresh)
         return true
     }
 }

@@ -12,6 +12,8 @@ class ImmutableState(val config: ConfigurationSection) : State {
 
     override val priority: Double = config.getDouble("priority")
 
+    override val maxLayer: Int = config.getInt("max-layer").takeIf { it > 0 } ?: Int.MAX_VALUE
+
     override val name: String = config.getString("name", id)!!
 
     override val isStatic: Boolean = config.getBoolean("static", false)

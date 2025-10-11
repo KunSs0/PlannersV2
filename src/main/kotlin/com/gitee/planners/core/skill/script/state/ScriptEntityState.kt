@@ -16,7 +16,6 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
         override fun getSender(event: EntityStateEvent.Attach.Post): Target<*> {
             return event.entity
         }
-
     }
 
     object Detach : ScriptEntityState<EntityStateEvent.Detach.Pre>() {
@@ -26,6 +25,29 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
         override val bind: Class<EntityStateEvent.Detach.Pre> = EntityStateEvent.Detach.Pre::class.java
 
         override fun getSender(event: EntityStateEvent.Detach.Pre): Target<*> {
+            return event.entity
+        }
+    }
+
+    object Mount : ScriptEntityState<EntityStateEvent.Mount.Post>() {
+
+        override val name: String = "state mount"
+
+        override val bind: Class<EntityStateEvent.Mount.Post> = EntityStateEvent.Mount.Post::class.java
+
+        override fun getSender(event: EntityStateEvent.Mount.Post): Target<*> {
+            return event.entity
+        }
+
+    }
+
+    object Close : ScriptEntityState<EntityStateEvent.Close.Pre>() {
+
+        override val name: String = "state close"
+
+        override val bind: Class<EntityStateEvent.Close.Pre> = EntityStateEvent.Close.Pre::class.java
+
+        override fun getSender(event: EntityStateEvent.Close.Pre): Target<*> {
             return event.entity
         }
 

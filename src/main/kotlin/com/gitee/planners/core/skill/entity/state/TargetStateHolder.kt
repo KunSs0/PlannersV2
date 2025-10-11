@@ -5,66 +5,89 @@ import com.gitee.planners.core.config.State
 import taboolib.common.platform.function.submit
 import taboolib.common.platform.service.PlatformExecutor
 
-class TargetStateHolder(val state: State, val duration: Long, val cb: Runnable?): Metadata.Unsaved {
+class TargetStateHolder(
+    val state: State,
+    duration: Long,
+    private val cb: Runnable?
+) : Metadata.Unsaved {
 
-    val end = System.currentTimeMillis() + duration * 50
+    var duration: Long = duration
+        private set
 
-    // 状态是否有效
-    var isValid = true
+    var end: Long = System.currentTimeMillis() + duration * 50
+        private set
 
-    // 状态是否过期
+    var layer: Int = 1
+        private set
+
+    var isValid: Boolean = true
+        private set
+
     val isExpired: Boolean
         get() = !isValid || System.currentTimeMillis() >= end
 
+    private var task: PlatformExecutor.PlatformTask? = null
 
-    // 定时任务
-    var task: PlatformExecutor.PlatformTask? = null
-
-    /**
-     * 初始化状态持有者
-     */
     fun init() {
-        task = submit(delay = duration, async = true) {
+        schedule(duration)
+    }
+
+    fun refresh(duration: Long) {
+        if (!isValid) {
+            return
+        }
+        schedule(duration)
+    }
+
+    fun incrementLayer(maxLayer: Int): Boolean {
+        if (layer >= maxLayer) {
+            return false
+        }
+        layer++
+        return true
+    }
+
+    fun decrementLayer(amount: Int): Int {
+        if (amount <= 0) {
+            return layer
+        }
+        if (amount >= layer) {
+            layer = 0
+        } else {
+            layer -= amount
+        }
+        return layer
+    }
+
+    fun close() {
+        task?.cancel()
+        task = null
+        isValid = false
+        layer = 0
+    }
+
+    private fun schedule(delay: Long) {
+        task?.cancel()
+        isValid = true
+        duration = delay
+        end = System.currentTimeMillis() + delay * 50
+        task = submit(delay = delay, async = true) {
             isValid = false
             cb?.run()
         }
     }
 
-    /**
-     * 关闭状态持有者
-     */
-    fun close() {
-        if (task != null) {
-            task!!.cancel()
-        }
-
-        this.isValid = false
-    }
-
     companion object {
 
-        /**
-         * 创建状态持有者
-         *
-         * @param state 状态
-         * @param duration 持续时间
-         */
         fun create(state: State, duration: Long, cb: Runnable?): TargetStateHolder {
             return TargetStateHolder(state, duration, cb)
         }
 
-        /**
-         * 解析元数据
-         *
-         * @param metadata 元数据
-         */
         fun parse(metadata: Metadata?): TargetStateHolder? {
             if (metadata == null) {
                 return null
             }
-
             return metadata.any() as TargetStateHolder
         }
-
     }
 }

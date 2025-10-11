@@ -5,43 +5,41 @@ import com.gitee.planners.core.config.State
 interface CapableState {
 
     /**
-     * 是否有效
-     *
-     * @return 是否有效
+     * 目标对象当前是否仍然有效。
      */
-    fun isValid():Boolean
+    fun isValid(): Boolean
 
     /**
-     * 添加状态
+     * 为目标挂载状态。
      *
-     * @param state 状态
-     * @param duration 持续时间
-     * @param coverBefore 是否覆盖之前的状态
+     * @param state 状态定义
+     * @param duration 持续时间（tick），非静态状态必须为正数
+     * @param refreshDuration 若状态已存在时是否刷新剩余时间
      */
-    fun addState(state: State, duration: Long = -1, coverBefore: Boolean)
+    fun attachState(state: State, duration: Long = -1, refreshDuration: Boolean)
 
     /**
-     * 移除状态
+     * 按层数卸载状态。
      *
-     * @param state 状态
+     * @param state 状态定义
+     * @param layer 要移除的层数，传入 999 表示直接清空
+     */
+    fun detachState(state: State, layer: Int = 1)
+
+    /**
+     * 完整移除状态。
+     *
+     * @param state 状态定义
      */
     fun removeState(state: State)
 
     /**
-     * 是否有状态
-     *
-     * @param state 状态
-     * @return 是否有状态
+     * 检查目标是否拥有指定状态。
      */
     fun hasState(state: State): Boolean
 
     /**
-     * 状态是否过期
-     *
-     * @param state 状态
-     * @return 状态是否过期
+     * 检查目标上的状态是否已经过期。
      */
     fun isExpired(state: State): Boolean
-
-
 }

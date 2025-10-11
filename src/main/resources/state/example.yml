@@ -1,5 +1,6 @@
 state0:
   priority: 0
+  max-layer: 3
   name: "眩晕"
   trigger:
     "chat":
@@ -7,20 +8,28 @@ state0:
       action: |-
         tell "chat"
         state detach ~
-    "state attach":
+    "state-attach":
       listen: state attach
       action: |-
-        tell "我被眩晕了"
-    "state detach":
+        tell "眩晕层数增加"
+    "state-detach":
       listen: state detach
       action: |-
-        tell "我已解除眩晕!"
-    "state end":
+        tell "眩晕层数减少"
+    "state-mount":
+      listen: state mount
+      action: |-
+        tell "首次获得眩晕"
+    "state-close":
+      listen: state close
+      action: |-
+        tell "完全解除眩晕"
+    "state-end":
       listen: state end
       action: |-
-        tell "state0 自然结束"
-    "c0":
-      listen: customtrigger a_0
+        tell "眩晕自然结束"
+    "custom":
+      listen: customtrigger demo
       action: |-
         tell "进入自定义触发器"
         state detach ~
