@@ -150,7 +150,7 @@ def smartHealingAura = {
     set injuredAllies to filter &allies where health < max_health
     
     # 按受伤程度排序（生命值百分比最低的优先）
-    set sortedAllies to sort &injuredAllies by health / max_health limit 3
+    set sortedAllies to sort &injuredAllies by math health / max_health limit 3
     
     # 对受伤最严重的前3个玩家进行治疗
     for ally in &sortedAllies then {

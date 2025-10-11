@@ -163,7 +163,7 @@ def applyHealthPenalty = {
         tell "你已死亡!"
         
         # 复活处理
-        health set &playerLevel * 5  # 根据等级设置复活生命值
+        health set math &playerLevel * 5  # 根据等级设置复活生命值
         tell "复活成功! 生命值恢复至" player health
     }
 }

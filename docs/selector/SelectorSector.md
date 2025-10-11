@@ -192,7 +192,7 @@ def smartSectorHealing = {
     
     if check count &injuredAllies > 0 then {
         # 按受伤程度排序
-        set sortedAllies to sort &injuredAllies by health / max_health
+        set sortedAllies to sort &injuredAllies by math health / max_health
         
         # 计算总治疗量
         set totalHealAmount to 0
