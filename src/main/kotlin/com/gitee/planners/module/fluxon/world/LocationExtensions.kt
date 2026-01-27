@@ -1,6 +1,6 @@
 package com.gitee.planners.module.fluxon.world
 
-import com.gitee.planners.api.job.target.TargetBukkitLocation
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import org.bukkit.Location
 import org.tabooproject.fluxon.runtime.FunctionSignature
@@ -14,8 +14,8 @@ object LocationExtensions {
     fun register() {
         val runtime = FluxonScriptCache.runtime
 
-        // TargetBukkitLocation 扩展
-        runtime.registerExtension(TargetBukkitLocation::class.java)
+        // ProxyTarget.BukkitLocation 扩展
+        runtime.registerExtension(ProxyTarget.BukkitLocation::class.java)
             .function("x", FunctionSignature.returns(Type.D).noParams()) { ctx ->
                 val target = ctx.target ?: return@function
                 ctx.setReturnDouble(target.getX())

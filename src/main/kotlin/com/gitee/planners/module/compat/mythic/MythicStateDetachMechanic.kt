@@ -1,6 +1,8 @@
 package com.gitee.planners.module.compat.mythic
 
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.asTarget
+import com.gitee.planners.api.job.target.detachState
+import com.gitee.planners.api.job.target.removeState
 import io.lumine.xikage.mythicmobs.adapters.AbstractEntity
 import io.lumine.xikage.mythicmobs.io.MythicLineConfig
 import io.lumine.xikage.mythicmobs.skills.ITargetedEntitySkill
@@ -30,7 +32,7 @@ class MythicStateDetachMechanic(config: MythicLineConfig) : SkillMechanic(config
         }
 
         val state = MythicMobsLoader.resolveStateOrWarn(id) ?: return false
-        val targetEntity = target.bukkitEntity?.adaptTarget() ?: return false
+        val targetEntity = target.bukkitEntity?.asTarget() ?: return false
         if (layer >= 999) {
             targetEntity.removeState(state)
         } else {

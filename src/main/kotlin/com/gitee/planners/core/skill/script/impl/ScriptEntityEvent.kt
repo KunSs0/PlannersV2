@@ -1,10 +1,8 @@
 package com.gitee.planners.core.skill.script.impl
 
-import com.gitee.planners.api.common.entity.animated.Animated
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
-import com.gitee.planners.core.skill.script.animated.DamageEventModifier
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -18,8 +16,8 @@ import taboolib.platform.util.hasMeta
 
 abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>() {
 
-    override fun getSender(event: T): Target<*>? {
-        return (event.entity as? Player)?.adaptTarget()
+    override fun getSender(event: T): ProxyTarget<*>? {
+        return (event.entity as? Player)?.asTarget()
     }
 
     abstract class DamageEvent : ScriptEntityEvent<EntityDamageByEntityEvent>() {
@@ -28,12 +26,8 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>()
 
         override fun handle(event: EntityDamageByEntityEvent, options: FluxonScriptOptions) {
             super.handle(event, options)
-            options.set("damager", event.damager.adaptTarget())
-            options.set("entity", event.entity.adaptTarget())
-        }
-
-        override fun getModifier(event: EntityDamageByEntityEvent): Animated? {
-            return DamageEventModifier(event)
+            options.set("damager", event.damager.asTarget())
+            options.set("entity", event.entity.asTarget())
         }
 
     }
@@ -42,8 +36,8 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>()
 
         override val name = "damage"
 
-        override fun getSender(event: EntityDamageByEntityEvent): Target<*>? {
-            return (event.attacker as? Player)?.adaptTarget()
+        override fun getSender(event: EntityDamageByEntityEvent): ProxyTarget<*>? {
+            return (event.attacker as? Player)?.asTarget()
         }
 
     }
@@ -82,15 +76,15 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>()
 
         override val bind = ProjectileHitEvent::class.java
 
-        override fun getSender(event: ProjectileHitEvent): Target<*>? {
+        override fun getSender(event: ProjectileHitEvent): ProxyTarget<*>? {
             // 检查是否是动画实体（需要移除对旧kether的依赖）
-            return (event.entity.shooter as? Player)?.adaptTarget()
+            return (event.entity.shooter as? Player)?.asTarget()
         }
 
         override fun handle(event: ProjectileHitEvent, options: FluxonScriptOptions) {
             options.set("entity", event.entity)
-            options.set("target", event.hitEntity?.adaptTarget())
-            options.set("block", event.hitBlock?.location?.adaptTarget())
+            options.set("target", event.hitEntity?.asTarget())
+            options.set("block", event.hitBlock?.location?.asTarget())
         }
 
     }

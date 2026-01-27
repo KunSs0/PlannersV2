@@ -1,6 +1,6 @@
 ﻿package com.gitee.planners.module.compat.mythic
 
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.skill.entity.state.States
 import io.lumine.xikage.mythicmobs.adapters.AbstractEntity
 import io.lumine.xikage.mythicmobs.io.MythicLineConfig
@@ -27,7 +27,7 @@ class MythicStateCustomTriggerMechanic(config: MythicLineConfig) : SkillMechanic
             return false
         }
 
-        val targetEntity = target.bukkitEntity?.adaptTarget() ?: return false
+        val targetEntity = target.bukkitEntity?.asTarget() ?: return false
         States.trigger(targetEntity, name)
         return true
     }

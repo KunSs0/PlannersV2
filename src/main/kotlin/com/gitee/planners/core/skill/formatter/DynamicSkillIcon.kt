@@ -1,14 +1,14 @@
 package com.gitee.planners.core.skill.formatter
 
 import com.gitee.planners.api.PlannersAPI
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 
-class DynamicSkillIcon(sender: Target<*>, skill: ImmutableSkill, level: Int = 1) :
+class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int = 1) :
     AbstractSkillIcon(sender, skill, level) {
 
     private val options by lazy {
@@ -32,7 +32,7 @@ class DynamicSkillIcon(sender: Target<*>, skill: ImmutableSkill, level: Int = 1)
         fun build(player: Player, skill: PlayerSkill) = build(player, skill.immutable, skill.level)
 
         fun build(player: Player, skill: ImmutableSkill, level: Int = 1) =
-            DynamicSkillIcon(player.adaptTarget(), skill, level).build()
+            DynamicSkillIcon(player.asTarget(), skill, level).build()
 
     }
 

@@ -3,7 +3,8 @@ package com.gitee.planners.core.command
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.asTarget
+import com.gitee.planners.api.job.target.attachState
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
@@ -51,7 +52,7 @@ object Command {
                     }
                     val duration = argument.clong
                     // 测试添加状态
-                    player.adaptTarget().attachState(state, duration, true)
+                    player.asTarget().attachState(state, duration, true)
                     player.sendMessage("Test.")
                 }
             }

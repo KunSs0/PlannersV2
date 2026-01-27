@@ -1,6 +1,7 @@
 package com.gitee.planners.module.compat.mythic
 
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.asTarget
+import com.gitee.planners.api.job.target.attachState
 import io.lumine.xikage.mythicmobs.adapters.AbstractEntity
 import io.lumine.xikage.mythicmobs.io.MythicLineConfig
 import io.lumine.xikage.mythicmobs.skills.ITargetedEntitySkill
@@ -33,7 +34,7 @@ class MythicStateAttachMechanic(config: MythicLineConfig) : SkillMechanic(config
         }
 
         val state = MythicMobsLoader.resolveStateOrWarn(id) ?: return false
-        val targetEntity = target.bukkitEntity?.adaptTarget() ?: return false
+        val targetEntity = target.bukkitEntity?.asTarget() ?: return false
 
         val durationMs = runCatching { duration.get(data, target) }.getOrElse { -1.0 }.roundToLong()
         targetEntity.attachState(state, durationMs, refresh)

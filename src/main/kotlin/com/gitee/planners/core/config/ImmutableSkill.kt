@@ -2,8 +2,7 @@ package com.gitee.planners.core.config
 
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetLocation
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
@@ -107,7 +106,7 @@ class ImmutableSkill(config: Configuration) : Skill {
      * 执行技能脚本
      */
     fun execute(
-        sender: Target<*>,
+        sender: ProxyTarget<*>,
         level: Int = 0,
         variables: Map<String, Any?> = emptyMap()
     ): CompletableFuture<Any?> {
@@ -115,7 +114,7 @@ class ImmutableSkill(config: Configuration) : Skill {
 
         val env = parsedScript.newEnvironment().apply {
             defineRootVariable("sender", sender)
-            defineRootVariable("origin", (sender as? TargetLocation<*>)?.getBukkitLocation())
+            defineRootVariable("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
             defineRootVariable("level", level)
             defineRootVariable("skill", this@ImmutableSkill)
             variables.forEach { (k, v) -> defineRootVariable(k, v) }

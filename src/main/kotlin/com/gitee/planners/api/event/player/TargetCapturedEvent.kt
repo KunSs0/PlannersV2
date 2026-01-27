@@ -1,13 +1,13 @@
 package com.gitee.planners.api.event.player
 
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetContainer
+import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.api.job.target.ProxyTargetContainer
 import org.bukkit.entity.Player
 import taboolib.platform.type.BukkitProxyEvent
 
 class TargetCapturedEvent(
-    val sender: Target<*>,
-    val container: TargetContainer,
+    val sender: ProxyTarget<*>,
+    val container: ProxyTargetContainer,
     val cause: Cause
 ) : BukkitProxyEvent() {
 
@@ -16,7 +16,7 @@ class TargetCapturedEvent(
         /* 玩家被攻击 */
         val DAMAGED = Cause("damaged")
 
-        fun damaged(sender: Target<*>, container: TargetContainer) = call(sender, container, DAMAGED)
+        fun damaged(sender: ProxyTarget<*>, container: ProxyTargetContainer) = call(sender, container, DAMAGED)
 
         /**
          * 快速调用事件，将返回一个被处理后的对象容器
@@ -27,7 +27,7 @@ class TargetCapturedEvent(
          *
          * @return 被处理后的对象容器
          */
-        fun call(sender: Target<*>, container: TargetContainer, cause: Cause): TargetContainer {
+        fun call(sender: ProxyTarget<*>, container: ProxyTargetContainer, cause: Cause): ProxyTargetContainer {
             if (container.any { it.instance is Player }) {
                 val event = TargetCapturedEvent(sender, container, cause)
                 // 如果事件被取消，则代表本次不允许被捕获

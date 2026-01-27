@@ -9,17 +9,21 @@ class Line : ParticleShape() {
 
     private val directionMatrix = SimpleMatrix(1, 4, true, doubleArrayOf(1.0, 0.0, 0.0, 0.0))
 
-    val origin = vector("origin", Vector(0, 0, 0)) {
-        pointMatrix[0, 0] = it.x
-        pointMatrix[0, 1] = it.y
-        pointMatrix[0, 2] = it.z
-    }
+    var origin: Vector = Vector(0, 0, 0)
+        set(value) {
+            field = value
+            pointMatrix[0, 0] = value.x
+            pointMatrix[0, 1] = value.y
+            pointMatrix[0, 2] = value.z
+        }
 
-    val direction = vector("direction", Vector(1, 1, 1)) {
-        directionMatrix[0, 0] = it.x
-        directionMatrix[0, 1] = it.y
-        directionMatrix[0, 2] = it.z
-    }
+    var direction: Vector = Vector(1, 1, 1)
+        set(value) {
+            field = value
+            directionMatrix[0, 0] = value.x
+            directionMatrix[0, 1] = value.y
+            directionMatrix[0, 2] = value.z
+        }
 
     override fun shape(t: Double): SimpleMatrix {
         return pointMatrix.plus(directionMatrix.scale(t))

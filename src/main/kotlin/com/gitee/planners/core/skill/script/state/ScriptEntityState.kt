@@ -1,7 +1,7 @@
 package com.gitee.planners.core.skill.script.state
 
 import com.gitee.planners.api.event.entity.EntityStateEvent
-import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
 import org.bukkit.event.Event
 
@@ -13,7 +13,7 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
         override val bind: Class<EntityStateEvent.Attach.Post> = EntityStateEvent.Attach.Post::class.java
 
-        override fun getSender(event: EntityStateEvent.Attach.Post): Target<*> {
+        override fun getSender(event: EntityStateEvent.Attach.Post): ProxyTarget<*> {
             return event.entity
         }
     }
@@ -24,7 +24,7 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
         override val bind: Class<EntityStateEvent.Detach.Pre> = EntityStateEvent.Detach.Pre::class.java
 
-        override fun getSender(event: EntityStateEvent.Detach.Pre): Target<*> {
+        override fun getSender(event: EntityStateEvent.Detach.Pre): ProxyTarget<*> {
             return event.entity
         }
     }
@@ -35,7 +35,7 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
         override val bind: Class<EntityStateEvent.Mount.Post> = EntityStateEvent.Mount.Post::class.java
 
-        override fun getSender(event: EntityStateEvent.Mount.Post): Target<*> {
+        override fun getSender(event: EntityStateEvent.Mount.Post): ProxyTarget<*> {
             return event.entity
         }
 
@@ -47,18 +47,18 @@ abstract class ScriptEntityState<T : Event> : ScriptBukkitEventHolder<T>() {
 
         override val bind: Class<EntityStateEvent.Close.Pre> = EntityStateEvent.Close.Pre::class.java
 
-        override fun getSender(event: EntityStateEvent.Close.Pre): Target<*> {
+        override fun getSender(event: EntityStateEvent.Close.Pre): ProxyTarget<*> {
             return event.entity
         }
 
     }
-    object End : ScriptEntityState<EntityStateEvent.End>() {
+    object End : ScriptEntityState<EntityStateEvent.End>() {
 
         override val name: String = "state end"
 
         override val bind: Class<EntityStateEvent.End> = EntityStateEvent.End::class.java
 
-        override fun getSender(event: EntityStateEvent.End): Target<*> {
+        override fun getSender(event: EntityStateEvent.End): ProxyTarget<*> {
             return event.entity
         }
     }

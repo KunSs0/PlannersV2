@@ -48,7 +48,7 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
     }
 
     override fun handle(event: T, options: FluxonScriptOptions) {
-        options.set("event", getModifier(event))
+
     }
 
     override fun getCallback(id: String): ScriptCallback<T>? {
