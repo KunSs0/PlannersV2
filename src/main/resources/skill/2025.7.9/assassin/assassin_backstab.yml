@@ -11,7 +11,7 @@ __option__:
     name: "背刺"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
+      - "技能等级 {{ &level }}"
       - "技能伤害 ${*damage}"
       - "冷却时间 ${*cooldown}秒"
       - "消耗法力 ${*mp_cost}"
@@ -25,7 +25,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 80
     # 伤害计算公式
-    damage: 60 + ctx skill level * 15
+    damage: 60 + &level * 15
     # 法力消耗
     mp_cost: 25
     # 攻击范围
@@ -44,7 +44,7 @@ action: |
       return
     }
     # 检查法力值是否足够
-    if profile mp < *mp_cost {
+    if sender :: getMagicPoint() < *mp_cost {
       sender :: sendMessage("法力不足！")
       sender :: resetCooldown(skill)
       return
@@ -62,7 +62,7 @@ action: |
   }
   fn initPlayerState() {
     # 消耗法力值
-    profile mp take *mp_cost
+    sender :: takeMagicPoint *mp_cost
     # 设置前摇状态
     sender :: setMetadata("状态", "前摇_背刺", 8)
     # 播放技能动画

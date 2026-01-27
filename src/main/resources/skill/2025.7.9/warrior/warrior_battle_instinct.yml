@@ -11,7 +11,7 @@ __option__:
     name: "战斗本能"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "闪避率提升 ${*dodge_rate}%"
       - "反击概率 ${*counter_chance}%"
       - "被动技能：提升战斗直觉和反应能力"
@@ -22,9 +22,9 @@ __option__:
   # 变量定义
   variables:
     # 闪避率提升百分比
-    dodge_rate: 2 + ctx skill level * 1
+    dodge_rate: 2 + &level * 1
     # 反击概率
-    counter_chance: 5 + ctx skill level * 2
+    counter_chance: 5 + &level * 2
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本
@@ -74,7 +74,7 @@ action: |
     attribute remove "战斗本能_闪避率"
     # 停止监听器
     var listener = metadata 战斗本能监听器
-    if check &listener is not null {
+    if &listener != null {
       unlisten &listener
     }
     # 发送停用消息

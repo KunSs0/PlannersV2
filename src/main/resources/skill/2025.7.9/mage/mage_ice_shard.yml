@@ -11,7 +11,7 @@ __option__:
     name: "冰锥术"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "技能伤害 ${*damage}"
       - "冷却时间 ${*cooldown}秒"
       - "消耗法力 ${*mp_cost}"
@@ -26,7 +26,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 50
     # 伤害计算公式
-    damage: 40 + ctx skill level * 10
+    damage: 40 + &level * 10
     # 法力消耗
     mp_cost: 25
     # 射程

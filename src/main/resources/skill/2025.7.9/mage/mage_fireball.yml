@@ -11,7 +11,7 @@ __option__:
     name: "火球术"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "技能伤害 ${*damage}"
       - "冷却时间 ${*cooldown}秒"
       - "消耗法力 ${*mp_cost}"
@@ -26,7 +26,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 40
     # 伤害计算公式
-    damage: 45 + ctx skill level * 12
+    damage: 45 + &level * 12
     # 法力消耗
     mp_cost: 30
     # 射程

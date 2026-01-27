@@ -11,7 +11,7 @@ __option__:
     name: "武器精通"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "武器伤害提升 ${*weapon_damage}%"
       - "攻击速度提升 ${*attack_speed}%"
       - "被动技能：提升武器使用熟练度"
@@ -22,9 +22,9 @@ __option__:
   # 变量定义
   variables:
     # 武器伤害提升百分比
-    weapon_damage: 5 + ctx skill level * 2
+    weapon_damage: 5 + &level * 2
     # 攻击速度提升百分比
-    attack_speed: 3 + ctx skill level * 1
+    attack_speed: 3 + &level * 1
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本

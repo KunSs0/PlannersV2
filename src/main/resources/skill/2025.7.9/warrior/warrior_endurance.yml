@@ -11,7 +11,7 @@ __option__:
     name: "耐力"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "生命值上限提升 ${*health_bonus}"
       - "法力值上限提升 ${*mana_bonus}"
       - "生命回复速度提升 ${*regen_bonus}%"
@@ -23,11 +23,11 @@ __option__:
   # 变量定义
   variables:
     # 生命值上限加成
-    health_bonus: 20 + ctx skill level * 5
+    health_bonus: 20 + &level * 5
     # 法力值上限加成
-    mana_bonus: 10 + ctx skill level * 3
+    mana_bonus: 10 + &level * 3
     # 生命回复速度加成百分比
-    regen_bonus: 10 + ctx skill level * 2
+    regen_bonus: 10 + &level * 2
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本

@@ -11,7 +11,7 @@ __option__:
     name: "法力精通"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "法力值上限提升 ${*mana_bonus}"
       - "法力回复速度提升 ${*regen_bonus}%"
       - "技能消耗减少 ${*cost_reduction}%"
@@ -23,11 +23,11 @@ __option__:
   # 变量定义
   variables:
     # 法力值上限加成
-    mana_bonus: 50 + ctx skill level * 10
+    mana_bonus: 50 + &level * 10
     # 法力回复速度加成百分比
-    regen_bonus: 20 + ctx skill level * 5
+    regen_bonus: 20 + &level * 5
     # 技能消耗减少百分比
-    cost_reduction: 5 + ctx skill level * 2
+    cost_reduction: 5 + &level * 2
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本

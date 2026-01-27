@@ -11,7 +11,7 @@ __option__:
     name: "闪电箭"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "技能伤害 ${*damage}"
       - "冷却时间 ${*cooldown}秒"
       - "消耗法力 ${*mp_cost}"
@@ -26,7 +26,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 60
     # 伤害计算公式
-    damage: 55 + ctx skill level * 14
+    damage: 55 + &level * 14
     # 法力消耗
     mp_cost: 35
     # 射程

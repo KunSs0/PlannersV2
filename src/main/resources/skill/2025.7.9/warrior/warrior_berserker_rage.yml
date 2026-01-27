@@ -11,7 +11,7 @@ __option__:
     name: "狂暴之怒"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "攻击力提升 ${*attack_boost}%"
       - "冷却时间 ${*cooldown}秒"
       - "消耗法力 ${*mp_cost}"
@@ -30,7 +30,7 @@ __option__:
     # 持续时间(tick)
     duration: 200
     # 攻击力提升百分比
-    attack_boost: 50 + ctx skill level * 10
+    attack_boost: 50 + &level * 10
     # 攻击速度提升
     attack_speed_boost: 3
     # 移动速度提升
@@ -51,7 +51,7 @@ action: |
       return
     }
     # 检查法力值是否足够
-    if check profile mp < *mp_cost {
+    if sender :: getMagicPoint() < *mp_cost {
       sender :: sendMessage("法力不足！")
       sender :: resetCooldown(skill)
       return
@@ -65,7 +65,7 @@ action: |
   }
   fn activateBerserkerRage() {
     # 消耗法力值
-    profile mp take *mp_cost
+    sender :: takeMagicPoint *mp_cost
     # 设置狂暴状态
     sender :: setMetadata("状态", "狂暴", *duration)
     # 播放激活动画

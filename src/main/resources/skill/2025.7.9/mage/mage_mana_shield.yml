@@ -11,7 +11,7 @@ __option__:
     name: "法力护盾"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "护盾吸收伤害 ${*shield_absorption}"
       - "法力转换比例 ${*mana_ratio}:1"
       - "被动技能：用法力值吸收伤害"
@@ -22,9 +22,9 @@ __option__:
   # 变量定义
   variables:
     # 护盾吸收伤害百分比
-    shield_absorption: 20 + ctx skill level * 5
+    shield_absorption: 20 + &level * 5
     # 法力转换比例(法力:伤害)
-    mana_ratio: 2 - ctx skill level * 0.1
+    mana_ratio: 2 - &level * 0.1
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本
@@ -70,7 +70,7 @@ action: |
   fn deactivatePassive() {
     # 停止监听器
     var listener = sender :: getMetadata("法力护盾监听器")
-    if &listener is not null {
+    if &listener != null {
       unlisten &listener
     }
     # 发送停用消息

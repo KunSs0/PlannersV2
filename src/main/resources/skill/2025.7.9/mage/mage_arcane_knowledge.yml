@@ -11,7 +11,7 @@ __option__:
     name: "奥术知识"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "技能冷却减少 ${*cooldown_reduction}%"
       - "经验获取提升 ${*exp_bonus}%"
       - "技能升级消耗减少 ${*upgrade_discount}%"
@@ -23,11 +23,11 @@ __option__:
   # 变量定义
   variables:
     # 技能冷却减少百分比
-    cooldown_reduction: 5 + ctx skill level * 2
+    cooldown_reduction: 5 + &level * 2
     # 经验获取提升百分比
-    exp_bonus: 10 + ctx skill level * 3
+    exp_bonus: 10 + &level * 3
     # 技能升级消耗减少百分比
-    upgrade_discount: 5 + ctx skill level * 2
+    upgrade_discount: 5 + &level * 2
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本

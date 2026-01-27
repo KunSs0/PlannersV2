@@ -11,7 +11,7 @@ __option__:
     name: "元素亲和"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "火系伤害提升 ${*fire_bonus}%"
       - "冰系伤害提升 ${*ice_bonus}%"
       - "雷系伤害提升 ${*lightning_bonus}%"
@@ -24,13 +24,13 @@ __option__:
   # 变量定义
   variables:
     # 火系伤害加成百分比
-    fire_bonus: 10 + ctx skill level * 3
+    fire_bonus: 10 + &level * 3
     # 冰系伤害加成百分比
-    ice_bonus: 10 + ctx skill level * 3
+    ice_bonus: 10 + &level * 3
     # 雷系伤害加成百分比
-    lightning_bonus: 10 + ctx skill level * 3
+    lightning_bonus: 10 + &level * 3
     # 元素抗性加成百分比
-    resistance: 5 + ctx skill level * 2
+    resistance: 5 + &level * 2
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本

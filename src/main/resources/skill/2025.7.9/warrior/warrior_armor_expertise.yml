@@ -11,7 +11,7 @@ __option__:
     name: "护甲专精"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "防御力提升 ${*defense_bonus}"
       - "伤害减免 ${*damage_reduction}%"
       - "被动技能：提升护甲防护能力"
@@ -22,9 +22,9 @@ __option__:
   # 变量定义
   variables:
     # 防御力加成
-    defense_bonus: 8 + ctx skill level * 3
+    defense_bonus: 8 + &level * 3
     # 伤害减免百分比
-    damage_reduction: 3 + ctx skill level * 1
+    damage_reduction: 3 + &level * 1
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本

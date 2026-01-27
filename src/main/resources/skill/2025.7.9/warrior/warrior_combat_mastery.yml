@@ -11,7 +11,7 @@ __option__:
     name: "战斗精通"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "攻击力提升 ${*attack_bonus}"
       - "暴击率提升 ${*crit_bonus}%"
       - "被动技能：提升基础战斗能力"
@@ -22,9 +22,9 @@ __option__:
   # 变量定义
   variables:
     # 攻击力加成
-    attack_bonus: 5 + ctx skill level * 2
+    attack_bonus: 5 + &level * 2
     # 暴击率加成
-    crit_bonus: 2 + ctx skill level * 1
+    crit_bonus: 2 + &level * 1
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本

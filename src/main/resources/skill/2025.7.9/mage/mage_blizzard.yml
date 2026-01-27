@@ -11,7 +11,7 @@ __option__:
     name: "暴风雪"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "技能伤害 ${*damage}"
       - "冷却时间 ${*cooldown}秒"
       - "消耗法力 ${*mp_cost}"
@@ -27,7 +27,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 500
     # 伤害计算公式
-    damage: 80 + ctx skill level * 20
+    damage: 80 + &level * 20
     # 法力消耗
     mp_cost: 150
     # 射程

@@ -11,7 +11,7 @@ __option__:
     name: "旋风斩"
     # 描述信息
     lore:
-      - "技能等级 ${ctx skill level}"
+      - "技能等级 ${&level}"
       - "技能伤害 ${*damage}"
       - "冷却时间 ${*cooldown}秒"
       - "消耗法力 ${*mp_cost}"
@@ -25,7 +25,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 300
     # 伤害计算公式
-    damage: 120 + ctx skill level * 25
+    damage: 120 + &level * 25
     # 法力消耗
     mp_cost: 80
     # 攻击半径
@@ -44,7 +44,7 @@ action: |
       return
     }
     # 检查法力值是否足够
-    if check profile mp < *mp_cost {
+    if sender :: getMagicPoint() < *mp_cost {
       sender :: sendMessage("法力不足！")
       sender :: resetCooldown(skill)
       return
@@ -62,7 +62,7 @@ action: |
   }
   fn initPlayerState() {
     # 消耗法力值
-    profile mp take *mp_cost
+    sender :: takeMagicPoint *mp_cost
     # 设置前摇状态
     sender :: setMetadata("状态", "前摇_旋风斩", 20)
     # 播放技能动画
@@ -76,7 +76,7 @@ action: |
   }
   fn executeWhirlwind() {
     # 检查是否仍在前摇状态
-    if not sender :: metadataContains("状态", "前摇_旋风斩") {
+    if !sender :: metadataContains("状态", "前摇_旋风斩") {
       return
     }
     # 执行多次旋转攻击
