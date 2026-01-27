@@ -1,22 +1,16 @@
 package com.gitee.planners.module.fluxon
 
-import com.gitee.planners.module.fluxon.command.CommandExtensions
-import com.gitee.planners.module.fluxon.common.CommonExtensions
 import com.gitee.planners.module.fluxon.cooldown.CooldownExtensions
 import com.gitee.planners.module.fluxon.delay.DelayExtensions
 import com.gitee.planners.module.fluxon.economy.EconomyExtensions
-import com.gitee.planners.module.fluxon.entity.EntityExtensions
 import com.gitee.planners.module.fluxon.germplugin.GermPluginExtensions
 import com.gitee.planners.module.fluxon.metadata.MetadataExtensions
 import com.gitee.planners.module.fluxon.mythicmobs.MythicMobsExtensions
-import com.gitee.planners.module.fluxon.player.PlayerExtensions
 import com.gitee.planners.module.fluxon.profile.ProfileExtensions
 import com.gitee.planners.module.fluxon.selector.SelectorExtensions
-import com.gitee.planners.module.fluxon.sender.SenderExtensions
 import com.gitee.planners.module.fluxon.skill.SkillCommands
 import com.gitee.planners.module.fluxon.skillsystem.SkillSystemExtensions
 import com.gitee.planners.module.fluxon.velocity.VelocityExtensions
-import com.gitee.planners.module.fluxon.world.LocationExtensions
 import org.tabooproject.fluxon.runtime.FluxonRuntime
 import taboolib.common.LifeCycle
 import taboolib.common.platform.SkipTo
@@ -35,21 +29,13 @@ object FluxonLoader {
      */
     fun init() {
         // 注册基础扩展函数
-        EntityExtensions.register()
-        LocationExtensions.register()
-        CommonExtensions.register()
         SkillCommands.register()
-        SenderExtensions.register()
 
-        // 高优先级扩展（用于技能配置迁移）
-        PlayerExtensions.register()
+        // 中优先级扩展
         MetadataExtensions.register()
         ProfileExtensions.register()
         CooldownExtensions.register()
-        CommandExtensions.register()
         DelayExtensions.register()
-
-        // 中优先级扩展
         VelocityExtensions.register()
         SelectorExtensions.register()
         SkillSystemExtensions.register()
