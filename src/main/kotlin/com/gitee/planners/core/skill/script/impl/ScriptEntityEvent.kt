@@ -1,7 +1,7 @@
 package com.gitee.planners.core.skill.script.impl
 
 import com.gitee.planners.api.common.entity.animated.Animated
-import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
 import com.gitee.planners.core.skill.script.animated.DamageEventModifier
@@ -18,7 +18,7 @@ import taboolib.platform.util.hasMeta
 
 abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>() {
 
-    override fun getSender(event: T): Target<*>? {
+    override fun getSender(event: T): ProxyTarget<*>? {
         return (event.entity as? Player)?.asTarget()
     }
 
@@ -42,7 +42,7 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>()
 
         override val name = "damage"
 
-        override fun getSender(event: EntityDamageByEntityEvent): Target<*>? {
+        override fun getSender(event: EntityDamageByEntityEvent): ProxyTarget<*>? {
             return (event.attacker as? Player)?.asTarget()
         }
 
@@ -82,7 +82,7 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>()
 
         override val bind = ProjectileHitEvent::class.java
 
-        override fun getSender(event: ProjectileHitEvent): Target<*>? {
+        override fun getSender(event: ProjectileHitEvent): ProxyTarget<*>? {
             // 检查是否是动画实体（需要移除对旧kether的依赖）
             return (event.entity.shooter as? Player)?.asTarget()
         }

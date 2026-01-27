@@ -1,9 +1,7 @@
 package com.gitee.planners.module.compat.mythic
 
 import com.gitee.planners.api.event.player.PlayerDamageEntityEvent
-import com.gitee.planners.api.job.target.TargetContainerization
-import com.gitee.planners.api.job.target.TargetEntity
-import com.gitee.planners.api.job.target.Targets
+import com.gitee.planners.api.job.target.ProxyTarget
 import io.lumine.mythic.bukkit.MythicBukkit
 import io.lumine.xikage.mythicmobs.MythicMobs
 import io.lumine.xikage.mythicmobs.adapters.bukkit.BukkitAdapter
@@ -27,8 +25,8 @@ object MythicMobDamageHandler {
                     MythicMobs.inst().placeholderManager.register("caster.pl.metadata", Placeholder.meta(object : BiFunction<PlaceholderMeta,String,String> {
 
                         override fun apply(metadata: PlaceholderMeta, args: String): String {
-                            val target = Targets.of(metadata.caster.entity)
-                            if (target !is TargetContainerization) {
+                            val target = ProxyTarget.of(metadata.caster.entity)
+                            if (target !is ProxyTarget.Containerization) {
                                 return "null"
                             }
 
@@ -41,8 +39,8 @@ object MythicMobDamageHandler {
                     MythicBukkit.inst().placeholderManager.register("caster.pl.metadata", io.lumine.mythic.core.skills.placeholders.Placeholder.meta(object : BiFunction<io.lumine.mythic.core.skills.placeholders.PlaceholderMeta,String,String> {
 
                         override fun apply(metadata: io.lumine.mythic.core.skills.placeholders.PlaceholderMeta, args: String): String {
-                            val target = Targets.of(metadata.caster.entity)
-                            if (target !is TargetContainerization) {
+                            val target = ProxyTarget.of(metadata.caster.entity)
+                            if (target !is ProxyTarget.Containerization) {
                                 return "null"
                             }
 

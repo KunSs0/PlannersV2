@@ -1,7 +1,7 @@
 package com.gitee.planners.core.skill.script
 
 import com.gitee.planners.api.common.entity.animated.Animated
-import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.State
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 
@@ -18,7 +18,7 @@ interface ScriptEventHolder<T> {
      *
      * @return 触发者
      */
-    fun getSender(event: T) : Target<*>?
+    fun getSender(event: T) : ProxyTarget<*>?
 
     /**
      * 处理事件

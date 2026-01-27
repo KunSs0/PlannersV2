@@ -1,6 +1,6 @@
 package com.gitee.planners.module.fluxon.entity
 
-import com.gitee.planners.api.job.target.TargetBukkitEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
@@ -15,8 +15,8 @@ object EntityExtensions {
     fun register() {
         val runtime = FluxonScriptCache.runtime
 
-        // TargetBukkitEntity 扩展
-        runtime.registerExtension(TargetBukkitEntity::class.java)
+        // ProxyTarget.BukkitEntity 扩展
+        runtime.registerExtension(ProxyTarget.BukkitEntity::class.java)
             .function("id", FunctionSignature.returns(Type.I).noParams()) { ctx ->
                 val target = ctx.target ?: return@function
                 ctx.setReturnInt(target.instance.entityId)

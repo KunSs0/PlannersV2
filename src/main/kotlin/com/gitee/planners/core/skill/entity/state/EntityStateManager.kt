@@ -2,9 +2,7 @@ package com.gitee.planners.core.skill.entity.state
 
 import com.gitee.planners.api.common.metadata.metadataValue
 import com.gitee.planners.api.event.entity.EntityStateEvent
-import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.api.job.target.TargetContainerization
-import com.gitee.planners.api.job.target.TargetEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.State
 import com.gitee.planners.core.config.State.Companion.path
 import taboolib.common.platform.function.info
@@ -15,29 +13,29 @@ import taboolib.common.platform.function.warning
  */
 object EntityStateManager {
 
-    fun has(target: TargetEntity<*>, state: State): Boolean {
+    fun has(target: ProxyTarget.Entity<*>, state: State): Boolean {
         if (state.isStatic) {
             return true
         }
-        val container = target as? TargetContainerization ?: return false
+        val container = target as? ProxyTarget.Containerization ?: return false
         val holder = TargetStateHolder.parse(container.getMetadata(state.path()))
         return holder?.let { it.isValid && it.layer > 0 } ?: false
     }
 
-    fun isExpired(target: TargetEntity<*>, state: State): Boolean {
-        val container = target as? TargetContainerization ?: return true
+    fun isExpired(target: ProxyTarget.Entity<*>, state: State): Boolean {
+        val container = target as? ProxyTarget.Containerization ?: return true
         val holder = TargetStateHolder.parse(container.getMetadata(state.path()))
         return holder?.isExpired ?: true
     }
 
-    fun attach(target: TargetEntity<*>, state: State, duration: Long, refresh: Boolean) {
+    fun attach(target: ProxyTarget.Entity<*>, state: State, duration: Long, refresh: Boolean) {
         if (duration <= 0) {
             warning("状态 ${state.id} 的持续时间必须大于 0")
             return
         }
 
-        val container = target as? TargetContainerization ?: return
-        val bukkitTarget = target as? TargetBukkitEntity ?: return
+        val container = target as? ProxyTarget.Containerization ?: return
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
 
         val key = state.path()
         val holder = TargetStateHolder.parse(container.getMetadata(key))
@@ -80,13 +78,13 @@ object EntityStateManager {
         }
     }
 
-    fun detach(target: TargetEntity<*>, state: State, layer: Int) {
+    fun detach(target: ProxyTarget.Entity<*>, state: State, layer: Int) {
         if (state.isStatic) {
             return
         }
 
-        val container = target as? TargetContainerization ?: return
-        val bukkitTarget = target as? TargetBukkitEntity ?: return
+        val container = target as? ProxyTarget.Containerization ?: return
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
 
         val key = state.path()
         val holder = TargetStateHolder.parse(container.getMetadata(key)) ?: return
@@ -116,13 +114,13 @@ object EntityStateManager {
         EntityStateEvent.Close.Post(bukkitTarget, state).call()
     }
 
-    fun remove(target: TargetEntity<*>, state: State) {
+    fun remove(target: ProxyTarget.Entity<*>, state: State) {
         if (state.isStatic) {
             return
         }
 
-        val container = target as? TargetContainerization ?: return
-        val bukkitTarget = target as? TargetBukkitEntity ?: return
+        val container = target as? ProxyTarget.Containerization ?: return
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
 
         val key = state.path()
         val holder = TargetStateHolder.parse(container.getMetadata(key)) ?: return
@@ -142,20 +140,20 @@ object EntityStateManager {
         EntityStateEvent.Close.Post(bukkitTarget, state).call()
     }
 
-    private fun endState(target: TargetEntity<*>, state: State) {
+    private fun endState(target: ProxyTarget.Entity<*>, state: State) {
         info("State ${state.id} timer task ended")
-        val bukkitTarget = target as? TargetBukkitEntity ?: return
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
         if (EntityStateEvent.End(bukkitTarget, state).call()) {
             remove(target, state)
         }
     }
 
     private fun performFullRemoval(
-        bukkitTarget: TargetBukkitEntity,
+        bukkitTarget: ProxyTarget.BukkitEntity,
         state: State,
         holder: TargetStateHolder,
         key: String,
-        container: TargetContainerization
+        container: ProxyTarget.Containerization
     ): Boolean {
         if (!EntityStateEvent.Close.Pre(bukkitTarget, state).call()) {
             return false

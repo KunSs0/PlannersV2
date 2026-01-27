@@ -1,6 +1,6 @@
 package com.gitee.planners.module.fluxon.sender
 
-import com.gitee.planners.api.job.target.TargetCommandSender
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import org.bukkit.command.CommandSender
 import org.tabooproject.fluxon.runtime.FunctionSignature
@@ -31,12 +31,25 @@ object SenderExtensions {
                 ctx.setReturnRef(sender.name)
             }
 
-        // TargetCommandSender 扩展
-        runtime.registerExtension(TargetCommandSender::class.java)
+        // ProxyTarget.BukkitEntity (实现了 CommandSender) 扩展
+        runtime.registerExtension(ProxyTarget.BukkitEntity::class.java)
             .function("sendMessage", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
                 val target = ctx.target ?: return@function
                 val message = ctx.getRef(0)?.toString() ?: return@function
-                target.instance.sendMessage(message)
+                target.sendMessage(message)
+            }
+            .function("hasPermission", FunctionSignature.returns(Type.Z).params(Type.OBJECT)) { ctx ->
+                val target = ctx.target ?: return@function
+                val permission = ctx.getRef(0)?.toString() ?: return@function
+                ctx.setReturnBool(target.instance.hasPermission(permission))
+            }
+
+        // ProxyTarget.Console 扩展
+        runtime.registerExtension(ProxyTarget.Console::class.java)
+            .function("sendMessage", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
+                val target = ctx.target ?: return@function
+                val message = ctx.getRef(0)?.toString() ?: return@function
+                target.sendMessage(message)
             }
             .function("hasPermission", FunctionSignature.returns(Type.Z).params(Type.OBJECT)) { ctx ->
                 val target = ctx.target ?: return@function

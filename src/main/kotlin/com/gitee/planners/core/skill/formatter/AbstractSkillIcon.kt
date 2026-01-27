@@ -1,12 +1,12 @@
 package com.gitee.planners.core.skill.formatter
 
-import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import org.bukkit.inventory.ItemStack
 import taboolib.module.chat.colored
 import taboolib.platform.util.buildItem
 
-abstract class AbstractSkillIcon(val sender: Target<*>, val skill: ImmutableSkill, val level: Int) : SkillIcon {
+abstract class AbstractSkillIcon(val sender: ProxyTarget<*>, val skill: ImmutableSkill, val level: Int) : SkillIcon {
 
     override fun build(): ItemStack {
         return buildItem(skill.icon!!) {

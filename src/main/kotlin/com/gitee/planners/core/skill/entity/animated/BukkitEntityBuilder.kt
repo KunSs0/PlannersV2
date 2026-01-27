@@ -3,8 +3,7 @@ package com.gitee.planners.core.skill.entity.animated
 import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.common.entity.animated.AnimatedMeta
 import com.gitee.planners.api.common.task.SimpleUniqueTask
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetLocation
+import com.gitee.planners.api.job.target.ProxyTarget
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import taboolib.platform.util.setMeta
@@ -25,8 +24,8 @@ class BukkitEntityBuilder(val type: EntityType, override val timestampTick: Long
 
     }
 
-    override fun create(target: Target<*>): Entity {
-        val location = (target as TargetLocation<*>).getBukkitLocation()
+    override fun create(target: ProxyTarget<*>): Entity {
+        val location = (target as ProxyTarget.Location<*>).getBukkitLocation()
         val entity = location.world!!.spawnEntity(location, type)
         // 创建删除任务
         SimpleUniqueTask.create(entity,timestampTick,false) {

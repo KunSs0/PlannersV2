@@ -1,10 +1,7 @@
 package com.gitee.planners.core.skill.script
 
 import com.gitee.planners.api.PlayerTemplateAPI.plannersLoaded
-import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import org.bukkit.entity.Player
@@ -33,7 +30,7 @@ open class ScriptCallback<T>(
      * @param event 事件
      * @param holder 事件持有者
      */
-    open fun call(sender: Target<*>, event: T, holder: ScriptEventHolder<T>): CompletableFuture<Any?> {
+    open fun call(sender: ProxyTarget<*>, event: T, holder: ScriptEventHolder<T>): CompletableFuture<Any?> {
         if (this.closed) {
             return CompletableFuture.completedFuture(null)
         }
@@ -45,7 +42,7 @@ open class ScriptCallback<T>(
         }
 
         // 如果 sender 是玩家且关联技能
-        if (sender is TargetBukkitEntity && sender.instance is Player && sender.instance.plannersLoaded) {
+        if (sender is ProxyTarget.BukkitEntity && sender.instance is Player && sender.instance.plannersLoaded) {
             options.set("player", sender.instance)
         }
 

@@ -3,7 +3,9 @@ package com.gitee.planners.module.particle
 import com.gitee.planners.api.common.entity.animated.AbstractAnimated
 import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.common.entity.animated.AnimatedMeta
-import com.gitee.planners.api.job.target.TargetLocation
+import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.api.job.target.ProxyTargetContainer
+import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.module.particle.animation.ParticleAnimated
 import com.gitee.planners.module.particle.particle.ParticleSpawner
@@ -18,7 +20,7 @@ import taboolib.common5.cint
 import kotlin.math.abs
 
 @Suppress("UNREACHABLE_CODE")
-open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, location: TargetLocation<*>) : AbstractAnimated(), Animated.Periodic {
+open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, location: ProxyTarget.Location<*>) : AbstractAnimated(), Animated.Periodic {
 
     private val shapes = mutableListOf<ParticleShape>()
 

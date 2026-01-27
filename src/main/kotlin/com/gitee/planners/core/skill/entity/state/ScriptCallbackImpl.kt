@@ -1,7 +1,6 @@
 package com.gitee.planners.core.skill.entity.state
 
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.hasState
 import com.gitee.planners.core.config.State
 import com.gitee.planners.core.skill.script.ScriptCallback
@@ -20,8 +19,8 @@ open class ScriptCallbackImpl<T>(val state: State, val trigger: State.Trigger) :
         trigger.action.async
     ) {
 
-    override fun call(sender: Target<*>, event: T, holder: ScriptEventHolder<T>): CompletableFuture<Any?> {
-        if (sender !is TargetEntity<*>) {
+    override fun call(sender: ProxyTarget<*>, event: T, holder: ScriptEventHolder<T>): CompletableFuture<Any?> {
+        if (sender !is ProxyTarget.Entity<*>) {
             return CompletableFuture.completedFuture(null)
         }
 

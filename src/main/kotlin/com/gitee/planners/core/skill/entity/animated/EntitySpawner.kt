@@ -1,10 +1,10 @@
 package com.gitee.planners.core.skill.entity.animated
 
-import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.ProxyTarget
 import org.bukkit.entity.Entity
 
 interface EntitySpawner {
 
-    fun create(target: Target<*>): Entity
+    fun create(target: ProxyTarget<*>): Entity
 
 }

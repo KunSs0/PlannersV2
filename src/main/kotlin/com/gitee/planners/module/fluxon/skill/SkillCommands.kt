@@ -1,6 +1,6 @@
 package com.gitee.planners.module.fluxon.skill
 
-import com.gitee.planners.api.job.target.TargetBukkitEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import org.bukkit.entity.LivingEntity
 import org.tabooproject.fluxon.runtime.FunctionSignature
@@ -15,8 +15,8 @@ object SkillCommands {
     fun register() {
         val runtime = FluxonScriptCache.runtime
 
-        // TargetBukkitEntity 扩展 - damage
-        runtime.registerExtension(TargetBukkitEntity::class.java)
+        // ProxyTarget.BukkitEntity 扩展 - damage
+        runtime.registerExtension(ProxyTarget.BukkitEntity::class.java)
             .function("damage", FunctionSignature.returns(Type.VOID).params(Type.D)) { ctx ->
                 val target = ctx.target ?: return@function
                 val entity = target.instance as? LivingEntity ?: return@function
@@ -28,7 +28,7 @@ object SkillCommands {
                 val amount = ctx.getAsDouble(0)
                 val sourceArg = ctx.getRef(1)
                 val killer = when (sourceArg) {
-                    is TargetBukkitEntity -> sourceArg.instance as? LivingEntity
+                    is ProxyTarget.BukkitEntity -> sourceArg.instance as? LivingEntity
                     is LivingEntity -> sourceArg
                     else -> null
                 }

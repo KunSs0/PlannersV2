@@ -3,8 +3,7 @@ package com.gitee.planners.core.skill.entity.state
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.script.ScriptCustomTriggerEvent
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.hasState
 import com.gitee.planners.api.job.target.isExpired
 import com.gitee.planners.api.job.target.removeState
@@ -24,7 +23,7 @@ object States {
     /**
      * 正在处理的携带状态实体, 实体的状态发生改变并不会从缓存中移除, 需要在适当的时候手动移除
      */
-    private val registryCarryStateTarget = mutableListOf<TargetEntity<*>>()
+    private val registryCarryStateTarget = mutableListOf<ProxyTarget.Entity<*>>()
 
     /**
      * 初始化所有状态
@@ -78,7 +77,7 @@ object States {
      *
      * @param target 实体
      */
-    fun record(target: TargetEntity<*>) {
+    fun record(target: ProxyTarget.Entity<*>) {
         if (target !in registryCarryStateTarget) {
             registryCarryStateTarget.add(target)
         }
@@ -129,8 +128,8 @@ object States {
      * @param sender 发送者
      * @param name 状态名称
      */
-    fun trigger(sender: Target<*>, name: String) {
-        if (sender !is TargetEntity<*>) {
+    fun trigger(sender: ProxyTarget<*>, name: String) {
+        if (sender !is ProxyTarget.Entity<*>) {
             return
         }
         ScriptCustomTriggerEvent(sender, name).call()

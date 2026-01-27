@@ -3,7 +3,7 @@ package com.gitee.planners.api
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.job.Variable
-import com.gitee.planners.api.job.target.TargetBukkitEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
@@ -24,7 +24,7 @@ object PlannersAPI {
      * @return 释放结果
      */
     fun cast(player: Player, skill: ImmutableSkill, level: Int): CompletableFuture<Any?> {
-        return skill.execute(TargetBukkitEntity(player), level)
+        return skill.execute(ProxyTarget.BukkitEntity(player), level)
     }
 
     /**
@@ -110,7 +110,7 @@ object PlannersAPI {
         if (magicPoint != null) {
             player.plannersTemplate.magicPoint -= magicPoint
         }
-        skill.immutable.execute(TargetBukkitEntity(player), skill.level)
+        skill.immutable.execute(ProxyTarget.BukkitEntity(player), skill.level)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()
     }

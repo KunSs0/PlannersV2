@@ -1,8 +1,7 @@
 package com.gitee.planners.module.compat.attribute
 
 import com.gitee.planners.api.common.task.SimpleUniqueTask
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetBukkitEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
 import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
@@ -22,9 +21,9 @@ object AttributePlus3Driver : AttributeDriver {
         return false
     }
 
-    override fun set(target: Target<*>, id: String, source: List<String>, timeout: Int) {
-        if (target !is TargetBukkitEntity) {
-            warning("Target type must be TargetBukkitEntity.")
+    override fun set(target: ProxyTarget<*>, id: String, source: List<String>, timeout: Int) {
+        if (target !is ProxyTarget.BukkitEntity) {
+            warning("Target type must be ProxyTarget.BukkitEntity.")
             return
         }
         val entity = target.instance as LivingEntity
@@ -44,9 +43,9 @@ object AttributePlus3Driver : AttributeDriver {
         return set(entity.asTarget(), id, source, timeout)
     }
 
-    override fun remove(target: Target<*>, id: String) {
-        if (target !is TargetBukkitEntity) {
-            warning("Target type must be TargetBukkitEntity.")
+    override fun remove(target: ProxyTarget<*>, id: String) {
+        if (target !is ProxyTarget.BukkitEntity) {
+            warning("Target type must be ProxyTarget.BukkitEntity.")
             return
         }
         val entity = target.instance as LivingEntity

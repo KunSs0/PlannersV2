@@ -1,7 +1,7 @@
 package com.gitee.planners.core.skill.entity.animated.event
 
 import com.gitee.planners.api.common.entity.animated.AnimatedEvent
-import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.skill.entity.animated.AbstractBukkitEntityAnimated
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
@@ -14,7 +14,7 @@ abstract class AnimatedEntityEvent(val animated: AbstractBukkitEntityAnimated<*>
         options.set("entity", entity)
     }
 
-    class Spawn(animated: AbstractBukkitEntityAnimated<*>, entity: Entity, val origin: Target<*>): AnimatedEntityEvent(animated,entity) {
+    class Spawn(animated: AbstractBukkitEntityAnimated<*>, entity: Entity, val origin: ProxyTarget<*>): AnimatedEntityEvent(animated,entity) {
         override val name = "spawn"
 
         override fun inject(options: FluxonScriptOptions) {

@@ -5,7 +5,7 @@ import com.gitee.planners.api.common.metadata.MetadataContainer
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import com.gitee.planners.api.job.target.LeastType
-import com.gitee.planners.api.job.target.TargetContainer
+import com.gitee.planners.api.job.target.ProxyTargetContainer
 import com.gitee.planners.util.unboxJavaToKotlin
 import taboolib.common.platform.function.warning
 import taboolib.common.util.Vector
@@ -123,8 +123,8 @@ abstract class AbstractAnimated : Animated, MetadataContainer(), Animated.Update
         return createBaked(id, defaultValue, parser = { this as Vector }, onUpdate)
     }
 
-    fun AbstractAnimated.objective(id: String, defaultValue: LeastType): AnimatedMeta.CoerceMeta<TargetContainer> {
-        return createBaked(id, TargetContainer(), parser = { this as TargetContainer })
+    fun AbstractAnimated.objective(id: String, defaultValue: LeastType): AnimatedMeta.CoerceMeta<ProxyTargetContainer> {
+        return createBaked(id, ProxyTargetContainer(), parser = { this as ProxyTargetContainer })
     }
 
     inline fun <reified T : Any> AbstractAnimated.createBaked(

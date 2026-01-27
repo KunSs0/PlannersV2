@@ -1,7 +1,6 @@
 package com.gitee.planners.core.skill.entity.animated
 
-import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.TargetBukkitEntity
+import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.util.rotateAroundX
 import com.gitee.planners.util.rotateAroundY
 import com.gitee.planners.util.rotateAroundZ
@@ -39,8 +38,8 @@ class BukkitProjectileBuilder(val type: Type, step: Float) : AbstractBukkitEntit
         this@BukkitProjectileBuilder.instance.setBounce(it)
     }
 
-    override fun create(target: Target<*>): Projectile {
-        val bukkitEntity = (target as TargetBukkitEntity).instance as LivingEntity
+    override fun create(target: ProxyTarget<*>): Projectile {
+        val bukkitEntity = (target as ProxyTarget.BukkitEntity).instance as LivingEntity
         return bukkitEntity.launchProjectile(this.type.clazz)
     }
 
