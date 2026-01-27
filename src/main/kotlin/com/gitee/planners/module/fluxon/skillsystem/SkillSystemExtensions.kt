@@ -6,62 +6,86 @@ import com.gitee.planners.module.fluxon.FluxonScriptCache
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.tabooproject.fluxon.runtime.FunctionContext
 import org.tabooproject.fluxon.runtime.FunctionSignature
 import org.tabooproject.fluxon.runtime.Type
+import taboolib.common.LifeCycle
+import taboolib.common.platform.Awake
 
 /**
  * 技能系统扩展
  */
 object SkillSystemExtensions {
 
-    fun register() {
+    @Awake(LifeCycle.LOAD)
+    private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // Player 技能等级管理扩展
-        runtime.registerExtension(Player::class.java)
-            .function("getSkillLevel", FunctionSignature.returns(Type.I).params(Type.OBJECT)) { ctx ->
-                val player = ctx.target ?: return@function
-                val skillId = ctx.getRef(0)?.toString() ?: return@function
+        // getSkillLevel(skillId) -> int (从环境获取player)
+        runtime.registerFunction("getSkillLevel", FunctionSignature.returns(Type.I).params(Type.OBJECT)) { ctx ->
+            val skillId = ctx.getRef(0)?.toString() ?: return@registerFunction
+            val player = getPlayerFromEnv(ctx)
+            val template = player.plannersTemplate
+            val playerSkill = template.getRegisteredSkillOrNull(skillId)
+            ctx.setReturnInt(playerSkill?.level ?: 0)
+        }
 
-                val template = player.plannersTemplate
-                val playerSkill = template.getRegisteredSkillOrNull(skillId)
-                ctx.setReturnInt(playerSkill?.level ?: 0)
-            }
-            .function("setSkillLevel", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.I)) { ctx ->
-                val player = ctx.target ?: return@function
-                val skillId = ctx.getRef(0)?.toString() ?: return@function
-                val level = ctx.getAsInt(1)
+        // getSkillLevel(skillId, player) -> int
+        runtime.registerFunction("getSkillLevel", FunctionSignature.returns(Type.I).params(Type.OBJECT, Type.OBJECT)) { ctx ->
+            val skillId = ctx.getRef(0)?.toString() ?: return@registerFunction
+            val player = ctx.getRef(1) as? Player ?: return@registerFunction
+            val template = player.plannersTemplate
+            val playerSkill = template.getRegisteredSkillOrNull(skillId)
+            ctx.setReturnInt(playerSkill?.level ?: 0)
+        }
 
-                val template = player.plannersTemplate
-                val playerSkill = template.getRegisteredSkillOrNull(skillId) ?: return@function
-                PlayerTemplateAPI.setSkillLevel(template, playerSkill, level)
-            }
+        // setSkillLevel(skillId, level) -> void (从环境获取player)
+        runtime.registerFunction("setSkillLevel", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.I)) { ctx ->
+            val skillId = ctx.getRef(0)?.toString() ?: return@registerFunction
+            val level = ctx.getAsInt(1)
+            val player = getPlayerFromEnv(ctx)
+            val template = player.plannersTemplate
+            val playerSkill = template.getRegisteredSkillOrNull(skillId) ?: return@registerFunction
+            PlayerTemplateAPI.setSkillLevel(template, playerSkill, level)
+        }
 
-        // 属性攻击（通过 Player 扩展）
-        runtime.registerExtension(Player::class.java)
-            .function("apAttack", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.OBJECT)) { ctx ->
-                ctx.target ?: return@function
-                val params = ctx.getRef(0)?.toString() ?: return@function
-                val targets = ctx.getRef(1) as? List<*> ?: return@function
+        // setSkillLevel(skillId, level, player) -> void
+        runtime.registerFunction("setSkillLevel", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.I, Type.OBJECT)) { ctx ->
+            val skillId = ctx.getRef(0)?.toString() ?: return@registerFunction
+            val level = ctx.getAsInt(1)
+            val player = ctx.getRef(2) as? Player ?: return@registerFunction
+            val template = player.plannersTemplate
+            val playerSkill = template.getRegisteredSkillOrNull(skillId) ?: return@registerFunction
+            PlayerTemplateAPI.setSkillLevel(template, playerSkill, level)
+        }
 
-                // 解析参数（格式示例: "damage=100,type=physical"）
-                val paramMap = parseAttackParams(params)
-                val damage = paramMap["damage"]?.toDoubleOrNull() ?: 0.0
-
-                // 对所有目标造成伤害
-                targets.filterIsInstance<Entity>().forEach { entity ->
-                    if (entity is LivingEntity && !entity.isDead) {
-                        entity.damage(damage)
-                    }
+        // apAttack(params, targets) -> void (从环境获取player)
+        runtime.registerFunction("apAttack", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.OBJECT)) { ctx ->
+            val params = ctx.getRef(0)?.toString() ?: return@registerFunction
+            val targets = ctx.getRef(1) as? List<*> ?: return@registerFunction
+            val paramMap = parseAttackParams(params)
+            val damage = paramMap["damage"]?.toDoubleOrNull() ?: 0.0
+            targets.filterIsInstance<Entity>().forEach { entity ->
+                if (entity is LivingEntity && !entity.isDead) {
+                    entity.damage(damage)
                 }
             }
+        }
+
+        // apAttack(params, targets, player) -> void
+        runtime.registerFunction("apAttack", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.OBJECT, Type.OBJECT)) { ctx ->
+            val params = ctx.getRef(0)?.toString() ?: return@registerFunction
+            val targets = ctx.getRef(1) as? List<*> ?: return@registerFunction
+            val paramMap = parseAttackParams(params)
+            val damage = paramMap["damage"]?.toDoubleOrNull() ?: 0.0
+            targets.filterIsInstance<Entity>().forEach { entity ->
+                if (entity is LivingEntity && !entity.isDead) {
+                    entity.damage(damage)
+                }
+            }
+        }
     }
 
-    /**
-     * 解析攻击参数
-     * @param params 参数字符串，格式: "key1=value1,key2=value2"
-     * @return 参数映射
-     */
     private fun parseAttackParams(params: String): Map<String, String> {
         return params.split(",")
             .mapNotNull { pair ->
@@ -71,5 +95,13 @@ object SkillSystemExtensions {
                 } else null
             }
             .toMap()
+    }
+
+    private fun getPlayerFromEnv(ctx: FunctionContext<*>): Player {
+        val find = ctx.environment.rootVariables["player"]
+        if (find is Player) {
+            return find
+        }
+        throw IllegalStateException("No player found in environment")
     }
 }

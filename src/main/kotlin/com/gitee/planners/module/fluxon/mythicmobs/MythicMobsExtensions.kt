@@ -7,12 +7,29 @@ import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.tabooproject.fluxon.runtime.FunctionSignature
 import org.tabooproject.fluxon.runtime.Type
+import org.tabooproject.fluxon.runtime.java.Export
+import taboolib.common.LifeCycle
+import taboolib.common.platform.Awake
 
 /**
  * MythicMobs 集成扩展
- * 通过 Location 和 Entity 扩展实现 MythicMobs 功能
+ * 使用方式: import mythic; mythic.spawnMob("SkeletonKing", location)
  */
 object MythicMobsExtensions {
+
+    @Awake(LifeCycle.LOAD)
+    private fun init() {
+        val runtime = FluxonScriptCache.runtime
+        runtime.registerFunction("pl:mythic", "mythic", FunctionSignature.returns(Type.OBJECT).noParams()) { ctx ->
+            ctx.setReturnRef(MythicObject)
+        }
+        runtime.exportRegistry.registerClass(MythicObject::class.java, "pl:mythic")
+    }
+}
+
+object MythicObject {
+    @JvmField
+    val TYPE: Type = Type.fromClass(MythicObject::class.java)
 
     private val mythicMobs by lazy {
         try {
@@ -22,33 +39,29 @@ object MythicMobsExtensions {
         }
     }
 
-    fun register() {
-        val runtime = FluxonScriptCache.runtime
+    @Export
+    fun spawnMob(mobType: String, location: Location): Entity? {
+        val mm = mythicMobs ?: return null
+        val mob = mm.mobManager.getMythicMob(mobType).orElse(null) ?: return null
+        val spawnedMob = mob.spawn(BukkitAdapter.adapt(location), 1.0)
+        return spawnedMob?.entity?.bukkitEntity
+    }
 
-        // Location 生成 MythicMob 扩展
-        runtime.registerExtension(Location::class.java)
-            .function("spawnMythicMob", FunctionSignature.returns(Type.OBJECT).params(Type.OBJECT)) { ctx ->
-                val location = ctx.target ?: return@function
-                val mobType = ctx.getRef(0)?.toString() ?: return@function
+    @Export
+    fun spawnMob(mobType: String, location: Location, level: Double): Entity? {
+        val mm = mythicMobs ?: return null
+        val mob = mm.mobManager.getMythicMob(mobType).orElse(null) ?: return null
+        val spawnedMob = mob.spawn(BukkitAdapter.adapt(location), level)
+        return spawnedMob?.entity?.bukkitEntity
+    }
 
-                val mm = mythicMobs ?: return@function
-                val mob = mm.mobManager.getMythicMob(mobType).orElse(null) ?: return@function
-
-                val spawnedMob = mob.spawn(BukkitAdapter.adapt(location), 1.0)
-                ctx.setReturnRef(spawnedMob?.entity?.bukkitEntity)
-            }
-
-        // Entity 检查是否为 MythicMob 扩展
-        runtime.registerExtension(Entity::class.java)
-            .function("isMythicMob", FunctionSignature.returns(Type.Z).noParams()) { ctx ->
-                val entity = ctx.target ?: return@function
-                val mm = mythicMobs ?: return@function
-                try {
-                    val isMythic = mm.apiHelper.isMythicMob(entity)
-                    ctx.setReturnBool(isMythic)
-                } catch (e: Exception) {
-                    ctx.setReturnBool(false)
-                }
-            }
+    @Export
+    fun isMythicMob(entity: Entity): Boolean {
+        val mm = mythicMobs ?: return false
+        return try {
+            mm.apiHelper.isMythicMob(entity)
+        } catch (e: Exception) {
+            false
+        }
     }
 }

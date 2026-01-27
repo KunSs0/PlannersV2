@@ -5,52 +5,52 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.tabooproject.fluxon.runtime.FunctionSignature
 import org.tabooproject.fluxon.runtime.Type
+import org.tabooproject.fluxon.runtime.java.Export
+import taboolib.common.LifeCycle
+import taboolib.common.platform.Awake
 
 /**
  * GermPlugin 集成扩展
- * 通过 Player 扩展与 GermPlugin 交互
+ * 使用方式: import germ; germ.playModel(player, "model_id")
  */
 object GermPluginExtensions {
 
-    fun register() {
+    @Awake(LifeCycle.LOAD)
+    private fun init() {
         val runtime = FluxonScriptCache.runtime
+        runtime.registerFunction("pl:germ", "germ", FunctionSignature.returns(Type.OBJECT).noParams()) { ctx ->
+            ctx.setReturnRef(GermObject)
+        }
+        runtime.exportRegistry.registerClass(GermObject::class.java, "pl:germ")
+    }
+}
 
-        // Player GermPlugin 扩展
-        runtime.registerExtension(Player::class.java)
-            .function("playGermModel", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
-                val player = ctx.target ?: return@function
-                val model = ctx.getRef(0)?.toString() ?: return@function
+object GermObject {
+    @JvmField
+    val TYPE: Type = Type.fromClass(GermObject::class.java)
 
-                val command = "gp model cast ${player.name} $model"
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command)
-            }
-            .function("stopGermModel", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
-                val player = ctx.target ?: return@function
-                val model = ctx.getRef(0)?.toString() ?: return@function
+    @Export
+    fun playModel(player: Player, model: String) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp model cast ${player.name} $model")
+    }
 
-                val command = "gp model stop ${player.name} $model"
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command)
-            }
-            .function("playGermEffect", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
-                val player = ctx.target ?: return@function
-                val effect = ctx.getRef(0)?.toString() ?: return@function
+    @Export
+    fun stopModel(player: Player, model: String) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp model stop ${player.name} $model")
+    }
 
-                val command = "gp effect spawn ${player.name} $effect"
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command)
-            }
-            .function("stopGermEffect", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
-                val player = ctx.target ?: return@function
-                val effect = ctx.getRef(0)?.toString() ?: return@function
+    @Export
+    fun playEffect(player: Player, effect: String) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp effect spawn ${player.name} $effect")
+    }
 
-                val command = "gp effect stop ${player.name} $effect"
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command)
-            }
-            .function("playGermSound", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
-                val player = ctx.target ?: return@function
-                val sound = ctx.getRef(0)?.toString() ?: return@function
+    @Export
+    fun stopEffect(player: Player, effect: String) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp effect stop ${player.name} $effect")
+    }
 
-                val command = "gp sound play ${player.name} $sound player"
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command)
-            }
+    @Export
+    fun playSound(player: Player, sound: String) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp sound play ${player.name} $sound player")
     }
 }
