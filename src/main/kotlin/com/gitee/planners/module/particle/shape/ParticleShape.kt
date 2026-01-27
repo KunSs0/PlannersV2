@@ -1,6 +1,5 @@
 package com.gitee.planners.module.particle.shape
 
-import com.gitee.planners.api.common.entity.animated.AbstractAnimated
 import com.gitee.planners.util.math.createIdentityMatrix
 import org.ejml.simple.SimpleMatrix
 import taboolib.common5.cdouble
@@ -9,7 +8,7 @@ import taboolib.common5.cdouble
  * Shape of the particle
  *
  */
-abstract class ParticleShape : AbstractAnimated() {
+abstract class ParticleShape {
 
     val transformMatrix: SimpleMatrix = createIdentityMatrix()
 

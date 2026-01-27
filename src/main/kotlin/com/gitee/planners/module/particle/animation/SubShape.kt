@@ -3,7 +3,7 @@ package com.gitee.planners.module.particle.animation
 import org.ejml.simple.SimpleMatrix
 import taboolib.common5.cint
 
-class SubShape : ParticleAnimated(transform = false) {
+class SubShape : ParticleAnimation(transform = false) {
 
     private var last: Double = 0.0
 

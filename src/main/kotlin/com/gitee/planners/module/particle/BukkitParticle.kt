@@ -1,13 +1,8 @@
 package com.gitee.planners.module.particle
 
-import com.gitee.planners.api.common.entity.animated.AbstractAnimated
-import com.gitee.planners.api.common.entity.animated.Animated
-import com.gitee.planners.api.common.entity.animated.AnimatedMeta
 import com.gitee.planners.api.job.target.ProxyTarget
-import com.gitee.planners.api.job.target.ProxyTargetContainer
-import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.asTarget
-import com.gitee.planners.module.particle.animation.ParticleAnimated
+import com.gitee.planners.module.particle.animation.ParticleAnimation
 import com.gitee.planners.module.particle.particle.ParticleSpawner
 import com.gitee.planners.module.particle.shape.ParticleShape
 import com.gitee.planners.util.math.asScaleMatrix
@@ -20,11 +15,11 @@ import taboolib.common5.cint
 import kotlin.math.abs
 
 @Suppress("UNREACHABLE_CODE")
-open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, location: ProxyTarget.Location<*>) : AbstractAnimated(), Animated.Periodic {
+open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, location: ProxyTarget.Location<*>) {
 
     private val shapes = mutableListOf<ParticleShape>()
 
-    private val animations = mutableListOf<ParticleAnimated>()
+    private val animations = mutableListOf<ParticleAnimation>()
 
     private var bakedShape = SimpleMatrix(0, 4)
 
@@ -38,50 +33,52 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
     private var baked = false
 
     /** The duration of the animation */
-    val duration = strictInt("duration", 20, 1) { }
+    var duration: Int = 20
 
     /** Current tick */
-    val tick = strictInt("tick", 0) { }
+    var tick: Int = 0
 
     /** The tick period */
-    val period = strictInt("period", 1, 1) { }
+    var period: Int = 1
 
-    /** Ths speed of the animation. Negative values are allowed */
-    val speed = double("speed", 1.0) { }
+    /** The speed of the animation. Negative values are allowed */
+    var speed: Double = 1.0
 
     /** Is the particle animated, or show all frames at once */
-    val frame = bool("frame", false) { }
+    var frame: Boolean = false
 
     /** The origin */
-    val origin = vector("origin", location.asVector()) {
-        baked = false
-    }
+    var origin: Vector = location.asVector()
+        set(value) {
+            field = value
+            baked = false
+        }
 
-    val world = text("world", location.getWorld()) { }
+    var world: String = location.getWorld()
 
     val particleOffsetVector = Vector(0, 0, 0)
 
-    val particleOffset = double("p-offset", 0.0) {
-        particleOffsetVector.x = it
-        particleOffsetVector.y = it
-        particleOffsetVector.z = it
-    }
+    var particleOffset: Double = 0.0
+        set(value) {
+            field = value
+            particleOffsetVector.x = value
+            particleOffsetVector.y = value
+            particleOffsetVector.z = value
+        }
 
     /** The lifetime of each particle */
-    val particleLife = strictInt("p-life", 20, 1) { }
+    var particleLife: Int = 20
 
-    val particleId = text("p-id", particleId) { }
+    var particleId: String = particleId
 
     /** The particle density per block unit */
-    val particleDensity = strictInt("p-density", 10) {
-        baked = false
-    }
+    var particleDensity: Int = 10
+        set(value) {
+            field = value
+            baked = false
+        }
 
-    val particleCount = strictInt("p-count", 1) { }
-
-    /** Current tick */
-    override val timestampTick: Long
-        get() = tick.asLong()
+    var particleCount: Int = 1
 
     /**
      * Bake the shapes into a single matrix
@@ -90,11 +87,10 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
         if (!baked) {
             var shape: SimpleMatrix? = null
             for (s in shapes) {
-                val matrix = s.getShape(particleDensity.asInt())
+                val matrix = s.getShape(particleDensity)
                 shape = if (shape == null) matrix else shape.concatRows(matrix)
             }
             bakedShape = shape ?: SimpleMatrix(0, 4)
-            // Add origin transformation
             bakedShape = bakedShape.mult(origin.asScaleMatrix())
             baked = true
         }
@@ -105,18 +101,18 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
      */
     private fun spawn(x: Double, y: Double, z: Double) {
         spawner.spawn(
-            particleId = particleId.asString(),
-            world = world.asString(),
+            particleId = particleId,
+            world = world,
             x = x,
             y = y,
             z = z,
-            lifetime = particleLife.asInt(),
-            count = particleCount.asInt(),
+            lifetime = particleLife,
+            count = particleCount,
             size = 0.0,
             alpha = 0.0,
             speed = 0.0,
             offset = particleOffsetVector
-        ) // TODO: Add size and alpha
+        )
     }
 
     fun start() = synchronized(lock) {
@@ -126,42 +122,40 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
         TODO("Particle implementation is not complete yet.")
 
         // No frame animation
-        if (!frame.asBoolean()) {
+        if (!frame) {
             bakeShapes()
             for (i in 0 until bakedShape.numRows()) {
                 val vector = bakedShape.extractVector(true, i) ?: break
-                val displayLocation = Location(world.asString(), vector.get(0), vector.get(1), vector.get(2))
-                spawner.spawn(particleId.asString(), displayLocation, particleLife.asInt())
+                val displayLocation = Location(world, vector.get(0), vector.get(1), vector.get(2))
+                spawner.spawn(particleId, displayLocation, particleLife)
             }
             return@synchronized
         }
 
-        if (speed.asDouble() == 0.0) {
+        if (speed == 0.0) {
             error("The speed of the animation cannot be 0")
         }
 
         if (framework == null) {
             bakeShapes()
-            // Restore the animation
             framework = BukkitParticleFramework(
                 animations,
-                bakedShape, // copy will be made
-                tick.asInt(),
-                (duration.asDouble() / abs(speed.asDouble())).cint,
-                backward = speed.asDouble() < 0,
+                bakedShape,
+                tick,
+                (duration / abs(speed)).cint,
+                backward = speed < 0,
                 this::spawn
             )
             baked = false
         }
-        // Play the animation asynchronously
         isPlaying = true
-        submit(async = true, period = period.asLong(), delay = 1) {
+        submit(async = true, period = period.toLong(), delay = 1) {
             synchronized(lock) {
                 if (!isPlaying) {
                     cancel()
                     return@submit
                 }
-                if (framework!!.nextFrame()) { // finished
+                if (framework!!.nextFrame()) {
                     framework = null
                     isPlaying = false
                     cancel()
@@ -171,19 +165,18 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
     }
 
     fun pause() = synchronized(lock) {
-        isPlaying = false // Will pause by next frame
+        isPlaying = false
     }
 
     fun reset() = synchronized(lock) {
         if (isPlaying) {
             error("The animation is playing, please pause it before resetting it.")
         }
-
-        tick.set(0)
+        tick = 0
         framework = null
     }
 
-    fun addAnimation(animation: ParticleAnimated) = synchronized(lock) {
+    fun addAnimation(animation: ParticleAnimation) = synchronized(lock) {
         if (isPlaying) {
             error("The animation is playing, please pause it before adding a new animation.")
         }
@@ -211,20 +204,20 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
         shapes.clear()
     }
 
-    override fun handleUpdate(metadata: AnimatedMeta.CoerceMeta<Any>) = synchronized(lock) {
-        if (isPlaying) {
-            error("The animation is playing, please pause it before updating the metadata.")
-        }
-        super.handleUpdate(metadata)
-    }
-
     fun clone() = synchronized(lock) {
-        val vector = origin.asVector()
-        val location = Location(world.asString(), vector.x, vector.y, vector.z)
-        val clone = BukkitParticle(spawner, particleId.asString(), location.asTarget())
+        val location = Location(world, origin.x, origin.y, origin.z)
+        val clone = BukkitParticle(spawner, particleId, location.asTarget())
         clone.shapes.addAll(shapes)
         clone.animations.addAll(animations)
-        this.copyMetaDataTo(clone)
+        clone.duration = duration
+        clone.tick = tick
+        clone.period = period
+        clone.speed = speed
+        clone.frame = frame
+        clone.particleLife = particleLife
+        clone.particleDensity = particleDensity
+        clone.particleCount = particleCount
+        clone.particleOffset = particleOffset
         clone
     }
 }

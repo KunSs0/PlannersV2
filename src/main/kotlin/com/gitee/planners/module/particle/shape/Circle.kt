@@ -9,21 +9,21 @@ class Circle : ParticleShape() {
 
     private val centerMatrix = SimpleMatrix(1, 4, true, doubleArrayOf(0.0, 0.0, 0.0, 1.0))
 
-    val center = vector("center", Vector(0, 0, 0)) {
-        centerMatrix[0, 0] = it.x
-        centerMatrix[0, 1] = it.y
-        centerMatrix[0, 2] = it.z
-    }
+    var center: Vector = Vector(0, 0, 0)
+        set(value) {
+            field = value
+            centerMatrix[0, 0] = value.x
+            centerMatrix[0, 1] = value.y
+            centerMatrix[0, 2] = value.z
+        }
 
-    val radius = double("radius", 1.0) { }
+    var radius: Double = 1.0
 
     override fun shape(t: Double): SimpleMatrix {
-        // Here the t is the theta
         val radians = 2.0 * Math.PI * t
         val x = cos(radians)
         val y = sin(radians)
-        val rad = radius.asDouble()
-        return centerMatrix.plus(SimpleMatrix(1, 4, true, doubleArrayOf(x * rad, y * rad, 0.0, 0.0)))
+        return centerMatrix.plus(SimpleMatrix(1, 4, true, doubleArrayOf(x * radius, y * radius, 0.0, 0.0)))
     }
 
 }

@@ -1,10 +1,8 @@
 package com.gitee.planners.core.skill.script.impl
 
-import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
-import com.gitee.planners.core.skill.script.animated.DamageEventModifier
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -30,10 +28,6 @@ abstract class ScriptEntityEvent<T : EntityEvent> : ScriptBukkitEventHolder<T>()
             super.handle(event, options)
             options.set("damager", event.damager.asTarget())
             options.set("entity", event.entity.asTarget())
-        }
-
-        override fun getModifier(event: EntityDamageByEntityEvent): Animated? {
-            return DamageEventModifier(event)
         }
 
     }
