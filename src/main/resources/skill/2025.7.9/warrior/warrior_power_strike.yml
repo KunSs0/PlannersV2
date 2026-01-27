@@ -11,13 +11,13 @@ __option__:
     name: "重击"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "技能伤害 {{ lazy *damage }}"
-      - "冷却时间 {{ lazy *cooldown }}秒"
-      - "消耗法力 {{ lazy *mp_cost }}"
+      - "技能等级 ${ctx skill level}"
+      - "技能伤害 ${*damage}"
+      - "冷却时间 ${*cooldown}秒"
+      - "消耗法力 ${*mp_cost}"
       - "蓄力后发出强力的重击攻击"
   # 技能分类
-  category: 
+  category:
     - "战士"
     - "小技能"
   # 变量定义
@@ -25,7 +25,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 100
     # 伤害计算公式
-    damage: math 80 + ctx skill level * 15
+    damage: 80 + ctx skill level * 15
     # 法力消耗
     mp_cost: 35
     # 攻击范围
@@ -36,67 +36,67 @@ __option__:
     skill_weight: 1.5
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 检查玩家状态是否允许释放技能
-    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+    if sender :: metadataContains("状态", "前摇") || sender :: metadataContains("控制", "沉默") || sender :: metadataContains("状态", "硬直") {
       # 重置冷却时间并退出
-      cooldown reset
-      exit success
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查法力值是否足够
-    if check profile mp < lazy mp_cost then {
-      tell "法力不足！"
-      cooldown reset
-      exit success
+    if check profile mp < *mp_cost {
+      sender :: sendMessage("法力不足！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 初始化玩家状态
-    call initPlayerState
+    initPlayerState()
     # 蓄力阶段
-    wait 0.5s
+    "wait" :: delay("0.5s")
     # 执行重击
-    call executePowerStrike
+    executePowerStrike()
     # 等待后摇时间
-    wait 0.3s
+    "wait" :: delay("0.3s")
     # 结束技能效果
-    call endSkill
+    endSkill()
   }
-  def initPlayerState = {
+  fn initPlayerState() {
     # 消耗法力值
-    profile mp take lazy mp_cost
+    profile mp take *mp_cost
     # 设置前摇状态
-    metadata 状态 to 前摇_重击 timeout 15
+    sender :: setMetadata("状态", "前摇_重击", 15)
     # 播放蓄力动画
-    command inline "gp model cast {{ player name }} warrior_power_charge_animation" as console
+    "gp model cast ${sender :: name()} warrior_power_charge_animation" :: executeAsConsole()
     # 播放蓄力音效
-    command inline "gp sound play {{ player name }} warrior_power_charge_sound player" as console
+    "gp sound play ${sender :: name()} warrior_power_charge_sound player" :: executeAsConsole()
     # 添加缓慢效果
-    command inline "effect {{ player name }} slow 2 5" as console
+    "effect ${sender :: name()} slow 2 5" :: executeAsConsole()
     # 播放蓄力特效
-    command inline "gp effect spawn {{ player name }} warrior_power_charge_effect {{ player name }}蓄力特效 {{ sender }}" as console
+    "gp effect spawn ${sender :: name()} warrior_power_charge_effect ${sender :: name()}蓄力特效 ${sender}" :: executeAsConsole()
   }
-  def executePowerStrike = {
+  fn executePowerStrike() {
     # 检查是否仍在前摇状态
-    if not check metadata 状态 contains 前摇_重击 then {
-      exit success
+    if not sender :: metadataContains("状态", "前摇_重击") {
+      return
     }
     # 播放攻击动画
-    command inline "gp model cast {{ player name }} warrior_power_strike_animation" as console
+    "gp model cast ${sender :: name()} warrior_power_strike_animation" :: executeAsConsole()
     # 播放攻击音效
-    command inline "gp sound play {{ player name }} warrior_power_strike_sound player" as console
+    "gp sound play ${sender :: name()} warrior_power_strike_sound player" :: executeAsConsole()
     # 选择攻击目标
-    set targets to select @rectangle 3 2.5 lazy attack_range offset "0 0 2" debug false @their
+    var targets = select @rectangle 3 2.5 *attack_range offset "0 0 2" debug false @their
     # 对目标造成伤害
-    ap-attack 技能权重+lazy skill_weight,斩选择+20 at &targets
+    ap-attack 技能权重+*skill_weight,斩选择+20 at &targets
     # 对目标施加击退效果
-    velocity move "0 0.3 lazy knockback_distance" at &targets
+    velocity move "0 0.3 *knockback_distance" at &targets
     # 播放击中特效
     mythic mob signal PowerStrikeImpact at &targets
     # 设置后摇状态
-    metadata 状态 to 后摇_重击 timeout 8
+    sender :: setMetadata("状态", "后摇_重击", 8)
   }
-  def endSkill = {
+  fn endSkill() {
     # 移除缓慢效果
-    command inline "effect {{ player name }} slow 0" as console
+    "effect ${sender :: name()} slow 0" :: executeAsConsole()
     # 停止动画
-    command inline "gp model stop {{ player name }} warrior_power_strike_animation" as console
+    "gp model stop ${sender :: name()} warrior_power_strike_animation" :: executeAsConsole()
   }

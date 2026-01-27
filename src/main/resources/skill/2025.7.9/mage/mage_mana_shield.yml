@@ -11,68 +11,68 @@ __option__:
     name: "法力护盾"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "护盾吸收伤害 {{ lazy *shield_absorption }}"
-      - "法力转换比例 {{ lazy *mana_ratio }}:1"
+      - "技能等级 ${ctx skill level}"
+      - "护盾吸收伤害 ${*shield_absorption}"
+      - "法力转换比例 ${*mana_ratio}:1"
       - "被动技能：用法力值吸收伤害"
   # 技能分类
-  category: 
+  category:
     - "法师"
     - "被动技能"
   # 变量定义
   variables:
     # 护盾吸收伤害百分比
-    shield_absorption: math 20 + ctx skill level * 5
+    shield_absorption: 20 + ctx skill level * 5
     # 法力转换比例(法力:伤害)
-    mana_ratio: math 2 - ctx skill level * 0.1
+    mana_ratio: 2 - ctx skill level * 0.1
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 被动技能在学习时自动激活
-    call activatePassive
+    activatePassive()
     # 注册受伤事件监听器
-    call registerDamageListener
+    registerDamageListener()
   }
-  def activatePassive = {
+  fn activatePassive() {
     # 发送激活消息
-    tell "法力护盾被动技能已激活！"
+    sender :: sendMessage("法力护盾被动技能已激活！")
   }
-  def registerDamageListener = {
+  fn registerDamageListener() {
     # 监听受到伤害事件
-    set damage_listener to listen handleDamageReceived on damaged priority HIGH
+    var damage_listener = listen handleDamageReceived on damaged priority HIGH
     # 保存监听器引用
-    metadata 法力护盾监听器 to &damage_listener
+    sender :: setMetadata("法力护盾监听器", &damage_listener, -1)
   }
-  def handleDamageReceived = {
+  fn handleDamageReceived() {
     # 获取受到的伤害
-    set damage_amount to event damage
+    var damage_amount = event damage
     # 计算护盾吸收的伤害
-    set absorbed_damage to math &damage_amount * lazy shield_absorption / 100
+    var absorbed_damage = &damage_amount * *shield_absorption / 100
     # 计算需要消耗的法力值
-    set mana_cost to math &absorbed_damage * lazy mana_ratio
+    var mana_cost = &absorbed_damage * *mana_ratio
     # 检查法力值是否足够
-    if check profile mp >= &mana_cost then {
+    if sender :: getMagicPoint() >= &mana_cost {
       # 消耗法力值
-      profile mp take &mana_cost
+      sender :: takeMagicPoint(&mana_cost)
       # 减少受到的伤害
-      set new_damage to math &damage_amount - &absorbed_damage
+      var new_damage = &damage_amount - &absorbed_damage
       event damage to &new_damage
       # 播放护盾特效
-      command inline "gp effect spawn {{ player name }} mage_mana_shield_effect 法力护盾特效 {{ sender }}" as console
+      "gp effect spawn ${sender :: name()} mage_mana_shield_effect 法力护盾特效 ${sender}" :: executeAsConsole()
       # 播放护盾音效
-      command inline "gp sound play {{ player name }} mage_mana_shield_sound player" as console
+      "gp sound play ${sender :: name()} mage_mana_shield_sound player" :: executeAsConsole()
       # 发送提示消息
-      tell inline "法力护盾吸收了 {{ &absorbed_damage }} 点伤害！"
+      sender :: sendMessage("法力护盾吸收了 ${&absorbed_damage} 点伤害！")
     }
   }
-  def deactivatePassive = {
+  fn deactivatePassive() {
     # 停止监听器
-    set listener to metadata 法力护盾监听器
-    if check &listener is not null then {
+    var listener = sender :: getMetadata("法力护盾监听器")
+    if &listener is not null {
       unlisten &listener
     }
     # 发送停用消息
-    tell "法力护盾被动技能已停用。"
+    sender :: sendMessage("法力护盾被动技能已停用。")
   }

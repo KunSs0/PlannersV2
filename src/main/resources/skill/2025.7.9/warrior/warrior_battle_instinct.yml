@@ -11,72 +11,72 @@ __option__:
     name: "战斗本能"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "闪避率提升 {{ lazy *dodge_rate }}%"
-      - "反击概率 {{ lazy *counter_chance }}%"
+      - "技能等级 ${ctx skill level}"
+      - "闪避率提升 ${*dodge_rate}%"
+      - "反击概率 ${*counter_chance}%"
       - "被动技能：提升战斗直觉和反应能力"
   # 技能分类
-  category: 
+  category:
     - "战士"
     - "被动技能"
   # 变量定义
   variables:
     # 闪避率提升百分比
-    dodge_rate: math 2 + ctx skill level * 1
+    dodge_rate: 2 + ctx skill level * 1
     # 反击概率
-    counter_chance: math 5 + ctx skill level * 2
+    counter_chance: 5 + ctx skill level * 2
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 被动技能在学习时自动激活
-    call activatePassive
+    activatePassive()
     # 注册受伤事件监听器
-    call registerDamageListener
+    registerDamageListener()
   }
-  def activatePassive = {
+  fn activatePassive() {
     # 添加闪避率提升属性
-    attribute add "战斗本能_闪避率" duration lazy duration 闪避率+lazy dodge_rate at @self
+    attribute add "战斗本能_闪避率" duration *duration 闪避率+*dodge_rate at @self
     # 发送激活消息
-    tell "战斗本能被动技能已激活！"
+    sender :: sendMessage("战斗本能被动技能已激活！")
   }
-  def registerDamageListener = {
+  fn registerDamageListener() {
     # 监听受到伤害事件
-    set damage_listener to listen handleDamageReceived on damaged priority HIGH
+    var damage_listener = listen handleDamageReceived on damaged priority HIGH
     # 保存监听器引用
-    metadata 战斗本能监听器 to &damage_listener
+    sender :: setMetadata("战斗本能监听器", &damage_listener)
   }
-  def handleDamageReceived = {
+  fn handleDamageReceived() {
     # 检查是否触发反击
-    set random_value to random 1 to 100
-    if check &random_value <= lazy counter_chance then {
+    var random_value = random 1 to 100
+    if check &random_value <= *counter_chance {
       # 触发反击
-      call executeCounterAttack
+      executeCounterAttack()
     }
   }
-  def executeCounterAttack = {
+  fn executeCounterAttack() {
     # 获取攻击者
-    set attacker to event damager
+    var attacker = event damager
     # 检查攻击者是否有效
-    if check &attacker is null then {
-      exit success
+    if check &attacker is null {
+      return
     }
     # 对攻击者进行反击
     ap-attack 技能权重+0.5,斩选择+8 at &attacker
     # 播放反击特效
     mythic mob signal CounterAttackEffect at &attacker
     # 发送反击消息
-    tell "触发战斗本能反击！"
+    sender :: sendMessage("触发战斗本能反击！")
   }
-  def deactivatePassive = {
+  fn deactivatePassive() {
     # 移除闪避率提升属性
     attribute remove "战斗本能_闪避率"
     # 停止监听器
-    set listener to metadata 战斗本能监听器
-    if check &listener is not null then {
+    var listener = metadata 战斗本能监听器
+    if check &listener is not null {
       unlisten &listener
     }
     # 发送停用消息
-    tell "战斗本能被动技能已停用。"
+    sender :: sendMessage("战斗本能被动技能已停用。")
   }

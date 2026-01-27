@@ -11,14 +11,14 @@ __option__:
     name: "狂暴之怒"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "攻击力提升 {{ lazy *attack_boost }}%"
-      - "冷却时间 {{ lazy *cooldown }}秒"
-      - "消耗法力 {{ lazy *mp_cost }}"
-      - "持续时间 {{ lazy *duration }}秒"
+      - "技能等级 ${ctx skill level}"
+      - "攻击力提升 ${*attack_boost}%"
+      - "冷却时间 ${*cooldown}秒"
+      - "消耗法力 ${*mp_cost}"
+      - "持续时间 ${*duration}秒"
       - "进入狂暴状态，大幅提升攻击力和攻击速度"
   # 技能分类
-  category: 
+  category:
     - "战士"
     - "大技能"
   # 变量定义
@@ -30,71 +30,71 @@ __option__:
     # 持续时间(tick)
     duration: 200
     # 攻击力提升百分比
-    attack_boost: math 50 + ctx skill level * 10
+    attack_boost: 50 + ctx skill level * 10
     # 攻击速度提升
     attack_speed_boost: 3
     # 移动速度提升
     speed_boost: 2
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 检查玩家状态是否允许释放技能
-    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+    if sender :: metadataContains("状态", "前摇") || sender :: metadataContains("控制", "沉默") || sender :: metadataContains("状态", "硬直") {
       # 重置冷却时间并退出
-      cooldown reset
-      exit success
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查是否已经在狂暴状态
-    if check metadata 状态 contains 狂暴 then {
-      tell "已经处于狂暴状态！"
-      cooldown reset
-      exit success
+    if sender :: metadataContains("状态", "狂暴") {
+      sender :: sendMessage("已经处于狂暴状态！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查法力值是否足够
-    if check profile mp < lazy mp_cost then {
-      tell "法力不足！"
-      cooldown reset
-      exit success
+    if check profile mp < *mp_cost {
+      sender :: sendMessage("法力不足！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 激活狂暴状态
-    call activateBerserkerRage
+    activateBerserkerRage()
     # 等待持续时间
-    wait lazy duration tick
+    "wait" :: delayTicks(*duration)
     # 结束狂暴状态
-    call deactivateBerserkerRage
+    deactivateBerserkerRage()
   }
-  def activateBerserkerRage = {
+  fn activateBerserkerRage() {
     # 消耗法力值
-    profile mp take lazy mp_cost
+    profile mp take *mp_cost
     # 设置狂暴状态
-    metadata 状态 to 狂暴 timeout lazy duration
+    sender :: setMetadata("状态", "狂暴", *duration)
     # 播放激活动画
-    command inline "gp model cast {{ player name }} warrior_berserker_activate_animation" as console
+    "gp model cast ${sender :: name()} warrior_berserker_activate_animation" :: executeAsConsole()
     # 播放激活音效
-    command inline "gp sound play {{ player name }} warrior_berserker_activate_sound player" as console
+    "gp sound play ${sender :: name()} warrior_berserker_activate_sound player" :: executeAsConsole()
     # 添加攻击力提升属性
-    attribute add "狂暴攻击力" duration lazy duration inline "攻击力+{{ lazy attack_boost }}%" at @self
+    attribute add "狂暴攻击力" duration *duration inline "攻击力+${*attack_boost}%" at @self
     # 添加攻击速度提升效果
-    command inline "effect {{ player name }} haste lazy attack_speed_boost lazy duration" as console
+    "effect ${sender :: name()} haste *attack_speed_boost *duration" :: executeAsConsole()
     # 添加移动速度提升效果
-    command inline "effect {{ player name }} speed lazy speed_boost lazy duration" as console
+    "effect ${sender :: name()} speed *speed_boost *duration" :: executeAsConsole()
     # 播放狂暴特效
-    command inline "gp effect spawn {{ player name }} warrior_berserker_effect {{ player name }}狂暴特效 {{ sender }}" as console
+    "gp effect spawn ${sender :: name()} warrior_berserker_effect ${sender :: name()}狂暴特效 ${sender}" :: executeAsConsole()
     # 发送提示消息
-    tell "进入狂暴状态！攻击力和速度大幅提升！"
+    sender :: sendMessage("进入狂暴状态！攻击力和速度大幅提升！")
   }
-  def deactivateBerserkerRage = {
+  fn deactivateBerserkerRage() {
     # 移除狂暴状态
     metadata 状态 remove 狂暴
     # 移除攻击力提升属性
     attribute remove "狂暴攻击力"
     # 移除速度效果
-    command inline "effect {{ player name }} haste 0" as console
-    command inline "effect {{ player name }} speed 0" as console
+    "effect ${sender :: name()} haste 0" :: executeAsConsole()
+    "effect ${sender :: name()} speed 0" :: executeAsConsole()
     # 停止特效
-    command inline "gp effect stop {{ player name }} warrior_berserker_effect" as console
+    "gp effect stop ${sender :: name()} warrior_berserker_effect" :: executeAsConsole()
     # 播放结束音效
-    command inline "gp sound play {{ player name }} warrior_berserker_end_sound player" as console
+    "gp sound play ${sender :: name()} warrior_berserker_end_sound player" :: executeAsConsole()
     # 发送提示消息
-    tell "狂暴状态结束。"
+    sender :: sendMessage("狂暴状态结束。")
   }

@@ -12,12 +12,12 @@ __option__:
     # 描述信息
     lore:
       - "技能等级 {{ ctx skill level }}"
-      - "技能伤害 {{ lazy *damage }}"
-      - "冷却时间 {{ lazy *cooldown }}秒"
-      - "消耗法力 {{ lazy *mp_cost }}"
+      - "技能伤害 ${*damage}"
+      - "冷却时间 ${*cooldown}秒"
+      - "消耗法力 ${*mp_cost}"
       - "从背后攻击敌人造成额外伤害"
   # 技能分类
-  category: 
+  category:
     - "刺客"
     - "小技能"
   # 变量定义
@@ -25,7 +25,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 80
     # 伤害计算公式
-    damage: math 60 + ctx skill level * 15
+    damage: 60 + ctx skill level * 15
     # 法力消耗
     mp_cost: 25
     # 攻击范围
@@ -36,79 +36,79 @@ __option__:
     skill_weight: 1.5
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 检查玩家状态是否允许释放技能
-    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+    if metadata 状态 contains 前摇 || metadata 控制 contains 沉默 || metadata 状态 contains 硬直 {
       # 重置冷却时间并退出
-      cooldown reset
-      exit success
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查法力值是否足够
-    if check profile mp < lazy mp_cost then {
-      tell "法力不足！"
-      cooldown reset
-      exit success
+    if profile mp < *mp_cost {
+      sender :: sendMessage("法力不足！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 初始化玩家状态
-    call initPlayerState
+    initPlayerState()
     # 等待前摇时间
-    wait 0.2s
+    "wait" :: delay("0.2s")
     # 执行背刺
-    call executeBackstab
+    executeBackstab()
     # 等待后摇时间
-    wait 0.3s
+    "wait" :: delay("0.3s")
     # 结束技能效果
-    call endSkill
+    endSkill()
   }
-  def initPlayerState = {
+  fn initPlayerState() {
     # 消耗法力值
-    profile mp take lazy mp_cost
+    profile mp take *mp_cost
     # 设置前摇状态
-    metadata 状态 to 前摇_背刺 timeout 8
+    sender :: setMetadata("状态", "前摇_背刺", 8)
     # 播放技能动画
-    command inline "gp model cast {{ player name }} assassin_backstab_animation" as console
+    "gp model cast {{ player name }} assassin_backstab_animation" :: executeAsConsole()
     # 播放音效
-    command inline "gp sound play {{ player name }} assassin_backstab_sound player" as console
+    "gp sound play {{ player name }} assassin_backstab_sound player" :: executeAsConsole()
     # 向前冲刺
     velocity move "0 0 0.6" at @sender
   }
-  def executeBackstab = {
+  fn executeBackstab() {
     # 检查是否仍在前摇状态
-    if not check metadata 状态 contains 前摇_背刺 then {
-      exit success
+    if not metadata 状态 contains 前摇_背刺 {
+      return
     }
     # 选择攻击目标
-    set targets to select @rectangle 2 2 lazy attack_range offset "0 0 1" debug false @their
+    var targets = select @rectangle 2 2 *attack_range offset "0 0 1" debug false @their
     # 检查是否为背后攻击
-    set is_backstab to false
-    foreach &targets as target then {
+    var is_backstab = false
+    foreach &targets as target {
       # 计算玩家与目标的相对位置
-      set target_yaw to entity &target yaw
-      set player_yaw to player yaw
-      set angle_diff to math abs(&target_yaw - &player_yaw)
-      # 如果角度差小于45度，则为背刺
-      if check &angle_diff < 45 or &angle_diff > 315 then {
-        set is_backstab to true
+      var target_yaw = entity &target yaw
+      var player_yaw = player yaw
+      var angle_diff = abs(&target_yaw - &player_yaw)
+      # 如果角度差小于45度,则为背刺
+      if &angle_diff < 45 || &angle_diff > 315 {
+        var is_backstab = true
       }
     }
     # 根据是否背刺计算伤害
-    if check &is_backstab is true then {
+    if &is_backstab is true {
       # 背刺伤害
-      ap-attack 技能权重+math lazy skill_weight * lazy backstab_multiplier,刺选择+25 at &targets
+      ap-attack 技能权重+*skill_weight * *backstab_multiplier,刺选择+25 at &targets
       # 播放背刺特效
       mythic mob signal BackstabCritical at &targets
       # 发送背刺消息
-      tell "成功背刺！造成额外伤害！"
+      sender :: sendMessage("成功背刺！造成额外伤害！")
     } else {
       # 普通伤害
-      ap-attack 技能权重+lazy skill_weight,刺选择+15 at &targets
+      ap-attack 技能权重+*skill_weight,刺选择+15 at &targets
       # 播放普通攻击特效
       mythic mob signal BackstabNormal at &targets
     }
     # 设置后摇状态
-    metadata 状态 to 后摇_背刺 timeout 8
+    sender :: setMetadata("状态", "后摇_背刺", 8)
   }
-  def endSkill = {
+  fn endSkill() {
     # 停止动画
-    command inline "gp model stop {{ player name }} assassin_backstab_animation" as console
+    "gp model stop {{ player name }} assassin_backstab_animation" :: executeAsConsole()
   }

@@ -11,41 +11,41 @@ __option__:
     name: "护甲专精"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "防御力提升 {{ lazy *defense_bonus }}"
-      - "伤害减免 {{ lazy *damage_reduction }}%"
+      - "技能等级 ${ctx skill level}"
+      - "防御力提升 ${*defense_bonus}"
+      - "伤害减免 ${*damage_reduction}%"
       - "被动技能：提升护甲防护能力"
   # 技能分类
-  category: 
+  category:
     - "战士"
     - "被动技能"
   # 变量定义
   variables:
     # 防御力加成
-    defense_bonus: math 8 + ctx skill level * 3
+    defense_bonus: 8 + ctx skill level * 3
     # 伤害减免百分比
-    damage_reduction: math 3 + ctx skill level * 1
+    damage_reduction: 3 + ctx skill level * 1
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 被动技能在学习时自动激活
-    call activatePassive
+    activatePassive()
   }
-  def activatePassive = {
+  fn activatePassive() {
     # 添加防御力加成属性
-    attribute add "护甲专精_防御力" duration lazy duration 防御力+lazy defense_bonus at @self
+    attribute add "护甲专精_防御力" duration *duration 防御力+*defense_bonus at @self
     # 添加伤害减免属性
-    attribute add "护甲专精_伤害减免" duration lazy duration 伤害减免+lazy damage_reduction at @self
+    attribute add "护甲专精_伤害减免" duration *duration 伤害减免+*damage_reduction at @self
     # 发送激活消息
-    tell "护甲专精被动技能已激活！"
+    sender :: sendMessage("护甲专精被动技能已激活！")
   }
-  def deactivatePassive = {
+  fn deactivatePassive() {
     # 移除防御力加成属性
     attribute remove "护甲专精_防御力"
     # 移除伤害减免属性
     attribute remove "护甲专精_伤害减免"
     # 发送停用消息
-    tell "护甲专精被动技能已停用。"
+    sender :: sendMessage("护甲专精被动技能已停用。")
   }

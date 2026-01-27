@@ -11,13 +11,13 @@ __option__:
     name: "盾击"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "技能伤害 {{ lazy *damage }}"
-      - "冷却时间 {{ lazy *cooldown }}秒"
-      - "消耗法力 {{ lazy *mp_cost }}"
+      - "技能等级 ${ctx skill level}"
+      - "技能伤害 ${*damage}"
+      - "冷却时间 ${*cooldown}秒"
+      - "消耗法力 ${*mp_cost}"
       - "使用盾牌进行冲击攻击并眩晕敌人"
   # 技能分类
-  category: 
+  category:
     - "战士"
     - "小技能"
   # 变量定义
@@ -25,7 +25,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 80
     # 伤害计算公式
-    damage: math 30 + ctx skill level * 8
+    damage: 30 + ctx skill level * 8
     # 法力消耗
     mp_cost: 25
     # 攻击范围
@@ -36,65 +36,65 @@ __option__:
     skill_weight: 0.8
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 检查玩家状态是否允许释放技能
-    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+    if sender :: metadataContains("状态", "前摇") || sender :: metadataContains("控制", "沉默") || sender :: metadataContains("状态", "硬直") {
       # 重置冷却时间并退出
-      cooldown reset
-      exit success
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查是否装备盾牌
-    if not inventory offhand is "minecraft:shield" then {
-      tell "需要装备盾牌才能使用此技能！"
-      cooldown reset
-      exit success
+    if not inventory offhand is "minecraft:shield" {
+      sender :: sendMessage("需要装备盾牌才能使用此技能！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查法力值是否足够
-    if check profile mp < lazy mp_cost then {
-      tell "法力不足！"
-      cooldown reset
-      exit success
+    if check profile mp < *mp_cost {
+      sender :: sendMessage("法力不足！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 初始化玩家状态
-    call initPlayerState
+    initPlayerState()
     # 等待前摇时间
-    wait 0.2s
+    "wait" :: delay("0.2s")
     # 执行冲击
-    call executeBash
+    executeBash()
     # 等待后摇时间
-    wait 0.3s
+    "wait" :: delay("0.3s")
     # 结束技能效果
-    call endSkill
+    endSkill()
   }
-  def initPlayerState = {
+  fn initPlayerState() {
     # 消耗法力值
-    profile mp take lazy mp_cost
+    profile mp take *mp_cost
     # 设置前摇状态
-    metadata 状态 to 前摇_盾击 timeout 8
+    sender :: setMetadata("状态", "前摇_盾击", 8)
     # 播放技能动画
-    command inline "gp model cast {{ player name }} warrior_shield_bash_animation" as console
+    "gp model cast ${sender :: name()} warrior_shield_bash_animation" :: executeAsConsole()
     # 播放音效
-    command inline "gp sound play {{ player name }} warrior_shield_bash_sound player" as console
+    "gp sound play ${sender :: name()} warrior_shield_bash_sound player" :: executeAsConsole()
     # 向前冲刺
     velocity move "0 0 0.8" at @sender
   }
-  def executeBash = {
+  fn executeBash() {
     # 检查是否仍在前摇状态
-    if not check metadata 状态 contains 前摇_盾击 then {
-      exit success
+    if not sender :: metadataContains("状态", "前摇_盾击") {
+      return
     }
     # 选择攻击目标
-    set targets to select @rectangle 2 2 lazy attack_range offset "0 0 1" debug false @their
+    var targets = select @rectangle 2 2 *attack_range offset "0 0 1" debug false @their
     # 对目标造成伤害
-    ap-attack 技能权重+lazy skill_weight,钝选择+12 at &targets
+    ap-attack 技能权重+*skill_weight,钝选择+12 at &targets
     # 对目标施加眩晕效果
-    metadata 控制 to 眩晕 timeout lazy stun_duration at &targets
+    &targets :: setMetadata("控制", "眩晕", *stun_duration)
     # 播放击中特效
     mythic mob signal ShieldBashImpact at &targets
     # 设置后摇状态
-    metadata 状态 to 后摇_盾击 timeout 8
+    sender :: setMetadata("状态", "后摇_盾击", 8)
   }
-  def endSkill = {
+  fn endSkill() {
     # 停止动画
-    command inline "gp model stop {{ player name }} warrior_shield_bash_animation" as console
+    "gp model stop ${sender :: name()} warrior_shield_bash_animation" :: executeAsConsole()
   }

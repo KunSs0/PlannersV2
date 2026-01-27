@@ -1,7 +1,13 @@
 package com.gitee.planners.module.fluxon
 
+import com.gitee.planners.module.fluxon.command.CommandExtensions
 import com.gitee.planners.module.fluxon.common.CommonExtensions
+import com.gitee.planners.module.fluxon.cooldown.CooldownExtensions
+import com.gitee.planners.module.fluxon.delay.DelayExtensions
 import com.gitee.planners.module.fluxon.entity.EntityExtensions
+import com.gitee.planners.module.fluxon.metadata.MetadataExtensions
+import com.gitee.planners.module.fluxon.player.PlayerExtensions
+import com.gitee.planners.module.fluxon.profile.ProfileExtensions
 import com.gitee.planners.module.fluxon.sender.SenderExtensions
 import com.gitee.planners.module.fluxon.skill.SkillCommands
 import com.gitee.planners.module.fluxon.world.LocationExtensions
@@ -28,6 +34,14 @@ object FluxonLoader {
         CommonExtensions.register()
         SkillCommands.register()
         SenderExtensions.register()
+
+        // 高优先级扩展（用于技能配置迁移）
+        PlayerExtensions.register()
+        MetadataExtensions.register()
+        ProfileExtensions.register()
+        CooldownExtensions.register()
+        CommandExtensions.register()
+        DelayExtensions.register()
 
         info("[Fluxon] 脚本引擎初始化完成")
     }

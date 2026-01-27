@@ -11,14 +11,14 @@ __option__:
     name: "暴风雪"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "技能伤害 {{ lazy *damage }}"
-      - "冷却时间 {{ lazy *cooldown }}秒"
-      - "消耗法力 {{ lazy *mp_cost }}"
-      - "持续时间 {{ lazy *duration }}秒"
+      - "技能等级 ${ctx skill level}"
+      - "技能伤害 ${*damage}"
+      - "冷却时间 ${*cooldown}秒"
+      - "消耗法力 ${*mp_cost}"
+      - "持续时间 ${*duration}秒"
       - "召唤暴风雪持续攻击范围内的敌人"
   # 技能分类
-  category: 
+  category:
     - "法师"
     - "大技能"
     - "冰系"
@@ -27,7 +27,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 500
     # 伤害计算公式
-    damage: math 80 + ctx skill level * 20
+    damage: 80 + ctx skill level * 20
     # 法力消耗
     mp_cost: 150
     # 射程
@@ -44,91 +44,91 @@ __option__:
     skill_weight: 2.5
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 检查玩家状态是否允许释放技能
-    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+    if sender :: metadataContains("状态", "前摇") || sender :: metadataContains("控制", "沉默") || sender :: metadataContains("状态", "硬直") {
       # 重置冷却时间并退出
-      cooldown reset
-      exit success
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查法力值是否足够
-    if check profile mp < lazy mp_cost then {
-      tell "法力不足！"
-      cooldown reset
-      exit success
+    if sender :: getMagicPoint() < *mp_cost {
+      sender :: sendMessage("法力不足！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 初始化玩家状态
-    call initPlayerState
+    initPlayerState()
     # 等待施法时间
-    wait 1.5s
+    "wait" :: delay("1.5s")
     # 召唤暴风雪
-    call summonBlizzard
+    summonBlizzard()
     # 等待后摇时间
-    wait 0.5s
+    "wait" :: delay("0.5s")
     # 结束技能效果
-    call endSkill
+    endSkill()
   }
-  def initPlayerState = {
+  fn initPlayerState() {
     # 消耗法力值
-    profile mp take lazy mp_cost
+    sender :: takeMagicPoint(*mp_cost)
     # 设置前摇状态
-    metadata 状态 to 前摇_暴风雪 timeout 40
+    sender :: setMetadata("状态", "前摇_暴风雪", 40)
     # 播放施法动画
-    command inline "gp model cast {{ player name }} mage_blizzard_cast_animation" as console
+    "gp model cast ${sender :: name()} mage_blizzard_cast_animation" :: executeAsConsole()
     # 播放施法音效
-    command inline "gp sound play {{ player name }} mage_blizzard_cast_sound player" as console
+    "gp sound play ${sender :: name()} mage_blizzard_cast_sound player" :: executeAsConsole()
     # 播放施法特效
-    command inline "gp effect spawn {{ player name }} mage_blizzard_cast_effect {{ player name }}暴风雪施法特效 {{ sender }}" as console
+    "gp effect spawn ${sender :: name()} mage_blizzard_cast_effect ${sender :: name()}暴风雪施法特效 ${sender}" :: executeAsConsole()
     # 添加缓慢效果防止移动
-    command inline "effect {{ player name }} slow 8 6" as console
+    "effect ${sender :: name()} slow 8 6" :: executeAsConsole()
     # 发送提示消息
-    tell "正在召唤暴风雪..."
+    sender :: sendMessage("正在召唤暴风雪...")
   }
-  def summonBlizzard = {
+  fn summonBlizzard() {
     # 检查是否仍在前摇状态
-    if not check metadata 状态 contains 前摇_暴风雪 then {
-      exit success
+    if !sender :: metadataContains("状态", "前摇_暴风雪") {
+      return
     }
     # 获取目标位置
-    set target_location to player look location distance lazy range
+    var target_location = sender :: lookLocation(*range)
     # 播放暴风雪开始音效
-    command inline "gp sound play {{ player name }} mage_blizzard_start_sound player" as console
+    "gp sound play ${sender :: name()} mage_blizzard_start_sound player" :: executeAsConsole()
     # 播放暴风雪特效
-    command inline "gp effect spawn {{ player name }} mage_blizzard_effect 暴风雪特效 {{ &target_location }}" as console
+    "gp effect spawn ${sender :: name()} mage_blizzard_effect 暴风雪特效 ${&target_location}" :: executeAsConsole()
     # 开始暴风雪循环攻击
-    call blizzardLoop at &target_location
+    blizzardLoop(&target_location)
   }
-  def blizzardLoop = {
+  fn blizzardLoop(&target_location) {
     # 计算攻击次数
-    set attack_count to math lazy duration / lazy attack_interval
-    set current_attack to 0
+    var attack_count = *duration / *attack_interval
+    var current_attack = 0
     # 循环攻击
-    while check &current_attack < &attack_count then {
+    while &current_attack < &attack_count {
       # 选择暴风雪范围内的敌人
-      set targets to select @circle lazy blizzard_radius at &target_location debug false @their
+      var targets = select @circle *blizzard_radius at &target_location debug false @their
       # 对目标造成伤害
-      ap-attack 技能权重+lazy skill_weight,冰选择+20 at &targets
+      ap-attack 技能权重+*skill_weight,冰选择+20 at &targets
       # 对目标施加减速效果
-      command inline "effect {{ &targets }} slowness lazy attack_interval lazy slow_level" as console
+      "effect ${&targets} slowness *attack_interval *slow_level" :: executeAsConsole()
       # 对目标施加冰冻状态
-      metadata 状态 to 冰冻 timeout lazy attack_interval at &targets
+      &targets :: setMetadata("状态", "冰冻", *attack_interval)
       # 播放冰雪攻击特效
       mythic mob signal BlizzardAttack at &targets
       # 增加攻击计数
-      set current_attack to math &current_attack + 1
+      current_attack = &current_attack + 1
       # 等待下次攻击
-      wait lazy attack_interval tick
+      "wait" :: delayTicks(*attack_interval)
     }
     # 设置后摇状态
-    metadata 状态 to 后摇_暴风雪 timeout 12
+    sender :: setMetadata("状态", "后摇_暴风雪", 12)
   }
-  def endSkill = {
+  fn endSkill() {
     # 移除缓慢效果
-    command inline "effect {{ player name }} slow 0" as console
+    "effect ${sender :: name()} slow 0" :: executeAsConsole()
     # 停止施法动画
-    command inline "gp model stop {{ player name }} mage_blizzard_cast_animation" as console
+    "gp model stop ${sender :: name()} mage_blizzard_cast_animation" :: executeAsConsole()
     # 停止施法特效
-    command inline "gp effect stop {{ player name }} mage_blizzard_cast_effect" as console
+    "gp effect stop ${sender :: name()} mage_blizzard_cast_effect" :: executeAsConsole()
     # 停止暴风雪特效
-    command inline "gp effect stop {{ player name }} mage_blizzard_effect" as console
+    "gp effect stop ${sender :: name()} mage_blizzard_effect" :: executeAsConsole()
   }

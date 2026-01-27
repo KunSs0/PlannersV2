@@ -11,13 +11,13 @@ __option__:
     name: "流星术"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "技能伤害 {{ lazy *damage }}"
-      - "冷却时间 {{ lazy *cooldown }}秒"
-      - "消耗法力 {{ lazy *mp_cost }}"
+      - "技能等级 ${ctx skill level}"
+      - "技能伤害 ${*damage}"
+      - "冷却时间 ${*cooldown}秒"
+      - "消耗法力 ${*mp_cost}"
       - "召唤流星从天而降造成大范围伤害"
   # 技能分类
-  category: 
+  category:
     - "法师"
     - "大技能"
     - "火系"
@@ -26,7 +26,7 @@ __option__:
     # 冷却时间(tick)
     cooldown: 400
     # 伤害计算公式
-    damage: math 200 + ctx skill level * 40
+    damage: 200 + ctx skill level * 40
     # 法力消耗
     mp_cost: 120
     # 射程
@@ -39,85 +39,85 @@ __option__:
     skill_weight: 3.0
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 检查玩家状态是否允许释放技能
-    if any [ check metadata 状态 contains 前摇 check metadata 控制 contains 沉默 check metadata 状态 contains 硬直 ] then {
+    if sender :: metadataContains("状态", "前摇") || sender :: metadataContains("控制", "沉默") || sender :: metadataContains("状态", "硬直") {
       # 重置冷却时间并退出
-      cooldown reset
-      exit success
+      sender :: resetCooldown(skill)
+      return
     }
     # 检查法力值是否足够
-    if check profile mp < lazy mp_cost then {
-      tell "法力不足！"
-      cooldown reset
-      exit success
+    if sender :: getMagicPoint() < *mp_cost {
+      sender :: sendMessage("法力不足！")
+      sender :: resetCooldown(skill)
+      return
     }
     # 初始化玩家状态
-    call initPlayerState
+    initPlayerState()
     # 等待施法时间
-    wait 2.0s
+    "wait" :: delay("2.0s")
     # 召唤流星
-    call summonMeteor
+    summonMeteor()
     # 等待后摇时间
-    wait 0.5s
+    "wait" :: delay("0.5s")
     # 结束技能效果
-    call endSkill
+    endSkill()
   }
-  def initPlayerState = {
+  fn initPlayerState() {
     # 消耗法力值
-    profile mp take lazy mp_cost
+    sender :: takeMagicPoint(*mp_cost)
     # 设置前摇状态
-    metadata 状态 to 前摇_流星术 timeout 50
+    sender :: setMetadata("状态", "前摇_流星术", 50)
     # 播放施法动画
-    command inline "gp model cast {{ player name }} mage_meteor_cast_animation" as console
+    "gp model cast ${sender :: name()} mage_meteor_cast_animation" :: executeAsConsole()
     # 播放施法音效
-    command inline "gp sound play {{ player name }} mage_meteor_cast_sound player" as console
+    "gp sound play ${sender :: name()} mage_meteor_cast_sound player" :: executeAsConsole()
     # 播放施法特效
-    command inline "gp effect spawn {{ player name }} mage_meteor_cast_effect {{ player name }}流星施法特效 {{ sender }}" as console
+    "gp effect spawn ${sender :: name()} mage_meteor_cast_effect ${sender :: name()}流星施法特效 ${sender}" :: executeAsConsole()
     # 添加缓慢效果防止移动
-    command inline "effect {{ player name }} slow 10 8" as console
+    "effect ${sender :: name()} slow 10 8" :: executeAsConsole()
     # 发送提示消息
-    tell "正在召唤流星..."
+    sender :: sendMessage("正在召唤流星...")
   }
-  def summonMeteor = {
+  fn summonMeteor() {
     # 检查是否仍在前摇状态
-    if not check metadata 状态 contains 前摇_流星术 then {
-      exit success
+    if !sender :: metadataContains("状态", "前摇_流星术") {
+      return
     }
     # 播放流星降落音效
-    command inline "gp sound play {{ player name }} mage_meteor_fall_sound player" as console
+    "gp sound play ${sender :: name()} mage_meteor_fall_sound player" :: executeAsConsole()
     # 获取目标位置
-    set target_location to player look location distance lazy range
+    var target_location = sender :: lookLocation(*range)
     # 播放流星降落特效
-    command inline "gp effect spawn {{ player name }} mage_meteor_fall_effect 流星降落特效 {{ &target_location }}" as console
+    "gp effect spawn ${sender :: name()} mage_meteor_fall_effect 流星降落特效 ${&target_location}" :: executeAsConsole()
     # 等待流星降落
-    wait 1.5s
+    "wait" :: delay("1.5s")
     # 流星撞击
-    call meteorImpact at &target_location
+    meteorImpact(&target_location)
   }
-  def meteorImpact = {
+  fn meteorImpact(&target_location) {
     # 播放撞击音效
-    command inline "gp sound play {{ player name }} mage_meteor_impact_sound player" as console
+    "gp sound play ${sender :: name()} mage_meteor_impact_sound player" :: executeAsConsole()
     # 选择爆炸范围内的敌人
-    set targets to select @circle lazy explosion_radius at &target_location debug false @their
+    var targets = select @circle *explosion_radius at &target_location debug false @their
     # 对目标造成伤害
-    ap-attack 技能权重+lazy skill_weight,火选择+35 at &targets
+    ap-attack 技能权重+*skill_weight,火选择+35 at &targets
     # 对目标施加燃烧效果
-    command inline "effect {{ &targets }} wither lazy burn_duration 2" as console
+    "effect ${&targets} wither *burn_duration 2" :: executeAsConsole()
     # 播放爆炸特效
     mythic mob signal MeteorExplosion at &target_location
     # 播放火焰特效
-    command inline "gp effect spawn {{ player name }} mage_meteor_explosion_effect 流星爆炸特效 {{ &target_location }}" as console
+    "gp effect spawn ${sender :: name()} mage_meteor_explosion_effect 流星爆炸特效 ${&target_location}" :: executeAsConsole()
     # 生成爆炸效果
-    command inline "summon tnt {{ &target_location }}" as console
+    "summon tnt ${&target_location}" :: executeAsConsole()
     # 设置后摇状态
-    metadata 状态 to 后摇_流星术 timeout 12
+    sender :: setMetadata("状态", "后摇_流星术", 12)
   }
-  def endSkill = {
+  fn endSkill() {
     # 移除缓慢效果
-    command inline "effect {{ player name }} slow 0" as console
+    "effect ${sender :: name()} slow 0" :: executeAsConsole()
     # 停止施法动画
-    command inline "gp model stop {{ player name }} mage_meteor_cast_animation" as console
+    "gp model stop ${sender :: name()} mage_meteor_cast_animation" :: executeAsConsole()
     # 停止施法特效
-    command inline "gp effect stop {{ player name }} mage_meteor_cast_effect" as console
+    "gp effect stop ${sender :: name()} mage_meteor_cast_effect" :: executeAsConsole()
   }

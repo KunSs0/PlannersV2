@@ -11,47 +11,47 @@ __option__:
     name: "元素亲和"
     # 描述信息
     lore:
-      - "技能等级 {{ ctx skill level }}"
-      - "火系伤害提升 {{ lazy *fire_bonus }}%"
-      - "冰系伤害提升 {{ lazy *ice_bonus }}%"
-      - "雷系伤害提升 {{ lazy *lightning_bonus }}%"
-      - "元素抗性提升 {{ lazy *resistance }}%"
+      - "技能等级 ${ctx skill level}"
+      - "火系伤害提升 ${*fire_bonus}%"
+      - "冰系伤害提升 ${*ice_bonus}%"
+      - "雷系伤害提升 ${*lightning_bonus}%"
+      - "元素抗性提升 ${*resistance}%"
       - "被动技能：提升元素魔法威力"
   # 技能分类
-  category: 
+  category:
     - "法师"
     - "被动技能"
   # 变量定义
   variables:
     # 火系伤害加成百分比
-    fire_bonus: math 10 + ctx skill level * 3
+    fire_bonus: 10 + ctx skill level * 3
     # 冰系伤害加成百分比
-    ice_bonus: math 10 + ctx skill level * 3
+    ice_bonus: 10 + ctx skill level * 3
     # 雷系伤害加成百分比
-    lightning_bonus: math 10 + ctx skill level * 3
+    lightning_bonus: 10 + ctx skill level * 3
     # 元素抗性加成百分比
-    resistance: math 5 + ctx skill level * 2
+    resistance: 5 + ctx skill level * 2
     # 属性持续时间(永久)
     duration: -1
 # 技能脚本
 action: |
-  def main = {
+  fn main() {
     # 被动技能在学习时自动激活
-    call activatePassive
+    activatePassive()
   }
-  def activatePassive = {
+  fn activatePassive() {
     # 添加火系伤害加成属性
-    attribute add "元素亲和_火系伤害" duration lazy duration 火选择+lazy fire_bonus at @self
+    attribute add "元素亲和_火系伤害" duration *duration 火选择+*fire_bonus at @self
     # 添加冰系伤害加成属性
-    attribute add "元素亲和_冰系伤害" duration lazy duration 冰选择+lazy ice_bonus at @self
+    attribute add "元素亲和_冰系伤害" duration *duration 冰选择+*ice_bonus at @self
     # 添加雷系伤害加成属性
-    attribute add "元素亲和_雷系伤害" duration lazy duration 雷选择+lazy lightning_bonus at @self
+    attribute add "元素亲和_雷系伤害" duration *duration 雷选择+*lightning_bonus at @self
     # 添加元素抗性属性
-    attribute add "元素亲和_元素抗性" duration lazy duration 元素抗性+lazy resistance at @self
+    attribute add "元素亲和_元素抗性" duration *duration 元素抗性+*resistance at @self
     # 发送激活消息
-    tell "元素亲和被动技能已激活！"
+    sender :: sendMessage("元素亲和被动技能已激活！")
   }
-  def deactivatePassive = {
+  fn deactivatePassive() {
     # 移除火系伤害加成属性
     attribute remove "元素亲和_火系伤害"
     # 移除冰系伤害加成属性
@@ -61,5 +61,5 @@ action: |
     # 移除元素抗性属性
     attribute remove "元素亲和_元素抗性"
     # 发送停用消息
-    tell "元素亲和被动技能已停用。"
+    sender :: sendMessage("元素亲和被动技能已停用。")
   }

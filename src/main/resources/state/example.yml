@@ -6,30 +6,30 @@ state0:
     "chat":
       listen: player chat
       action: |-
-        tell "chat"
+        sender :: sendMessage("chat")
         state detach ~
     "state-attach":
       listen: state attach
       action: |-
-        tell "眩晕层数增加"
+        sender :: sendMessage("眩晕层数增加")
     "state-detach":
       listen: state detach
       action: |-
-        tell "眩晕层数减少"
+        sender :: sendMessage("眩晕层数减少")
     "state-mount":
       listen: state mount
       action: |-
-        tell "首次获得眩晕"
+        sender :: sendMessage("首次获得眩晕")
     "state-close":
       listen: state close
       action: |-
-        tell "完全解除眩晕"
+        sender :: sendMessage("完全解除眩晕")
     "state-end":
       listen: state end
       action: |-
-        tell "眩晕自然结束"
+        sender :: sendMessage("眩晕自然结束")
     "custom":
       listen: customtrigger demo
       action: |-
-        tell "进入自定义触发器"
+        sender :: sendMessage("进入自定义触发器")
         state detach ~
