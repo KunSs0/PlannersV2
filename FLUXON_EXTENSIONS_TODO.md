@@ -77,85 +77,64 @@
 - `"wait"::delayTicks(ticks: Long)` - 按 tick 延迟
 - `"wait"::delayMillis(millis: Long)` - 按毫秒延迟
 
-## 需要实现 ⏳
+### 数学函数 (`MathExtensions.kt`) ✅
+- `abs(value: Number) : Double` - 绝对值
+- `max(a: Number, b: Number) : Double` - 最大值
+- `min(a: Number, b: Number) : Double` - 最小值
+- `sqrt(value: Number) : Double` - 平方根
+- `sin(value: Number) : Double` - 正弦
+- `cos(value: Number) : Double` - 余弦
+- `tan(value: Number) : Double` - 正切
 
-### 1. 选择器系统 (中优先级)
-```kotlin
-// SelectorExtensions.kt
-- selectRectangle(width, height, length, location, filter)
-- selectSphere(radius, location, filter)
-- selectLine(distance, location, direction, filter)
-```
+### 速度控制 (`VelocityExtensions.kt`) ✅
+- `Entity::setVelocity(x: Double, y: Double, z: Double)` - 设置速度
+- `Entity::addVelocity(x: Double, y: Double, z: Double)` - 添加速度
+- `Entity::getVelocity() : Vector` - 获取速度
 
-### 2. 速度控制 (中优先级)
-```kotlin
-// VelocityExtensions.kt
-- Entity::setVelocity(x: Double, y: Double, z: Double)
-- Entity::addVelocity(x: Double, y: Double, z: Double)
-- Entity::getVelocity() : Vector
-```
+### 选择器系统 (`SelectorExtensions.kt`) ✅
+- `selectRectangle(width, height, length, location, filter)` - 矩形选择器
+- `selectSphere(radius, location, filter)` - 球形选择器
+- `selectLine(distance, location, direction, filter)` - 直线选择器
 
-### 3. 技能系统 (中优先级)
-```kotlin
-// SkillSystemExtensions.kt
-- apAttack(params: String, targets: List<Entity>)  // 属性攻击
-- getSkillLevel(player: Player, skill: Skill) : Int
-- setSkillLevel(player: Player, skill: Skill, level: Int)
-```
+### 技能系统 (`SkillSystemExtensions.kt`) ✅
+- `apAttack(params: String, targets: List<Entity>)` - 属性攻击
+- `getSkillLevel(player: Player, skill: Skill) : Int` - 获取技能等级
+- `setSkillLevel(player: Player, skill: Skill, level: Int)` - 设置技能等级
 
-### 4. MythicMobs 集成 (低优先级)
-```kotlin
-// MythicMobsExtensions.kt
-- spawnMythicMob(mobType: String, location: Location)
-- sendMythicSignal(signal: String, location: Location)
-- isMythicMob(entity: Entity) : Boolean
-```
+### MythicMobs 集成 (`MythicMobsExtensions.kt`) ✅
+- `spawnMythicMob(mobType: String, location: Location)` - 生成 MythicMob
+- `sendMythicSignal(signal: String, location: Location)` - 发送信号
+- `isMythicMob(entity: Entity) : Boolean` - 检查是否为 MythicMob
 
-### 5. GermPlugin 集成 (低优先级)
-```kotlin
-// GermPluginExtensions.kt
-- playGermModel(player: Player, model: String)
-- stopGermModel(player: Player, model: String)
-- playGermEffect(player: Player, effect: String)
-- stopGermEffect(player: Player, effect: String)
-- playGermSound(player: Player, sound: String)
-```
-
-### 6. 数学函数 (中优先级)
-```kotlin
-// MathExtensions.kt
-// 注册为全局函数或静态导入
-- abs(value: Number) : Double
-- max(a: Number, b: Number) : Double
-- min(a: Number, b: Number) : Double
-- sqrt(value: Number) : Double
-- sin(value: Number) : Double
-- cos(value: Number) : Double
-- tan(value: Number) : Double
-```
+### GermPlugin 集成 (`GermPluginExtensions.kt`) ✅
+- `playGermModel(player: Player, model: String)` - 播放模型动画
+- `stopGermModel(player: Player, model: String)` - 停止模型动画
+- `playGermEffect(player: Player, effect: String)` - 播放特效
+- `stopGermEffect(player: Player, effect: String)` - 停止特效
+- `playGermSound(player: Player, sound: String)` - 播放音效
 
 ## 实现优先级说明
 
-### 高优先级
+### 高优先级 ✅ 已完成
 这些功能在配置文件中大量使用，必须先实现才能进行脚本迁移：
-- Player 扩展
-- 元数据操作
-- Profile 操作
-- 冷却系统
-- 命令执行
-- 等待和延迟
+- ✅ Player 扩展
+- ✅ 元数据操作
+- ✅ Profile 操作
+- ✅ 冷却系统
+- ✅ 命令执行
+- ✅ 等待和延迟
 
-### 中优先级
+### 中优先级 ✅ 已完成
 这些功能在部分技能中使用，影响中等：
-- 选择器系统
-- 速度控制
-- 技能系统
-- 数学函数
+- ✅ 选择器系统
+- ✅ 速度控制
+- ✅ 技能系统
+- ✅ 数学函数
 
-### 低优先级
+### 低优先级 ✅ 已完成
 这些是可选的第三方集成，可以逐步实现：
-- MythicMobs 集成
-- GermPlugin 集成
+- ✅ MythicMobs 集成
+- ✅ GermPlugin 集成
 
 ## 实现建议
 
@@ -179,10 +158,10 @@
 
 - ✅ 基础扩展已实现 (Entity, Location, Common, Sender)
 - ✅ 高优先级扩展已完成 (Player, Metadata, Profile, Cooldown, Command, Delay)
-- ⏳ 中优先级扩展待实现 (4/4)
-- ⏳ 低优先级扩展待实现 (2/2)
+- ✅ 中优先级扩展已完成 (Math, Velocity, Selector, SkillSystem)
+- ✅ 低优先级扩展已完成 (MythicMobs, GermPlugin)
 
-**总进度**: 10/16 (62.5%)
+**总进度**: 16/16 (100%) 🎉
 
 ## 配置文件迁移状态
 
