@@ -3,7 +3,7 @@ package com.gitee.planners.module.compat.attribute
 import com.gitee.planners.api.common.task.SimpleUniqueTask
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.TargetBukkitEntity
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.asTarget
 import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
@@ -41,7 +41,7 @@ object AttributePlus3Driver : AttributeDriver {
     }
 
     override fun set(entity: Entity, id: String, source: List<String>, timeout: Int) {
-        return set(adaptTarget<Target<*>>(entity), id, source, timeout)
+        return set(entity.asTarget(), id, source, timeout)
     }
 
     override fun remove(target: Target<*>, id: String) {

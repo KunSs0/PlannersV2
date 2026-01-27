@@ -10,21 +10,21 @@ enum class LeastType {
 
     ONLINE_PLAYERS {
         override fun getTargetContainer(sender: Any?): TargetContainer {
-            return TargetContainer.of(*Bukkit.getOnlinePlayers().map { it.adaptTarget() }.toTypedArray())
+            return TargetContainer.of(*Bukkit.getOnlinePlayers().map { it.asTarget() }.toTypedArray())
         }
     },
 
     // 释放者方案
     SENDER {
         override fun getTargetContainer(sender: Any?): TargetContainer {
-            return if (sender != null) TargetContainer.of(adaptTarget<Target<*>>(sender)) else TargetContainer()
+            return if (sender != null) TargetContainer.of(Targets.of(sender)) else TargetContainer()
         }
     },
 
     // 控制台方案
     CONSOLE {
         override fun getTargetContainer(sender: Any?): TargetContainer {
-            return TargetContainer.of(Bukkit.getConsoleSender().adaptTarget())
+            return TargetContainer.of(Bukkit.getConsoleSender().asTarget())
         }
     },
 
@@ -32,7 +32,7 @@ enum class LeastType {
     ORIGIN {
         override fun getTargetContainer(sender: Any?): TargetContainer {
             // Origin needs context, return sender as fallback
-            return if (sender != null) TargetContainer.of(adaptTarget<Target<*>>(sender)) else TargetContainer()
+            return if (sender != null) TargetContainer.of(Targets.of(sender)) else TargetContainer()
         }
     },
 

@@ -3,7 +3,7 @@ package com.gitee.planners.core.skill.script.impl
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.job.target.Target
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import org.bukkit.entity.Player
@@ -17,7 +17,7 @@ import taboolib.platform.util.attacker
 abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() {
 
     override fun getSender(event: T): Target<*>? {
-        return event.player.adaptTarget()
+        return event.player.asTarget()
     }
 
     override fun handle(event: T, options: FluxonScriptOptions) {
@@ -39,7 +39,7 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() 
         override val bind = PlayerProfileLoadedEvent::class.java
 
         override fun getSender(event: PlayerProfileLoadedEvent): Target<*>? {
-            return event.player.adaptTarget()
+            return event.player.asTarget()
         }
 
         override fun handle(event: PlayerProfileLoadedEvent, options: FluxonScriptOptions) {
@@ -74,7 +74,7 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() 
         override fun getSender(event: EntityDamageByEntityEvent): Target<*>? {
             val attacker = event.attacker
             if (attacker is Player) {
-                return adaptTarget(attacker)
+                return attacker.asTarget()
             }
 
             return null
@@ -92,7 +92,7 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() 
         override fun getSender(event: EntityDamageByEntityEvent): Target<*>? {
             val entity = event.entity
             if (entity is Player) {
-                return adaptTarget(entity)
+                return entity.asTarget()
             }
 
             return null
@@ -126,7 +126,7 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() 
         override val bind: Class<PlayerSkillCastEvent.Post> = PlayerSkillCastEvent.Post::class.java
 
         override fun getSender(event: PlayerSkillCastEvent.Post): Target<*>? {
-            return adaptTarget(event.player)
+            return event.player.asTarget()
         }
 
     }

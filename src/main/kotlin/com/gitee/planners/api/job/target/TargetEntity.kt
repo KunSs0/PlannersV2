@@ -1,6 +1,5 @@
 package com.gitee.planners.api.job.target
 
-import com.gitee.planners.core.config.State
 import org.bukkit.Location
 import org.bukkit.entity.EntityType
 import java.util.UUID

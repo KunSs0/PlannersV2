@@ -4,7 +4,7 @@ import com.gitee.planners.api.common.entity.animated.AbstractAnimated
 import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.common.entity.animated.AnimatedMeta
 import com.gitee.planners.api.job.target.TargetLocation
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.module.particle.animation.ParticleAnimated
 import com.gitee.planners.module.particle.particle.ParticleSpawner
 import com.gitee.planners.module.particle.shape.ParticleShape
@@ -219,7 +219,7 @@ open class BukkitParticle(val spawner: ParticleSpawner, particleId: String, loca
     fun clone() = synchronized(lock) {
         val vector = origin.asVector()
         val location = Location(world.asString(), vector.x, vector.y, vector.z)
-        val clone = BukkitParticle(spawner, particleId.asString(), location.adaptTarget())
+        val clone = BukkitParticle(spawner, particleId.asString(), location.asTarget())
         clone.shapes.addAll(shapes)
         clone.animations.addAll(animations)
         this.copyMetaDataTo(clone)

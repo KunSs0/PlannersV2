@@ -3,8 +3,11 @@ package com.gitee.planners.core.skill.entity.state
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.script.ScriptCustomTriggerEvent
-import com.gitee.planners.api.job.target.CapableState
 import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.TargetEntity
+import com.gitee.planners.api.job.target.hasState
+import com.gitee.planners.api.job.target.isExpired
+import com.gitee.planners.api.job.target.removeState
 import com.gitee.planners.core.config.State
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
 import com.gitee.planners.core.skill.script.ScriptCallback
@@ -21,7 +24,7 @@ object States {
     /**
      * 正在处理的携带状态实体, 实体的状态发生改变并不会从缓存中移除, 需要在适当的时候手动移除
      */
-    private val registryCarryStateTarget = mutableListOf<CapableState>()
+    private val registryCarryStateTarget = mutableListOf<TargetEntity<*>>()
 
     /**
      * 初始化所有状态
@@ -75,7 +78,7 @@ object States {
      *
      * @param target 实体
      */
-    fun record(target: CapableState) {
+    fun record(target: TargetEntity<*>) {
         if (target !in registryCarryStateTarget) {
             registryCarryStateTarget.add(target)
         }
@@ -127,7 +130,7 @@ object States {
      * @param name 状态名称
      */
     fun trigger(sender: Target<*>, name: String) {
-        if (sender !is CapableState) {
+        if (sender !is TargetEntity<*>) {
             return
         }
         ScriptCustomTriggerEvent(sender, name).call()
