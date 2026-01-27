@@ -34,7 +34,7 @@ object FluxonLoader {
      * 注册所有扩展函数和 Command
      */
     fun init() {
-        // 注册扩展函数
+        // 注册基础扩展函数
         EntityExtensions.register()
         LocationExtensions.register()
         CommonExtensions.register()
@@ -58,6 +58,9 @@ object FluxonLoader {
         // 低优先级扩展（第三方集成）
         MythicMobsExtensions.register()
         GermPluginExtensions.register()
+
+        // 初始化事件注册表
+        FluxonEventRegistry.init()
 
         info("[Fluxon] 脚本引擎初始化完成")
     }
