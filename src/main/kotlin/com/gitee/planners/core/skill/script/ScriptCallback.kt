@@ -7,7 +7,6 @@ import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import taboolib.common.platform.event.EventPriority
-import taboolib.common.platform.event.ProxyListener
 import java.util.concurrent.CompletableFuture
 
 open class ScriptCallback<T>(
@@ -20,8 +19,6 @@ open class ScriptCallback<T>(
 
     // 是否已被关闭
     var closed: Boolean = false
-
-    lateinit var mapping: ProxyListener
 
     /**
      * 调用脚本
