@@ -1,11 +1,10 @@
 package com.gitee.planners.module.fluxon.velocity
 
+import com.gitee.planners.module.fluxon.FluxonFunctionContext
 import com.gitee.planners.module.fluxon.FluxonScriptCache
+import com.gitee.planners.module.fluxon.registerFunction
 import org.bukkit.entity.Entity
 import org.bukkit.util.Vector
-import org.tabooproject.fluxon.runtime.FunctionContext
-import org.tabooproject.fluxon.runtime.FunctionSignature
-import org.tabooproject.fluxon.runtime.Type
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 
@@ -18,61 +17,37 @@ object VelocityExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // setVelocity(x, y, z) -> void (从环境获取entity)
-        runtime.registerFunction("setVelocity", FunctionSignature.returns(Type.VOID).params(Type.D, Type.D, Type.D)) { ctx ->
-            val x = ctx.getAsDouble(0)
-            val y = ctx.getAsDouble(1)
-            val z = ctx.getAsDouble(2)
-            val entity = getEntityFromEnv(ctx)
-            entity.velocity = Vector(x, y, z)
+        // setVelocity(x, y, z, [entity]) -> void
+        runtime.registerFunction("setVelocity", listOf(3, 4)) { ctx ->
+            val x = (ctx.arguments[0] as Number).toDouble()
+            val y = (ctx.arguments[1] as Number).toDouble()
+            val z = (ctx.arguments[2] as Number).toDouble()
+            ctx.getEntityArg(3).velocity = Vector(x, y, z)
+            null
         }
 
-        // setVelocity(x, y, z, entity) -> void
-        runtime.registerFunction("setVelocity", FunctionSignature.returns(Type.VOID).params(Type.D, Type.D, Type.D, Type.OBJECT)) { ctx ->
-            val x = ctx.getAsDouble(0)
-            val y = ctx.getAsDouble(1)
-            val z = ctx.getAsDouble(2)
-            val entity = ctx.getRef(3) as? Entity ?: return@registerFunction
-            entity.velocity = Vector(x, y, z)
-        }
-
-        // addVelocity(x, y, z) -> void (从环境获取entity)
-        runtime.registerFunction("addVelocity", FunctionSignature.returns(Type.VOID).params(Type.D, Type.D, Type.D)) { ctx ->
-            val x = ctx.getAsDouble(0)
-            val y = ctx.getAsDouble(1)
-            val z = ctx.getAsDouble(2)
-            val entity = getEntityFromEnv(ctx)
+        // addVelocity(x, y, z, [entity]) -> void
+        runtime.registerFunction("addVelocity", listOf(3, 4)) { ctx ->
+            val x = (ctx.arguments[0] as Number).toDouble()
+            val y = (ctx.arguments[1] as Number).toDouble()
+            val z = (ctx.arguments[2] as Number).toDouble()
+            val entity = ctx.getEntityArg(3)
             entity.velocity = entity.velocity.add(Vector(x, y, z))
+            null
         }
 
-        // addVelocity(x, y, z, entity) -> void
-        runtime.registerFunction("addVelocity", FunctionSignature.returns(Type.VOID).params(Type.D, Type.D, Type.D, Type.OBJECT)) { ctx ->
-            val x = ctx.getAsDouble(0)
-            val y = ctx.getAsDouble(1)
-            val z = ctx.getAsDouble(2)
-            val entity = ctx.getRef(3) as? Entity ?: return@registerFunction
-            entity.velocity = entity.velocity.add(Vector(x, y, z))
-        }
-
-        // getVelocity() -> Vector (从环境获取entity)
-        runtime.registerFunction("getVelocity", FunctionSignature.returns(Type.OBJECT).noParams()) { ctx ->
-            val entity = getEntityFromEnv(ctx)
-            ctx.setReturnRef(entity.velocity)
-        }
-
-        // getVelocity(entity) -> Vector
-        runtime.registerFunction("getVelocity", FunctionSignature.returns(Type.OBJECT).params(Type.OBJECT)) { ctx ->
-            val entity = ctx.getRef(0) as? Entity ?: return@registerFunction
-            ctx.setReturnRef(entity.velocity)
+        // getVelocity([entity]) -> Vector
+        runtime.registerFunction("getVelocity", listOf(0, 1)) { ctx ->
+            ctx.getEntityArg(0).velocity
         }
     }
 
-    private fun getEntityFromEnv(ctx: FunctionContext<*>): Entity {
-        val find = ctx.environment.rootVariables["target"]
-            ?: ctx.environment.rootVariables["player"]
-        if (find is Entity) {
-            return find
+    private fun FluxonFunctionContext.getEntityArg(index: Int): Entity {
+        if (arguments.size > index) {
+            return arguments[index] as? Entity
+                ?: throw IllegalStateException("Argument at $index is not an entity")
         }
-        throw IllegalStateException("No entity found in environment")
+        return (environment.rootVariables["target"] ?: environment.rootVariables["player"]) as? Entity
+            ?: throw IllegalStateException("No entity found in environment")
     }
 }

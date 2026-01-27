@@ -3,16 +3,15 @@ package com.gitee.planners.module.fluxon.cooldown
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.skill.cooler.Cooler
+import com.gitee.planners.module.fluxon.FluxonFunctionContext
 import com.gitee.planners.module.fluxon.FluxonScriptCache
+import com.gitee.planners.module.fluxon.registerFunction
 import org.bukkit.entity.Player
-import org.tabooproject.fluxon.runtime.FunctionContext
-import org.tabooproject.fluxon.runtime.FunctionSignature
-import org.tabooproject.fluxon.runtime.Type
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 
 /**
- * Cooldown 冷却系统扩展 - 全局函数注册
+ * Cooldown 冷却系统扩展
  */
 object CooldownExtensions {
 
@@ -20,95 +19,52 @@ object CooldownExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // getCooldown(skillIdOrSkill) -> long (从环境获取player)
-        runtime.registerFunction("getCooldown", FunctionSignature.returns(Type.J).params(Type.OBJECT)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val player = getPlayerFromEnv(ctx)
-            val skill = resolveSkill(skillIdOrSkill) ?: return@registerFunction
-            ctx.setReturnLong(Cooler.INSTANCE.get(player, skill))
+        // getCooldown(skillIdOrSkill, [player]) -> long
+        runtime.registerFunction("getCooldown", listOf(1, 2)) { ctx ->
+            val skill = resolveSkill(ctx.arguments[0]) ?: return@registerFunction 0L
+            val player = ctx.getPlayerArg(1)
+            Cooler.INSTANCE.get(player, skill)
         }
 
-        // getCooldown(skillIdOrSkill, player) -> long
-        runtime.registerFunction("getCooldown", FunctionSignature.returns(Type.J).params(Type.OBJECT, Type.OBJECT)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val player = ctx.getRef(1) as? Player ?: return@registerFunction
-            val skill = resolveSkill(skillIdOrSkill) ?: return@registerFunction
-            ctx.setReturnLong(Cooler.INSTANCE.get(player, skill))
-        }
-
-        // setCooldown(skillIdOrSkill, ticks) -> void (从环境获取player)
-        runtime.registerFunction("setCooldown", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.I)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val ticks = ctx.getAsInt(1)
-            val player = getPlayerFromEnv(ctx)
-            val skill = resolveSkill(skillIdOrSkill) ?: return@registerFunction
+        // setCooldown(skillIdOrSkill, ticks, [player]) -> void
+        runtime.registerFunction("setCooldown", listOf(2, 3)) { ctx ->
+            val skill = resolveSkill(ctx.arguments[0]) ?: return@registerFunction null
+            val ticks = (ctx.arguments[1] as Number).toInt()
+            val player = ctx.getPlayerArg(2)
             Cooler.INSTANCE.set(player, skill, ticks)
+            null
         }
 
-        // setCooldown(skillIdOrSkill, ticks, player) -> void
-        runtime.registerFunction("setCooldown", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.I, Type.OBJECT)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val ticks = ctx.getAsInt(1)
-            val player = ctx.getRef(2) as? Player ?: return@registerFunction
-            val skill = resolveSkill(skillIdOrSkill) ?: return@registerFunction
-            Cooler.INSTANCE.set(player, skill, ticks)
-        }
-
-        // resetCooldown(skillIdOrSkill) -> void (从环境获取player)
-        runtime.registerFunction("resetCooldown", FunctionSignature.returns(Type.VOID).params(Type.OBJECT)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val player = getPlayerFromEnv(ctx)
-            val skill = resolveSkill(skillIdOrSkill) ?: return@registerFunction
+        // resetCooldown(skillIdOrSkill, [player]) -> void
+        runtime.registerFunction("resetCooldown", listOf(1, 2)) { ctx ->
+            val skill = resolveSkill(ctx.arguments[0]) ?: return@registerFunction null
+            val player = ctx.getPlayerArg(1)
             Cooler.INSTANCE.set(player, skill, 0)
+            null
         }
 
-        // resetCooldown(skillIdOrSkill, player) -> void
-        runtime.registerFunction("resetCooldown", FunctionSignature.returns(Type.VOID).params(Type.OBJECT, Type.OBJECT)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val player = ctx.getRef(1) as? Player ?: return@registerFunction
-            val skill = resolveSkill(skillIdOrSkill) ?: return@registerFunction
-            Cooler.INSTANCE.set(player, skill, 0)
-        }
-
-        // hasCooldown(skillIdOrSkill) -> boolean (从环境获取player)
-        runtime.registerFunction("hasCooldown", FunctionSignature.returns(Type.Z).params(Type.OBJECT)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val player = getPlayerFromEnv(ctx)
-            val skill = resolveSkill(skillIdOrSkill) ?: run {
-                ctx.setReturnBool(false)
-                return@registerFunction
-            }
-            ctx.setReturnBool(Cooler.INSTANCE.get(player, skill) > 0)
-        }
-
-        // hasCooldown(skillIdOrSkill, player) -> boolean
-        runtime.registerFunction("hasCooldown", FunctionSignature.returns(Type.Z).params(Type.OBJECT, Type.OBJECT)) { ctx ->
-            val skillIdOrSkill = ctx.getRef(0)
-            val player = ctx.getRef(1) as? Player ?: run {
-                ctx.setReturnBool(false)
-                return@registerFunction
-            }
-            val skill = resolveSkill(skillIdOrSkill) ?: run {
-                ctx.setReturnBool(false)
-                return@registerFunction
-            }
-            ctx.setReturnBool(Cooler.INSTANCE.get(player, skill) > 0)
+        // hasCooldown(skillIdOrSkill, [player]) -> boolean
+        runtime.registerFunction("hasCooldown", listOf(1, 2)) { ctx ->
+            val skill = resolveSkill(ctx.arguments[0]) ?: return@registerFunction false
+            val player = ctx.getPlayerArg(1)
+            Cooler.INSTANCE.get(player, skill) > 0
         }
     }
 
-    private fun resolveSkill(skillIdOrSkill: Any?): Skill? {
-        return when (skillIdOrSkill) {
-            is String -> Registries.SKILL.get(skillIdOrSkill)
-            is Skill -> skillIdOrSkill
+    private fun resolveSkill(arg: Any?): Skill? {
+        return when (arg) {
+            is String -> Registries.SKILL.get(arg)
+            is Skill -> arg
             else -> null
         }
     }
 
-    private fun getPlayerFromEnv(ctx: FunctionContext<*>): Player {
-        val find = ctx.environment.rootVariables["player"]
-        if (find is Player) {
-            return find
+    private fun FluxonFunctionContext.getPlayerArg(index: Int): Player {
+        if (arguments.size > index) {
+            return arguments[index] as? Player
+                ?: throw IllegalStateException("Argument at $index is not a player")
         }
-        throw IllegalStateException("No player found in environment")
+        return environment.rootVariables["player"] as? Player
+            ?: throw IllegalStateException("No player found in environment")
     }
 }
