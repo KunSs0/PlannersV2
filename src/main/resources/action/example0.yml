@@ -9,4 +9,6 @@ __option__:
       default: 100
 
 action: |-
-  tell "{{ &type }}:{{ &uuid }} title = {{ &title }} tick = {{ &tick }}"
+  // TODO: 需要实现 tell 扩展函数
+  // tell("${&type}:${&uuid} title = ${&title} tick = ${&tick}")
+  sender :: sendMessage("${&type}:${&uuid} title = ${&title} tick = ${&tick}")

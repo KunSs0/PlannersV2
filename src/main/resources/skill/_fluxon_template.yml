@@ -1,0 +1,67 @@
+__option__:
+  # 技能名称
+  name: "示例技能"
+  # 是否异步执行
+  async: false
+  # 图标配置
+  icon-formatter:
+    # 物品材质
+    material: DIAMOND_SWORD
+    # 显示名称
+    name: "示例技能"
+    # 描述信息
+    lore:
+      - "技能等级 ${&level}"
+      - "技能伤害 ${&damage}"
+      - "冷却时间 ${&cooldown}秒"
+      - "消耗法力 ${&mp_cost}"
+      - "这是一个示例技能"
+  # 技能分类
+  category:
+    - "示例"
+  # 变量定义
+  variables:
+    # 冷却时间(秒)
+    cooldown: 10
+    # 伤害计算公式
+    damage: 50 + &level * 10
+    # 法力消耗
+    mp_cost: 20
+
+# 技能脚本 - Fluxon 语法示例
+action: |
+  def main() {
+    // 检查玩家状态
+    // TODO: 需要实现 metadata 扩展函数
+    // if hasState("前摇") || hasState("硬直") then {
+    //   resetCooldown()
+    //   return null
+    // }
+
+    // 检查法力值
+    // TODO: 需要实现 profile 扩展函数
+    // if getMagicPoint() < &mp_cost then {
+    //   sender :: sendMessage("法力不足！")
+    //   resetCooldown()
+    //   return null
+    // }
+
+    // 发送消息示例
+    sender :: sendMessage("使用技能: ${&level}级")
+
+    // 造成伤害示例
+    // target :: damage(&damage)
+
+    // 播放声音示例
+    sender :: playSound("entity.player.levelup", 1.0f, 1.0f)
+  }
+
+// 说明：
+// 1. 函数定义使用 def name() { ... }
+// 2. 变量引用使用 &variable
+// 3. 字符串插值使用 ${...}
+// 4. 注释使用 //
+// 5. 扩展函数使用 target :: method(...)
+// 6. 条件语句: if condition then { ... } else { ... }
+// 7. 数学表达式直接书写，不需要 math 关键字
+// 8. 逻辑运算符: && || !

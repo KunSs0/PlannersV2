@@ -2,6 +2,7 @@ package com.gitee.planners.module.fluxon
 
 import com.gitee.planners.module.fluxon.common.CommonExtensions
 import com.gitee.planners.module.fluxon.entity.EntityExtensions
+import com.gitee.planners.module.fluxon.sender.SenderExtensions
 import com.gitee.planners.module.fluxon.skill.SkillCommands
 import com.gitee.planners.module.fluxon.world.LocationExtensions
 import org.tabooproject.fluxon.runtime.FluxonRuntime
@@ -26,6 +27,7 @@ object FluxonLoader {
         LocationExtensions.register()
         CommonExtensions.register()
         SkillCommands.register()
+        SenderExtensions.register()
 
         info("[Fluxon] 脚本引擎初始化完成")
     }
