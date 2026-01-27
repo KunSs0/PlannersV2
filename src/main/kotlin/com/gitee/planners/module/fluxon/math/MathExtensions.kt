@@ -4,6 +4,7 @@ import com.gitee.planners.module.fluxon.FluxonScriptCache
 import org.tabooproject.fluxon.runtime.FunctionSignature
 import org.tabooproject.fluxon.runtime.Type
 import kotlin.math.*
+import kotlin.random.Random
 
 /**
  * 数学函数扩展
@@ -45,6 +46,17 @@ object MathExtensions {
                 val a = ctx.target ?: return@function
                 val b = ctx.getAsDouble(0)
                 ctx.setReturnDouble(kotlin.math.min(a, b))
+            }
+
+        // 全局随机数函数
+        runtime.registerExtension(String::class.java)
+            .function("random", FunctionSignature.returns(Type.I).params(Type.I, Type.I)) { ctx ->
+                val target = ctx.target ?: return@function
+                if (target != "Math" && target != "math") return@function
+
+                val min = ctx.getAsInt(0)
+                val max = ctx.getAsInt(1)
+                ctx.setReturnInt(Random.nextInt(min, max + 1))
             }
     }
 }

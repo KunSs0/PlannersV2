@@ -4,6 +4,7 @@ import com.gitee.planners.module.fluxon.command.CommandExtensions
 import com.gitee.planners.module.fluxon.common.CommonExtensions
 import com.gitee.planners.module.fluxon.cooldown.CooldownExtensions
 import com.gitee.planners.module.fluxon.delay.DelayExtensions
+import com.gitee.planners.module.fluxon.economy.EconomyExtensions
 import com.gitee.planners.module.fluxon.entity.EntityExtensions
 import com.gitee.planners.module.fluxon.germplugin.GermPluginExtensions
 import com.gitee.planners.module.fluxon.math.MathExtensions
@@ -54,6 +55,7 @@ object FluxonLoader {
         VelocityExtensions.register()
         SelectorExtensions.register()
         SkillSystemExtensions.register()
+        EconomyExtensions.register()
 
         // 低优先级扩展（第三方集成）
         MythicMobsExtensions.register()

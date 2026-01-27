@@ -107,11 +107,27 @@
 - `isMythicMob(entity: Entity) : Boolean` - 检查是否为 MythicMob
 
 ### GermPlugin 集成 (`GermPluginExtensions.kt`) ✅
-- `playGermModel(player: Player, model: String)` - 播放模型动画
-- `stopGermModel(player: Player, model: String)` - 停止模型动画
-- `playGermEffect(player: Player, effect: String)` - 播放特效
-- `stopGermEffect(player: Player, effect: String)` - 停止特效
-- `playGermSound(player: Player, sound: String)` - 播放音效
+- `Player::playGermModel(model: String)` - 播放模型动画
+- `Player::stopGermModel(model: String)` - 停止模型动画
+- `Player::playGermEffect(effect: String)` - 播放特效
+- `Player::stopGermEffect(effect: String)` - 停止特效
+- `Player::playGermSound(sound: String)` - 播放音效
+
+### 经济系统 (`EconomyExtensions.kt`) ✅
+- `Player::getBalance() : Double` - 获取余额
+- `Player::takeBalance(amount: Double) : Boolean` - 扣除金额
+- `Player::giveBalance(amount: Double) : Boolean` - 增加金额
+- `Player::setBalance(amount: Double)` - 设置金额
+
+### 数学函数 (`MathExtensions.kt`) ✅
+- `Double::abs() : Double` - 绝对值
+- `Double::max(b: Double) : Double` - 最大值
+- `Double::min(b: Double) : Double` - 最小值
+- `Double::sqrt() : Double` - 平方根
+- `Double::sin() : Double` - 正弦
+- `Double::cos() : Double` - 余弦
+- `Double::tan() : Double` - 正切
+- `Math::random(min: Int, max: Int) : Int` - 随机整数
 
 ## 实现优先级说明
 
@@ -158,10 +174,10 @@
 
 - ✅ 基础扩展已实现 (Entity, Location, Common, Sender)
 - ✅ 高优先级扩展已完成 (Player, Metadata, Profile, Cooldown, Command, Delay)
-- ✅ 中优先级扩展已完成 (Math, Velocity, Selector, SkillSystem)
+- ✅ 中优先级扩展已完成 (Math, Velocity, Selector, SkillSystem, Economy)
 - ✅ 低优先级扩展已完成 (MythicMobs, GermPlugin)
 
-**总进度**: 16/16 (100%) 🎉
+**总进度**: 17/17 (100%) 🎉
 
 ## 配置文件迁移状态
 
@@ -170,6 +186,7 @@
 - ✅ 战士技能 (10个): warrior_power_strike, warrior_slash_strike, warrior_shield_bash, warrior_whirlwind, warrior_berserker_rage, warrior_armor_expertise, warrior_battle_instinct, warrior_combat_mastery, warrior_endurance, warrior_weapon_mastery
 - ✅ 刺客技能 (1个): assassin_backstab
 - ✅ 职业配置: archer, assassin, guardian, mage, warrior, blade-master, grand-master, swordsman
-- ✅ 其他配置: router/soldier.yml, state/example.yml, action/example0.yml, module/level/example.yml
+- ✅ 示例配置: skill/example0.yml, skill/example1.yml, action/example0.yml, module/level/example.yml, module/currency/example.yml
+- ✅ 核心配置: config.yml (magic-point 配置)
 
-**配置迁移进度**: 所有核心配置文件已完成迁移
+**配置迁移进度**: 所有配置文件已完成迁移 ✅

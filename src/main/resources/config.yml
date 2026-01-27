@@ -25,12 +25,12 @@ settings:
   magic-point:
     resume:
       # 法力值的恢复的运算表达式
-      expression: "math 1 + random 1 to 2"
+      expression: "1 + Math::random(1, 2)"
       # 法力值的恢复的更新任务的轮询周期,单位tick
       update-tick: 20
     upper-limit:
       # 法力值的运算表达式
-      expression: "math player level * 2 + 100"
+      expression: "sender :: getLevel() * 2 + 100"
       # 最大法力值的更新任务的轮询周期,单位tick
       update-tick: 20
   level:
