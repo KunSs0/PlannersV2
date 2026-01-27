@@ -1,26 +1,25 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.common.script.ComplexCompiledScript
-import com.gitee.planners.api.common.script.ComplexScriptPlatform
-import com.gitee.planners.api.common.script.SingletonKetherScript
-import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
+import com.gitee.planners.api.job.target.Target
+import com.gitee.planners.api.job.target.TargetLocation
+import com.gitee.planners.module.fluxon.FluxonScriptCache
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
+import org.tabooproject.fluxon.parser.ParsedScript
 import taboolib.common.LifeCycle
-import taboolib.common.platform.function.info
 import taboolib.common.platform.function.registerLifeCycleTask
+import taboolib.common.platform.function.warning
 import taboolib.common.util.asList
 import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import taboolib.module.configuration.util.mapSection
-import taboolib.module.kether.printKetherErrorMessage
-import taboolib.module.kether.runKether
+import java.util.concurrent.CompletableFuture
 
-class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
+class ImmutableSkill(config: Configuration) : Skill {
 
     /** 技能ID */
     override val id = config.file!!.nameWithoutExtension
@@ -37,9 +36,10 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
     val categories = option["category", "*"]!!.asList()
 
     /** 技能是否异步运行 */
-    override val async = option.getBoolean("async", true)
+    val async = option.getBoolean("async", true)
 
-    val action = config.getString("action", config.getString("run", "tell none"))!!
+    /** 脚本源代码 */
+    val action = config.getString("action", config.getString("run", ""))!!
 
     /**
      * 技能提供的属性
@@ -68,18 +68,28 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
                 return it
             }
         }
-
         return null
     }
 
-    init {
-        // 在 ENABLE 阶段 编译脚本
-        registerLifeCycleTask(LifeCycle.ENABLE) {
+    /** 解析后的脚本 (延迟加载) */
+    val script: ParsedScript? by lazy {
+        if (action.isEmpty()) {
+            null
+        } else {
             try {
-                this.compiledScript()
+                FluxonScriptCache.getOrParse(action)
             } catch (e: Exception) {
-                e.printKetherErrorMessage(true)
+                warning("[Skill] 脚本解析失败: $id - ${e.message}")
+                null
             }
+        }
+    }
+
+    init {
+        // 在 ENABLE 阶段预编译脚本
+        registerLifeCycleTask(LifeCycle.ENABLE) {
+            // 触发延迟加载
+            script
         }
     }
 
@@ -93,16 +103,29 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
         ImmutableVariable.parse(id, value)
     }
 
-    override fun source(): String {
-        return action
-    }
+    /**
+     * 执行技能脚本
+     */
+    fun execute(
+        sender: Target<*>,
+        level: Int = 0,
+        variables: Map<String, Any?> = emptyMap()
+    ): CompletableFuture<Any?> {
+        val parsedScript = script ?: return CompletableFuture.completedFuture(null)
 
-    override fun namespaces(): List<String> {
-        return listOf(KetherHelper.NAMESPACE_COMMON, KetherHelper.NAMESPACE_SKILL)
-    }
+        val env = parsedScript.newEnvironment().apply {
+            defineRootVariable("sender", sender)
+            defineRootVariable("origin", (sender as? TargetLocation<*>)?.getBukkitLocation())
+            defineRootVariable("level", level)
+            defineRootVariable("skill", this@ImmutableSkill)
+            variables.forEach { (k, v) -> defineRootVariable(k, v) }
+        }
 
-    override fun platform(): ComplexScriptPlatform {
-        return ComplexScriptPlatform.SKILL
+        return if (async) {
+            CompletableFuture.supplyAsync { parsedScript.eval(env) }
+        } else {
+            CompletableFuture.completedFuture(parsedScript.eval(env))
+        }
     }
 
     override fun getVariableOrNull(id: String): Variable? {
@@ -119,9 +142,27 @@ class ImmutableSkill(config: Configuration) : Skill, ComplexCompiledScript {
 
     class IndexedUpgrade(val begin: Int, val end: Int, val args: Map<String, Amount>) {
 
-        class Amount(experience: String, val mark: Boolean) : SingletonKetherScript(experience)
+        class Amount(val expression: String, val mark: Boolean) {
 
+            /** 解析后的脚本 */
+            private val script: ParsedScript? by lazy {
+                if (expression.isEmpty()) null
+                else FluxonScriptCache.getOrParse(expression)
+            }
+
+            val isNotNull: Boolean
+                get() = expression.isNotEmpty()
+
+            /**
+             * 执行表达式
+             */
+            fun eval(variables: Map<String, Any?> = emptyMap()): Any? {
+                val parsedScript = script ?: return null
+                val env = parsedScript.newEnvironment().apply {
+                    variables.forEach { (k, v) -> defineRootVariable(k, v) }
+                }
+                return parsedScript.eval(env)
+            }
+        }
     }
-
-
 }

@@ -1,6 +1,6 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.common.script.ComplexCompiledScript
+import com.gitee.planners.module.fluxon.FluxonTrigger
 
 /**
  * 状态定义接口。
@@ -32,5 +32,5 @@ interface State {
 
     val triggers: Map<String, Trigger>
 
-    class Trigger(val id: String, val listen: String, val action: ComplexCompiledScript)
+    class Trigger(val id: String, val listen: String, val action: FluxonTrigger)
 }

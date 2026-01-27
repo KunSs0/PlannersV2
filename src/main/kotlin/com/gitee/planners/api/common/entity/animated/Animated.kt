@@ -1,13 +1,12 @@
 package com.gitee.planners.api.common.entity.animated
 
 import com.gitee.planners.api.common.metadata.Metadata
-import com.gitee.planners.module.kether.context.AbstractComplexScriptContext
 
 interface Animated {
 
     fun listen(listener: AnimatedListener)
 
-    fun emit(event: AnimatedEvent, context: AbstractComplexScriptContext)
+    fun emit(event: AnimatedEvent, sender: Any, variables: Map<String, Any?> = emptyMap())
 
     fun metaKeys(): Set<String>
 

@@ -1,40 +1,37 @@
 package com.gitee.planners.api.job
 
-import com.gitee.planners.api.common.script.KetherScript
-import com.gitee.planners.api.common.script.KetherScriptOptions
-import com.gitee.planners.api.common.script.SingletonKetherScript
-import org.bukkit.entity.Player
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import taboolib.common5.cbool
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
-import taboolib.module.kether.KetherFunction
 import java.util.concurrent.CompletableFuture
 
 interface Condition {
 
-    fun match(options: KetherScriptOptions): CompletableFuture<Boolean>
+    fun match(options: FluxonScriptOptions): CompletableFuture<Boolean>
 
-    fun consumeTo(options: KetherScriptOptions)
+    fun consumeTo(options: FluxonScriptOptions)
 
     class Messaged(val condition: String, message: String?, post: String?) : Condition,
-        SingletonKetherScript(condition) {
+        SingletonFluxonScript(condition) {
 
-        val post = SingletonKetherScript(post)
+        val post = SingletonFluxonScript(post)
 
-        private val message = SingletonKetherScript(message)
+        private val message = SingletonFluxonScript(message)
 
-        override fun match(options: KetherScriptOptions): CompletableFuture<Boolean> {
-            return this.run(options).thenApply { it.cbool } ?: CompletableFuture.completedFuture(false)
+        override fun match(options: FluxonScriptOptions): CompletableFuture<Boolean> {
+            return this.run(options).thenApply { it.cbool }
         }
 
-        fun getMessage(options: KetherScriptOptions) : String {
+        fun getMessage(options: FluxonScriptOptions) : String {
             if (message.isNotNull) {
-                return KetherFunction.parse(message.action,options.build().build())
+                return message.eval(options)?.toString() ?: ""
             }
             return ""
         }
 
-        override fun consumeTo(options: KetherScriptOptions) {
+        override fun consumeTo(options: FluxonScriptOptions) {
             if (post.isNotNull) { post.run(options) }
         }
 
@@ -42,15 +39,15 @@ interface Condition {
 
     class Combined(private val values: List<Condition>) : Condition {
 
-        override fun consumeTo(options: KetherScriptOptions) {
+        override fun consumeTo(options: FluxonScriptOptions) {
             values.forEach { it.consumeTo(options) }
         }
 
-        fun getMessage(options: KetherScriptOptions) : List<String> {
+        fun getMessage(options: FluxonScriptOptions) : List<String> {
             return values.filterIsInstance<Messaged>().map { it.getMessage(options) }.filter { it.isNotEmpty() }
         }
 
-        override fun match(options: KetherScriptOptions): CompletableFuture<Boolean> {
+        override fun match(options: FluxonScriptOptions): CompletableFuture<Boolean> {
             return CompletableFuture.completedFuture(this.values.all {
                 it.match(options).getNow(false)
             })
@@ -59,7 +56,7 @@ interface Condition {
         /**
          * the sync method
          */
-        fun verify(options: KetherScriptOptions): VerifyInfo {
+        fun verify(options: FluxonScriptOptions): VerifyInfo {
             return VerifyInfo(this.values.filter {
                 !it.match(options).getNow(false)
             })

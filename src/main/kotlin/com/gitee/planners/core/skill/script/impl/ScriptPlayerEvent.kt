@@ -5,13 +5,13 @@ import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.player.AsyncPlayerChatEvent
 import org.bukkit.event.player.PlayerEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerToggleSprintEvent
-import taboolib.module.kether.ScriptContext
 import taboolib.platform.util.attacker
 
 abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() {
@@ -20,7 +20,7 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() 
         return event.player.adaptTarget()
     }
 
-    override fun handle(event: T, ctx: ScriptContext) {
+    override fun handle(event: T, options: FluxonScriptOptions) {
 
     }
 
@@ -42,7 +42,7 @@ abstract class ScriptPlayerEvent<T: PlayerEvent> : ScriptBukkitEventHolder<T>() 
             return event.player.adaptTarget()
         }
 
-        override fun handle(event: PlayerProfileLoadedEvent, ctx: ScriptContext) {
+        override fun handle(event: PlayerProfileLoadedEvent, options: FluxonScriptOptions) {
 
         }
 

@@ -1,8 +1,8 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.common.script.SingletonKetherScript
 import com.gitee.planners.api.job.Variable
-import com.gitee.planners.api.common.script.KetherScriptOptions
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import taboolib.common5.cbool
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
@@ -17,7 +17,6 @@ interface ImmutableVariable : Variable {
 
                 is String -> Default(id, value)
 
-
                 is Boolean, is Int, is Float, is Double, is Long -> Default(id, "$value")
 
                 is List<*> -> {
@@ -30,16 +29,16 @@ interface ImmutableVariable : Variable {
 
     }
 
-    open class Default(override val id: String, action: String) : SingletonKetherScript(action), ImmutableVariable
+    open class Default(override val id: String, action: String) : SingletonFluxonScript(action), ImmutableVariable
 
     class Case(condition: String, id: String, action: String) : Default(id, action) {
 
-        val condition = SingletonKetherScript(condition)
+        val condition = SingletonFluxonScript(condition)
 
         /**
          * 玩家是否匹配条件
          */
-        fun match(options: KetherScriptOptions): Boolean {
+        fun match(options: FluxonScriptOptions): Boolean {
             return condition.run(options).thenApply { it.cbool }.getNow(false)
         }
 
@@ -54,7 +53,7 @@ interface ImmutableVariable : Variable {
             Case(condition, id, action)
         }
 
-        override fun run(options: KetherScriptOptions): CompletableFuture<Any?> {
+        override fun run(options: FluxonScriptOptions): CompletableFuture<Any?> {
             val case = cases.firstOrNull { it.match(options) } ?: return CompletableFuture.completedFuture(false)
 
             return case.run(options)

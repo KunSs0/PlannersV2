@@ -2,8 +2,8 @@ package com.gitee.planners.module.compat.attribute
 
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.api.common.script.KetherScriptOptions
-import com.gitee.planners.api.common.script.SingletonKetherScript
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.event.player.PlayerSetRouteEvent
 import com.gitee.planners.api.event.player.PlayerSkillEvent
@@ -11,7 +11,6 @@ import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
 import org.bukkit.entity.Player
 import taboolib.common.platform.event.SubscribeEvent
-import taboolib.module.kether.KetherFunction
 
 object AttributeProvider {
 
@@ -76,7 +75,7 @@ object AttributeProvider {
             return emptyList()
         }
 
-        val options = KetherScriptOptions.common(player)
+        val options = FluxonScriptOptions.common(player)
 
         return attributes.map { parse(it, options) }
     }
@@ -96,15 +95,12 @@ object AttributeProvider {
             return emptyList()
         }
 
-        val newCtx = PlannersAPI.newCtx(player, skill)
-        val options = newCtx.optionsBuilder()
+        val options = PlannersAPI.newOptions(player, skill)
 
         return attributes.map { parse(it, options) }
     }
 
-    fun parse(text: String, options: KetherScriptOptions): String {
-        return KetherFunction.reader.replaceNested(text.trim()) {
-            SingletonKetherScript(this).run(options).getNow(null).toString()
-        }
+    fun parse(text: String, options: FluxonScriptOptions): String {
+        return SingletonFluxonScript.replaceNested(text.trim(), options)
     }
 }

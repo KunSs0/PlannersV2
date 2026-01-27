@@ -1,11 +1,11 @@
 package com.gitee.planners.api.common.entity.animated
 
-import taboolib.module.kether.ScriptContext
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
 
 interface AnimatedEvent {
 
     val name: String
 
-    fun inject(ctx: ScriptContext)
+    fun inject(options: FluxonScriptOptions)
 
 }

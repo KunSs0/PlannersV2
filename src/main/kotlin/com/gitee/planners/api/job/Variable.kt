@@ -1,10 +1,9 @@
 package com.gitee.planners.api.job
 
-import com.gitee.planners.api.common.script.KetherScript
+import com.gitee.planners.module.fluxon.FluxonScript
 
-interface Variable : KetherScript {
+interface Variable : FluxonScript {
 
     val id: String
 
 }
-

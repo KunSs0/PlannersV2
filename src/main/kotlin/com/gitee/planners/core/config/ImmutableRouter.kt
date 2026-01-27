@@ -15,7 +15,7 @@ class ImmutableRouter(private val config: Configuration) : Router {
     override val name = config.getString("__option__.name", id)!!
 
     override val algorithmLevel =
-        Algorithm.parseKether(config.getConfigurationSection("__option__.algorithm.level"))
+        Algorithm.parse(config.getConfigurationSection("__option__.algorithm.level"))
 
     val icon = config.getItemStack("__option__.icon")
 

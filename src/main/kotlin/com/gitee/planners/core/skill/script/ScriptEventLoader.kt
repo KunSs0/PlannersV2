@@ -1,37 +1,16 @@
 package com.gitee.planners.core.skill.script
 
-import com.gitee.planners.api.common.script.ComplexCompiledScript
 import com.gitee.planners.api.event.PluginReloadEvents
-import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.module.kether.context.CompiledScriptContext
-import org.bukkit.Bukkit
 import org.bukkit.event.Event
 import taboolib.common.LifeCycle
 import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.library.reflex.ReflexClass
-import taboolib.module.kether.runKether
-import java.util.*
 
 object ScriptEventLoader {
 
     private val holders = mutableMapOf<String, ScriptEventHolder<out Any>>()
-
-    /**
-     * 为脚本注册onload监听器
-     *
-     * @param compiled 脚本
-     */
-    fun registerListener(compiled: ComplexCompiledScript) {
-        val script = compiled.compiledScript()
-        script.getBlock("onload").ifPresent { block ->
-            runKether {
-                val context = CompiledScriptContext(Bukkit.getConsoleSender().adaptTarget(), compiled)
-                compiled.platform().run(UUID.randomUUID().toString(), script, block, context.optionsBuilder())
-            }
-        }
-    }
 
     @SubscribeEvent
     fun e(e: PluginReloadEvents.Pre) {

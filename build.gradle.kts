@@ -16,7 +16,6 @@ taboolib {
         install(BukkitHook)
         install(XSeries)
         install(MinecraftEffect)
-        install(Kether)
         install(Metrics)
         install(BukkitNavigation)
         install(Database)
@@ -39,10 +38,11 @@ taboolib {
 repositories {
     mavenCentral()
     mavenLocal()
+    maven("https://repo.tabooproject.org/repository/releases")
 }
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
-    destinationDirectory = file("F:\\minecraft\\server\\paper-1.12.2\\plugins")
+//    destinationDirectory = file("F:\\minecraft\\server\\paper-1.12.2\\plugins")
 //    destinationDirectory = file("F:\\minecraft\\server\\paper-1.20.1\\plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
@@ -55,6 +55,9 @@ dependencies {
     compileOnly("com.google.code.gson:gson:2.8.9")
     // https://mvnrepository.com/artifact/com.google.guava/guava
     implementation("com.google.guava:guava:33.0.0-jre")
+
+    // Fluxon 脚本引擎 - 通过 libs 目录加载
+    // taboo("org.tabooproject.fluxon:core:1.5.7")
 
     // https://mvnrepository.com/artifact/org.ejml/ejml-all
     compileOnly("org.ejml:ejml-core:0.41")

@@ -5,17 +5,18 @@ import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.core.config.State
 import com.gitee.planners.core.skill.script.ScriptCustomTrigger
 import com.gitee.planners.core.skill.script.ScriptEventHolder
+import java.util.concurrent.CompletableFuture
 
 open class ScriptCustomCallbackImpl(state: State, trigger: State.Trigger) : ScriptCallbackImpl<ScriptCustomTriggerEvent>(state, trigger) {
 
     val name = trigger.listen.replace(ScriptCustomTrigger.name,"").trim()
 
-    override fun call(sender: Target<*>, event: ScriptCustomTriggerEvent, holder: ScriptEventHolder<ScriptCustomTriggerEvent>) {
+    override fun call(sender: Target<*>, event: ScriptCustomTriggerEvent, holder: ScriptEventHolder<ScriptCustomTriggerEvent>): CompletableFuture<Any?> {
         if (event.name != this.name) {
-            return
+            return CompletableFuture.completedFuture(null)
         }
 
-        super.call(sender, event, holder)
+        return super.call(sender, event, holder)
     }
 
 }

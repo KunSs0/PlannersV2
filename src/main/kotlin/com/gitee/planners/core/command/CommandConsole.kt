@@ -1,8 +1,7 @@
 package com.gitee.planners.core.command
 
 import com.gitee.planners.api.Registries
-import com.gitee.planners.module.kether.context.ImmutableSkillContext
-import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.api.job.target.TargetConsoleCommandSender
 import org.bukkit.command.ConsoleCommandSender
 import taboolib.common.platform.command.CommandBody
 import taboolib.common.platform.command.subCommand
@@ -18,14 +17,14 @@ object CommandConsole {
 
             execute<ConsoleCommandSender> { sender, context, argument ->
                 val skill = Registries.SKILL.get(argument)
-                ImmutableSkillContext(sender.adaptTarget(), skill, 1).call()
+                skill.execute(TargetConsoleCommandSender(sender), 1)
                 sender.sendMessage("casted ${skill.id}")
             }
 
             dynamic("level", optional = true) {
                 execute<ConsoleCommandSender> { sender, context, argument ->
                     val skill = Registries.SKILL.get(context["id"])
-                    ImmutableSkillContext(sender.adaptTarget(), skill, argument.cint).call()
+                    skill.execute(TargetConsoleCommandSender(sender), argument.cint)
                     sender.sendMessage("casted ${skill.id}")
                 }
             }

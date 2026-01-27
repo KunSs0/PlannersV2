@@ -1,8 +1,6 @@
-﻿package com.gitee.planners.core.config
+package com.gitee.planners.core.config
 
-import com.gitee.planners.api.common.script.ComplexCompiledScript
-import com.gitee.planners.api.common.script.ComplexScriptPlatform
-import com.gitee.planners.api.common.script.kether.KetherHelper
+import com.gitee.planners.module.fluxon.FluxonTrigger
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.util.mapSection
 
@@ -19,30 +17,15 @@ class ImmutableState(val config: ConfigurationSection) : State {
     override val isStatic: Boolean = config.getBoolean("static", false)
 
     override val triggers: Map<String, State.Trigger> = config.mapSection("trigger") {
-        val id: String = it.name
-        val on: String = it.getString("listen", it.name)!!
+        val triggerId: String = it.name
+        val listen: String = it.getString("listen", it.name)!!
         val action = it.getString("action", "")!!
+        val async = it.getBoolean("async", false)
 
-        State.Trigger(id, on, ScriptImpl(action))
-    }
-
-    class ScriptImpl(val experience: String) : ComplexCompiledScript {
-
-        override val id: String = experience
-
-        override val async: Boolean = false
-
-        override fun source(): String {
-            return experience
-        }
-
-        override fun namespaces(): List<String> {
-            return listOf(KetherHelper.NAMESPACE_COMMON)
-        }
-
-        override fun platform(): ComplexScriptPlatform {
-            return ComplexScriptPlatform.STATE
-        }
+        State.Trigger(
+            id = triggerId,
+            listen = listen,
+            action = FluxonTrigger.of(triggerId, listen, action, async)
+        )
     }
 }
-

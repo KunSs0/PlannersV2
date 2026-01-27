@@ -1,7 +1,7 @@
 package com.gitee.planners.api.job
 
 import com.gitee.planners.api.common.Unique
-import com.gitee.planners.api.common.script.KetherScriptOptions
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
@@ -14,6 +14,6 @@ interface Route : Unique {
 
     fun getIcon() : ItemStack?
 
-    fun isInfer(player: Player,options: KetherScriptOptions): Condition.VerifyInfo
+    fun isInfer(player: Player, options: FluxonScriptOptions): Condition.VerifyInfo
 
 }

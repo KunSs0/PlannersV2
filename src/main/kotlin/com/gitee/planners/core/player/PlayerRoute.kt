@@ -1,7 +1,7 @@
 package com.gitee.planners.core.player
 
 import com.gitee.planners.api.Registries
-import com.gitee.planners.api.common.script.KetherScriptOptions
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import com.gitee.planners.api.job.*
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
@@ -53,7 +53,7 @@ class PlayerRoute(val bindingId: Long, private val routerId: String, private val
         return route.getIcon()
     }
 
-    override fun isInfer(player: Player, options: KetherScriptOptions): Condition.VerifyInfo {
+    override fun isInfer(player: Player, options: FluxonScriptOptions): Condition.VerifyInfo {
         throw IllegalStateException("Not implemented")
     }
 

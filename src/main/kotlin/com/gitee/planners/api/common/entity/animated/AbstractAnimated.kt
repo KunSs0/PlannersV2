@@ -2,14 +2,14 @@ package com.gitee.planners.api.common.entity.animated
 
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
-import com.gitee.planners.module.kether.context.AbstractComplexScriptContext
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.TargetContainer
 import com.gitee.planners.util.unboxJavaToKotlin
 import taboolib.common.platform.function.warning
 import taboolib.common.util.Vector
 import taboolib.common5.*
-import taboolib.module.kether.runKether
 
 abstract class AbstractAnimated : Animated, MetadataContainer(), Animated.Updated {
 
@@ -19,19 +19,15 @@ abstract class AbstractAnimated : Animated, MetadataContainer(), Animated.Update
         this.listeners += listener
     }
 
-    override fun emit(event: AnimatedEvent, context: AbstractComplexScriptContext) {
-        val compiled = context.compiled
-        val platform = context.platform
-        val options = context.optionsBuilder {
-            it.context { event.inject(this) }
+    override fun emit(event: AnimatedEvent, sender: Any, variables: Map<String, Any?>) {
+        val options = FluxonScriptOptions.create {
+            set("sender", sender)
+            variables.forEach { (k, v) -> set(k, v) }
         }
+        event.inject(options)
+
         this.listeners.filter { it.on == event.name }.forEach { listener ->
-            val script = compiled.compiledScript()
-            compiled.getBlockScript(listener.binding).ifPresent {
-                runKether {
-                    platform.run("${script.id}_${listener.binding}", script, it, options)
-                }
-            }
+            SingletonFluxonScript(listener.binding).run(options)
         }
     }
 

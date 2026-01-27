@@ -1,12 +1,11 @@
 package com.gitee.planners.core.config.level
 
 import com.gitee.planners.api.common.Unique
-import com.gitee.planners.api.common.script.KetherScriptOptions
-import com.gitee.planners.api.common.script.SingletonKetherScript
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import org.bukkit.entity.Player
 import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
-import taboolib.module.kether.runKether
 import java.util.concurrent.CompletableFuture
 
 interface Algorithm {
@@ -18,7 +17,7 @@ interface Algorithm {
     fun getExp(player: Player, level: Int): CompletableFuture<Int>
 
 
-    class Kether(val root: ConfigurationSection) : Algorithm, Unique {
+    class Fluxon(val root: ConfigurationSection) : Algorithm, Unique {
 
         override val id: String = root.name
 
@@ -26,27 +25,25 @@ interface Algorithm {
 
         override val maxLevel = root.getInt("max")
 
-        private val action = SingletonKetherScript(root.getString("experience"))
+        private val action = SingletonFluxonScript(root.getString("experience"))
 
         override fun getExp(player: Player, level: Int): CompletableFuture<Int> {
-            val options = KetherScriptOptions.create {
-                this.sender(player)
-                this.vars("level" to level)
+            val options = FluxonScriptOptions.create {
+                set("sender", player)
+                set("level", level)
             }
-            return runKether(CompletableFuture.completedFuture(Int.MAX_VALUE)) {
-                action.run(options).thenApply { it.cint }
-            }!!
+            return action.run(options).thenApply { it?.cint ?: Int.MAX_VALUE }
         }
 
     }
 
     companion object {
 
-        fun parseKether(root: ConfigurationSection?): Algorithm? {
+        fun parse(root: ConfigurationSection?): Algorithm? {
             if (root == null) {
                 return null
             }
-            return Kether(root)
+            return Fluxon(root)
         }
 
     }

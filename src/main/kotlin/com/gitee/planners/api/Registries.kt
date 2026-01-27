@@ -33,7 +33,7 @@ object Registries {
     }
 
     val LEVEL = createDeepMultiBuiltin("module/level", "example.yml") {
-        Algorithm.Kether(it)
+        Algorithm.Fluxon(it)
     }
 
     val KEYBINDING = createSingleMultiBuiltin("key-binding.yml") {

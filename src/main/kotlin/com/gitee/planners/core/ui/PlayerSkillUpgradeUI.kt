@@ -4,9 +4,8 @@ import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.api.common.script.KetherScript.Companion.PARSER_DOUBLE
-import com.gitee.planners.api.common.script.KetherScript.Companion.PARSER_INT
-import com.gitee.planners.api.common.script.KetherScript.Companion.getNow
+import com.gitee.planners.module.fluxon.FluxonScript
+import com.gitee.planners.module.fluxon.FluxonScript.Companion.getNow
 import com.gitee.planners.api.job.target.adaptTarget
 import com.gitee.planners.api.template.ProfileOperator
 import com.gitee.planners.api.template.ProfileOperatorImpl
@@ -15,7 +14,6 @@ import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.ui.BaseUI.Companion.setIcon
 import com.gitee.planners.module.currency.Currencies
-import com.gitee.planners.module.kether.context.ImmutableSkillContext
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import taboolib.common.platform.function.submitAsync
@@ -151,14 +149,14 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
      * @param condition 条件
      */
     fun executeConditionOnCallback(player: Player, skill: PlayerSkill, condition: ImmutableSkill.IndexedUpgrade) {
-        val ctx = ImmutableSkillContext(adaptTarget(player), skill.immutable, skill.level)
+        val options = PlannersAPI.newOptions(player, skill)
         condition.args.forEach {
             val currency = Currencies.getInstance(it.key)
             if (currency == null) {
                 warning("Unsupported currency ${it.key}")
                 return@forEach
             }
-            val data = it.value.getNow(ctx.optionsBuilder(), PARSER_DOUBLE)
+            val data = it.value.eval(options.getVariables()).cdouble
             currency.take(player, data)
         }
     }
@@ -173,7 +171,7 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
      * @return 是否满足条件
      */
     fun checkCondition(player: Player, skill: PlayerSkill, condition: ImmutableSkill.IndexedUpgrade): Boolean {
-        val context = ImmutableSkillContext(adaptTarget(player), skill.immutable, skill.level)
+        val options = PlannersAPI.newOptions(player, skill)
 
         return condition.args.all { (node, amount) ->
             val currency = Currencies.getInstance(node)
@@ -181,7 +179,7 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
                 warning("Unsupported currency $node")
                 return@all false
             }
-            val data = amount.getNow(context.optionsBuilder(), PARSER_DOUBLE)
+            val data = amount.eval(options.getVariables()).cdouble
             currency.get(player) >= data
         }
     }
@@ -191,7 +189,7 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
         if (condition == null) {
             return submitIcon.get().icon
         }
-        val context = ImmutableSkillContext(adaptTarget(player), skill.immutable, skill.level)
+        val options = PlannersAPI.newOptions(player, skill)
         return buildItem(submitIcon.get().icon) {
             val newList = mutableListOf<String>()
             // 渲染${condition} 为 条件列表
@@ -203,7 +201,7 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
                             newList += "Unsupported currency $node"
                             return@formatLine
                         }
-                        val data = amount.getNow(context.optionsBuilder(), PARSER_INT)
+                        val data = amount.eval(options.getVariables()).cint
                         // 渲染变量
                         newList += submitIconConditionFormatter.get()
                             .replaceWithOrder(currency.name, currency.get(player), data)

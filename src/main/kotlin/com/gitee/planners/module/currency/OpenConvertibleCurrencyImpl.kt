@@ -1,22 +1,12 @@
 package com.gitee.planners.module.currency
 
-import com.gitee.planners.api.common.script.ComplexCompiledScript
-import com.gitee.planners.api.common.script.ComplexScriptPlatform
-import com.gitee.planners.api.common.script.KetherScript.Companion.PARSER_DOUBLE
-import com.gitee.planners.api.common.script.KetherScript.Companion.getNow
-import com.gitee.planners.api.common.script.KetherScriptOptions
-import com.gitee.planners.api.common.script.SingletonKetherScript
-import com.gitee.planners.api.common.script.kether.KetherHelper
-import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.module.kether.context.CompiledScriptContext
-import com.gitee.planners.module.kether.context.Context
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.warning
 import taboolib.common5.cdouble
-import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.util.mapValue
-import java.util.concurrent.CompletableFuture
 import java.util.function.Function
 
 class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConvertibleCurrency {
@@ -35,7 +25,7 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
             return 0.0
         }
 
-        return actions["hook"]!!.getNow(player, PARSER_DOUBLE)
+        return actions["hook"]!!.getNow(player, Function { it.cdouble })
     }
 
     override fun give(player: Player, amount: Double): Boolean {
@@ -73,44 +63,17 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
     }
 
 
-    class SimpleAction(experience: String) : SingletonKetherScript(experience), ComplexCompiledScript {
-
-        override val id: String = experience
-
-        override val async: Boolean = false
-
-        override fun namespaces(): List<String> {
-            return listOf(KetherHelper.NAMESPACE_COMMON)
-        }
-
-        override fun platform(): ComplexScriptPlatform {
-            return Currencies
-        }
-
-        override fun source(): String {
-            return action
-        }
+    class SimpleAction(action: String) : SingletonFluxonScript(action) {
 
         fun runNow(player: Player, vararg args: Pair<String, Any?>) {
-            val ctx = newCtx(player)
-
-            this.run(ctx.optionsBuilder {
-                it.vars(*args)
-            })
+            val options = FluxonScriptOptions.common(player)
+            args.forEach { (k, v) -> options.set(k, v) }
+            this.run(options)
         }
 
         inline fun <reified T> getNow(sender: Player, parser: Function<Any?, T>): T {
-            return getNow(newCtx(sender).optionsBuilder(), parser)
-        }
-
-        /**
-         * 创建一个新的上下文
-         *
-         * @param player 玩家
-         * @param action 动作
-         */
-        fun newCtx(player: Player): CompiledScriptContext {
-            return CompiledScriptContext(adaptTarget(player), this)
+            val options = FluxonScriptOptions.common(sender)
+            return parser.apply(this.eval(options))
         }
 
     }

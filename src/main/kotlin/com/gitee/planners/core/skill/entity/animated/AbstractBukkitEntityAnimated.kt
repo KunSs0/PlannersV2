@@ -7,7 +7,6 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import taboolib.module.ai.clearGoalAi
 import taboolib.module.ai.clearTargetAi
-import taboolib.module.nms.getI18nName
 
 abstract class AbstractBukkitEntityAnimated<E : Entity> : AbstractAnimated() {
 
@@ -15,7 +14,7 @@ abstract class AbstractBukkitEntityAnimated<E : Entity> : AbstractAnimated() {
     open lateinit var instance: E
 
     val name = text("name", "") {
-        instance.customName = if (it == "") instance.getI18nName() else it
+        instance.customName = if (it == "") instance.name else it
     }
 
     val nameVisible = bool("is-name-visible", false) {

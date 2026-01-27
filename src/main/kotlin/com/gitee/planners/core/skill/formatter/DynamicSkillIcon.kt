@@ -1,33 +1,30 @@
 package com.gitee.planners.core.skill.formatter
 
-import com.gitee.planners.api.common.script.SingletonKetherScript
+import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
-import com.gitee.planners.module.kether.context.ImmutableSkillContext
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
-import taboolib.common.util.unsafeLazy
-import taboolib.module.kether.KetherFunction
 
 class DynamicSkillIcon(sender: Target<*>, skill: ImmutableSkill, level: Int = 1) :
     AbstractSkillIcon(sender, skill, level) {
 
-    val context by unsafeLazy {
-        ImmutableSkillContext(sender, skill, level)
+    private val options by lazy {
+        val player = sender.instance as? Player
+        if (player != null) {
+            PlannersAPI.newOptions(player, skill, level)
+        } else {
+            com.gitee.planners.module.fluxon.FluxonScriptOptions.forSkill(sender.instance ?: sender, level)
+        }
     }
 
     override fun parse(text: String?): String {
         if (text == null) {
             return ""
         }
-
-        // parse the text
-        return KetherFunction.reader.replaceNested(text.trim()) {
-            SingletonKetherScript(this).run(context.optionsBuilder())
-                .getNow(null)
-                .toString()
-        }
+        return SingletonFluxonScript.replaceNested(text.trim(), options)
     }
 
     companion object {

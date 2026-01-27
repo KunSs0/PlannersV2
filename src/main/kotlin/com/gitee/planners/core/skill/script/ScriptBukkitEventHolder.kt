@@ -2,15 +2,12 @@ package com.gitee.planners.core.skill.script
 
 import com.gitee.planners.core.config.State
 import com.gitee.planners.core.skill.entity.state.ScriptCallbackImpl
-import com.gitee.planners.core.skill.script.animated.AbstractEventModifier
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import org.bukkit.event.Event
 import taboolib.common.platform.event.EventPriority
 import taboolib.common.platform.event.ProxyListener
 import taboolib.common.platform.function.info
 import taboolib.common.platform.function.registerBukkitListener
-import taboolib.module.kether.ScriptContext
-import taboolib.module.kether.ScriptFrame
-import java.util.*
 
 abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
 
@@ -50,8 +47,8 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
         callback.call(sender, event, this)
     }
 
-    override fun handle(event: T, ctx: ScriptContext) {
-        ctx["event"] = getModifier(event)
+    override fun handle(event: T, options: FluxonScriptOptions) {
+        options.set("event", getModifier(event))
     }
 
     override fun getCallback(id: String): ScriptCallback<T>? {
@@ -93,14 +90,6 @@ abstract class ScriptBukkitEventHolder<T : Event> : ScriptEventHolder<T> {
      */
     override fun unregister(callback: ScriptCallback<T>) {
         callbacks -= callback
-    }
-
-    companion object {
-
-        fun ScriptFrame.getWrappedEvent(): Optional<AbstractEventModifier<*>> {
-            return this.variables().get("event")
-        }
-
     }
 
 }

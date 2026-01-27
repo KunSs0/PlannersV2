@@ -3,7 +3,7 @@ package com.gitee.planners.core.skill.script
 import com.gitee.planners.api.common.entity.animated.Animated
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.core.config.State
-import taboolib.module.kether.ScriptContext
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
 
 interface ScriptEventHolder<T> {
 
@@ -24,9 +24,9 @@ interface ScriptEventHolder<T> {
      * 处理事件
      *
      * @param event 事件对象
-     * @param ctx 脚本上下文
+     * @param options 脚本选项
      */
-    fun handle(event: T, ctx: ScriptContext)
+    fun handle(event: T, options: FluxonScriptOptions)
 
     /**
      * 获取修饰符

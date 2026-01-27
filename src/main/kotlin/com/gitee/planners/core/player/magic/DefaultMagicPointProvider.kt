@@ -3,8 +3,8 @@ package com.gitee.planners.core.player.magic
 import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
-import com.gitee.planners.api.common.script.KetherScriptOptions
-import com.gitee.planners.api.common.script.SingletonKetherScript
+import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.fluxon.SingletonFluxonScript
 import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submitAsync
@@ -71,7 +71,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     fun executeUpdateTask(player: Player) {
-        expressionResume.get().run(KetherScriptOptions.common(player)).thenAccept { data ->
+        expressionResume.get().run(FluxonScriptOptions.common(player)).thenAccept { data ->
             val template = player.plannersTemplate
             template.magicPoint += (data?.cint ?: 0)
         }
@@ -85,7 +85,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     fun executeUpdateTaskInUpperLimit(player: Player) {
-        expressionUpperLimit.get().run(KetherScriptOptions.common(player)).thenAccept { data ->
+        expressionUpperLimit.get().run(FluxonScriptOptions.common(player)).thenAccept { data ->
             this.setPointInUpperLimit(player, data?.cint ?: 0)
         }
     }
@@ -94,13 +94,13 @@ class DefaultMagicPointProvider : MagicPointProvider {
     companion object {
 
         @ConfigNode("settings.magic-point.upper-limit.expression")
-        val expressionUpperLimit = lazyConversion<String?, SingletonKetherScript> {
-            SingletonKetherScript(this ?: "${Int.MAX_VALUE}")
+        val expressionUpperLimit = lazyConversion<String?, SingletonFluxonScript> {
+            SingletonFluxonScript(this ?: "${Int.MAX_VALUE}")
         }
 
         @ConfigNode("settings.magic-point.resume.expression")
-        val expressionResume = lazyConversion<String?, SingletonKetherScript> {
-            SingletonKetherScript(this ?: "${Int.MAX_VALUE}")
+        val expressionResume = lazyConversion<String?, SingletonFluxonScript> {
+            SingletonFluxonScript(this ?: "${Int.MAX_VALUE}")
         }
 
         @ConfigNode("settings.magic-point.upper-limit.update-tick")
