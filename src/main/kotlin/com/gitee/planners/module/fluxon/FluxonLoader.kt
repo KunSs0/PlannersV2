@@ -1,6 +1,5 @@
 package com.gitee.planners.module.fluxon
 
-import com.gitee.planners.module.fluxon.cooldown.CooldownExtensions
 import com.gitee.planners.module.fluxon.delay.DelayExtensions
 import com.gitee.planners.module.fluxon.economy.EconomyExtensions
 import com.gitee.planners.module.fluxon.germplugin.GermPluginExtensions
@@ -34,7 +33,6 @@ object FluxonLoader {
         // 中优先级扩展
         MetadataExtensions.register()
         ProfileExtensions.register()
-        CooldownExtensions.register()
         DelayExtensions.register()
         VelocityExtensions.register()
         SelectorExtensions.register()
