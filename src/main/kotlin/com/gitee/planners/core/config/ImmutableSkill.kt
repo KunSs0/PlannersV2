@@ -75,12 +75,7 @@ class ImmutableSkill(config: Configuration) : Skill {
         if (action.isEmpty()) {
             null
         } else {
-            try {
-                FluxonScriptCache.getOrParse(action)
-            } catch (e: Exception) {
-                warning("[Skill] 脚本解析失败: $id - ${e.message}")
-                null
-            }
+            FluxonScriptCache.getOrParse(action)
         }
     }
 

@@ -9,7 +9,7 @@ __option__:
     rectZ: [ 2, 4, 3, 3 ]
 
 action: |
-  fn main() {
+  def main() {
     # 获取当前状态索引，默认为 0
     let idx = if sender :: hasMetadata("x1.status")
               then sender :: getMetadata("x1.status")

@@ -18,12 +18,12 @@ __option__:
     attributes:
       - "攻击力 +${10 * &level}"
 action: |
-  fn main() {
+  def main() {
     tell("技能释放成功")
-    "wait" :: delay("1.5s")
-    sender :: setCooldown(skill, 200)
+    sleep(1500)
+    setCooldown(skill, 200)
   }
 
-  fn handleHit() {
-    tell("on hit ${&target}")
+  def handleHit() {
+    tell("on hit ${&?target}")
   }
