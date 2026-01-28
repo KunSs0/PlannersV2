@@ -1,5 +1,6 @@
 package com.gitee.planners.module.fluxon
 
+import org.bukkit.entity.Player
 import org.tabooproject.fluxon.runtime.FluxonRuntime
 import org.tabooproject.fluxon.runtime.FunctionSignature
 import org.tabooproject.fluxon.runtime.Type
@@ -49,4 +50,14 @@ class FluxonFunctionContext(private val ctx: org.tabooproject.fluxon.runtime.Fun
     fun getAsDouble(index: Int): Double = ctx.getAsDouble(index)
 
     fun getAsString(index: Int): String? = ctx.getRef(index)?.toString()
+}
+
+/**
+ * 从上下文获取玩家参数
+ */
+fun FluxonFunctionContext.getPlayerArg(index: Int): Player? {
+    if (arguments.size > index) {
+        return arguments[index] as? Player
+    }
+    return (environment.rootVariables["sender"] ?: environment.rootVariables["player"]) as? Player
 }

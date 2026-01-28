@@ -30,7 +30,11 @@ settings:
       update-tick: 20
     upper-limit:
       # 法力值的运算表达式
-      expression: "sender :: getLevel() * 2 + 100"
+      # 可用函数:
+      #   &profile :: level() - 玩家等级
+      #   &profile :: magicPoint() - 当前魔力值
+      #   &ctx :: level() - 技能等级 (技能脚本中)
+      expression: "&profile :: level() * 2 + 100"
       # 最大法力值的更新任务的轮询周期,单位tick
       update-tick: 20
   level:

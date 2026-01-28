@@ -1,5 +1,12 @@
 package com.gitee.planners.module.fluxon
 
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
+import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.api.job.target.asTarget
+import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.module.fluxon.context.SkillContext
+import org.bukkit.entity.Entity
+import org.bukkit.entity.Player
 import org.tabooproject.fluxon.parser.ParsedScript
 import org.tabooproject.fluxon.runtime.Environment
 import taboolib.common5.cdouble
@@ -81,7 +88,12 @@ class FluxonScriptOptions {
          * 通用选项
          */
         fun common(sender: Any): FluxonScriptOptions {
-            return FluxonScriptOptions().set("sender", sender)
+            return FluxonScriptOptions().also {
+                it.set("sender", sender)
+                if (sender is Player) {
+                    it.set("profile", sender.plannersTemplate)
+                }
+            }
         }
 
         /**
@@ -94,10 +106,29 @@ class FluxonScriptOptions {
         /**
          * 创建技能执行选项
          */
-        fun forSkill(sender: Any, level: Int, extraVars: Map<String, Any?> = emptyMap()): FluxonScriptOptions {
+        fun forSkill(
+            sender: Any,
+            level: Int,
+            skill: ImmutableSkill? = null,
+            extraVars: Map<String, Any?> = emptyMap()
+        ): FluxonScriptOptions {
+            val proxyTarget = when (sender) {
+                is ProxyTarget<*> -> sender
+                is Entity -> sender.asTarget()
+                else -> null
+            }
+            val player = when (sender) {
+                is Player -> sender
+                is ProxyTarget<*> -> sender.instance as? Player
+                else -> null
+            }
             return FluxonScriptOptions().also {
                 it.set("sender", sender)
                 it.set("level", level)
+                it.set("ctx", SkillContext(proxyTarget, skill, level))
+                if (player != null) {
+                    it.set("profile", player.plannersTemplate)
+                }
                 extraVars.forEach { (k, v) -> it.set(k, v) }
             }
         }
