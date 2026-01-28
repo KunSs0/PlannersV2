@@ -56,7 +56,7 @@ settings:
   bukkit-launch:
     unimpeded-types:
       - AIR
-      - LONG_GRASS
+      - SHORT_GRASS
       - GLASS
       - WATER
-      - YELLOW_FLOWER
+      - DANDELION

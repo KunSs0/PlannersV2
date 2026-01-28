@@ -7,6 +7,12 @@ __option__:
   icon-preview-next:
     slot: 5
     material: STONE
+  icon-submit:
+    slot: 8
+    material: LIME_CONCRETE
+    name: "&a确认升级"
+    format:
+      condition: "&7- {0}"
 
 icon-#:
   slots: [ 0, 1, 2, 4, 6, 7 ]
