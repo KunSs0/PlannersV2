@@ -5,7 +5,6 @@ import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import com.gitee.planners.module.fluxon.getTargetsArg
-import com.gitee.planners.module.fluxon.registerFunction
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
@@ -14,6 +13,8 @@ import org.serverct.ersha.api.AttributeAPI
 import org.serverct.ersha.attribute.AttributeHandle
 import org.serverct.ersha.attribute.data.AttributeData
 import org.serverct.ersha.attribute.data.AttributeSource
+import org.tabooproject.fluxon.runtime.FunctionSignature.returns
+import org.tabooproject.fluxon.runtime.Type
 import taboolib.common.LifeCycle
 import taboolib.common.Requires
 import taboolib.common.platform.Awake
@@ -32,87 +33,112 @@ object AttributePlusExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // apAttack(attributes, [isolation], [targets], [source]) - AttributePlus 属性攻击
-        runtime.registerFunction("apAttack", listOf(1, 2, 3, 4)) { ctx ->
-            val attributes = ctx.getAsString(0) ?: return@registerFunction 0.0
-            val isolation = if (ctx.arguments.size > 1) ctx.getRef(1) as? Boolean ?: false else false
+        // apAttack(attributes) - 属性攻击 sender
+        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING)) { ctx ->
+            val attributes = ctx.getString(0) ?: return@registerFunction
+            val targetsArg = ctx.getTargetsArg(-1, LeastType.EMPTY)
+            val sourceArg = ctx.getTargetsArg(-1, LeastType.SENDER)
+            ctx.setReturnDouble(executeApAttack(attributes, false, targetsArg, sourceArg))
+        }
+
+        // apAttack(attributes, isolation) - 属性攻击，可选隔离
+        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN)) { ctx ->
+            val attributes = ctx.getString(0) ?: return@registerFunction
+            val isolation = ctx.getBool(1)
+            val targetsArg = ctx.getTargetsArg(-1, LeastType.EMPTY)
+            val sourceArg = ctx.getTargetsArg(-1, LeastType.SENDER)
+            ctx.setReturnDouble(executeApAttack(attributes, isolation, targetsArg, sourceArg))
+        }
+
+        // apAttack(attributes, isolation, targets) - 属性攻击目标
+        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN, Type.OBJECT)) { ctx ->
+            val attributes = ctx.getString(0) ?: return@registerFunction
+            val isolation = ctx.getBool(1)
+            val targetsArg = ctx.getTargetsArg(2, LeastType.EMPTY)
+            val sourceArg = ctx.getTargetsArg(-1, LeastType.SENDER)
+            ctx.setReturnDouble(executeApAttack(attributes, isolation, targetsArg, sourceArg))
+        }
+
+        // apAttack(attributes, isolation, targets, source) - 属性攻击，指定来源
+        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN, Type.OBJECT, Type.OBJECT)) { ctx ->
+            val attributes = ctx.getString(0) ?: return@registerFunction
+            val isolation = ctx.getBool(1)
             val targetsArg = ctx.getTargetsArg(2, LeastType.EMPTY)
             val sourceArg = ctx.getTargetsArg(3, LeastType.SENDER)
+            ctx.setReturnDouble(executeApAttack(attributes, isolation, targetsArg, sourceArg))
+        }
+    }
 
-            val sender = sourceArg.filterIsInstance<ProxyTarget.BukkitEntity>()
-                .firstOrNull()?.instance as? LivingEntity
+    private fun executeApAttack(
+        attributes: String,
+        isolation: Boolean,
+        targetsArg: com.gitee.planners.api.job.target.ProxyTargetContainer,
+        sourceArg: com.gitee.planners.api.job.target.ProxyTargetContainer
+    ): Double {
+        val sender = sourceArg.filterIsInstance<ProxyTarget.BukkitEntity>()
+            .firstOrNull()?.instance as? LivingEntity
 
-            if (sender == null) {
-                warning("apAttack: source not correctly defined")
-                return@registerFunction 0.0
-            }
+        if (sender == null) {
+            warning("apAttack: source not correctly defined")
+            return 0.0
+        }
 
-            // 是否隔离，如果隔离，则不会读取攻击者的属性
-            val data: AttributeData = if (isolation) {
-                AttributeData.create(sender)
-            } else {
-                AttributeAPI.getAttrData(sender)
-            }
+        val data: AttributeData = if (isolation) {
+            AttributeData.create(sender)
+        } else {
+            AttributeAPI.getAttrData(sender)
+        }
 
-            // 添加临时属性
-            data.operationAttribute(
-                AttributeAPI.getAttributeSource(attributes.split(",")),
-                AttributeSource.OperationType.ADD,
-                "@planners_skill"
-            )
+        data.operationAttribute(
+            AttributeAPI.getAttributeSource(attributes.split(",")),
+            AttributeSource.OperationType.ADD,
+            "@planners_skill"
+        )
 
-            var totalDamage = 0.0
+        var totalDamage = 0.0
 
-            // 获取目标
-            val targets = targetsArg
+        targetsArg
+            .filterIsInstance<ProxyTarget.BukkitEntity>()
+            .map { it.instance }
+            .filterIsInstance<LivingEntity>()
+            .filter { it != sender }
+            .forEach { entity ->
+                val env = EntityDamageByEntityEvent(
+                    sender, entity,
+                    EntityDamageEvent.DamageCause.CUSTOM, 0.0
+                )
 
-            targets.filterIsInstance<ProxyTarget.BukkitEntity>()
-                .map { it.instance }
-                .filterIsInstance<LivingEntity>()
-                .filter { it != sender }
-                .forEach { entity ->
-                    val env = EntityDamageByEntityEvent(
-                        sender, entity,
-                        EntityDamageEvent.DamageCause.CUSTOM, 0.0
-                    )
+                val handle = runSync {
+                    AttributeHandle(data, AttributeAPI.getAttrData(entity))
+                }.init(env, false, true).handleAttackOrDefenseAttribute()
 
-                    val handle = runSync {
-                        AttributeHandle(data, AttributeAPI.getAttrData(entity))
-                    }.init(env, false, true).handleAttackOrDefenseAttribute()
+                if (!env.isCancelled && !handle.isCancelled) {
+                    val finalDamage = handle.getDamage(sender)
 
-                    if (!env.isCancelled && !handle.isCancelled) {
-                        val finalDamage = handle.getDamage(sender)
+                    if (finalDamage > entity.health) {
+                        entity.setMeta("@killer", sender)
+                    }
 
-                        // 设置击杀者标记
-                        if (finalDamage > entity.health) {
-                            entity.setMeta("@killer", sender)
-                        }
+                    handle.sendAttributeMessage()
+                    runSync { entity.damage(finalDamage) }
 
-                        handle.sendAttributeMessage()
-                        runSync { entity.damage(finalDamage) }
+                    if (sender is Player) {
+                        PlayerDamageEntityEvent(
+                            sender, entity, finalDamage,
+                            EntityDamageEvent.DamageCause.CUSTOM
+                        ).call()
+                    }
 
-                        // 触发玩家攻击实体事件
-                        if (sender is Player) {
-                            PlayerDamageEntityEvent(
-                                sender, entity, finalDamage,
-                                EntityDamageEvent.DamageCause.CUSTOM
-                            ).call()
-                        }
+                    totalDamage += finalDamage
 
-                        totalDamage += finalDamage
-
-                        // 反伤处理
-                        val reflectDamage = handle.getDamage(entity)
-                        if (reflectDamage > 0.0) {
-                            submit { sender.damage(reflectDamage) }
-                        }
+                    val reflectDamage = handle.getDamage(entity)
+                    if (reflectDamage > 0.0) {
+                        submit { sender.damage(reflectDamage) }
                     }
                 }
+            }
 
-            // 移除临时属性
-            data.takeApiAttribute("@planners_skill")
-
-            totalDamage
-        }
+        data.takeApiAttribute("@planners_skill")
+        return totalDamage
     }
 }

@@ -3,10 +3,12 @@ package com.gitee.planners.module.fluxon.finder
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.ProxyTargetContainer
 import com.gitee.planners.module.fluxon.FluxonScriptCache
-import com.gitee.planners.module.fluxon.registerFunction
+
 import org.bukkit.Location
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
+import org.tabooproject.fluxon.runtime.FunctionSignature.returns
+import org.tabooproject.fluxon.runtime.Type
 import org.tabooproject.fluxon.runtime.java.Export
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
@@ -156,12 +158,19 @@ class TargetFinder(
 
             runtime.exportRegistry.registerClass(TargetFinder::class.java)
 
-            // finder([origin]) -> TargetFinder
-            runtime.registerFunction("finder", listOf(0, 1)) { ctx ->
+            // finder() -> TargetFinder
+            runtime.registerFunction("finder", returns(Type.OBJECT).noParams()) { ctx ->
+                val origin = (ctx.environment.rootVariables["sender"] as? LivingEntity)?.location
+                    ?: error("无法解析 origin，请传入 Location 或确保 sender 是 LivingEntity")
+                val sender = ctx.environment.rootVariables["sender"] as? LivingEntity
+                TargetFinder(origin, sender)
+            }
+
+            // finder(origin) -> TargetFinder
+            runtime.registerFunction("finder", returns(Type.OBJECT).params(Type.OBJECT)) { ctx ->
                 val origin = resolveLocation(ctx.getRef(0))
                     ?: (ctx.environment.rootVariables["sender"] as? LivingEntity)?.location
                     ?: error("无法解析 origin，请传入 Location 或确保 sender 是 LivingEntity")
-
                 val sender = ctx.environment.rootVariables["sender"] as? LivingEntity
                 TargetFinder(origin, sender)
             }

@@ -1,12 +1,11 @@
 package com.gitee.planners.module.fluxon.skillsystem
 
-import com.gitee.planners.api.PlayerTemplateAPI
-import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.module.fluxon.FluxonScriptCache
-import com.gitee.planners.module.fluxon.getPlayerArg
-import com.gitee.planners.module.fluxon.registerFunction
+
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
+import org.tabooproject.fluxon.runtime.FunctionSignature.returns
+import org.tabooproject.fluxon.runtime.Type
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 
@@ -19,9 +18,24 @@ object SkillSystemExtensions {
     fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        runtime.registerFunction("apAttack", listOf(2, 3)) { ctx ->
-            val params = ctx.getAsString(0) ?: return@registerFunction null
-            val targets = ctx.getRef(1) as? List<*> ?: return@registerFunction null
+        // apAttack(params, targets) - 属性攻击
+        runtime.registerFunction("apAttack", returns(Type.VOID).params(Type.STRING, Type.OBJECT)) { ctx ->
+            val params = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getRef(1) as? List<*> ?: return@registerFunction
+            val paramMap = parseAttackParams(params)
+            val damage = paramMap["damage"]?.toDoubleOrNull() ?: 0.0
+            targets.filterIsInstance<Entity>().forEach { entity ->
+                if (entity is LivingEntity && !entity.isDead) {
+                    entity.damage(damage)
+                }
+            }
+            null
+        }
+
+        // apAttack(params, targets, source) - 属性攻击，带来源
+        runtime.registerFunction("apAttack", returns(Type.VOID).params(Type.STRING, Type.OBJECT, Type.OBJECT)) { ctx ->
+            val params = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getRef(1) as? List<*> ?: return@registerFunction
             val paramMap = parseAttackParams(params)
             val damage = paramMap["damage"]?.toDoubleOrNull() ?: 0.0
             targets.filterIsInstance<Entity>().forEach { entity ->

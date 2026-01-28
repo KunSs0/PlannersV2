@@ -1,17 +1,17 @@
 package com.gitee.planners.module.fluxon.germplugin
 
 import com.germ.germplugin.api.GermPacketAPI
-import com.germ.germplugin.api.RootType
 import com.germ.germplugin.api.SoundType
 import com.germ.germplugin.api.ViewType
 import com.germ.germplugin.api.bean.AnimDataDTO
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
+
 import com.gitee.planners.module.fluxon.getTargetsArg
-import com.gitee.planners.module.fluxon.registerFunction
-import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import org.tabooproject.fluxon.runtime.FunctionSignature.returns
+import org.tabooproject.fluxon.runtime.Type
 import taboolib.common.LifeCycle
 import taboolib.common.Requires
 import taboolib.common.platform.Awake
@@ -28,37 +28,37 @@ object GermPluginExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // germEffect(name, [index], [targets]) - 播放特效
-        runtime.registerFunction("germEffect", listOf(1, 2, 3)) { ctx ->
-            val name = ctx.getAsString(0) ?: return@registerFunction null
-            val index = if (ctx.arguments.size > 1) ctx.getAsString(1) ?: UUID.randomUUID().toString() else UUID.randomUUID().toString()
-            val targets = ctx.getTargetsArg(2, LeastType.SENDER)
-
-            targets.forEach { target ->
-                when (target) {
-                    is ProxyTarget.BukkitEntity -> {
-                        val loc = target.getBukkitLocation()
-                        onlinePlayers.forEach { player ->
-                            GermPacketAPI.sendEffect(player, name, index, loc.x, loc.y, loc.z)
-                        }
-                    }
-                    is ProxyTarget.Location<*> -> {
-                        val loc = target.getBukkitLocation()
-                        onlinePlayers.forEach { player ->
-                            GermPacketAPI.sendEffect(player, name, index, loc.x, loc.y, loc.z)
-                        }
-                    }
-                    else -> {}
-                }
-            }
+        // germEffect(name) - 播放特效
+        runtime.registerFunction("germEffect", returns(Type.STRING).params(Type.STRING)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val index = UUID.randomUUID().toString()
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            playEffect(name, index, targets)
             index
         }
 
-        // germEffectRemove(index, [targets]) - 移除特效
-        runtime.registerFunction("germEffectRemove", listOf(1, 2)) { ctx ->
-            val index = ctx.getAsString(0) ?: return@registerFunction null
-            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
+        // germEffect(name, index) - 播放特效，指定索引
+        runtime.registerFunction("germEffect", returns(Type.STRING).params(Type.STRING, Type.STRING)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val index = ctx.getString(1) ?: UUID.randomUUID().toString()
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            playEffect(name, index, targets)
+            index
+        }
 
+        // germEffect(name, index, targets) - 播放特效给目标
+        runtime.registerFunction("germEffect", returns(Type.STRING).params(Type.STRING, Type.STRING, Type.OBJECT)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val index = ctx.getString(1) ?: UUID.randomUUID().toString()
+            val targets = ctx.getTargetsArg(2, LeastType.SENDER)
+            playEffect(name, index, targets)
+            index
+        }
+
+        // germEffectRemove(index) - 移除特效
+        runtime.registerFunction("germEffectRemove", returns(Type.VOID).params(Type.STRING)) { ctx ->
+            val index = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
                 GermPacketAPI.removeEffect(player, index)
@@ -66,10 +66,20 @@ object GermPluginExtensions {
             null
         }
 
-        // germEffectClear([targets]) - 清除所有特效
-        runtime.registerFunction("germEffectClear", listOf(0, 1)) { ctx ->
-            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
+        // germEffectRemove(index, targets) - 移除目标特效
+        runtime.registerFunction("germEffectRemove", returns(Type.VOID).params(Type.STRING, Type.OBJECT)) { ctx ->
+            val index = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
+            targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+                val player = target.instance as? Player ?: return@forEach
+                GermPacketAPI.removeEffect(player, index)
+            }
+            null
+        }
 
+        // germEffectClear() - 清除所有特效
+        runtime.registerFunction("germEffectClear", returns(Type.VOID).noParams()) { ctx ->
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
                 GermPacketAPI.clearEffect(player)
@@ -77,90 +87,122 @@ object GermPluginExtensions {
             null
         }
 
-        // germSound(name, [type], [volume], [pitch], [targets]) - 播放声音
-        runtime.registerFunction("germSound", listOf(1, 2, 3, 4, 5)) { ctx ->
-            val name = ctx.getAsString(0) ?: return@registerFunction null
-            val typeName = if (ctx.arguments.size > 1) ctx.getAsString(1) ?: "MASTER" else "MASTER"
-            val volume = if (ctx.arguments.size > 2) ctx.getAsDouble(2).toFloat() else 1f
-            val pitch = if (ctx.arguments.size > 3) ctx.getAsDouble(3).toFloat() else 1f
-            val targets = ctx.getTargetsArg(4, LeastType.SENDER)
-
-            val type = runCatching { SoundType.valueOf(typeName.uppercase()) }.getOrElse { SoundType.MASTER }
-
-            targets.forEach { target ->
-                when (target) {
-                    is ProxyTarget.BukkitEntity -> {
-                        val player = target.instance as? Player ?: return@forEach
-                        val loc = player.location
-                        GermPacketAPI.playSound(player, name, type, loc.x.toFloat(), loc.y.toFloat(), loc.z.toFloat(), 0, volume, pitch)
-                    }
-                    is ProxyTarget.Location<*> -> {
-                        GermPacketAPI.playSound(target.getBukkitLocation(), name, type, 0, volume, pitch)
-                    }
-                    else -> {}
-                }
-            }
-            null
-        }
-
-        // germAnimation(name, [speed], [reverse], [targets]) - 播放动画
-        runtime.registerFunction("germAnimation", listOf(1, 2, 3, 4)) { ctx ->
-            val name = ctx.getAsString(0) ?: return@registerFunction null
-            val speed = if (ctx.arguments.size > 1) ctx.getAsDouble(1).toFloat() else 1f
-            val reverse = if (ctx.arguments.size > 2) ctx.getRef(2) as? Boolean ?: false else false
-            val targets = ctx.getTargetsArg(3, LeastType.SENDER)
-
-            val animData = AnimDataDTO(name, speed, reverse)
-            targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
-                val entityId = target.instance.entityId
-                onlinePlayers.forEach { sender ->
-                    if (target.instance is Player) {
-                        GermPacketAPI.sendBendAction(sender, entityId, animData)
-                    } else {
-                        GermPacketAPI.sendModelAnimation(sender, entityId, animData)
-                    }
-                }
-            }
-            null
-        }
-
-        // germAnimationStop(name, [targets]) - 停止动画
-        runtime.registerFunction("germAnimationStop", listOf(1, 2)) { ctx ->
-            val name = ctx.getAsString(0) ?: return@registerFunction null
-            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
-
-            targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
-                val entityId = target.instance.entityId
-                onlinePlayers.forEach { sender ->
-                    if (target.instance is Player) {
-                        GermPacketAPI.sendBendClear(sender, entityId)
-                    } else {
-                        GermPacketAPI.stopModelAnimation(sender, entityId, name)
-                    }
-                }
-            }
-            null
-        }
-
-        // germViewLock([duration], [type], [targets]) - 锁定视角
-        runtime.registerFunction("germViewLock", listOf(0, 1, 2, 3)) { ctx ->
-            val duration = if (ctx.arguments.size > 0) ctx.getAsLong(0) else -1L
-            val typeName = if (ctx.arguments.size > 1) ctx.getAsString(1) ?: "FIRST_PERSON" else "FIRST_PERSON"
-            val targets = ctx.getTargetsArg(2, LeastType.SENDER)
-
-            val type = runCatching { ViewType.valueOf(typeName.uppercase()) }.getOrElse { ViewType.FIRST_PERSON }
-
+        // germEffectClear(targets) - 清除目标所有特效
+        runtime.registerFunction("germEffectClear", returns(Type.VOID).params(Type.OBJECT)) { ctx ->
+            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
-                GermPacketAPI.sendLockPlayerCameraView(player, type, duration)
+                GermPacketAPI.clearEffect(player)
             }
             null
         }
 
-        // germViewUnlock([targets]) - 解锁视角
-        runtime.registerFunction("germViewUnlock", listOf(0, 1)) { ctx ->
-            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
+        // germSound(name) - 播放声音
+        runtime.registerFunction("germSound", returns(Type.VOID).params(Type.STRING)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            playGermSound(name, SoundType.MASTER, 1f, 1f, targets)
+            null
+        }
 
+        // germSound(name, type, volume, pitch) - 播放声音，全参数
+        runtime.registerFunction("germSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val typeName = ctx.getString(1) ?: "MASTER"
+            val volume = ctx.getAsDouble(2).toFloat()
+            val pitch = ctx.getAsDouble(3).toFloat()
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            val type = runCatching { SoundType.valueOf(typeName.uppercase()) }.getOrElse { SoundType.MASTER }
+            playGermSound(name, type, volume, pitch, targets)
+            null
+        }
+
+        // germSound(name, type, volume, pitch, targets) - 播放声音给目标
+        runtime.registerFunction("germSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val typeName = ctx.getString(1) ?: "MASTER"
+            val volume = ctx.getAsDouble(2).toFloat()
+            val pitch = ctx.getAsDouble(3).toFloat()
+            val targets = ctx.getTargetsArg(4, LeastType.SENDER)
+            val type = runCatching { SoundType.valueOf(typeName.uppercase()) }.getOrElse { SoundType.MASTER }
+            playGermSound(name, type, volume, pitch, targets)
+            null
+        }
+
+        // germAnimation(name) - 播放动画
+        runtime.registerFunction("germAnimation", returns(Type.VOID).params(Type.STRING)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            playAnimation(name, 1f, false, targets)
+            null
+        }
+
+        // germAnimation(name, speed, reverse) - 播放动画，带速度和反转
+        runtime.registerFunction("germAnimation", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.BOOLEAN)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val speed = ctx.getAsDouble(1).toFloat()
+            val reverse = ctx.getBool(2)
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            playAnimation(name, speed, reverse, targets)
+            null
+        }
+
+        // germAnimation(name, speed, reverse, targets) - 播放目标动画
+        runtime.registerFunction("germAnimation", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.BOOLEAN, Type.OBJECT)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val speed = ctx.getAsDouble(1).toFloat()
+            val reverse = ctx.getBool(2)
+            val targets = ctx.getTargetsArg(3, LeastType.SENDER)
+            playAnimation(name, speed, reverse, targets)
+            null
+        }
+
+        // germAnimationStop(name) - 停止动画
+        runtime.registerFunction("germAnimationStop", returns(Type.VOID).params(Type.STRING)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            stopAnimation(name, targets)
+            null
+        }
+
+        // germAnimationStop(name, targets) - 停止目标动画
+        runtime.registerFunction("germAnimationStop", returns(Type.VOID).params(Type.STRING, Type.OBJECT)) { ctx ->
+            val name = ctx.getString(0) ?: return@registerFunction
+            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
+            stopAnimation(name, targets)
+            null
+        }
+
+        // germViewLock() - 锁定视角
+        runtime.registerFunction("germViewLock", returns(Type.VOID).noParams()) { ctx ->
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            lockView(-1L, ViewType.FIRST_PERSON, targets)
+            null
+        }
+
+        // germViewLock(duration, type) - 锁定视角，带时长和类型
+        runtime.registerFunction("germViewLock", returns(Type.VOID).params(Type.NUMBER, Type.STRING)) { ctx ->
+            val duration = ctx.getAsLong(0)
+            val typeName = ctx.getString(1) ?: "FIRST_PERSON"
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            val type = runCatching { ViewType.valueOf(typeName.uppercase()) }.getOrElse { ViewType.FIRST_PERSON }
+            lockView(duration, type, targets)
+            null
+        }
+
+        // germViewLock(duration, type, targets) - 锁定目标视角
+        runtime.registerFunction("germViewLock", returns(Type.VOID).params(Type.NUMBER, Type.STRING, Type.OBJECT)) { ctx ->
+            val duration = ctx.getAsLong(0)
+            val typeName = ctx.getString(1) ?: "FIRST_PERSON"
+            val targets = ctx.getTargetsArg(2, LeastType.SENDER)
+            val type = runCatching { ViewType.valueOf(typeName.uppercase()) }.getOrElse { ViewType.FIRST_PERSON }
+            lockView(duration, type, targets)
+            null
+        }
+
+        // germViewUnlock() - 解锁视角
+        runtime.registerFunction("germViewUnlock", returns(Type.VOID).noParams()) { ctx ->
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
                 GermPacketAPI.sendUnlockPlayerCameraView(player)
@@ -168,22 +210,42 @@ object GermPluginExtensions {
             null
         }
 
-        // germLookLock([duration], [targets]) - 锁定视线
-        runtime.registerFunction("germLookLock", listOf(0, 1, 2)) { ctx ->
-            val duration = if (ctx.arguments.size > 0) ctx.getAsLong(0) else -1L
-            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
-
+        // germViewUnlock(targets) - 解锁目标视角
+        runtime.registerFunction("germViewUnlock", returns(Type.VOID).params(Type.OBJECT)) { ctx ->
+            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
-                GermPacketAPI.sendLockPlayerCameraRotate(player, duration)
+                GermPacketAPI.sendUnlockPlayerCameraView(player)
             }
             null
         }
 
-        // germLookUnlock([targets]) - 解锁视线
-        runtime.registerFunction("germLookUnlock", listOf(0, 1)) { ctx ->
-            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
+        // germLookLock() - 锁定视线
+        runtime.registerFunction("germLookLock", returns(Type.VOID).noParams()) { ctx ->
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            lockLook(-1L, targets)
+            null
+        }
 
+        // germLookLock(duration) - 锁定视线，带时长
+        runtime.registerFunction("germLookLock", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+            val duration = ctx.getAsLong(0)
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            lockLook(duration, targets)
+            null
+        }
+
+        // germLookLock(duration, targets) - 锁定目标视线
+        runtime.registerFunction("germLookLock", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+            val duration = ctx.getAsLong(0)
+            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
+            lockLook(duration, targets)
+            null
+        }
+
+        // germLookUnlock() - 解锁视线
+        runtime.registerFunction("germLookUnlock", returns(Type.VOID).noParams()) { ctx ->
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
                 GermPacketAPI.sendUnlockPlayerCameraRotate(player)
@@ -191,22 +253,42 @@ object GermPluginExtensions {
             null
         }
 
-        // germMoveLock([duration], [targets]) - 锁定移动
-        runtime.registerFunction("germMoveLock", listOf(0, 1, 2)) { ctx ->
-            val duration = if (ctx.arguments.size > 0) ctx.getAsLong(0) else -1L
-            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
-
+        // germLookUnlock(targets) - 解锁目标视线
+        runtime.registerFunction("germLookUnlock", returns(Type.VOID).params(Type.OBJECT)) { ctx ->
+            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
-                GermPacketAPI.sendLockPlayerMove(player, duration)
+                GermPacketAPI.sendUnlockPlayerCameraRotate(player)
             }
             null
         }
 
-        // germMoveUnlock([targets]) - 解锁移动
-        runtime.registerFunction("germMoveUnlock", listOf(0, 1)) { ctx ->
-            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
+        // germMoveLock() - 锁定移动
+        runtime.registerFunction("germMoveLock", returns(Type.VOID).noParams()) { ctx ->
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            lockMove(-1L, targets)
+            null
+        }
 
+        // germMoveLock(duration) - 锁定移动，带时长
+        runtime.registerFunction("germMoveLock", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+            val duration = ctx.getAsLong(0)
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            lockMove(duration, targets)
+            null
+        }
+
+        // germMoveLock(duration, targets) - 锁定目标移动
+        runtime.registerFunction("germMoveLock", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+            val duration = ctx.getAsLong(0)
+            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
+            lockMove(duration, targets)
+            null
+        }
+
+        // germMoveUnlock() - 解锁移动
+        runtime.registerFunction("germMoveUnlock", returns(Type.VOID).noParams()) { ctx ->
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
                 GermPacketAPI.sendUnlockPlayerMove(player)
@@ -214,21 +296,127 @@ object GermPluginExtensions {
             null
         }
 
-        // germCooldown(slot, tick, [targets]) - 设置物品冷却
-        runtime.registerFunction("germCooldown", listOf(2, 3)) { ctx ->
-            val slot = ctx.getAsString(0) ?: return@registerFunction null
-            val tick = ctx.getAsInt(1)
-            val targets = ctx.getTargetsArg(2, LeastType.SENDER)
-
-            val equipment = runCatching {
-                taboolib.type.BukkitEquipment.valueOf(slot.uppercase())
-            }.getOrNull() ?: return@registerFunction null
-
+        // germMoveUnlock(targets) - 解锁目标移动
+        runtime.registerFunction("germMoveUnlock", returns(Type.VOID).params(Type.OBJECT)) { ctx ->
+            val targets = ctx.getTargetsArg(0, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val player = target.instance as? Player ?: return@forEach
-                GermPacketAPI.setItemStackCooldown(player, equipment.getItem(player), tick)
+                GermPacketAPI.sendUnlockPlayerMove(player)
             }
             null
+        }
+
+        // germCooldown(slot, tick) - 设置物品冷却
+        runtime.registerFunction("germCooldown", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+            val slot = ctx.getString(0) ?: return@registerFunction
+            val tick = ctx.getAsInt(1)
+            val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
+            setCooldown(slot, tick, targets)
+            null
+        }
+
+        // germCooldown(slot, tick, targets) - 设置目标物品冷却
+        runtime.registerFunction("germCooldown", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+            val slot = ctx.getString(0) ?: return@registerFunction
+            val tick = ctx.getAsInt(1)
+            val targets = ctx.getTargetsArg(2, LeastType.SENDER)
+            setCooldown(slot, tick, targets)
+            null
+        }
+    }
+
+    private fun playEffect(name: String, index: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        targets.forEach { target ->
+            when (target) {
+                is ProxyTarget.BukkitEntity -> {
+                    val loc = target.getBukkitLocation()
+                    onlinePlayers.forEach { player ->
+                        GermPacketAPI.sendEffect(player, name, index, loc.x, loc.y, loc.z)
+                    }
+                }
+                is ProxyTarget.Location<*> -> {
+                    val loc = target.getBukkitLocation()
+                    onlinePlayers.forEach { player ->
+                        GermPacketAPI.sendEffect(player, name, index, loc.x, loc.y, loc.z)
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun playGermSound(name: String, type: SoundType, volume: Float, pitch: Float, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        targets.forEach { target ->
+            when (target) {
+                is ProxyTarget.BukkitEntity -> {
+                    val player = target.instance as? Player ?: return@forEach
+                    val loc = player.location
+                    GermPacketAPI.playSound(player, name, type, loc.x.toFloat(), loc.y.toFloat(), loc.z.toFloat(), 0, volume, pitch)
+                }
+                is ProxyTarget.Location<*> -> {
+                    GermPacketAPI.playSound(target.getBukkitLocation(), name, type, 0, volume, pitch)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun playAnimation(name: String, speed: Float, reverse: Boolean, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        val animData = AnimDataDTO(name, speed, reverse)
+        targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+            val entityId = target.instance.entityId
+            onlinePlayers.forEach { sender ->
+                if (target.instance is Player) {
+                    GermPacketAPI.sendBendAction(sender, entityId, animData)
+                } else {
+                    GermPacketAPI.sendModelAnimation(sender, entityId, animData)
+                }
+            }
+        }
+    }
+
+    private fun stopAnimation(name: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+            val entityId = target.instance.entityId
+            onlinePlayers.forEach { sender ->
+                if (target.instance is Player) {
+                    GermPacketAPI.sendBendClear(sender, entityId)
+                } else {
+                    GermPacketAPI.stopModelAnimation(sender, entityId, name)
+                }
+            }
+        }
+    }
+
+    private fun lockView(duration: Long, type: ViewType, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+            val player = target.instance as? Player ?: return@forEach
+            GermPacketAPI.sendLockPlayerCameraView(player, type, duration)
+        }
+    }
+
+    private fun lockLook(duration: Long, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+            val player = target.instance as? Player ?: return@forEach
+            GermPacketAPI.sendLockPlayerCameraRotate(player, duration)
+        }
+    }
+
+    private fun lockMove(duration: Long, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+            val player = target.instance as? Player ?: return@forEach
+            GermPacketAPI.sendLockPlayerMove(player, duration)
+        }
+    }
+
+    private fun setCooldown(slot: String, tick: Int, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
+        val equipment = runCatching {
+            taboolib.type.BukkitEquipment.valueOf(slot.uppercase())
+        }.getOrNull() ?: return
+
+        targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+            val player = target.instance as? Player ?: return@forEach
+            GermPacketAPI.setItemStackCooldown(player, equipment.getItem(player), tick)
         }
     }
 }
