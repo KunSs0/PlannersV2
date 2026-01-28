@@ -21,7 +21,12 @@ object VelocityExtensions {
     fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // velocitySet(x, y, z) - 设置 sender 速度
+        /**
+         * 设置 sender 的速度向量
+         * @param x X 轴速度分量
+         * @param y Y 轴速度分量（垂直方向）
+         * @param z Z 轴速度分量
+         */
         runtime.registerFunction("velocitySet", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
@@ -32,7 +37,13 @@ object VelocityExtensions {
             }
         }
 
-        // velocitySet(x, y, z, targets) - 设置目标速度
+        /**
+         * 设置目标的速度向量
+         * @param x X 轴速度分量
+         * @param y Y 轴速度分量
+         * @param z Z 轴速度分量
+         * @param targets 目标实体
+         */
         runtime.registerFunction("velocitySet", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
@@ -43,7 +54,12 @@ object VelocityExtensions {
             }
         }
 
-        // velocityAdd(x, y, z) - 增加 sender 速度
+        /**
+         * 在 sender 当前速度基础上增加速度
+         * @param x X 轴速度增量
+         * @param y Y 轴速度增量
+         * @param z Z 轴速度增量
+         */
         runtime.registerFunction("velocityAdd", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
@@ -54,7 +70,13 @@ object VelocityExtensions {
             }
         }
 
-        // velocityAdd(x, y, z, targets) - 增加目标速度
+        /**
+         * 在目标当前速度基础上增加速度
+         * @param x X 轴速度增量
+         * @param y Y 轴速度增量
+         * @param z Z 轴速度增量
+         * @param targets 目标实体
+         */
         runtime.registerFunction("velocityAdd", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
@@ -65,7 +87,12 @@ object VelocityExtensions {
             }
         }
 
-        // velocityMove(x, y, z) - 根据 sender 朝向移动
+        /**
+         * 根据 sender 朝向添加相对速度
+         * @param x 左右速度（正=右，负=左）
+         * @param y 垂直速度（正=上，负=下）
+         * @param z 前后速度（正=前，负=后）
+         */
         runtime.registerFunction("velocityMove", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
@@ -74,7 +101,13 @@ object VelocityExtensions {
             applyVelocityMove(targets, x, y, z)
         }
 
-        // velocityMove(x, y, z, targets) - 根据实体朝向移动
+        /**
+         * 根据目标朝向添加相对速度
+         * @param x 左右速度
+         * @param y 垂直速度
+         * @param z 前后速度
+         * @param targets 目标实体
+         */
         runtime.registerFunction("velocityMove", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
@@ -83,7 +116,9 @@ object VelocityExtensions {
             applyVelocityMove(targets, x, y, z)
         }
 
-        // velocityZero() - 清除 sender 速度
+        /**
+         * 清除 sender 的速度（设为零向量）
+         */
         runtime.registerFunction("velocityZero", returns(Type.VOID).noParams()) { ctx ->
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
@@ -91,7 +126,10 @@ object VelocityExtensions {
             }
         }
 
-        // velocityZero(targets) - 清除目标速度
+        /**
+         * 清除目标的速度
+         * @param targets 目标实体
+         */
         runtime.registerFunction("velocityZero", returns(Type.VOID).params(Type.OBJECT)) { ctx ->
             val targets = ctx.getTargetsArg(0, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
@@ -99,7 +137,11 @@ object VelocityExtensions {
             }
         }
 
-        // getVelocity(entity) - 获取实体速度
+        /**
+         * 获取实体当前速度向量
+         * @param entity 目标实体
+         * @return 速度向量 (org.bukkit.util.Vector)
+         */
         runtime.registerFunction("getVelocity", returns(Type.OBJECT).params(Type.OBJECT)) { ctx ->
             val entity = ctx.getRef(0) as? Entity ?: return@registerFunction
             ctx.setReturnRef(entity.velocity)

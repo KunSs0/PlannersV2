@@ -22,7 +22,12 @@ object PotionExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // potion(type, level, duration) - 给 sender 添加药水效果
+        /**
+         * 给 sender 添加药水效果
+         * @param type 药水效果类型名称（如 SPEED, STRENGTH, REGENERATION）
+         * @param level 效果等级（1=I级，2=II级...）
+         * @param duration 持续时间（tick，20 ticks = 1 秒）
+         */
         runtime.registerFunction("potion", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val level = ctx.getAsInt(1)
@@ -32,7 +37,13 @@ object PotionExtensions {
             null
         }
 
-        // potion(type, level, duration, targets) - 给目标添加药水效果
+        /**
+         * 给目标添加药水效果
+         * @param type 药水效果类型名称
+         * @param level 效果等级
+         * @param duration 持续时间（tick）
+         * @param targets 目标实体（必须是 LivingEntity）
+         */
         runtime.registerFunction("potion", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val level = ctx.getAsInt(1)
@@ -42,7 +53,10 @@ object PotionExtensions {
             null
         }
 
-        // potionRemove(type) - 移除 sender 的药水效果
+        /**
+         * 移除 sender 的指定药水效果
+         * @param type 药水效果类型名称
+         */
         runtime.registerFunction("potionRemove", returns(Type.VOID).params(Type.STRING)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -50,7 +64,11 @@ object PotionExtensions {
             null
         }
 
-        // potionRemove(type, targets) - 移除目标的药水效果
+        /**
+         * 移除目标的指定药水效果
+         * @param type 药水效果类型名称
+         * @param targets 目标实体
+         */
         runtime.registerFunction("potionRemove", returns(Type.VOID).params(Type.STRING, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)

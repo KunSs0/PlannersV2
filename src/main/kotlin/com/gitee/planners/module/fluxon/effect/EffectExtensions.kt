@@ -19,7 +19,10 @@ object EffectExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // freeze(ticks) - 冻结 sender
+        /**
+         * 冻结 sender（细雪冻结效果）
+         * @param ticks 冻结时间（tick），最大 140 ticks 达到最大冻结效果
+         */
         runtime.registerFunction("freeze", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
             val ticks = ctx.getAsInt(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -29,7 +32,11 @@ object EffectExtensions {
             null
         }
 
-        // freeze(ticks, targets) - 冻结目标
+        /**
+         * 冻结目标
+         * @param ticks 冻结时间（tick）
+         * @param targets 目标实体
+         */
         runtime.registerFunction("freeze", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
             val ticks = ctx.getAsInt(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
@@ -39,7 +46,10 @@ object EffectExtensions {
             null
         }
 
-        // fire(ticks) - 点燃 sender
+        /**
+         * 点燃 sender
+         * @param ticks 燃烧时间（tick，20 ticks = 1 秒）
+         */
         runtime.registerFunction("fire", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
             val ticks = ctx.getAsInt(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -49,7 +59,11 @@ object EffectExtensions {
             null
         }
 
-        // fire(ticks, targets) - 点燃目标
+        /**
+         * 点燃目标
+         * @param ticks 燃烧时间（tick）
+         * @param targets 目标实体
+         */
         runtime.registerFunction("fire", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
             val ticks = ctx.getAsInt(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
@@ -59,7 +73,10 @@ object EffectExtensions {
             null
         }
 
-        // explosion(power) - 在 origin 创建爆炸
+        /**
+         * 在 origin 位置创建爆炸（无火焰，不破坏方块）
+         * @param power 爆炸威力（TNT=4, 苦力怕=3, 末影水晶=6）
+         */
         runtime.registerFunction("explosion", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
             val power = ctx.getAsDouble(0).toFloat()
             val targets = ctx.getTargetsArg(-1, LeastType.ORIGIN)
@@ -67,7 +84,11 @@ object EffectExtensions {
             null
         }
 
-        // explosion(power, fire) - 创建爆炸，可选火焰
+        /**
+         * 创建爆炸，可选是否产生火焰
+         * @param power 爆炸威力
+         * @param fire 是否产生火焰
+         */
         runtime.registerFunction("explosion", returns(Type.VOID).params(Type.NUMBER, Type.BOOLEAN)) { ctx ->
             val power = ctx.getAsDouble(0).toFloat()
             val setFire = ctx.getBool(1)
@@ -76,7 +97,12 @@ object EffectExtensions {
             null
         }
 
-        // explosion(power, fire, break) - 创建爆炸，可选火焰和破坏
+        /**
+         * 创建爆炸，可选火焰和方块破坏
+         * @param power 爆炸威力
+         * @param fire 是否产生火焰
+         * @param break 是否破坏方块
+         */
         runtime.registerFunction("explosion", returns(Type.VOID).params(Type.NUMBER, Type.BOOLEAN, Type.BOOLEAN)) { ctx ->
             val power = ctx.getAsDouble(0).toFloat()
             val setFire = ctx.getBool(1)
@@ -86,7 +112,13 @@ object EffectExtensions {
             null
         }
 
-        // explosion(power, fire, break, locations) - 在指定位置创建爆炸
+        /**
+         * 在指定位置创建爆炸
+         * @param power 爆炸威力
+         * @param fire 是否产生火焰
+         * @param break 是否破坏方块
+         * @param locations 爆炸位置（支持 Location/ProxyTarget）
+         */
         runtime.registerFunction("explosion", returns(Type.VOID).params(Type.NUMBER, Type.BOOLEAN, Type.BOOLEAN, Type.OBJECT)) { ctx ->
             val power = ctx.getAsDouble(0).toFloat()
             val setFire = ctx.getBool(1)

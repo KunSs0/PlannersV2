@@ -21,7 +21,10 @@ object SoundExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // sound(name) - 播放原版声音给 sender
+        /**
+         * 播放原版声音给 sender（默认音量和音调）
+         * @param name 原版声音名称（如 ENTITY_PLAYER_LEVELUP）
+         */
         runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -29,7 +32,11 @@ object SoundExtensions {
             null
         }
 
-        // sound(name, volume) - 播放原版声音，指定音量
+        /**
+         * 播放原版声音，指定音量
+         * @param name 原版声音名称
+         * @param volume 音量（1.0=正常音量，可超过 1.0 增大传播距离）
+         */
         runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val volume = ctx.getAsDouble(1).toFloat()
@@ -38,7 +45,12 @@ object SoundExtensions {
             null
         }
 
-        // sound(name, volume, pitch) - 播放原版声音，指定音量和音调
+        /**
+         * 播放原版声音，指定音量和音调
+         * @param name 原版声音名称
+         * @param volume 音量
+         * @param pitch 音调（0.5-2.0，1.0=正常音调）
+         */
         runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val volume = ctx.getAsDouble(1).toFloat()
@@ -48,7 +60,13 @@ object SoundExtensions {
             null
         }
 
-        // sound(name, volume, pitch, targets) - 播放原版声音给目标
+        /**
+         * 播放原版声音给指定目标
+         * @param name 原版声音名称
+         * @param volume 音量
+         * @param pitch 音调
+         * @param targets 目标玩家
+         */
         runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val volume = ctx.getAsDouble(1).toFloat()
@@ -58,7 +76,10 @@ object SoundExtensions {
             null
         }
 
-        // soundResource(name) - 播放资源包声音给 sender
+        /**
+         * 播放资源包自定义声音给 sender
+         * @param name 资源包中定义的声音 ID（如 custom.skill.fire）
+         */
         runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -66,7 +87,11 @@ object SoundExtensions {
             null
         }
 
-        // soundResource(name, volume) - 播放资源包声音，指定音量
+        /**
+         * 播放资源包声音，指定音量
+         * @param name 声音 ID
+         * @param volume 音量
+         */
         runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val volume = ctx.getAsDouble(1).toFloat()
@@ -75,7 +100,12 @@ object SoundExtensions {
             null
         }
 
-        // soundResource(name, volume, pitch) - 播放资源包声音，指定音量和音调
+        /**
+         * 播放资源包声音，指定音量和音调
+         * @param name 声音 ID
+         * @param volume 音量
+         * @param pitch 音调
+         */
         runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val volume = ctx.getAsDouble(1).toFloat()
@@ -85,7 +115,13 @@ object SoundExtensions {
             null
         }
 
-        // soundResource(name, volume, pitch, targets) - 播放资源包声音给目标
+        /**
+         * 播放资源包声音给指定目标
+         * @param name 声音 ID
+         * @param volume 音量
+         * @param pitch 音调
+         * @param targets 目标玩家
+         */
         runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val volume = ctx.getAsDouble(1).toFloat()

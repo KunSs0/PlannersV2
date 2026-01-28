@@ -33,7 +33,11 @@ object AttributePlusExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // apAttack(attributes) - 属性攻击 sender
+        /**
+         * 使用临时属性对目标进行属性攻击
+         * @param attributes 临时属性字符串（逗号分隔，如 "物理攻击: 100, 暴击几率: 50"）
+         * @return 总伤害值
+         */
         runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val targetsArg = ctx.getTargetsArg(-1, LeastType.EMPTY)
@@ -41,7 +45,12 @@ object AttributePlusExtensions {
             ctx.setReturnDouble(executeApAttack(attributes, false, targetsArg, sourceArg))
         }
 
-        // apAttack(attributes, isolation) - 属性攻击，可选隔离
+        /**
+         * 属性攻击，可选是否使用隔离数据
+         * @param attributes 临时属性字符串
+         * @param isolation 是否使用隔离数据（true=创建独立副本，不影响实体原属性）
+         * @return 总伤害值
+         */
         runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val isolation = ctx.getBool(1)
@@ -50,7 +59,13 @@ object AttributePlusExtensions {
             ctx.setReturnDouble(executeApAttack(attributes, isolation, targetsArg, sourceArg))
         }
 
-        // apAttack(attributes, isolation, targets) - 属性攻击目标
+        /**
+         * 对指定目标进行属性攻击
+         * @param attributes 临时属性字符串
+         * @param isolation 是否使用隔离数据
+         * @param targets 攻击目标（支持 Entity/ProxyTarget/容器）
+         * @return 总伤害值
+         */
         runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN, Type.OBJECT)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val isolation = ctx.getBool(1)
@@ -59,7 +74,14 @@ object AttributePlusExtensions {
             ctx.setReturnDouble(executeApAttack(attributes, isolation, targetsArg, sourceArg))
         }
 
-        // apAttack(attributes, isolation, targets, source) - 属性攻击，指定来源
+        /**
+         * 指定攻击来源进行属性攻击
+         * @param attributes 临时属性字符串
+         * @param isolation 是否使用隔离数据
+         * @param targets 攻击目标
+         * @param source 攻击来源实体
+         * @return 总伤害值
+         */
         runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN, Type.OBJECT, Type.OBJECT)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val isolation = ctx.getBool(1)

@@ -21,7 +21,10 @@ object CommandExtensions {
     private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // command(cmd) - 以 sender 身份执行命令
+        /**
+         * 以 sender 身份执行命令
+         * @param cmd 命令字符串（不含前导斜杠）
+         */
         runtime.registerFunction("command", returns(Type.VOID).params(Type.STRING)) { ctx ->
             val cmd = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -31,7 +34,11 @@ object CommandExtensions {
             null
         }
 
-        // command(cmd, targets) - 以目标身份执行命令
+        /**
+         * 以目标身份执行命令
+         * @param cmd 命令字符串
+         * @param targets 执行命令的目标（需要是 CommandSender）
+         */
         runtime.registerFunction("command", returns(Type.VOID).params(Type.STRING, Type.OBJECT)) { ctx ->
             val cmd = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
@@ -41,7 +48,10 @@ object CommandExtensions {
             null
         }
 
-        // commandOp(cmd) - 以 OP 权限执行命令
+        /**
+         * 以 OP 权限执行命令（临时授予 OP 权限，执行后恢复）
+         * @param cmd 命令字符串
+         */
         runtime.registerFunction("commandOp", returns(Type.VOID).params(Type.STRING)) { ctx ->
             val cmd = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -49,7 +59,11 @@ object CommandExtensions {
             null
         }
 
-        // commandOp(cmd, targets) - 以 OP 权限执行命令
+        /**
+         * 以 OP 权限让目标执行命令
+         * @param cmd 命令字符串
+         * @param targets 目标玩家
+         */
         runtime.registerFunction("commandOp", returns(Type.VOID).params(Type.STRING, Type.OBJECT)) { ctx ->
             val cmd = ctx.getString(0) ?: return@registerFunction
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
@@ -57,7 +71,10 @@ object CommandExtensions {
             null
         }
 
-        // commandConsole(cmd) - 以控制台身份执行命令
+        /**
+         * 以控制台身份执行命令（拥有完整权限）
+         * @param cmd 命令字符串
+         */
         runtime.registerFunction("commandConsole", returns(Type.VOID).params(Type.STRING)) { ctx ->
             val cmd = ctx.getString(0) ?: return@registerFunction
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd)
