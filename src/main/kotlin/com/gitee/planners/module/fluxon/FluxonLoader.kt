@@ -15,9 +15,6 @@ object FluxonLoader {
      * 初始化 Fluxon 运行时
      */
     fun init() {
-        // 初始化事件注册表
-        FluxonEventRegistry.init()
-
         info("[Fluxon] 脚本引擎初始化完成")
     }
 }
