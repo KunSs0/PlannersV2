@@ -2,34 +2,22 @@ state0:
   priority: 0
   max-layer: 3
   name: "眩晕"
-  trigger:
-    "chat":
-      listen: player chat
-      action: |-
-        sender :: sendMessage("chat")
-        state detach ~
-    "state-attach":
-      listen: state attach
-      action: |-
-        sender :: sendMessage("眩晕层数增加")
-    "state-detach":
-      listen: state detach
-      action: |-
-        sender :: sendMessage("眩晕层数减少")
-    "state-mount":
-      listen: state mount
-      action: |-
-        sender :: sendMessage("首次获得眩晕")
-    "state-close":
-      listen: state close
-      action: |-
-        sender :: sendMessage("完全解除眩晕")
-    "state-end":
-      listen: state end
-      action: |-
-        sender :: sendMessage("眩晕自然结束")
-    "custom":
-      listen: customtrigger demo
-      action: |-
-        sender :: sendMessage("进入自定义触发器")
-        state detach ~
+  action: |
+    def main() {
+      // 状态加载时执行一次，可自行注册 listener
+    }
+    def onStateAttach() {
+      tell("眩晕层数增加")
+    }
+    def onStateDetach() {
+      tell("眩晕层数减少")
+    }
+    def onStateMount() {
+      tell("首次获得眩晕")
+    }
+    def onStateClose() {
+      tell("完全解除眩晕")
+    }
+    def onStateEnd() {
+      tell("眩晕自然结束")
+    }

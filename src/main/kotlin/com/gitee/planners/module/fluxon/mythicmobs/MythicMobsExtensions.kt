@@ -10,11 +10,13 @@ import org.tabooproject.fluxon.runtime.Type
 import org.tabooproject.fluxon.runtime.java.Export
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
+import taboolib.common.Requires
 
 /**
  * MythicMobs 集成扩展
  * 使用方式: import mythic; mythic.spawnMob("SkeletonKing", location)
  */
+@Requires(classes = ["io.lumine.mythic.bukkit.MythicBukkit"])
 object MythicMobsExtensions {
 
     @Awake(LifeCycle.LOAD)

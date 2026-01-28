@@ -19,7 +19,7 @@ action: |
     let x = &rectX[idx]
     let z = &rectZ[idx]
 
-    sender :: sendMessage("idx=${idx},x=${x}, z=${z}")
+    tell("idx=${idx},x=${x}, z=${z}")
 
     # 检查是否到达最后一个索引
     if idx == 3 {

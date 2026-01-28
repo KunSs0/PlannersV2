@@ -19,11 +19,11 @@ __option__:
       - "攻击力 +${10 * &level}"
 action: |
   fn main() {
-    sender :: sendMessage("技能释放成功")
+    tell("技能释放成功")
     "wait" :: delay("1.5s")
     sender :: setCooldown(skill, 200)
   }
 
   fn handleHit() {
-    sender :: sendMessage("on hit ${&target}")
+    tell("on hit ${&target}")
   }

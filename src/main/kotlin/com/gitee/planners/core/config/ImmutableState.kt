@@ -1,8 +1,8 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.module.fluxon.FluxonTrigger
+import com.gitee.planners.module.fluxon.FluxonScriptCache
+import org.tabooproject.fluxon.parser.ParsedScript
 import taboolib.library.configuration.ConfigurationSection
-import taboolib.module.configuration.util.mapSection
 
 class ImmutableState(val config: ConfigurationSection) : State {
 
@@ -16,16 +16,7 @@ class ImmutableState(val config: ConfigurationSection) : State {
 
     override val isStatic: Boolean = config.getBoolean("static", false)
 
-    override val triggers: Map<String, State.Trigger> = config.mapSection("trigger") {
-        val triggerId: String = it.name
-        val listen: String = it.getString("listen", it.name)!!
-        val action = it.getString("action", "")!!
-        val async = it.getBoolean("async", false)
-
-        State.Trigger(
-            id = triggerId,
-            listen = listen,
-            action = FluxonTrigger.of(triggerId, listen, action, async)
-        )
+    override val action: ParsedScript? = config.getString("action")?.let { actionStr ->
+        if (actionStr.isBlank()) null else FluxonScriptCache.getOrParse(actionStr)
     }
 }

@@ -9,11 +9,13 @@ import org.tabooproject.fluxon.runtime.java.Export
 import org.tabooproject.fluxon.runtime.java.Optional
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
+import taboolib.common.Requires
 
 /**
  * GermPlugin 集成扩展
  * 使用方式: import germ; germ.playModel(player, "model_id")
  */
+@Requires(classes = ["com.germ.germplugin.GermPlugin"])
 object GermPluginExtensions {
 
     @Awake(LifeCycle.LOAD)

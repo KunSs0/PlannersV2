@@ -10,10 +10,12 @@ import org.tabooproject.fluxon.runtime.java.Export
 import org.tabooproject.fluxon.runtime.java.Optional
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
+import taboolib.common.Requires
 
 /**
  * 经济系统扩展 (Vault Economy)
  */
+@Requires(classes = ["net.milkbowl.vault.economy.Economy"])
 object EconomyExtensions {
 
     @Awake(LifeCycle.LOAD)

@@ -2,9 +2,6 @@ package com.gitee.planners.core.skill.script
 
 import com.gitee.planners.api.event.script.ScriptCustomTriggerEvent
 import com.gitee.planners.api.job.target.ProxyTarget
-import com.gitee.planners.core.config.State
-import com.gitee.planners.core.skill.entity.state.ScriptCallbackImpl
-import com.gitee.planners.core.skill.entity.state.ScriptCustomCallbackImpl
 
 object ScriptCustomTrigger : ScriptBukkitEventHolder<ScriptCustomTriggerEvent>() {
 
@@ -15,9 +12,4 @@ object ScriptCustomTrigger : ScriptBukkitEventHolder<ScriptCustomTriggerEvent>()
     override fun getSender(event: ScriptCustomTriggerEvent): ProxyTarget<*>? {
         return event.sender
     }
-
-    override fun getAssignCallback(state: State, trigger: State.Trigger): ScriptCallbackImpl<ScriptCustomTriggerEvent> {
-        return ScriptCustomCallbackImpl(state, trigger)
-    }
-
 }

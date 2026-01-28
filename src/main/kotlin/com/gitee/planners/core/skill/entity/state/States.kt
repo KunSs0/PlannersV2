@@ -11,7 +11,9 @@ import com.gitee.planners.core.config.State
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
 import com.gitee.planners.core.skill.script.ScriptCallback
 import com.gitee.planners.core.skill.script.ScriptEventLoader
+import com.gitee.planners.module.fluxon.FluxonScriptCache
 import org.bukkit.event.Event
+import org.tabooproject.fluxon.parser.ParsedScript
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.Schedule
@@ -21,9 +23,25 @@ import taboolib.common.platform.function.warning
 object States {
 
     /**
+     * 内置事件函数名映射
+     */
+    private val EVENT_FUNC_MAPPING = mapOf(
+        "state attach" to "onStateAttach",
+        "state detach" to "onStateDetach",
+        "state mount" to "onStateMount",
+        "state close" to "onStateClose",
+        "state end" to "onStateEnd"
+    )
+
+    /**
      * 正在处理的携带状态实体, 实体的状态发生改变并不会从缓存中移除, 需要在适当的时候手动移除
      */
     private val registryCarryStateTarget = mutableListOf<ProxyTarget.Entity<*>>()
+
+    /**
+     * 每个状态注册的回调列表（用于卸载）
+     */
+    private val stateCallbacks = mutableMapOf<State, MutableList<Pair<ScriptBukkitEventHolder<*>, ScriptCallback<*>>>>()
 
     /**
      * 初始化所有状态
@@ -81,8 +99,6 @@ object States {
         if (target !in registryCarryStateTarget) {
             registryCarryStateTarget.add(target)
         }
-
-
     }
 
     /**
@@ -91,17 +107,12 @@ object States {
      * @param state 状态
      */
     private fun unload(state: State) {
-        for (trigger in state.triggers.values) {
-            val holder = ScriptEventLoader.getHolder(trigger.listen) as? ScriptBukkitEventHolder<Event>
-            if (holder == null) {
-                continue
-            }
-
-            val callback = holder.getCallback(trigger.id)
-            if (callback != null) {
-                holder.unregister(callback)
-            }
+        // 注销所有回调
+        stateCallbacks[state]?.forEach { (holder, callback) ->
+            @Suppress("UNCHECKED_CAST")
+            (holder as ScriptBukkitEventHolder<Event>).unregister(callback as ScriptCallback<Event>)
         }
+        stateCallbacks.remove(state)
     }
 
     /**
@@ -110,15 +121,59 @@ object States {
      * @param state 状态
      */
     private fun load(state: State) {
-        for (trigger in state.triggers.values) {
+        val script = state.action ?: return
 
-            val holder = ScriptEventLoader.getHolder(trigger.listen)
-            if (holder == null) {
-                warning("Unknown script event: ${trigger.listen} (state: ${state.id}, trigger: ${trigger.listen})")
+        stateCallbacks[state] = mutableListOf()
+
+        // 创建临时环境执行 main() 函数（如果存在）
+        val initEnv = script.newEnvironment()
+        try {
+            script.eval(initEnv)
+            // 尝试调用 main()
+            try {
+                val mainCall = FluxonScriptCache.getOrParse("main()")
+                mainCall.eval(initEnv)
+            } catch (_: Exception) {
+                // main() 不存在，忽略
+            }
+        } catch (e: Exception) {
+            warning("Failed to initialize state script: ${state.id}")
+            e.printStackTrace()
+            return
+        }
+
+        // 检测并注册内置事件回调
+        for ((eventName, funcName) in EVENT_FUNC_MAPPING) {
+            // 检测函数是否存在
+            if (!hasFunctionDefined(script, funcName)) {
                 continue
             }
 
-            holder.register(state, trigger)
+            val holder = ScriptEventLoader.getHolder(eventName) as? ScriptBukkitEventHolder<Event>
+            if (holder == null) {
+                warning("Unknown script event: $eventName (state: ${state.id}, func: $funcName)")
+                continue
+            }
+
+            val callback = ScriptCallbackImpl<Event>(state, funcName, script)
+            holder.register(callback)
+            stateCallbacks[state]!!.add(holder to callback)
+        }
+    }
+
+    /**
+     * 检测脚本中是否定义了指定函数
+     */
+    private fun hasFunctionDefined(script: ParsedScript, funcName: String): Boolean {
+        return try {
+            val env = script.newEnvironment()
+            script.eval(env)
+            // 尝试解析函数调用，如果函数不存在会抛异常
+            val checkScript = FluxonScriptCache.getOrParse("$funcName()")
+            checkScript.eval(env)
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
@@ -134,5 +189,4 @@ object States {
         }
         ScriptCustomTriggerEvent(sender, name).call()
     }
-
 }

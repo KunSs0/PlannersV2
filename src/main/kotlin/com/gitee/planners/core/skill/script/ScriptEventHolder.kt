@@ -1,7 +1,6 @@
 package com.gitee.planners.core.skill.script
 
 import com.gitee.planners.api.job.target.ProxyTarget
-import com.gitee.planners.core.config.State
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 
 interface ScriptEventHolder<T> {
@@ -43,14 +42,6 @@ interface ScriptEventHolder<T> {
      * @param id 脚本id
      */
     fun getCallback(id: String): ScriptCallback<T>?
-
-    /**
-     * 注册监听器
-     *
-     * @param state 状态
-     * @param trigger 触发器
-     */
-    fun register(state: State, trigger: State.Trigger)
 
     /**
      * 注册监听器

@@ -27,7 +27,13 @@ object FluxonScriptCache {
      * @return 解析后的脚本
      */
     fun getOrParse(source: String): ParsedScript {
-        return cache.computeIfAbsent(source) { Fluxon.parse(it) }
+        return cache.computeIfAbsent(source) {
+            try {
+                Fluxon.parse(it)
+            } catch (e: Exception) {
+                throw RuntimeException("Failed to parse script: $it", e)
+            }
+        }
     }
 
     /**
