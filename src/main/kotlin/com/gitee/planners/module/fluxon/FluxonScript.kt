@@ -4,7 +4,7 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.config.ImmutableSkill
-import com.gitee.planners.module.fluxon.context.SkillContext
+import com.gitee.planners.core.skill.context.SkillContext
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.tabooproject.fluxon.parser.ParsedScript
