@@ -2,10 +2,10 @@ money:
   name: '金币'
   action:
     # 余额查询
-    hook: sender :: getBalance()
+    hook: getBalance()
     # 余额提取
-    withdraw: sender :: takeBalance(&arg)
+    withdraw: takeBalance(&arg)
     # 余额存入
-    deposit: sender :: giveBalance(&arg)
+    deposit: giveBalance(&arg)
     # 余额设置
-    set: sender :: setBalance(&arg)
+    set: setBalance(&arg)

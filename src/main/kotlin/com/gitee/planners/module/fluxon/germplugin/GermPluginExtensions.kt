@@ -6,6 +6,7 @@ import org.bukkit.entity.Player
 import org.tabooproject.fluxon.runtime.FunctionSignature
 import org.tabooproject.fluxon.runtime.Type
 import org.tabooproject.fluxon.runtime.java.Export
+import org.tabooproject.fluxon.runtime.java.Optional
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 
@@ -23,34 +24,37 @@ object GermPluginExtensions {
         }
         runtime.exportRegistry.registerClass(GermObject::class.java, "pl:germ")
     }
-}
 
-object GermObject {
-    @JvmField
-    val TYPE: Type = Type.fromClass(GermObject::class.java)
 
-    @Export
-    fun playModel(player: Player, model: String) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp model cast ${player.name} $model")
+    object GermObject {
+
+        @JvmField
+        val TYPE: Type = Type.fromClass(GermObject::class.java)
+
+        @Export
+        fun playModel(model: String, @Optional player: Player) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp model cast ${player.name} $model")
+        }
+
+        @Export
+        fun stopModel(model: String, @Optional player: Player) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp model stop ${player.name} $model")
+        }
+
+        @Export
+        fun playEffect(effect: String, @Optional player: Player) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp effect spawn ${player.name} $effect")
+        }
+
+        @Export
+        fun stopEffect(effect: String, @Optional player: Player) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp effect stop ${player.name} $effect")
+        }
+
+        @Export
+        fun playSound(sound: String, @Optional player: Player) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp sound play ${player.name} $sound player")
+        }
     }
 
-    @Export
-    fun stopModel(player: Player, model: String) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp model stop ${player.name} $model")
-    }
-
-    @Export
-    fun playEffect(player: Player, effect: String) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp effect spawn ${player.name} $effect")
-    }
-
-    @Export
-    fun stopEffect(player: Player, effect: String) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp effect stop ${player.name} $effect")
-    }
-
-    @Export
-    fun playSound(player: Player, sound: String) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gp sound play ${player.name} $sound player")
-    }
 }
