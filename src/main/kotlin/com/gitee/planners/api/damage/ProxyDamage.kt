@@ -26,7 +26,7 @@ class ProxyDamage private constructor(
 
         // 设置击杀者标记
         if (source != null && source != target && target.health <= finalDamage) {
-            target.setMeta("@killer", source)
+            target.setMeta("killer", source)
         }
 
         // 执行伤害

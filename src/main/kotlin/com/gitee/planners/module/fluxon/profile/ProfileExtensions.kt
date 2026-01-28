@@ -39,7 +39,7 @@ object ProfileExtensions {
                 ctx.getTarget()?.let { it.magicPoint += ctx.getInt(0) }
             }
             .function("maxMagicPoint", returns(Type.I).noParams()) { ctx ->
-                ctx.setReturnInt(ctx.getTarget()?.get("@magic.point.max")?.asInt() ?: 0)
+                ctx.setReturnInt(ctx.getTarget()?.get("magic.point.max")?.asInt() ?: 0)
             }
             .function("job", returns(Type.STRING).noParams()) { ctx ->
                 ctx.setReturnRef(ctx.getTarget()?.route?.getJob()?.id)

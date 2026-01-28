@@ -31,7 +31,7 @@ state attach <stateId> [duration <-1>] [refresh <true>] [at <目标容器>]
 state detach <stateId|~> [layer <1>] [at <目标容器>]
 ```
 
-- `stateId` 或 `~`：`~` 会优先读取脚本变量 `@State`，否则解析文本。
+- `stateId` 或 `~`：`~` 会优先读取脚本变量 `state`，否则解析文本。
 - `layer`：要移除的层数，默认 `1`；传入 `999` 表示一次性清空。
 - 执行 `CapableState.detachState`，触发 `EntityStateEvent.Detach`，当层数归零时额外触发 `EntityStateEvent.Close`。
 

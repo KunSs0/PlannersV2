@@ -110,7 +110,7 @@ object ProjectileExtensions {
             val entity = target.instance as? LivingEntity ?: return@forEach
             val projectile = entity.launchProjectile(type.clazz)
             projectile.velocity = projectile.velocity.multiply(speed)
-            projectile.setMeta("@shooter", entity)
+            projectile.setMeta("shooter", entity)
             projectiles.add(projectile)
         }
 
@@ -133,7 +133,7 @@ object ProjectileExtensions {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach
             val projectile = entity.launchProjectile(type.clazz, normalizedDirection.clone().multiply(speed))
-            projectile.setMeta("@shooter", entity)
+            projectile.setMeta("shooter", entity)
             projectiles.add(projectile)
         }
 
@@ -162,8 +162,8 @@ object ProjectileExtensions {
                     .multiply(speed)
 
                 val projectile = shooter.launchProjectile(type.clazz, direction)
-                projectile.setMeta("@shooter", shooter)
-                projectile.setMeta("@target", dest.getBukkitLocation())
+                projectile.setMeta("shooter", shooter)
+                projectile.setMeta("target", dest.getBukkitLocation())
                 projectiles.add(projectile)
             }
         }

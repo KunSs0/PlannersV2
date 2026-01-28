@@ -106,12 +106,12 @@ object States {
         val env = script.newEnvironment()
         env.defineRootVariable("sender", target.instance)
         env.defineRootVariable("event", event)
-        env.defineRootVariable("@State", state)
+        env.defineRootVariable("state", state)
 
         FluxonScriptOptions.create {
             set("sender", target.instance)
             set("event", event)
-            set("@State", state)
+            set("state", state)
         }.applyTo(env)
 
         script.eval(env)

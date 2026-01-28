@@ -211,7 +211,7 @@ object EntityExtensions {
             val entity = world.spawnEntity(loc.getBukkitLocation(), type)
 
             if (duration > 0) {
-                entity.setMeta("@duration", duration)
+                entity.setMeta("duration", duration)
                 submit(delay = duration) {
                     if (entity.isValid) {
                         entity.remove()

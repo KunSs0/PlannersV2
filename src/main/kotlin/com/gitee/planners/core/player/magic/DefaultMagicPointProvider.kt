@@ -23,15 +23,15 @@ class DefaultMagicPointProvider : MagicPointProvider {
     var taskResume: PlatformExecutor.PlatformTask? = null
 
     override fun getPoint(player: Player): Int {
-        return player.plannersTemplate["@magic.point"]?.asInt() ?: 0
+        return player.plannersTemplate["magic.point"]?.asInt() ?: 0
     }
 
     override fun setPoint(player: Player, magicPoint: Int) {
-        player.plannersTemplate["@magic.point"] = metadataValue(minOf(magicPoint, getPointInUpperLimit(player)), -1)
+        player.plannersTemplate["magic.point"] = metadataValue(minOf(magicPoint, getPointInUpperLimit(player)), -1)
     }
 
     override fun getPointInUpperLimit(player: Player): Int {
-        return player.plannersTemplate["@magic.point.max"]?.asInt() ?: 0
+        return player.plannersTemplate["magic.point.max"]?.asInt() ?: 0
     }
 
     fun close() {
@@ -41,7 +41,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     fun setPointInUpperLimit(player: Player, magicPoint: Int) {
-        player.plannersTemplate["@magic.point.max"] = metadataValue(magicPoint, -1)
+        player.plannersTemplate["magic.point.max"] = metadataValue(magicPoint, -1)
     }
 
     init {

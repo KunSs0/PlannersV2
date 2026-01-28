@@ -122,7 +122,7 @@ object AttributePlusExtensions {
         data.operationAttribute(
             AttributeAPI.getAttributeSource(attributes.split(",")),
             AttributeSource.OperationType.ADD,
-            "@planners_skill"
+            "planners_skill"
         )
 
         var totalDamage = 0.0
@@ -146,7 +146,7 @@ object AttributePlusExtensions {
                     val finalDamage = handle.getDamage(sender)
 
                     if (finalDamage > entity.health) {
-                        entity.setMeta("@killer", sender)
+                        entity.setMeta("killer", sender)
                     }
 
                     handle.sendAttributeMessage()
@@ -168,7 +168,7 @@ object AttributePlusExtensions {
                 }
             }
 
-        data.takeApiAttribute("@planners_skill")
+        data.takeApiAttribute("planners_skill")
         return totalDamage
     }
 }
