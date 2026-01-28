@@ -9,6 +9,11 @@ database:
     table: planners_v2
 
 settings:
+  # 自定义伤害类型（防止拼写错误）
+  damage-causes:
+    - SKILL
+    - ATTRIBUTE
+    - MYTHIC
   placeholder:
     # 使用模式, script, literal
     use: script

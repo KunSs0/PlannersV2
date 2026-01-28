@@ -1,5 +1,6 @@
 package com.gitee.planners.module.compat.mythic
 
+import com.gitee.planners.api.damage.DamageCause
 import com.gitee.planners.api.event.player.PlayerDamageEntityEvent
 import com.gitee.planners.api.job.target.ProxyTarget
 import io.lumine.mythic.bukkit.MythicBukkit
@@ -58,7 +59,7 @@ object MythicMobDamageHandler {
         info("MythicMobDamageHandler ")
         info(" isEnable: $MythicMobsLoader.isEnable")
         info(" damager: ${e.player}")
-        if (MythicMobsLoader.isEnable && e.cause == EntityDamageEvent.DamageCause.CUSTOM) {
+        if (MythicMobsLoader.isEnable && e.cause == DamageCause.of(EntityDamageEvent.DamageCause.CUSTOM)) {
             // v4
             if (MythicMobsLoader.version[0] == 4) {
                 processThreatUpdateV4(e.player,e.entity,e.damage)

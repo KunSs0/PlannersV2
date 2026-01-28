@@ -1,5 +1,6 @@
 package com.gitee.planners.api
 
+import com.gitee.planners.api.damage.DamageCause
 import com.gitee.planners.core.config.*
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
@@ -45,11 +46,12 @@ object Registries {
     }
 
     fun handleReload() {
+        DamageCause.reload()
         AutoReloadable.onReload()
     }
 
     fun init() {
-        // ...
+        DamageCause.reload()
     }
 
 }

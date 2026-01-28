@@ -28,6 +28,7 @@ object MythicStateHandler {
                 "plstateattach", "pl-state-attach" -> event.register(MythicStateAttachMechanic(event.config))
                 "plstatedetach", "pl-state-detach" -> event.register(MythicStateDetachMechanic(event.config))
                 "plstatecustomtrigger", "pl-state-customtrigger" -> event.register(MythicStateCustomTriggerMechanic(event.config))
+                "pldamage", "pl-damage" -> event.register(MythicDamageMechanic(event.config))
             }
         }
     }
