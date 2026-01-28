@@ -1,12 +1,9 @@
 package com.gitee.planners.module.fluxon.velocity
 
 import com.gitee.planners.module.fluxon.FluxonScriptCache
+import com.gitee.planners.module.fluxon.registerFunction
 import org.bukkit.entity.Entity
 import org.bukkit.util.Vector
-import org.tabooproject.fluxon.runtime.FunctionSignature
-import org.tabooproject.fluxon.runtime.Type
-import org.tabooproject.fluxon.runtime.java.Export
-import org.tabooproject.fluxon.runtime.java.Optional
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 
@@ -16,32 +13,30 @@ import taboolib.common.platform.Awake
 object VelocityExtensions {
 
     @Awake(LifeCycle.LOAD)
-    private fun init() {
+    fun init() {
         val runtime = FluxonScriptCache.runtime
-        runtime.registerFunction("pl:velocity", "velocity", FunctionSignature.returns(Type.OBJECT).noParams()) { ctx ->
-            ctx.setReturnRef(VelocityObject)
-        }
-        runtime.exportRegistry.registerClass(VelocityObject::class.java, "pl:velocity")
-    }
 
-    object VelocityObject {
-
-        @JvmField
-        val TYPE: Type = Type.fromClass(VelocityObject::class.java)
-
-        @Export
-        fun set(x: Double, y: Double, z: Double, @Optional entity: Entity) {
+        runtime.registerFunction("setVelocity", listOf(4)) { ctx ->
+            val x = ctx.getAsDouble(0)
+            val y = ctx.getAsDouble(1)
+            val z = ctx.getAsDouble(2)
+            val entity = ctx.getRef(3) as? Entity ?: return@registerFunction null
             entity.velocity = Vector(x, y, z)
+            null
         }
 
-        @Export
-        fun add(x: Double, y: Double, z: Double, @Optional entity: Entity) {
+        runtime.registerFunction("addVelocity", listOf(4)) { ctx ->
+            val x = ctx.getAsDouble(0)
+            val y = ctx.getAsDouble(1)
+            val z = ctx.getAsDouble(2)
+            val entity = ctx.getRef(3) as? Entity ?: return@registerFunction null
             entity.velocity = entity.velocity.add(Vector(x, y, z))
+            null
         }
 
-        @Export
-        fun get(@Optional entity: Entity): Vector {
-            return entity.velocity
+        runtime.registerFunction("getVelocity", listOf(1)) { ctx ->
+            val entity = ctx.getRef(0) as? Entity ?: return@registerFunction Vector()
+            entity.velocity
         }
     }
 }

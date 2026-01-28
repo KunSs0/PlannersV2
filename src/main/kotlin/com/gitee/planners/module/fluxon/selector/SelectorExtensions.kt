@@ -1,13 +1,10 @@
 package com.gitee.planners.module.fluxon.selector
 
 import com.gitee.planners.module.fluxon.FluxonScriptCache
+import com.gitee.planners.module.fluxon.registerFunction
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.util.Vector
-import org.tabooproject.fluxon.runtime.FunctionSignature
-import org.tabooproject.fluxon.runtime.Type
-import org.tabooproject.fluxon.runtime.java.Export
-import org.tabooproject.fluxon.runtime.java.Optional
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import kotlin.math.abs
@@ -18,43 +15,42 @@ import kotlin.math.abs
 object SelectorExtensions {
 
     @Awake(LifeCycle.LOAD)
-    private fun init() {
+    fun init() {
         val runtime = FluxonScriptCache.runtime
-        runtime.registerFunction("pl:selector", "selector", FunctionSignature.returns(Type.OBJECT).noParams()) { ctx ->
-            ctx.setReturnRef(SelectorObject)
-        }
-        runtime.exportRegistry.registerClass(SelectorObject::class.java, "pl:selector")
-    }
 
-    object SelectorObject {
+        runtime.registerFunction("selectRectangle", listOf(4)) { ctx ->
+            val location = ctx.getRef(0) as? Location ?: return@registerFunction emptyList<Entity>()
+            val width = ctx.getAsDouble(1)
+            val height = ctx.getAsDouble(2)
+            val length = ctx.getAsDouble(3)
 
-        @JvmField
-        val TYPE: Type = Type.fromClass(SelectorObject::class.java)
-
-        @Export
-        fun rectangle(location: Location, width: Double, height: Double, length: Double): List<Entity> {
             val halfWidth = width / 2.0
             val halfHeight = height / 2.0
             val halfLength = length / 2.0
 
-            return location.world?.entities?.filter { entity ->
+            location.world?.entities?.filter { entity ->
                 val loc = entity.location
                 abs(loc.x - location.x) <= halfWidth &&
                 abs(loc.y - location.y) <= halfHeight &&
                 abs(loc.z - location.z) <= halfLength
-            } ?: emptyList()
+            } ?: emptyList<Entity>()
         }
 
-        @Export
-        fun sphere(location: Location, radius: Double): List<Entity> {
+        runtime.registerFunction("selectSphere", listOf(2)) { ctx ->
+            val location = ctx.getRef(0) as? Location ?: return@registerFunction emptyList<Entity>()
+            val radius = ctx.getAsDouble(1)
             val radiusSquared = radius * radius
-            return location.world?.entities?.filter { entity ->
+
+            location.world?.entities?.filter { entity ->
                 entity.location.distanceSquared(location) <= radiusSquared
-            } ?: emptyList()
+            } ?: emptyList<Entity>()
         }
 
-        @Export
-        fun line(location: Location, distance: Double, @Optional direction: Vector?): List<Entity> {
+        runtime.registerFunction("selectLine", listOf(2, 3)) { ctx ->
+            val location = ctx.getRef(0) as? Location ?: return@registerFunction emptyList<Entity>()
+            val distance = ctx.getAsDouble(1)
+            val direction = if (ctx.arguments.size > 2) ctx.getRef(2) as? Vector else null
+
             val dir = direction ?: location.direction
             val normalizedDir = dir.clone().normalize()
             val entities = mutableListOf<Entity>()
@@ -71,7 +67,7 @@ object SelectorExtensions {
                 }
             }
 
-            return entities
+            entities
         }
     }
 }
