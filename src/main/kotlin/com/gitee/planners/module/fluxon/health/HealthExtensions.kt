@@ -1,59 +1,54 @@
-package com.gitee.planners.module.fluxon.skill
+package com.gitee.planners.module.fluxon.health
 
 import com.gitee.planners.api.job.target.LeastType
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import com.gitee.planners.module.fluxon.getTargetsArg
 import com.gitee.planners.module.fluxon.registerFunction
-import com.gitee.planners.module.fluxon.resolveLivingEntity
 import org.bukkit.entity.LivingEntity
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
-import taboolib.platform.util.setMeta
 
 /**
- * 技能相关全局函数
+ * 生命值操作扩展
  */
-object SkillCommands {
+object HealthExtensions {
 
     @Awake(LifeCycle.LOAD)
-    fun init() {
+    private fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        // damage(amount, [targets]) - 对目标造成伤害
-        runtime.registerFunction("damage", listOf(1, 2)) { ctx ->
-            val amount = ctx.getAsDouble(0)
-            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
-            targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
-                (target.instance as? LivingEntity)?.damage(amount)
-            }
-            null
-        }
-
-        // damageBy(amount, source, [targets]) - 以来源对目标造成伤害
-        runtime.registerFunction("damageBy", listOf(2, 3)) { ctx ->
-            val amount = ctx.getAsDouble(0)
-            val source = ctx.getRef(1)
-            val targets = ctx.getTargetsArg(2, LeastType.SENDER)
-            val killer = resolveLivingEntity(source)
-            targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
-                val entity = target.instance as? LivingEntity ?: return@forEach
-                if (killer != null && killer != entity && entity.health <= amount) {
-                    entity.setMeta("@killer", killer)
-                }
-                entity.damage(amount)
-            }
-            null
-        }
-
-        // heal(amount, [targets]) - 治疗目标
-        runtime.registerFunction("heal", listOf(1, 2)) { ctx ->
+        // healthAdd(amount, [targets]) - 增加生命值
+        runtime.registerFunction("healthAdd", listOf(1, 2)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
                 val entity = target.instance as? LivingEntity ?: return@forEach
                 @Suppress("DEPRECATION")
                 entity.health = (entity.health + amount).coerceAtMost(entity.maxHealth)
+            }
+            null
+        }
+
+        // healthSet(amount, [targets]) - 设置生命值
+        runtime.registerFunction("healthSet", listOf(1, 2)) { ctx ->
+            val amount = ctx.getAsDouble(0)
+            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
+            targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+                val entity = target.instance as? LivingEntity ?: return@forEach
+                @Suppress("DEPRECATION")
+                entity.health = amount.coerceIn(0.0, entity.maxHealth)
+            }
+            null
+        }
+
+        // healthTake(amount, [targets]) - 减少生命值
+        runtime.registerFunction("healthTake", listOf(1, 2)) { ctx ->
+            val amount = ctx.getAsDouble(0)
+            val targets = ctx.getTargetsArg(1, LeastType.SENDER)
+            targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
+                val entity = target.instance as? LivingEntity ?: return@forEach
+                entity.health = (entity.health - amount).coerceAtLeast(0.0)
             }
             null
         }

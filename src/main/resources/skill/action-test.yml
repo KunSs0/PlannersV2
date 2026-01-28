@@ -1,0 +1,28 @@
+__option__:
+  name: "批量操作测试"
+
+action: |
+  def main() {
+    // 测试默认 sender (不传 targets，使用 LeastType.SENDER)
+    damage(10)
+    heal(5)
+
+    // 使用 finder 链式选择器选择目标
+    targets = finder()::range(8)::excludeType("player")::limit(5)::build()
+    damage(20, &targets)
+
+    // 测试药水效果 (默认 sender)
+    potion("SPEED", 1, 200)
+
+    // 测试速度 (指定目标)
+    velocityAdd(0, 1, 0, &targets)
+
+    // 测试状态
+    freeze(100, &targets)
+    fire(60, &targets)
+
+    // 测试声音 (默认 sender)
+    sound("ENTITY_PLAYER_LEVELUP", 1.0, 1.0)
+
+    tell("技能执行完毕")
+  }

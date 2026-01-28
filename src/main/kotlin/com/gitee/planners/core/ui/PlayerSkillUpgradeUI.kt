@@ -5,7 +5,6 @@ import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.module.fluxon.FluxonScript
-import com.gitee.planners.module.fluxon.FluxonScript.Companion.getNow
 import com.gitee.planners.api.template.ProfileOperator
 import com.gitee.planners.api.template.ProfileOperatorImpl
 import com.gitee.planners.core.config.ImmutableSkill
