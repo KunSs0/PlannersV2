@@ -6,13 +6,32 @@ import com.gitee.planners.core.config.ImmutableRouter
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
 import taboolib.common.platform.command.*
+import taboolib.common5.cint
 
+/**
+ * <player> 风格命令
+ */
 fun with(block: ProxyCommandSender.(player: Player) -> Unit) = subCommand {
     dynamic("player") {
         suggestPlayers()
         execute<ProxyCommandSender> { sender, ctx, _ ->
             val player = ctx.player("player").castSafely<Player>() ?: return@execute
             block(sender, player)
+        }
+    }
+}
+
+/**
+ * <player> <value> 风格命令
+ */
+fun withValue(block: ProxyCommandSender.(player: Player, value: Int) -> Unit) = subCommand {
+    dynamic("player") {
+        suggestPlayers()
+        dynamic("value") {
+            execute<ProxyCommandSender> { sender, ctx, argument ->
+                val player = ctx.player("player").castSafely<Player>() ?: return@execute
+                block(sender, player, argument.cint)
+            }
         }
     }
 }
