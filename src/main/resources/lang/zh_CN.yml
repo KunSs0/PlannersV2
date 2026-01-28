@@ -1,23 +1,29 @@
-player-route-exists: "&3&l< &b&l｡◕‿◕｡&3&l > &f您已经选择了{0}职业，无法重复选择"
-player-route-selected: '&3&l< &b&l｡◕‿◕｡&3&l > &f选择 {0} 职业'
-player-route-clear: '&3&l< &b&l｡◕‿◕｡&3&l > &f清空职业成功'
-player-route-invalid: '&3&l< &b&l｡◕‿◕｡&3&l > &c还未选择职业'
+# ==================== 职业系统 ====================
+player-route-exists: "&8[&6✦&8] &c您已选择 {0} 职业，无法重复选择"
+player-route-selected: "&8[&6✦&8] &a成功选择 {0} 职业"
+player-route-clear: "&8[&6✦&8] &f已清空职业"
+player-route-invalid: "&8[&6✦&8] &c您尚未选择职业"
 
-player-transfer-invalid: '&3&l< &b&l｡◕‿◕｡&3&l > &f转职条件不满足,无法转职'
-player-transfer-success: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功转职 {0}'
+# ==================== 转职系统 ====================
+player-transfer-invalid: "&8[&6✦&8] &c转职条件不满足，无法转职"
+player-transfer-success: "&8[&6✦&8] &a成功转职为 {0}"
 
-command-experience-add: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 添加 {1} 经验'
-command-experience-set: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 设置 {1} 经验'
-command-experience-take: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 减少 {1} 经验'
+# ==================== 经验管理 ====================
+command-experience-add: "&8[&6✦&8] &f已为 {0} 添加 &e{1} &f经验"
+command-experience-set: "&8[&6✦&8] &f已将 {0} 经验设置为 &e{1}"
+command-experience-take: "&8[&6✦&8] &f已为 {0} 扣除 &e{1} &f经验"
 
-command-level-add: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 添加 {1} 等级'
-command-level-set: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 设置 {1} 等级'
-command-level-take: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 减少 {1} 等级'
+# ==================== 等级管理 ====================
+command-level-add: "&8[&6✦&8] &f已为 {0} 添加 &e{1} &f级"
+command-level-set: "&8[&6✦&8] &f已将 {0} 等级设置为 &e{1}"
+command-level-take: "&8[&6✦&8] &f已为 {0} 扣除 &e{1} &f级"
 
-command-magicpoint-add: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 添加 {1} 法力值'
-command-magicpoint-set: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 设置 {1} 法力值'
-command-magicpoint-take: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 减少 {1} 法力值'
-command-magicpoint-reset: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功为 {0} 重置法力值'
+# ==================== 法力值管理 ====================
+command-magicpoint-add: "&8[&6✦&8] &f已为 {0} 添加 &b{1} &f法力值"
+command-magicpoint-set: "&8[&6✦&8] &f已将 {0} 法力值设置为 &b{1}"
+command-magicpoint-take: "&8[&6✦&8] &f已为 {0} 扣除 &b{1} &f法力值"
+command-magicpoint-reset: "&8[&6✦&8] &f已重置 {0} 的法力值"
 
-skill-upgrade-failed: '&3&l< &b&l｡◕‿◕｡&3&l > &c技能升级失败, 请检查技能等级是否达到上限或者是否满足升级条件'
-skill-upgrade-success: '&3&l< &b&l｡◕‿◕｡&3&l > &f成功升级技能 {0}'
+# ==================== 技能系统 ====================
+skill-upgrade-failed: "&8[&6✦&8] &c技能升级失败，等级已达上限或条件不满足"
+skill-upgrade-success: "&8[&6✦&8] &a成功将 {0} 升级"
