@@ -9,14 +9,14 @@ __option__:
       - "技能伤害 ${*damage}"
   variables:
     cooldown: 100
-    damage: 32 * &level + 100
+    damage: 32 * &ctx :: level() + 100
   upgrade:
     condition:
       0-100:
-        money: 100.0 * &level + 32.5
+        money: 100.0 * &ctx :: level() + 32.5
   hook:
     attributes:
-      - "攻击力 +${10 * &level}"
+      - "攻击力 +${10 * &&ctx :: level()}"
 action: |
   def main() {
     tell("技能释放成功")
