@@ -8,7 +8,6 @@ import taboolib.common.platform.Plugin
 import taboolib.common.platform.function.adaptCommandSender
 import taboolib.common.platform.function.info
 import taboolib.common.platform.function.warning
-import taboolib.module.chat.colored
 import taboolib.module.configuration.Config
 import taboolib.module.configuration.ConfigNode
 import taboolib.module.configuration.ConfigNodeTransfer
@@ -18,15 +17,19 @@ import taboolib.platform.BukkitPlugin
 
 object Planners : Plugin() {
 
+    private const val GREEN = "\u001B[32m"
+    private const val YELLOW = "\u001B[33m"
+    private const val RESET = "\u001B[0m"
+
     val LOGO = listOf(
-        "&a┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "&a┃&e_____  _                                  __      _____",
-        "&a┃&e|  __ \\| |                                 \\ \\    / /__ \\",
-        "&a┃&e| |__) | | __ _ _ __  _ __   ___ _ __ ___   \\ \\  / /   ) |",
-        "&a┃&e|  ___/| |/ _` | '_ \\| '_ \\ / _ \\ '__/ __|   \\ \\/ /   / /",
-        "&a┃&e| |    | | (_| | | | | | | |  __/ |  \\__ \\    \\  /   / /_",
-        "&a┃&e|_|    |_|\\__,_|_| |_|_| |_|\\___|_|  |___/     \\/   |____|",
-        "&a┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "$GREEN┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$RESET",
+        "$GREEN┃$YELLOW _____  _                                  __      ____$RESET",
+        "$GREEN┃$YELLOW |  __ \\| |                                 \\ \\    / /__ \\$RESET",
+        "$GREEN┃$YELLOW | |__) | | __ _ _ __  _ __   ___ _ __ ___   \\ \\  / / __) |$RESET",
+        "$GREEN┃$YELLOW |  ___/| |/ _` | '_ \\| '_ \\ / _ \\ '__/ __|   \\ \\/ / |__ <$RESET",
+        "$GREEN┃$YELLOW | |    | | (_| | | | | | | |  __/ |  \\__ \\    \\  /  ___) |$RESET",
+        "$GREEN┃$YELLOW |_|    |_|\\__,_|_| |_|_| |_|\\___|_|  |___/     \\/  |____/$RESET",
+        "$GREEN┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$RESET"
     )
 
     @Config(autoReload = true)
@@ -46,16 +49,16 @@ object Planners : Plugin() {
     }
 
     /**
-     *  _____  _                                  __      _____
+     *  _____  _                                  __      ____
      *  |  __ \| |                                 \ \    / /__ \
-     *  | |__) | | __ _ _ __  _ __   ___ _ __ ___   \ \  / /   ) |
-     *  |  ___/| |/ _` | '_ \| '_ \ / _ \ '__/ __|   \ \/ /   / /
-     *  | |    | | (_| | | | | | | |  __/ |  \__ \    \  /   / /_
-     *  |_|    |_|\__,_|_| |_|_| |_|\___|_|  |___/     \/   |____|
+     *  | |__) | | __ _ _ __  _ __   ___ _ __ ___   \ \  / / __) |
+     *  |  ___/| |/ _` | '_ \| '_ \ / _ \ '__/ __|   \ \/ / |__ <
+     *  | |    | | (_| | | | | | | |  __/ |  \__ \    \  /  ___) |
+     *  |_|    |_|\__,_|_| |_|_| |_|\___|_|  |___/     \/  |____/
      */
     override fun onEnable() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
-        LOGO.colored().forEach(::info)
+        LOGO.forEach(::info)
         Registries.init()
     }
 
