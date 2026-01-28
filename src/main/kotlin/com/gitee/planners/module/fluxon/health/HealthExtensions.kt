@@ -90,6 +90,11 @@ object HealthExtensions {
         }
     }
 
+    /**
+     * 增加目标的生命值（不超过最大值）
+     * @param targets 目标容器
+     * @param amount 增加的生命值数量
+     */
     private fun addHealth(targets: com.gitee.planners.api.job.target.ProxyTargetContainer, amount: Double) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach
@@ -98,6 +103,11 @@ object HealthExtensions {
         }
     }
 
+    /**
+     * 设置目标的生命值（限制在 0 到最大值之间）
+     * @param targets 目标容器
+     * @param amount 目标生命值
+     */
     private fun setHealth(targets: com.gitee.planners.api.job.target.ProxyTargetContainer, amount: Double) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach
@@ -106,6 +116,11 @@ object HealthExtensions {
         }
     }
 
+    /**
+     * 减少目标的生命值（不低于 0，不触发伤害事件）
+     * @param targets 目标容器
+     * @param amount 减少的生命值数量
+     */
     private fun takeHealth(targets: com.gitee.planners.api.job.target.ProxyTargetContainer, amount: Double) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach

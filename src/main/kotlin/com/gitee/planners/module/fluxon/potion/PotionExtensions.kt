@@ -77,6 +77,13 @@ object PotionExtensions {
         }
     }
 
+    /**
+     * 给目标添加药水效果
+     * @param typeName 药水效果类型名称
+     * @param level 效果等级（1=I级）
+     * @param duration 持续时间（tick）
+     * @param targets 目标容器
+     */
     private fun applyPotion(typeName: String, level: Int, duration: Int, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val type = PotionEffectType.getByName(typeName) ?: return
         val effect = PotionEffect(type, duration, level - 1, false, true)
@@ -85,6 +92,11 @@ object PotionExtensions {
         }
     }
 
+    /**
+     * 移除目标的药水效果
+     * @param typeName 药水效果类型名称
+     * @param targets 目标容器
+     */
     private fun removePotion(typeName: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val type = PotionEffectType.getByName(typeName) ?: return
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->

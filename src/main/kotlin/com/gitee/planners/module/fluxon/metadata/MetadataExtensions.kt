@@ -86,6 +86,11 @@ object MetadataExtensions {
         }
     }
 
+    /**
+     * 获取实体的元数据容器
+     * @param entity 目标实体
+     * @return 元数据容器（Player 使用 plannersTemplate，其他使用 EntityMetadataManager）
+     */
     private fun getContainer(entity: Entity) = if (entity is Player) {
         entity.plannersTemplate
     } else {

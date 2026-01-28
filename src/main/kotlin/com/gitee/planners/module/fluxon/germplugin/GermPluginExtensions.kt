@@ -325,6 +325,12 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 播放 GermPlugin 特效
+     * @param name 特效名称
+     * @param index 特效索引 ID
+     * @param targets 目标容器（支持实体和位置）
+     */
     private fun playEffect(name: String, index: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.forEach { target ->
             when (target) {
@@ -345,6 +351,14 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 播放 GermPlugin 声音
+     * @param name 声音名称
+     * @param type 声音类型
+     * @param volume 音量
+     * @param pitch 音调
+     * @param targets 目标容器（支持实体和位置）
+     */
     private fun playGermSound(name: String, type: SoundType, volume: Float, pitch: Float, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.forEach { target ->
             when (target) {
@@ -361,6 +375,13 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 播放 GermPlugin 动画
+     * @param name 动画名称
+     * @param speed 播放速度
+     * @param reverse 是否反向播放
+     * @param targets 目标实体容器
+     */
     private fun playAnimation(name: String, speed: Float, reverse: Boolean, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val animData = AnimDataDTO(name, speed, reverse)
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
@@ -375,6 +396,11 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 停止 GermPlugin 动画
+     * @param name 动画名称
+     * @param targets 目标实体容器
+     */
     private fun stopAnimation(name: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entityId = target.instance.entityId
@@ -388,6 +414,12 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 锁定玩家视角
+     * @param duration 锁定时长（tick，-1 为永久）
+     * @param type 视角类型
+     * @param targets 目标玩家容器
+     */
     private fun lockView(duration: Long, type: ViewType, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val player = target.instance as? Player ?: return@forEach
@@ -395,6 +427,11 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 锁定玩家视线旋转
+     * @param duration 锁定时长（tick，-1 为永久）
+     * @param targets 目标玩家容器
+     */
     private fun lockLook(duration: Long, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val player = target.instance as? Player ?: return@forEach
@@ -402,6 +439,11 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 锁定玩家移动
+     * @param duration 锁定时长（tick，-1 为永久）
+     * @param targets 目标玩家容器
+     */
     private fun lockMove(duration: Long, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val player = target.instance as? Player ?: return@forEach
@@ -409,6 +451,12 @@ object GermPluginExtensions {
         }
     }
 
+    /**
+     * 设置玩家物品槽位冷却
+     * @param slot 物品槽位名称（如 HAND, OFF_HAND, HELMET 等）
+     * @param tick 冷却时长（tick）
+     * @param targets 目标玩家容器
+     */
     private fun setCooldown(slot: String, tick: Int, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val equipment = runCatching {
             taboolib.type.BukkitEquipment.valueOf(slot.uppercase())

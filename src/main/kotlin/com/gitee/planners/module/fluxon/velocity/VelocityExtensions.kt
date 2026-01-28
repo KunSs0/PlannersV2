@@ -148,6 +148,13 @@ object VelocityExtensions {
         }
     }
 
+    /**
+     * 根据目标朝向计算并应用相对速度
+     * @param targets 目标容器
+     * @param x 左右速度（正=右，负=左）
+     * @param y 垂直速度（正=上，负=下）
+     * @param z 前后速度（正=前，负=后）
+     */
     private fun applyVelocityMove(targets: com.gitee.planners.api.job.target.ProxyTargetContainer, x: Double, y: Double, z: Double) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val direction = target.instance.location.direction

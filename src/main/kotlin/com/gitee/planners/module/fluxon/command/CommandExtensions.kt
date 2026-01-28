@@ -82,6 +82,11 @@ object CommandExtensions {
         }
     }
 
+    /**
+     * 以 OP 权限执行命令（临时授予 OP 权限，执行后恢复原状态）
+     * @param cmd 命令字符串（不含前导斜杠）
+     * @param targets 目标玩家容器
+     */
     private fun executeAsOp(cmd: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val player = target.instance as? Player ?: return@forEach

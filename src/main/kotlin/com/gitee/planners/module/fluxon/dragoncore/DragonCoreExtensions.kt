@@ -246,6 +246,15 @@ object DragonCoreExtensions {
         }
     }
 
+    /**
+     * 播放 DragonCore 粒子特效
+     * @param scheme 粒子方案名称
+     * @param x X 偏移量
+     * @param y Y 偏移量
+     * @param z Z 偏移量
+     * @param tile 持续时间
+     * @param targets 目标容器（支持实体和位置）
+     */
     private fun playParticle(scheme: String, x: Double, y: Double, z: Double, tile: Int, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.forEach { target ->
             val id = UUID.randomUUID().toString()
@@ -260,6 +269,16 @@ object DragonCoreExtensions {
         }
     }
 
+    /**
+     * 播放 DragonCore 声音
+     * @param name 声音名称
+     * @param id 声音 ID
+     * @param type 声音类型
+     * @param volume 音量
+     * @param pitch 音调
+     * @param loop 是否循环
+     * @param targets 目标玩家容器
+     */
     private fun playSound(name: String, id: String, type: String, volume: Float, pitch: Float, loop: Boolean, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val player = target.instance as? Player ?: return@forEach
@@ -267,6 +286,12 @@ object DragonCoreExtensions {
         }
     }
 
+    /**
+     * 播放 DragonCore 实体动画
+     * @param name 动画名称
+     * @param transition 过渡时间
+     * @param targets 目标实体容器（仅 LivingEntity 生效）
+     */
     private fun setAnimation(name: String, transition: Int, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach
@@ -274,6 +299,12 @@ object DragonCoreExtensions {
         }
     }
 
+    /**
+     * 移除 DragonCore 实体动画
+     * @param name 动画名称
+     * @param transition 过渡时间
+     * @param targets 目标实体容器
+     */
     private fun removeAnimation(name: String, transition: Int, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach
@@ -281,6 +312,11 @@ object DragonCoreExtensions {
         }
     }
 
+    /**
+     * 同步 DragonCore 占位符到客户端
+     * @param data 占位符数据（空格分隔的键值对，键值用逗号分隔）
+     * @param targets 目标玩家容器
+     */
     private fun syncPlaceholder(data: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val map = data.split(" ").associate {
             val parts = it.split(",")
@@ -292,6 +328,12 @@ object DragonCoreExtensions {
         }
     }
 
+    /**
+     * 删除 DragonCore 占位符缓存
+     * @param name 占位符名称
+     * @param isStartWith 是否使用前缀匹配
+     * @param targets 目标玩家容器
+     */
     private fun deletePlaceholderCache(name: String, isStartWith: Boolean, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val player = target.instance as? Player ?: return@forEach
@@ -299,6 +341,11 @@ object DragonCoreExtensions {
         }
     }
 
+    /**
+     * 执行 DragonCore 实体动画函数
+     * @param function 函数名称
+     * @param targets 目标实体容器
+     */
     private fun executeEntityFunction(function: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach

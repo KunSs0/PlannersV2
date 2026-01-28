@@ -195,6 +195,13 @@ object EntityExtensions {
         }
     }
 
+    /**
+     * 在指定位置生成实体
+     * @param typeName 实体类型名称（如 ZOMBIE, SKELETON）
+     * @param duration 存活时长（tick，-1 表示永久）
+     * @param locations 生成位置容器
+     * @return 生成的实体或实体列表（单个时返回 ProxyTarget，多个时返回 List）
+     */
     private fun spawnEntities(typeName: String, duration: Long, locations: com.gitee.planners.api.job.target.ProxyTargetContainer): Any? {
         val type = runCatching { EntityType.valueOf(typeName.uppercase()) }.getOrNull() ?: return null
         val entities = mutableListOf<Entity>()
@@ -218,6 +225,10 @@ object EntityExtensions {
         return if (entities.size == 1) entities.first().asTarget() else entities.map { it.asTarget() }
     }
 
+    /**
+     * 移除目标容器中的所有实体
+     * @param targets 目标容器
+     */
     private fun removeEntities(targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance
@@ -227,6 +238,13 @@ object EntityExtensions {
         }
     }
 
+    /**
+     * 传送实体到指定坐标（保持世界和朝向不变）
+     * @param x X 坐标
+     * @param y Y 坐标
+     * @param z Z 坐标
+     * @param targets 目标容器
+     */
     private fun teleportEntities(x: Double, y: Double, z: Double, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance
@@ -238,6 +256,11 @@ object EntityExtensions {
         }
     }
 
+    /**
+     * 传送实体到目标位置
+     * @param targets 要传送的实体容器
+     * @param destinations 目标位置容器（使用第一个位置）
+     */
     private fun teleportTo(targets: com.gitee.planners.api.job.target.ProxyTargetContainer, destinations: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val dest = destinations.filterIsInstance<ProxyTarget.Location<*>>().firstOrNull() ?: return
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
@@ -245,6 +268,11 @@ object EntityExtensions {
         }
     }
 
+    /**
+     * 设置实体的 AI 状态
+     * @param enabled 是否启用 AI
+     * @param targets 目标容器（仅 LivingEntity 生效）
+     */
     private fun setEntityAI(enabled: Boolean, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val entity = target.instance as? LivingEntity ?: return@forEach

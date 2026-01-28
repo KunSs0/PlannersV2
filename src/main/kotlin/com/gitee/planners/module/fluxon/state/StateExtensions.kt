@@ -146,6 +146,13 @@ object StateExtensions {
         }
     }
 
+    /**
+     * 挂载状态到目标实体
+     * @param id 状态 ID 字符串
+     * @param duration 持续时间（tick）
+     * @param refresh 是否刷新已有状态时长（true=刷新时长，false=叠加层数）
+     * @param targets 目标容器
+     */
     private fun attachState(id: String, duration: Long, refresh: Boolean, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val state = Registries.STATE.getOrNull(id)
         if (state == null) {
@@ -157,6 +164,12 @@ object StateExtensions {
         }
     }
 
+    /**
+     * 卸载目标实体的状态指定层数
+     * @param id 状态 ID 字符串
+     * @param layer 要卸载的层数
+     * @param targets 目标容器
+     */
     private fun detachState(id: String, layer: Int, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val state = Registries.STATE.getOrNull(id)
         if (state == null) {
@@ -168,6 +181,11 @@ object StateExtensions {
         }
     }
 
+    /**
+     * 完全移除目标实体的状态（清除所有层数）
+     * @param id 状态 ID 字符串
+     * @param targets 目标容器
+     */
     private fun removeState(id: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val state = Registries.STATE.getOrNull(id)
         if (state == null) {
@@ -179,6 +197,12 @@ object StateExtensions {
         }
     }
 
+    /**
+     * 检查目标是否拥有指定状态
+     * @param id 状态 ID 字符串
+     * @param targets 目标容器（检查第一个目标）
+     * @return 是否拥有该状态
+     */
     private fun hasState(id: String, targets: com.gitee.planners.api.job.target.ProxyTargetContainer): Boolean {
         val state = Registries.STATE.getOrNull(id)
         if (state == null) {

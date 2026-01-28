@@ -95,6 +95,13 @@ object ProjectileExtensions {
         }
     }
 
+    /**
+     * 发射投射物（沿实体朝向）
+     * @param typeName 投射物类型名称（如 ARROW, FIREBALL）
+     * @param speed 速度倍率
+     * @param targets 发射源实体容器
+     * @return 生成的投射物列表
+     */
     private fun launchProjectile(typeName: String, speed: Double, targets: com.gitee.planners.api.job.target.ProxyTargetContainer): List<Projectile> {
         val type = ProjectileType.values().find { it.name.equals(typeName, ignoreCase = true) } ?: return emptyList()
         val projectiles = mutableListOf<Projectile>()
@@ -110,6 +117,14 @@ object ProjectileExtensions {
         return projectiles
     }
 
+    /**
+     * 向指定方向发射投射物
+     * @param typeName 投射物类型名称
+     * @param direction 发射方向向量（会被归一化）
+     * @param speed 速度倍率
+     * @param targets 发射源实体容器
+     * @return 生成的投射物列表
+     */
     private fun launchProjectileAt(typeName: String, direction: Vector, speed: Double, targets: com.gitee.planners.api.job.target.ProxyTargetContainer): List<Projectile> {
         val type = ProjectileType.values().find { it.name.equals(typeName, ignoreCase = true) } ?: return emptyList()
         val normalizedDirection = direction.normalize()
@@ -125,6 +140,14 @@ object ProjectileExtensions {
         return projectiles
     }
 
+    /**
+     * 从来源向目标位置发射投射物
+     * @param typeName 投射物类型名称
+     * @param speed 速度倍率
+     * @param sources 发射源实体容器
+     * @param destinations 目标位置容器
+     * @return 生成的投射物列表
+     */
     private fun launchProjectileToward(typeName: String, speed: Double, sources: com.gitee.planners.api.job.target.ProxyTargetContainer, destinations: com.gitee.planners.api.job.target.ProxyTargetContainer): List<Projectile> {
         val type = ProjectileType.values().find { it.name.equals(typeName, ignoreCase = true) } ?: return emptyList()
         val projectiles = mutableListOf<Projectile>()

@@ -129,6 +129,13 @@ object EffectExtensions {
         }
     }
 
+    /**
+     * 在指定位置创建爆炸
+     * @param power 爆炸威力
+     * @param setFire 是否产生火焰
+     * @param breakBlocks 是否破坏方块
+     * @param targets 位置目标容器
+     */
     private fun createExplosion(power: Float, setFire: Boolean, breakBlocks: Boolean, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.Location<*>>().forEach { target ->
             val location = target.getBukkitLocation()

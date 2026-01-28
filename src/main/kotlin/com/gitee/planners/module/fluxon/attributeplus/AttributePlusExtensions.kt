@@ -91,6 +91,14 @@ object AttributePlusExtensions {
         }
     }
 
+    /**
+     * 执行 AttributePlus 属性攻击
+     * @param attributes 临时属性字符串（逗号分隔，如 "物理攻击: 100, 暴击几率: 50"）
+     * @param isolation 是否使用隔离数据（true=创建独立副本，不影响实体原属性）
+     * @param targetsArg 攻击目标容器
+     * @param sourceArg 攻击来源容器
+     * @return 总伤害值
+     */
     private fun executeApAttack(
         attributes: String,
         isolation: Boolean,

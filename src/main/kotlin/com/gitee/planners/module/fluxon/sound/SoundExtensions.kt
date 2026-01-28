@@ -132,6 +132,13 @@ object SoundExtensions {
         }
     }
 
+    /**
+     * 播放原版声音
+     * @param name 声音枚举名称（大写）
+     * @param volume 音量
+     * @param pitch 音调
+     * @param targets 目标玩家容器
+     */
     private fun playSound(name: String, volume: Float, pitch: Float, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         val sound = runCatching { Sound.valueOf(name.uppercase()) }.getOrNull() ?: return
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
@@ -140,6 +147,13 @@ object SoundExtensions {
         }
     }
 
+    /**
+     * 播放资源包自定义声音
+     * @param name 声音 ID（如 custom.skill.fire）
+     * @param volume 音量
+     * @param pitch 音调
+     * @param targets 目标玩家容器
+     */
     private fun playResourceSound(name: String, volume: Float, pitch: Float, targets: com.gitee.planners.api.job.target.ProxyTargetContainer) {
         targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
             val player = target.instance as? Player ?: return@forEach

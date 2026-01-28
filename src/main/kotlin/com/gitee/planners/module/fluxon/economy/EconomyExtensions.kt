@@ -115,6 +115,11 @@ object EconomyExtensions {
         }
     }
 
+    /**
+     * 设置玩家账户余额（通过存取款实现）
+     * @param player 目标玩家
+     * @param amount 目标余额
+     */
     private fun setBalance(player: org.bukkit.entity.Player, amount: Double) {
         val eco = economy ?: return
         val current = eco.getBalance(player)

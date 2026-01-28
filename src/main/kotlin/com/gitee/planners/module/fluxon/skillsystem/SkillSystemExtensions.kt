@@ -47,6 +47,11 @@ object SkillSystemExtensions {
         }
     }
 
+    /**
+     * 解析攻击参数字符串
+     * @param params 参数字符串（格式: "key1=value1,key2=value2"）
+     * @return 参数键值对映射
+     */
     private fun parseAttackParams(params: String): Map<String, String> {
         return params.split(",")
             .mapNotNull { pair ->
