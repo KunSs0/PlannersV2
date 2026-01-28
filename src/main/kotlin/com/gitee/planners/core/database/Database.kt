@@ -21,7 +21,7 @@ interface Database {
 
         val INSTANCE: Database by lazy {
             when (val type = option.get().use.uppercase()) {
-                "LOCAL" -> TODO("Not implemented")
+                "LOCAL" -> DatabaseLocal()
                 "SQL" -> DatabaseSQL()
                 else -> {
                     val event = DatabaseInitEvent(type)
