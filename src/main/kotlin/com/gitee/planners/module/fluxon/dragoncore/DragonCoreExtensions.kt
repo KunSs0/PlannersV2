@@ -36,7 +36,7 @@ object DragonCoreExtensions {
         }
 
         // dcParticle(scheme, x, y, z, tile) - 播放粒子特效，带偏移和时长
-        runtime.registerFunction("dcParticle", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("dcParticle", returns(Type.VOID).params(Type.STRING, Type.D, Type.D, Type.D, Type.I)) { ctx ->
             val scheme = ctx.getString(0) ?: return@registerFunction
             val x = ctx.getAsDouble(1)
             val y = ctx.getAsDouble(2)
@@ -48,7 +48,7 @@ object DragonCoreExtensions {
         }
 
         // dcParticle(scheme, x, y, z, tile, targets) - 播放粒子特效给目标
-        runtime.registerFunction("dcParticle", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("dcParticle", returns(Type.VOID).params(Type.STRING, Type.D, Type.D, Type.D, Type.I, Type.OBJECT)) { ctx ->
             val scheme = ctx.getString(0) ?: return@registerFunction
             val x = ctx.getAsDouble(1)
             val y = ctx.getAsDouble(2)
@@ -68,12 +68,12 @@ object DragonCoreExtensions {
         }
 
         // dcSound(name, id, type, volume, pitch, loop) - 播放声音，全参数
-        runtime.registerFunction("dcSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.STRING, Type.NUMBER, Type.NUMBER, Type.BOOLEAN)) { ctx ->
+        runtime.registerFunction("dcSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.STRING, Type.F, Type.F, Type.BOOLEAN)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val id = ctx.getString(1) ?: UUID.randomUUID().toString()
             val type = ctx.getString(2) ?: "music"
-            val volume = ctx.getAsDouble(3).toFloat()
-            val pitch = ctx.getAsDouble(4).toFloat()
+            val volume = ctx.getFloat(3)
+            val pitch = ctx.getFloat(4)
             val loop = ctx.getBool(5)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             playSound(name, id, type, volume, pitch, loop, targets)
@@ -81,12 +81,12 @@ object DragonCoreExtensions {
         }
 
         // dcSound(name, id, type, volume, pitch, loop, targets) - 播放声音给目标
-        runtime.registerFunction("dcSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.STRING, Type.NUMBER, Type.NUMBER, Type.BOOLEAN, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("dcSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.STRING, Type.F, Type.F, Type.BOOLEAN, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val id = ctx.getString(1) ?: UUID.randomUUID().toString()
             val type = ctx.getString(2) ?: "music"
-            val volume = ctx.getAsDouble(3).toFloat()
-            val pitch = ctx.getAsDouble(4).toFloat()
+            val volume = ctx.getFloat(3)
+            val pitch = ctx.getFloat(4)
             val loop = ctx.getBool(5)
             val targets = ctx.getTargetsArg(6, LeastType.SENDER)
             playSound(name, id, type, volume, pitch, loop, targets)
@@ -102,7 +102,7 @@ object DragonCoreExtensions {
         }
 
         // dcAnimation(name, transition) - 播放实体动画，带过渡
-        runtime.registerFunction("dcAnimation", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("dcAnimation", returns(Type.VOID).params(Type.STRING, Type.I)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val transition = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -111,7 +111,7 @@ object DragonCoreExtensions {
         }
 
         // dcAnimation(name, transition, targets) - 播放目标动画
-        runtime.registerFunction("dcAnimation", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("dcAnimation", returns(Type.VOID).params(Type.STRING, Type.I, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val transition = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(2, LeastType.SENDER)
@@ -128,7 +128,7 @@ object DragonCoreExtensions {
         }
 
         // dcAnimationRemove(name, transition) - 移除实体动画，带过渡
-        runtime.registerFunction("dcAnimationRemove", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("dcAnimationRemove", returns(Type.VOID).params(Type.STRING, Type.I)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val transition = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -137,7 +137,7 @@ object DragonCoreExtensions {
         }
 
         // dcAnimationRemove(name, transition, targets) - 移除目标动画
-        runtime.registerFunction("dcAnimationRemove", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("dcAnimationRemove", returns(Type.VOID).params(Type.STRING, Type.I, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val transition = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(2, LeastType.SENDER)

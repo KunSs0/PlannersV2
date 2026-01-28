@@ -37,9 +37,9 @@ object SoundExtensions {
          * @param name 原版声音名称
          * @param volume 音量（1.0=正常音量，可超过 1.0 增大传播距离）
          */
-        runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.F)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val volume = ctx.getAsDouble(1).toFloat()
+            val volume = ctx.getFloat(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             playSound(name, volume, 1.0f, targets)
             null
@@ -51,10 +51,10 @@ object SoundExtensions {
          * @param volume 音量
          * @param pitch 音调（0.5-2.0，1.0=正常音调）
          */
-        runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.F, Type.F)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val volume = ctx.getAsDouble(1).toFloat()
-            val pitch = ctx.getAsDouble(2).toFloat()
+            val volume = ctx.getFloat(1)
+            val pitch = ctx.getFloat(2)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             playSound(name, volume, pitch, targets)
             null
@@ -67,10 +67,10 @@ object SoundExtensions {
          * @param pitch 音调
          * @param targets 目标玩家
          */
-        runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("sound", returns(Type.VOID).params(Type.STRING, Type.F, Type.F, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val volume = ctx.getAsDouble(1).toFloat()
-            val pitch = ctx.getAsDouble(2).toFloat()
+            val volume = ctx.getFloat(1)
+            val pitch = ctx.getFloat(2)
             val targets = ctx.getTargetsArg(3, LeastType.SENDER)
             playSound(name, volume, pitch, targets)
             null
@@ -92,9 +92,9 @@ object SoundExtensions {
          * @param name 声音 ID
          * @param volume 音量
          */
-        runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.F)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val volume = ctx.getAsDouble(1).toFloat()
+            val volume = ctx.getFloat(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             playResourceSound(name, volume, 1.0f, targets)
             null
@@ -106,10 +106,10 @@ object SoundExtensions {
          * @param volume 音量
          * @param pitch 音调
          */
-        runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.F, Type.F)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val volume = ctx.getAsDouble(1).toFloat()
-            val pitch = ctx.getAsDouble(2).toFloat()
+            val volume = ctx.getFloat(1)
+            val pitch = ctx.getFloat(2)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             playResourceSound(name, volume, pitch, targets)
             null
@@ -122,10 +122,10 @@ object SoundExtensions {
          * @param pitch 音调
          * @param targets 目标玩家
          */
-        runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("soundResource", returns(Type.VOID).params(Type.STRING, Type.F, Type.F, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val volume = ctx.getAsDouble(1).toFloat()
-            val pitch = ctx.getAsDouble(2).toFloat()
+            val volume = ctx.getFloat(1)
+            val pitch = ctx.getFloat(2)
             val targets = ctx.getTargetsArg(3, LeastType.SENDER)
             playResourceSound(name, volume, pitch, targets)
             null

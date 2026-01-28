@@ -30,7 +30,7 @@ object ProjectileExtensions {
         }
 
         // projectile(type, speed) - 发射投射物，指定速度
-        runtime.registerFunction("projectile", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("projectile", returns(Type.OBJECT).params(Type.STRING, Type.D)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val speed = ctx.getAsDouble(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -38,7 +38,7 @@ object ProjectileExtensions {
         }
 
         // projectile(type, speed, targets) - 从目标发射投射物
-        runtime.registerFunction("projectile", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("projectile", returns(Type.OBJECT).params(Type.STRING, Type.D, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val speed = ctx.getAsDouble(1)
             val targets = ctx.getTargetsArg(2, LeastType.SENDER)
@@ -46,7 +46,7 @@ object ProjectileExtensions {
         }
 
         // projectileAt(type, x, y, z, speed) - 向指定方向发射投射物
-        runtime.registerFunction("projectileAt", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("projectileAt", returns(Type.OBJECT).params(Type.STRING, Type.D, Type.D, Type.D, Type.D)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val x = ctx.getAsDouble(1)
             val y = ctx.getAsDouble(2)
@@ -57,7 +57,7 @@ object ProjectileExtensions {
         }
 
         // projectileAt(type, x, y, z, speed, targets) - 从目标向指定方向发射投射物
-        runtime.registerFunction("projectileAt", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("projectileAt", returns(Type.OBJECT).params(Type.STRING, Type.D, Type.D, Type.D, Type.D, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val x = ctx.getAsDouble(1)
             val y = ctx.getAsDouble(2)
@@ -68,7 +68,7 @@ object ProjectileExtensions {
         }
 
         // projectileToward(type, speed) - 向目标发射投射物
-        runtime.registerFunction("projectileToward", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("projectileToward", returns(Type.OBJECT).params(Type.STRING, Type.D)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val speed = ctx.getAsDouble(1)
             val sources = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -77,7 +77,7 @@ object ProjectileExtensions {
         }
 
         // projectileToward(type, speed, sources) - 从来源向目标发射投射物
-        runtime.registerFunction("projectileToward", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("projectileToward", returns(Type.OBJECT).params(Type.STRING, Type.D, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val speed = ctx.getAsDouble(1)
             val sources = ctx.getTargetsArg(2, LeastType.SENDER)
@@ -86,7 +86,7 @@ object ProjectileExtensions {
         }
 
         // projectileToward(type, speed, sources, destinations) - 从来源向目标发射投射物
-        runtime.registerFunction("projectileToward", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER, Type.OBJECT, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("projectileToward", returns(Type.OBJECT).params(Type.STRING, Type.D, Type.OBJECT, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val speed = ctx.getAsDouble(1)
             val sources = ctx.getTargetsArg(2, LeastType.SENDER)

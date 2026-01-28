@@ -106,11 +106,11 @@ object GermPluginExtensions {
         }
 
         // germSound(name, type, volume, pitch) - 播放声音，全参数
-        runtime.registerFunction("germSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("germSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.F, Type.F)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val typeName = ctx.getString(1) ?: "MASTER"
-            val volume = ctx.getAsDouble(2).toFloat()
-            val pitch = ctx.getAsDouble(3).toFloat()
+            val volume = ctx.getFloat(2)
+            val pitch = ctx.getFloat(3)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             val type = runCatching { SoundType.valueOf(typeName.uppercase()) }.getOrElse { SoundType.MASTER }
             playGermSound(name, type, volume, pitch, targets)
@@ -118,11 +118,11 @@ object GermPluginExtensions {
         }
 
         // germSound(name, type, volume, pitch, targets) - 播放声音给目标
-        runtime.registerFunction("germSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("germSound", returns(Type.VOID).params(Type.STRING, Type.STRING, Type.F, Type.F, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
             val typeName = ctx.getString(1) ?: "MASTER"
-            val volume = ctx.getAsDouble(2).toFloat()
-            val pitch = ctx.getAsDouble(3).toFloat()
+            val volume = ctx.getFloat(2)
+            val pitch = ctx.getFloat(3)
             val targets = ctx.getTargetsArg(4, LeastType.SENDER)
             val type = runCatching { SoundType.valueOf(typeName.uppercase()) }.getOrElse { SoundType.MASTER }
             playGermSound(name, type, volume, pitch, targets)
@@ -138,9 +138,9 @@ object GermPluginExtensions {
         }
 
         // germAnimation(name, speed, reverse) - 播放动画，带速度和反转
-        runtime.registerFunction("germAnimation", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.BOOLEAN)) { ctx ->
+        runtime.registerFunction("germAnimation", returns(Type.VOID).params(Type.STRING, Type.F, Type.BOOLEAN)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val speed = ctx.getAsDouble(1).toFloat()
+            val speed = ctx.getFloat(1)
             val reverse = ctx.getBool(2)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             playAnimation(name, speed, reverse, targets)
@@ -148,9 +148,9 @@ object GermPluginExtensions {
         }
 
         // germAnimation(name, speed, reverse, targets) - 播放目标动画
-        runtime.registerFunction("germAnimation", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.BOOLEAN, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("germAnimation", returns(Type.VOID).params(Type.STRING, Type.F, Type.BOOLEAN, Type.OBJECT)) { ctx ->
             val name = ctx.getString(0) ?: return@registerFunction
-            val speed = ctx.getAsDouble(1).toFloat()
+            val speed = ctx.getFloat(1)
             val reverse = ctx.getBool(2)
             val targets = ctx.getTargetsArg(3, LeastType.SENDER)
             playAnimation(name, speed, reverse, targets)
@@ -181,7 +181,7 @@ object GermPluginExtensions {
         }
 
         // germViewLock(duration, type) - 锁定视角，带时长和类型
-        runtime.registerFunction("germViewLock", returns(Type.VOID).params(Type.NUMBER, Type.STRING)) { ctx ->
+        runtime.registerFunction("germViewLock", returns(Type.VOID).params(Type.J, Type.STRING)) { ctx ->
             val duration = ctx.getAsLong(0)
             val typeName = ctx.getString(1) ?: "FIRST_PERSON"
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -191,7 +191,7 @@ object GermPluginExtensions {
         }
 
         // germViewLock(duration, type, targets) - 锁定目标视角
-        runtime.registerFunction("germViewLock", returns(Type.VOID).params(Type.NUMBER, Type.STRING, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("germViewLock", returns(Type.VOID).params(Type.J, Type.STRING, Type.OBJECT)) { ctx ->
             val duration = ctx.getAsLong(0)
             val typeName = ctx.getString(1) ?: "FIRST_PERSON"
             val targets = ctx.getTargetsArg(2, LeastType.SENDER)
@@ -228,7 +228,7 @@ object GermPluginExtensions {
         }
 
         // germLookLock(duration) - 锁定视线，带时长
-        runtime.registerFunction("germLookLock", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("germLookLock", returns(Type.VOID).params(Type.J)) { ctx ->
             val duration = ctx.getAsLong(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             lockLook(duration, targets)
@@ -236,7 +236,7 @@ object GermPluginExtensions {
         }
 
         // germLookLock(duration, targets) - 锁定目标视线
-        runtime.registerFunction("germLookLock", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("germLookLock", returns(Type.VOID).params(Type.J, Type.OBJECT)) { ctx ->
             val duration = ctx.getAsLong(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             lockLook(duration, targets)
@@ -271,7 +271,7 @@ object GermPluginExtensions {
         }
 
         // germMoveLock(duration) - 锁定移动，带时长
-        runtime.registerFunction("germMoveLock", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("germMoveLock", returns(Type.VOID).params(Type.J)) { ctx ->
             val duration = ctx.getAsLong(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             lockMove(duration, targets)
@@ -279,7 +279,7 @@ object GermPluginExtensions {
         }
 
         // germMoveLock(duration, targets) - 锁定目标移动
-        runtime.registerFunction("germMoveLock", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("germMoveLock", returns(Type.VOID).params(Type.J, Type.OBJECT)) { ctx ->
             val duration = ctx.getAsLong(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             lockMove(duration, targets)
@@ -307,7 +307,7 @@ object GermPluginExtensions {
         }
 
         // germCooldown(slot, tick) - 设置物品冷却
-        runtime.registerFunction("germCooldown", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("germCooldown", returns(Type.VOID).params(Type.STRING, Type.I)) { ctx ->
             val slot = ctx.getString(0) ?: return@registerFunction
             val tick = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -316,7 +316,7 @@ object GermPluginExtensions {
         }
 
         // germCooldown(slot, tick, targets) - 设置目标物品冷却
-        runtime.registerFunction("germCooldown", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("germCooldown", returns(Type.VOID).params(Type.STRING, Type.I, Type.OBJECT)) { ctx ->
             val slot = ctx.getString(0) ?: return@registerFunction
             val tick = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(2, LeastType.SENDER)

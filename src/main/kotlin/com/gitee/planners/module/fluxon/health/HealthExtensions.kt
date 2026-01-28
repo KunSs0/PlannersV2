@@ -24,7 +24,7 @@ object HealthExtensions {
          * 增加 sender 的生命值（不超过最大值）
          * @param amount 增加的生命值数量
          */
-        runtime.registerFunction("healthAdd", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("healthAdd", returns(Type.VOID).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             addHealth(targets, amount)
@@ -36,7 +36,7 @@ object HealthExtensions {
          * @param amount 增加的生命值数量
          * @param targets 目标实体（支持 Entity/ProxyTarget/容器）
          */
-        runtime.registerFunction("healthAdd", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("healthAdd", returns(Type.VOID).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             addHealth(targets, amount)
@@ -47,7 +47,7 @@ object HealthExtensions {
          * 设置 sender 的生命值（限制在 0 到最大值之间）
          * @param amount 目标生命值
          */
-        runtime.registerFunction("healthSet", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("healthSet", returns(Type.VOID).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             setHealth(targets, amount)
@@ -59,7 +59,7 @@ object HealthExtensions {
          * @param amount 目标生命值
          * @param targets 目标实体
          */
-        runtime.registerFunction("healthSet", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("healthSet", returns(Type.VOID).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             setHealth(targets, amount)
@@ -70,7 +70,7 @@ object HealthExtensions {
          * 减少 sender 的生命值（不低于 0，不触发伤害事件）
          * @param amount 减少的生命值数量
          */
-        runtime.registerFunction("healthTake", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("healthTake", returns(Type.VOID).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             takeHealth(targets, amount)
@@ -82,7 +82,7 @@ object HealthExtensions {
          * @param amount 减少的生命值数量
          * @param targets 目标实体
          */
-        runtime.registerFunction("healthTake", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("healthTake", returns(Type.VOID).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             takeHealth(targets, amount)

@@ -23,7 +23,7 @@ object CooldownExtensions {
          * @param skill 技能对象或技能 ID 字符串
          * @return 剩余冷却 tick 数
          */
-        runtime.registerFunction("getCooldown", returns(Type.NUMBER).params(Type.OBJECT)) { ctx ->
+        runtime.registerFunction("getCooldown", returns(Type.J).params(Type.OBJECT)) { ctx ->
             val skill = resolveSkill(ctx.getRef(0)) ?: return@registerFunction
             val player = ctx.getPlayerArg(-1) ?: return@registerFunction
             ctx.setReturnLong(Cooler.INSTANCE.get(player, skill))
@@ -35,7 +35,7 @@ object CooldownExtensions {
          * @param player 目标玩家
          * @return 剩余冷却 tick 数
          */
-        runtime.registerFunction("getCooldown", returns(Type.NUMBER).params(Type.OBJECT, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("getCooldown", returns(Type.J).params(Type.OBJECT, Type.OBJECT)) { ctx ->
             val skill = resolveSkill(ctx.getRef(0)) ?: return@registerFunction
             val player = ctx.getPlayerArg(1) ?: return@registerFunction
             ctx.setReturnLong(Cooler.INSTANCE.get(player, skill))
@@ -46,7 +46,7 @@ object CooldownExtensions {
          * @param skill 技能对象或技能 ID 字符串
          * @param ticks 冷却时间（tick，20 ticks = 1 秒）
          */
-        runtime.registerFunction("setCooldown", returns(Type.VOID).params(Type.OBJECT, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("setCooldown", returns(Type.VOID).params(Type.OBJECT, Type.I)) { ctx ->
             val skill = resolveSkill(ctx.getRef(0)) ?: return@registerFunction
             val ticks = ctx.getAsInt(1)
             val player = ctx.getPlayerArg(-1) ?: return@registerFunction
@@ -59,7 +59,7 @@ object CooldownExtensions {
          * @param ticks 冷却时间（tick）
          * @param player 目标玩家
          */
-        runtime.registerFunction("setCooldown", returns(Type.VOID).params(Type.OBJECT, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("setCooldown", returns(Type.VOID).params(Type.OBJECT, Type.I, Type.OBJECT)) { ctx ->
             val skill = resolveSkill(ctx.getRef(0)) ?: return@registerFunction
             val ticks = ctx.getAsInt(1)
             val player = ctx.getPlayerArg(2) ?: return@registerFunction

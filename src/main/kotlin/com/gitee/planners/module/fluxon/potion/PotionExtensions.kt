@@ -28,7 +28,7 @@ object PotionExtensions {
          * @param level 效果等级（1=I级，2=II级...）
          * @param duration 持续时间（tick，20 ticks = 1 秒）
          */
-        runtime.registerFunction("potion", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("potion", returns(Type.VOID).params(Type.STRING, Type.I, Type.I)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val level = ctx.getAsInt(1)
             val duration = ctx.getAsInt(2)
@@ -44,7 +44,7 @@ object PotionExtensions {
          * @param duration 持续时间（tick）
          * @param targets 目标实体（必须是 LivingEntity）
          */
-        runtime.registerFunction("potion", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("potion", returns(Type.VOID).params(Type.STRING, Type.I, Type.I, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val level = ctx.getAsInt(1)
             val duration = ctx.getAsInt(2)

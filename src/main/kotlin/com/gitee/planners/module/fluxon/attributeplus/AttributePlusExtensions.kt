@@ -38,7 +38,7 @@ object AttributePlusExtensions {
          * @param attributes 临时属性字符串（逗号分隔，如 "物理攻击: 100, 暴击几率: 50"）
          * @return 总伤害值
          */
-        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING)) { ctx ->
+        runtime.registerFunction("apAttack", returns(Type.D).params(Type.STRING)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val targetsArg = ctx.getTargetsArg(-1, LeastType.EMPTY)
             val sourceArg = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -51,7 +51,7 @@ object AttributePlusExtensions {
          * @param isolation 是否使用隔离数据（true=创建独立副本，不影响实体原属性）
          * @return 总伤害值
          */
-        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN)) { ctx ->
+        runtime.registerFunction("apAttack", returns(Type.D).params(Type.STRING, Type.BOOLEAN)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val isolation = ctx.getBool(1)
             val targetsArg = ctx.getTargetsArg(-1, LeastType.EMPTY)
@@ -66,7 +66,7 @@ object AttributePlusExtensions {
          * @param targets 攻击目标（支持 Entity/ProxyTarget/容器）
          * @return 总伤害值
          */
-        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("apAttack", returns(Type.D).params(Type.STRING, Type.BOOLEAN, Type.OBJECT)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val isolation = ctx.getBool(1)
             val targetsArg = ctx.getTargetsArg(2, LeastType.EMPTY)
@@ -82,7 +82,7 @@ object AttributePlusExtensions {
          * @param source 攻击来源实体
          * @return 总伤害值
          */
-        runtime.registerFunction("apAttack", returns(Type.NUMBER).params(Type.STRING, Type.BOOLEAN, Type.OBJECT, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("apAttack", returns(Type.D).params(Type.STRING, Type.BOOLEAN, Type.OBJECT, Type.OBJECT)) { ctx ->
             val attributes = ctx.getString(0) ?: return@registerFunction
             val isolation = ctx.getBool(1)
             val targetsArg = ctx.getTargetsArg(2, LeastType.EMPTY)

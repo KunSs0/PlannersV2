@@ -33,7 +33,7 @@ object EntityExtensions {
         }
 
         // entitySpawn(type, duration) - 在 origin 生成实体，指定存活时长
-        runtime.registerFunction("entitySpawn", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("entitySpawn", returns(Type.OBJECT).params(Type.STRING, Type.J)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val duration = ctx.getAsLong(1)
             val locations = ctx.getTargetsArg(-1, LeastType.ORIGIN)
@@ -41,7 +41,7 @@ object EntityExtensions {
         }
 
         // entitySpawn(type, duration, locations) - 在指定位置生成实体
-        runtime.registerFunction("entitySpawn", returns(Type.OBJECT).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("entitySpawn", returns(Type.OBJECT).params(Type.STRING, Type.J, Type.OBJECT)) { ctx ->
             val typeName = ctx.getString(0) ?: return@registerFunction
             val duration = ctx.getAsLong(1)
             val locations = ctx.getTargetsArg(2, LeastType.ORIGIN)
@@ -63,7 +63,7 @@ object EntityExtensions {
         }
 
         // entityTeleport(x, y, z) - 传送 sender
-        runtime.registerFunction("entityTeleport", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("entityTeleport", returns(Type.VOID).params(Type.D, Type.D, Type.D)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)
@@ -73,7 +73,7 @@ object EntityExtensions {
         }
 
         // entityTeleport(x, y, z, targets) - 传送指定实体
-        runtime.registerFunction("entityTeleport", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("entityTeleport", returns(Type.VOID).params(Type.D, Type.D, Type.D, Type.OBJECT)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)

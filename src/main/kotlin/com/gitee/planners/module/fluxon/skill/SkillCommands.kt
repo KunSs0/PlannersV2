@@ -23,7 +23,7 @@ object SkillCommands {
         val runtime = FluxonScriptCache.runtime
 
         // damage(amount) - 对 sender 造成伤害
-        runtime.registerFunction("damage", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("damage", returns(Type.VOID).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
@@ -33,7 +33,7 @@ object SkillCommands {
         }
 
         // damage(amount, targets) - 对目标造成伤害
-        runtime.registerFunction("damage", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("damage", returns(Type.VOID).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             targets.filterIsInstance<ProxyTarget.BukkitEntity>().forEach { target ->
@@ -43,7 +43,7 @@ object SkillCommands {
         }
 
         // damageBy(amount, source) - 以来源对 sender 造成伤害
-        runtime.registerFunction("damageBy", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("damageBy", returns(Type.VOID).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val source = ctx.getRef(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -53,7 +53,7 @@ object SkillCommands {
         }
 
         // damageBy(amount, source, targets) - 以来源对目标造成伤害
-        runtime.registerFunction("damageBy", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("damageBy", returns(Type.VOID).params(Type.D, Type.OBJECT, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val source = ctx.getRef(1)
             val targets = ctx.getTargetsArg(2, LeastType.SENDER)
@@ -63,7 +63,7 @@ object SkillCommands {
         }
 
         // heal(amount) - 治疗 sender
-        runtime.registerFunction("heal", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("heal", returns(Type.VOID).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
             applyHeal(amount, targets)
@@ -71,7 +71,7 @@ object SkillCommands {
         }
 
         // heal(amount, targets) - 治疗目标
-        runtime.registerFunction("heal", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("heal", returns(Type.VOID).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val targets = ctx.getTargetsArg(1, LeastType.SENDER)
             applyHeal(amount, targets)

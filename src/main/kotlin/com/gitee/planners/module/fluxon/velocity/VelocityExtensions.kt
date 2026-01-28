@@ -27,7 +27,7 @@ object VelocityExtensions {
          * @param y Y 轴速度分量（垂直方向）
          * @param z Z 轴速度分量
          */
-        runtime.registerFunction("velocitySet", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("velocitySet", returns(Type.VOID).params(Type.D, Type.D, Type.D)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)
@@ -44,7 +44,7 @@ object VelocityExtensions {
          * @param z Z 轴速度分量
          * @param targets 目标实体
          */
-        runtime.registerFunction("velocitySet", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("velocitySet", returns(Type.VOID).params(Type.D, Type.D, Type.D, Type.OBJECT)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)
@@ -60,7 +60,7 @@ object VelocityExtensions {
          * @param y Y 轴速度增量
          * @param z Z 轴速度增量
          */
-        runtime.registerFunction("velocityAdd", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("velocityAdd", returns(Type.VOID).params(Type.D, Type.D, Type.D)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)
@@ -77,7 +77,7 @@ object VelocityExtensions {
          * @param z Z 轴速度增量
          * @param targets 目标实体
          */
-        runtime.registerFunction("velocityAdd", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("velocityAdd", returns(Type.VOID).params(Type.D, Type.D, Type.D, Type.OBJECT)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)
@@ -93,7 +93,7 @@ object VelocityExtensions {
          * @param y 垂直速度（正=上，负=下）
          * @param z 前后速度（正=前，负=后）
          */
-        runtime.registerFunction("velocityMove", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("velocityMove", returns(Type.VOID).params(Type.D, Type.D, Type.D)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)
@@ -108,7 +108,7 @@ object VelocityExtensions {
          * @param z 前后速度
          * @param targets 目标实体
          */
-        runtime.registerFunction("velocityMove", returns(Type.VOID).params(Type.NUMBER, Type.NUMBER, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("velocityMove", returns(Type.VOID).params(Type.D, Type.D, Type.D, Type.OBJECT)) { ctx ->
             val x = ctx.getAsDouble(0)
             val y = ctx.getAsDouble(1)
             val z = ctx.getAsDouble(2)

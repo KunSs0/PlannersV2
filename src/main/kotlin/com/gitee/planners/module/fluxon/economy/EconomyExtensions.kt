@@ -32,7 +32,7 @@ object EconomyExtensions {
          * 获取 sender 的账户余额
          * @return 余额数值，无经济插件时返回 0
          */
-        runtime.registerFunction("getBalance", returns(Type.NUMBER).noParams()) { ctx ->
+        runtime.registerFunction("getBalance", returns(Type.D).noParams()) { ctx ->
             val player = ctx.getPlayerArg(-1)
             ctx.setReturnDouble(if (player != null) economy?.getBalance(player) ?: 0.0 else 0.0)
         }
@@ -42,7 +42,7 @@ object EconomyExtensions {
          * @param player 目标玩家
          * @return 余额数值
          */
-        runtime.registerFunction("getBalance", returns(Type.NUMBER).params(Type.OBJECT)) { ctx ->
+        runtime.registerFunction("getBalance", returns(Type.D).params(Type.OBJECT)) { ctx ->
             val player = ctx.getPlayerArg(0)
             ctx.setReturnDouble(if (player != null) economy?.getBalance(player) ?: 0.0 else 0.0)
         }
@@ -52,7 +52,7 @@ object EconomyExtensions {
          * @param amount 扣款金额
          * @return 是否扣款成功（余额不足或无经济插件返回 false）
          */
-        runtime.registerFunction("takeMoney", returns(Type.BOOLEAN).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("takeMoney", returns(Type.BOOLEAN).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val player = ctx.getPlayerArg(-1)
             ctx.setReturnBool(player != null && economy?.withdrawPlayer(player, amount)?.transactionSuccess() == true)
@@ -64,7 +64,7 @@ object EconomyExtensions {
          * @param player 目标玩家
          * @return 是否扣款成功
          */
-        runtime.registerFunction("takeMoney", returns(Type.BOOLEAN).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("takeMoney", returns(Type.BOOLEAN).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val player = ctx.getPlayerArg(1)
             ctx.setReturnBool(player != null && economy?.withdrawPlayer(player, amount)?.transactionSuccess() == true)
@@ -75,7 +75,7 @@ object EconomyExtensions {
          * @param amount 存款金额
          * @return 是否存款成功
          */
-        runtime.registerFunction("giveMoney", returns(Type.BOOLEAN).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("giveMoney", returns(Type.BOOLEAN).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val player = ctx.getPlayerArg(-1)
             ctx.setReturnBool(player != null && economy?.depositPlayer(player, amount)?.transactionSuccess() == true)
@@ -87,7 +87,7 @@ object EconomyExtensions {
          * @param player 目标玩家
          * @return 是否存款成功
          */
-        runtime.registerFunction("giveMoney", returns(Type.BOOLEAN).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("giveMoney", returns(Type.BOOLEAN).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val player = ctx.getPlayerArg(1)
             ctx.setReturnBool(player != null && economy?.depositPlayer(player, amount)?.transactionSuccess() == true)
@@ -97,7 +97,7 @@ object EconomyExtensions {
          * 设置 sender 的账户余额（通过存取款实现）
          * @param amount 目标余额
          */
-        runtime.registerFunction("setMoney", returns(Type.VOID).params(Type.NUMBER)) { ctx ->
+        runtime.registerFunction("setMoney", returns(Type.VOID).params(Type.D)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val player = ctx.getPlayerArg(-1) ?: return@registerFunction
             setBalance(player, amount)
@@ -108,7 +108,7 @@ object EconomyExtensions {
          * @param amount 目标余额
          * @param player 目标玩家
          */
-        runtime.registerFunction("setMoney", returns(Type.VOID).params(Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("setMoney", returns(Type.VOID).params(Type.D, Type.OBJECT)) { ctx ->
             val amount = ctx.getAsDouble(0)
             val player = ctx.getPlayerArg(1) ?: return@registerFunction
             setBalance(player, amount)

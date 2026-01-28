@@ -66,7 +66,7 @@ object MetadataExtensions {
          * @param timeout 超时时间（tick），到期后自动删除
          * @param entity 目标实体
          */
-        runtime.registerFunction("setMetaTimeout", returns(Type.VOID).params(Type.STRING, Type.OBJECT, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("setMetaTimeout", returns(Type.VOID).params(Type.STRING, Type.OBJECT, Type.J, Type.OBJECT)) { ctx ->
             val key = ctx.getString(0) ?: return@registerFunction
             val value = ctx.getRef(1) ?: return@registerFunction
             val timeout = ctx.getAsLong(2)

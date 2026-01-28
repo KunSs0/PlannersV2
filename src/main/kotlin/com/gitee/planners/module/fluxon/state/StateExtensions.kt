@@ -30,7 +30,7 @@ object StateExtensions {
          * @param id 状态 ID 字符串
          * @param duration 持续时间（tick，20 ticks = 1 秒）
          */
-        runtime.registerFunction("stateAttach", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("stateAttach", returns(Type.VOID).params(Type.STRING, Type.J)) { ctx ->
             val id = ctx.getString(0) ?: return@registerFunction
             val duration = ctx.getAsLong(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -43,7 +43,7 @@ object StateExtensions {
          * @param duration 持续时间（tick）
          * @param refresh 是否刷新已有状态时长（true=刷新时长，false=叠加层数）
          */
-        runtime.registerFunction("stateAttach", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.BOOLEAN)) { ctx ->
+        runtime.registerFunction("stateAttach", returns(Type.VOID).params(Type.STRING, Type.J, Type.BOOLEAN)) { ctx ->
             val id = ctx.getString(0) ?: return@registerFunction
             val duration = ctx.getAsLong(1)
             val refresh = ctx.getBool(2)
@@ -58,7 +58,7 @@ object StateExtensions {
          * @param refresh 是否刷新已有状态时长
          * @param targets 目标实体（支持 Entity/ProxyTarget/容器）
          */
-        runtime.registerFunction("stateAttach", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.BOOLEAN, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("stateAttach", returns(Type.VOID).params(Type.STRING, Type.J, Type.BOOLEAN, Type.OBJECT)) { ctx ->
             val id = ctx.getString(0) ?: return@registerFunction
             val duration = ctx.getAsLong(1)
             val refresh = ctx.getBool(2)
@@ -81,7 +81,7 @@ object StateExtensions {
          * @param id 状态 ID 字符串
          * @param layer 要卸载的层数
          */
-        runtime.registerFunction("stateDetach", returns(Type.VOID).params(Type.STRING, Type.NUMBER)) { ctx ->
+        runtime.registerFunction("stateDetach", returns(Type.VOID).params(Type.STRING, Type.I)) { ctx ->
             val id = ctx.getString(0) ?: return@registerFunction
             val layer = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(-1, LeastType.SENDER)
@@ -94,7 +94,7 @@ object StateExtensions {
          * @param layer 要卸载的层数
          * @param targets 目标实体
          */
-        runtime.registerFunction("stateDetach", returns(Type.VOID).params(Type.STRING, Type.NUMBER, Type.OBJECT)) { ctx ->
+        runtime.registerFunction("stateDetach", returns(Type.VOID).params(Type.STRING, Type.I, Type.OBJECT)) { ctx ->
             val id = ctx.getString(0) ?: return@registerFunction
             val layer = ctx.getAsInt(1)
             val targets = ctx.getTargetsArg(2, LeastType.SENDER)
