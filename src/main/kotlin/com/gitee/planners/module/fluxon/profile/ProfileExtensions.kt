@@ -20,20 +20,8 @@ object ProfileExtensions {
             .function("level", returns(Type.I).noParams()) { ctx ->
                 ctx.setReturnInt(ctx.getTarget()?.level ?: 0)
             }
-            .function("setLevel", returns(Type.VOID).params(Type.I)) { ctx ->
-                ctx.getTarget()?.setLevel(ctx.getInt(0))
-            }
-            .function("addLevel", returns(Type.VOID).params(Type.I)) { ctx ->
-                ctx.getTarget()?.addLevel(ctx.getInt(0))
-            }
-            .function("experience", returns(Type.I).noParams()) { ctx ->
+            .function("exp", returns(Type.I).noParams()) { ctx ->
                 ctx.setReturnInt(ctx.getTarget()?.experience ?: 0)
-            }
-            .function("setExperience", returns(Type.VOID).params(Type.I)) { ctx ->
-                ctx.getTarget()?.setExperience(ctx.getInt(0))
-            }
-            .function("addExperience", returns(Type.VOID).params(Type.I)) { ctx ->
-                ctx.getTarget()?.addExperience(ctx.getInt(0))
             }
             .function("experienceMax", returns(Type.I).noParams()) { ctx ->
                 ctx.setReturnInt(ctx.getTarget()?.experienceMax ?: 0)
@@ -52,9 +40,6 @@ object ProfileExtensions {
             }
             .function("maxMagicPoint", returns(Type.I).noParams()) { ctx ->
                 ctx.setReturnInt(ctx.getTarget()?.get("@magic.point.max")?.asInt() ?: 0)
-            }
-            .function("setMaxMagicPoint", returns(Type.VOID).params(Type.I)) { ctx ->
-                ctx.getTarget()?.set("@magic.point.max", metadataValue(ctx.getInt(0), -1))
             }
             .function("job", returns(Type.STRING).noParams()) { ctx ->
                 ctx.setReturnRef(ctx.getTarget()?.route?.getJob()?.id)
