@@ -30,7 +30,7 @@ taboolib {
         }
     }
 
-    version { taboolib = "6.2.3-e102d76" }
+    version { taboolib = "6.2.4-7c873bc" }
 
     relocate("ink.ptms.um", "com.gitee.module.um")
 }
@@ -43,7 +43,7 @@ repositories {
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
 //    destinationDirectory = file("F:\\minecraft\\server\\paper-1.12.2\\plugins")
-//    destinationDirectory = file("F:\\minecraft\\server\\paper-1.20.1\\plugins")
+    destinationDirectory = file("F:\\minecraft\\server\\paper-1.20.1\\plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
 dependencies {

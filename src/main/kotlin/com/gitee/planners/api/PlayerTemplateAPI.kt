@@ -9,8 +9,8 @@ import com.gitee.planners.core.database.Database
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerSkill
-import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
-import com.gitee.planners.core.player.magic.MagicPoint.magicPointInUpperLimit
+import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
+import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPointInUpperLimit
 import com.gitee.planners.util.builtin.MutableRegistryInMap
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerJoinEvent

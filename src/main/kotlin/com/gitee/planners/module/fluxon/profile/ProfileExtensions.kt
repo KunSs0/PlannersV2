@@ -2,7 +2,7 @@ package com.gitee.planners.module.fluxon.profile
 
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
-import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
+import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.module.fluxon.FluxonFunctionContext
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import com.gitee.planners.module.fluxon.registerFunction

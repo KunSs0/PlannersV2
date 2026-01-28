@@ -3,9 +3,9 @@ package com.gitee.planners.core.player.magic
 import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
+import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
 import com.gitee.planners.module.fluxon.SingletonFluxonScript
-import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submitAsync
 import taboolib.common.platform.service.PlatformExecutor

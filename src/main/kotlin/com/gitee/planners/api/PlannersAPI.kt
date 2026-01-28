@@ -6,10 +6,10 @@ import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
+import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.core.skill.ExecutableResult
 import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.module.fluxon.FluxonScriptOptions
-import com.gitee.planners.core.player.magic.MagicPoint.magicPoint
 import org.bukkit.entity.Player
 import taboolib.common5.cint
 import java.util.concurrent.CompletableFuture
