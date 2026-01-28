@@ -19,22 +19,6 @@ object SkillSystemExtensions {
     fun init() {
         val runtime = FluxonScriptCache.runtime
 
-        runtime.registerFunction("getSkillLevel", listOf(1, 2)) { ctx ->
-            val skillId = ctx.getAsString(0) ?: return@registerFunction 0
-            val player = ctx.getPlayerArg(1) ?: return@registerFunction 0
-            player.plannersTemplate.getRegisteredSkillOrNull(skillId)?.level ?: 0
-        }
-
-        runtime.registerFunction("setSkillLevel", listOf(2, 3)) { ctx ->
-            val skillId = ctx.getAsString(0) ?: return@registerFunction null
-            val level = ctx.getAsInt(1)
-            val player = ctx.getPlayerArg(2) ?: return@registerFunction null
-            val template = player.plannersTemplate
-            val playerSkill = template.getRegisteredSkillOrNull(skillId) ?: return@registerFunction null
-            PlayerTemplateAPI.setSkillLevel(template, playerSkill, level)
-            null
-        }
-
         runtime.registerFunction("apAttack", listOf(2, 3)) { ctx ->
             val params = ctx.getAsString(0) ?: return@registerFunction null
             val targets = ctx.getRef(1) as? List<*> ?: return@registerFunction null

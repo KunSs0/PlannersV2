@@ -1,8 +1,8 @@
 package com.gitee.planners.module.fluxon.skill
 
-import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import com.gitee.planners.module.fluxon.registerFunction
+import com.gitee.planners.module.fluxon.resolveLivingEntity
 import org.bukkit.entity.LivingEntity
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
@@ -42,14 +42,6 @@ object SkillCommands {
             @Suppress("DEPRECATION")
             target.health = (target.health + amount).coerceAtMost(target.maxHealth)
             null
-        }
-    }
-
-    private fun resolveLivingEntity(arg: Any?): LivingEntity? {
-        return when (arg) {
-            is ProxyTarget.BukkitEntity -> arg.instance as? LivingEntity
-            is LivingEntity -> arg
-            else -> null
         }
     }
 }

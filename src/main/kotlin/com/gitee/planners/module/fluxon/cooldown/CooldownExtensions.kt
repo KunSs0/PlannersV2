@@ -1,11 +1,10 @@
 package com.gitee.planners.module.fluxon.cooldown
 
-import com.gitee.planners.api.Registries
-import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.module.fluxon.FluxonScriptCache
 import com.gitee.planners.module.fluxon.getPlayerArg
 import com.gitee.planners.module.fluxon.registerFunction
+import com.gitee.planners.module.fluxon.resolveSkill
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 
@@ -43,14 +42,6 @@ object CooldownExtensions {
             val skill = resolveSkill(ctx.getRef(0)) ?: return@registerFunction false
             val player = ctx.getPlayerArg(1) ?: return@registerFunction false
             Cooler.INSTANCE.get(player, skill) > 0
-        }
-    }
-
-    private fun resolveSkill(arg: Any?): Skill? {
-        return when (arg) {
-            is String -> Registries.SKILL.get(arg)
-            is Skill -> arg
-            else -> null
         }
     }
 }
