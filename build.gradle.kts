@@ -56,9 +56,6 @@ dependencies {
     // https://mvnrepository.com/artifact/com.google.guava/guava
     implementation("com.google.guava:guava:33.0.0-jre")
 
-    // Fluxon 脚本引擎
-    taboo("org.tabooproject.fluxon:core:1.6.1")
-
     // https://mvnrepository.com/artifact/org.ejml/ejml-all
     compileOnly("org.ejml:ejml-core:0.41")
     compileOnly("org.ejml:ejml-simple:0.41")

@@ -1,8 +1,9 @@
 # Fluxon → GraalJS 脚本引擎迁移计划
 
-> 版本: 4.0
+> 版本: 5.0
 > 日期: 2026-03-03
 > 策略: 完全替换，脚本语法改为标准 JavaScript
+> 实现语言: **Java** (新增代码放置在 Java 源码目录)
 > 状态: 📋 计划中
 
 ## 概述
@@ -52,9 +53,10 @@ ParsedScript                   →   Source (预编译缓存)
 Environment                    →   Value bindings (Context.getBindings)
 ParsedScript.eval(env)         →   Context.eval(source)
 runtime.registerFunction()     →   bindings.putMember("name", ProxyExecutable)
-FunctionContext                →   标准 JS 函数参数
-FluxonScriptOptions            →   ScriptBindings (自定义绑定容器)
-SingletonFluxonScript          →   CachedScript (新封装)
+FunctionContext                →   标准 JS 函数参数 (Value[])
+FluxonScriptOptions            →   ScriptOptions (保留"执行选项"语义，含 variables + async 标志)
+SingletonFluxonScript          →   SingletonScript (保留"单次脚本封装"语义)
+FluxonScriptCache              →   ScriptManager (避免与 GraalJS Engine / javax.script.ScriptEngine 冲突)
 FluxonTrigger                  →   ScriptTrigger (新封装)
 ```
 
@@ -77,121 +79,143 @@ FluxonTrigger                  →   ScriptTrigger (新封装)
 
 ## 核心组件设计
 
-### 1. ScriptEngine (替代 FluxonScriptCache)
+### 1. ScriptManager (替代 FluxonScriptCache)
 
-```kotlin
-object ScriptEngine {
-    private val cache = ConcurrentHashMap<String, Source>()
-    private val engine = Engine.newBuilder()
-        .option("engine.WarnInterpreterOnly", "false")
-        .build()
+> 命名说明: 避免与 GraalJS 的 `Engine` 类和 `javax.script.ScriptEngine` 冲突
 
-    fun getOrCompile(source: String, name: String = "script"): Source {
-        return cache.computeIfAbsent(source) {
-            Source.newBuilder("js", it, name).cached(true).build()
+```java
+public final class ScriptManager {
+    private static final ConcurrentHashMap<String, Source> cache = new ConcurrentHashMap<>();
+    private static final Engine engine = Engine.newBuilder()
+            .option("engine.WarnInterpreterOnly", "false")
+            .build();
+
+    public static Source getOrCompile(String source, String name) {
+        return cache.computeIfAbsent(source, s ->
+                Source.newBuilder("js", s, name).cached(true).buildLiteral());
+    }
+
+    public static Object eval(String source, ScriptOptions options) {
+        Source compiled = getOrCompile(source, "script");
+        try (Context ctx = createContext(options)) {
+            return unwrap(ctx.eval(compiled));
         }
     }
 
-    fun eval(source: String, bindings: ScriptBindings): Any? {
-        val compiled = getOrCompile(source)
-        return createContext(bindings).use { ctx ->
-            ctx.eval(compiled).let { unwrap(it) }
-        }
-    }
-
-    private fun createContext(bindings: ScriptBindings): Context {
-        val ctx = Context.newBuilder("js")
-            .engine(engine)
-            .allowAllAccess(true)
-            .build()
-        val jsBindings = ctx.getBindings("js")
+    private static Context createContext(ScriptOptions options) {
+        Context ctx = Context.newBuilder("js")
+                .engine(engine)
+                .allowAllAccess(true)
+                .build();
+        Value jsBindings = ctx.getBindings("js");
         // 注入全局函数
-        GlobalFunctions.applyTo(jsBindings)
+        GlobalFunctions.applyTo(jsBindings);
         // 注入上下文变量
-        bindings.applyTo(jsBindings)
-        return ctx
+        options.applyTo(jsBindings);
+        return ctx;
     }
 
-    fun clear() = cache.clear()
+    public static void clear() { cache.clear(); }
 }
 ```
 
-### 2. ScriptBindings (替代 FluxonScriptOptions)
+### 2. ScriptOptions (替代 FluxonScriptOptions)
 
-```kotlin
-class ScriptBindings {
-    internal val variables = mutableMapOf<String, Any?>()
-    internal var async: Boolean = false
+> 命名说明: 保留"执行选项"语义，该类不仅包含变量绑定，还包含 async 等执行配置
 
-    fun set(key: String, value: Any?) = apply { variables[key] = value }
-    fun async(async: Boolean) = apply { this.async = async }
+```java
+public class ScriptOptions {
+    private final Map<String, Object> variables = new LinkedHashMap<>();
+    private boolean async = false;
 
-    fun applyTo(jsBindings: Value) {
-        variables.forEach { (k, v) -> jsBindings.putMember(k, v) }
+    public ScriptOptions set(String key, Object value) {
+        variables.put(key, value);
+        return this;
     }
 
-    companion object {
-        fun forSkill(sender: Any, level: Int, skill: ImmutableSkill?, extraVars: Map<String, Any?> = emptyMap()): ScriptBindings {
-            return ScriptBindings().apply {
-                set("sender", sender)
-                set("level", level)
-                set("skill", skill)
-                set("ctx", SkillContext(sender, level, skill))
-                set("profile", PlayerTemplateAPI.getPlayerTemplate(sender))
-                extraVars.forEach { (k, v) -> set(k, v) }
-            }
-        }
+    public ScriptOptions async(boolean async) {
+        this.async = async;
+        return this;
+    }
+
+    public boolean isAsync() { return async; }
+    public Map<String, Object> getVariables() { return variables; }
+
+    public void applyTo(Value jsBindings) {
+        variables.forEach(jsBindings::putMember);
+    }
+
+    public static ScriptOptions forSkill(Object sender, int level, ImmutableSkill skill, Map<String, Object> extraVars) {
+        ScriptOptions options = new ScriptOptions();
+        options.set("sender", sender);
+        options.set("level", level);
+        options.set("skill", skill);
+        options.set("ctx", new SkillContext(sender, level, skill));
+        options.set("profile", PlayerTemplateAPI.getPlayerTemplate(sender));
+        if (extraVars != null) extraVars.forEach(options::set);
+        return options;
     }
 }
 ```
 
 ### 3. GlobalFunctions (替代 runtime.registerFunction)
 
-```kotlin
-object GlobalFunctions {
-    private val functions = mutableMapOf<String, ProxyExecutable>()
+```java
+public final class GlobalFunctions {
+    private static final Map<String, ProxyExecutable> functions = new ConcurrentHashMap<>();
 
-    fun register(name: String, fn: (args: Array<Value>) -> Any?) {
-        functions[name] = ProxyExecutable { args -> fn(args) }
+    public static void register(String name, ProxyExecutable fn) {
+        functions.put(name, fn);
     }
 
-    fun applyTo(bindings: Value) {
-        functions.forEach { (name, fn) -> bindings.putMember(name, fn) }
+    public static void applyTo(Value bindings) {
+        functions.forEach(bindings::putMember);
     }
 }
 ```
 
-### 4. CachedScript (替代 SingletonFluxonScript)
+### 4. SingletonScript (替代 SingletonFluxonScript)
 
-```kotlin
-open class CachedScript(source: String? = null) {
-    open val action: String = source ?: ""
-    val isNotNull: Boolean = action.isNotEmpty()
+> 命名说明: 保留"单次脚本封装"语义 — 封装单个脚本源码并提供执行入口，缓存由 ScriptManager 负责
 
-    fun run(bindings: ScriptBindings): CompletableFuture<Any?> {
-        if (action.isEmpty()) return CompletableFuture.completedFuture(null)
-        return if (bindings.async) {
-            CompletableFuture.supplyAsync { ScriptEngine.eval(action, bindings) }
-        } else {
-            CompletableFuture.completedFuture(ScriptEngine.eval(action, bindings))
-        }
+```java
+public class SingletonScript {
+    private final String action;
+
+    public SingletonScript(String source) {
+        this.action = source != null ? source : "";
     }
 
-    fun eval(bindings: ScriptBindings = ScriptBindings()): Any? {
-        if (action.isEmpty()) return null
-        return ScriptEngine.eval(action, bindings)
+    public boolean isNotNull() { return !action.isEmpty(); }
+    public String getAction() { return action; }
+
+    public CompletableFuture<Object> run(ScriptOptions options) {
+        if (action.isEmpty()) return CompletableFuture.completedFuture(null);
+        if (options.isAsync()) {
+            return CompletableFuture.supplyAsync(() -> ScriptManager.eval(action, options));
+        }
+        return CompletableFuture.completedFuture(ScriptManager.eval(action, options));
+    }
+
+    public Object eval(ScriptOptions options) {
+        if (action.isEmpty()) return null;
+        return ScriptManager.eval(action, options);
+    }
+
+    public Object eval() {
+        return eval(new ScriptOptions());
     }
 }
 ```
 
 ---
 
-## 扩展函数迁移 (20 个模块)
+## 扩展函数迁移 (22 个模块)
 
 ### 注册方式变化
 
 ```kotlin
-// 旧 (Fluxon): 通过 runtime + FunctionSignature
+// 旧 (Fluxon/Kotlin): 通过 runtime + FunctionSignature
 runtime.registerFunction("damage",
     returns(Type.VOID).params(Type.D, Type.OBJECT)
 ) { ctx ->
@@ -199,13 +223,16 @@ runtime.registerFunction("damage",
     val targets = ctx.getRef(1)
     // ...
 }
+```
 
-// 新 (GraalJS): ProxyExecutable 全局函数
-GlobalFunctions.register("damage") { args ->
-    val amount = args[0].asDouble()
-    val targets = if (args.size > 1) resolveTargets(args[1]) else null
+```java
+// 新 (GraalJS/Java): ProxyExecutable 全局函数
+GlobalFunctions.register("damage", args -> {
+    double amount = args[0].asDouble();
+    ProxyTargetContainer targets = args.length > 1 ? resolveTargets(args[1]) : null;
     // ...
-}
+    return null;
+});
 ```
 
 ### 模块迁移清单
@@ -307,10 +334,10 @@ action: |
 ### Phase 1: 引擎核心 (基础层)
 
 1. 添加 GraalJS 依赖到 build.gradle.kts
-2. 实现 `ScriptEngine` — 编译、缓存、执行
-3. 实现 `ScriptBindings` — 上下文变量注入
-4. 实现 `GlobalFunctions` — 全局函数注册框架
-5. 实现 `CachedScript` — 替代 SingletonFluxonScript
+2. 实现 `ScriptManager` — 编译、缓存、执行 (Java)
+3. 实现 `ScriptOptions` — 上下文变量注入 + 执行配置 (Java)
+4. 实现 `GlobalFunctions` — 全局函数注册框架 (Java)
+5. 实现 `SingletonScript` — 替代 SingletonFluxonScript (Java)
 6. 单元测试验证基础执行流程
 
 ### Phase 2: 扩展函数迁移
@@ -321,9 +348,9 @@ action: |
 
 ### Phase 3: 上层集成
 
-10. 重构 `FluxonScript.kt` → 使用 CachedScript
+10. 重构 `FluxonScript.kt` → 使用 SingletonScript
 11. 重构 `FluxonLoader.kt` → 初始化 GraalJS Engine
-12. 重构 `FluxonTrigger.kt` → 使用 ScriptEngine
+12. 重构 `FluxonTrigger.kt` → 使用 ScriptManager
 13. 重构 `States.kt` → 状态回调改用 JS 函数调用
 14. 重构 `ImmutableSkill` / `ImmutableState` 中的脚本字段
 
@@ -362,8 +389,8 @@ action: |
 ```
 待删除文件/依赖:
 - [ ] org.tabooproject.fluxon:core:1.6.1 (build.gradle.kts)
-- [ ] FluxonScriptCache.kt
-- [ ] FluxonExts.kt (参数解析工具迁移到新工具类后删除)
+- [ ] FluxonScriptCache.kt (由 ScriptManager.java 替代)
+- [ ] FluxonExts.kt (参数解析工具迁移到新 Java 工具类后删除)
 - [ ] 所有 Fluxon import 语句
 - [ ] FluxonEventRegistry.kt (如已存在)
 ```
