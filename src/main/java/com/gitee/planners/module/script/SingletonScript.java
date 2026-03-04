@@ -11,7 +11,8 @@ import java.util.regex.Pattern;
  */
 public class SingletonScript implements Script {
 
-    private static final Pattern NESTED_PATTERN = Pattern.compile("\\{\\{(.+?)}}");
+    // 同时支持 {{expr}} 和 ${expr} 两种模板格式
+    private static final Pattern NESTED_PATTERN = Pattern.compile("\\{\\{(.+?)}}|\\$\\{([^}]+)}");
 
     private final String action;
 
@@ -63,11 +64,40 @@ public class SingletonScript implements Script {
         Matcher matcher = NESTED_PATTERN.matcher(text);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
-            String expr = matcher.group(1);
+            String expr;
+            if (matcher.group(1) != null) {
+                // {{expr}} — 标准 JS 格式，直接求值
+                expr = matcher.group(1);
+            } else {
+                // ${expr} — Fluxon 兼容格式，预处理符号
+                expr = preprocessFluxon(matcher.group(2));
+            }
             Object result = new SingletonScript(expr).eval(options);
             matcher.appendReplacement(sb, Matcher.quoteReplacement(result != null ? result.toString() : ""));
         }
         matcher.appendTail(sb);
         return sb.toString();
+    }
+
+    /**
+     * 将 Fluxon 表达式预处理为合法 JS：
+     * - 去除前缀 &、*（变量sigil）
+     * - 将 && 替换为空（模板内部双sigil）
+     * - 将 :: 替换为 .（方法调用）
+     * - 去除剩余 &
+     */
+    private static String preprocessFluxon(String expr) {
+        String s = expr.trim();
+        // 前缀 & 或 * 去除（如 &level → level，*damage → damage）
+        if (s.startsWith("&") || s.startsWith("*")) {
+            s = s.substring(1);
+        }
+        // && → 空（如 &&ctx → ctx）
+        s = s.replace("&&", "");
+        // :: → .（如 ctx :: level() → ctx.level()）
+        s = s.replace("::", ".");
+        // 剩余 & 去除
+        s = s.replace("&", "");
+        return s.trim();
     }
 }

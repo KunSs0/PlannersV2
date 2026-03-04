@@ -2,15 +2,24 @@ def0:
   min: 1
   max: 100
   experience: |
-    if &level <= 10 then
-      &level * 200
-    else if &level <= 20 then
-      &level * 600
-    else if &level <= 30 then
-      &level * 900
-    else if &level <= 40 then
-      &level * 1200
-    else if &level <= 50 then
-      &level * 1600
-    else
-      &level * 3000
+    var exp;
+    switch (true) {
+      case level <= 10:
+        exp = level * 200;
+        break;
+      case level <= 20:
+        exp = level * 600;
+        break;
+      case level <= 30:
+        exp = level * 900;
+        break;
+      case level <= 40:
+        exp = level * 1200;
+        break;
+      case level <= 50:
+        exp = level * 1600;
+        break;
+      default:
+        exp = level * 3000;
+    }
+    exp

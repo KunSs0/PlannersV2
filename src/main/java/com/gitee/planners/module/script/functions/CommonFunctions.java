@@ -18,6 +18,19 @@ public final class CommonFunctions {
     private CommonFunctions() {}
 
     public static void register() {
+        // sleep(ms) — 当前线程睡眠，仅建议在 async 脚本中使用
+        GlobalFunctions.register("sleep", args -> {
+            long ms = ScriptArgs.getLong(args, 0);
+            if (ms > 0) {
+                try {
+                    Thread.sleep(ms);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            return null;
+        });
+
         // tell(message) 或 tell(message, targets)
         GlobalFunctions.register("tell", args -> {
             String message = ScriptArgs.getString(args, 0);

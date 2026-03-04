@@ -20,7 +20,12 @@ interface ImmutableVariable : Variable {
                 is Boolean, is Int, is Float, is Double, is Long -> Default(id, "$value")
 
                 is List<*> -> {
-                    When(id, value.map { Configuration.fromMap(it as Map<*, *>) })
+                    val first = value.firstOrNull()
+                    if (first is Map<*, *>) {
+                        When(id, value.map { Configuration.fromMap(it as Map<*, *>) })
+                    } else {
+                        DirectList(id, value)
+                    }
                 }
 
                 else -> error("Unsupported value type ${value::class.java}")
@@ -30,6 +35,13 @@ interface ImmutableVariable : Variable {
     }
 
     open class Default(override val id: String, action: String) : SingletonScript(action), ImmutableVariable
+
+    /** 直接注入列表值，不经过脚本求值（用于 YAML 数组变量如 rectX: [4, 1, 3, 4]） */
+    class DirectList(override val id: String, private val list: List<*>) : ImmutableVariable {
+        override fun run(options: ScriptOptions): CompletableFuture<Any?> {
+            return CompletableFuture.completedFuture(list)
+        }
+    }
 
     class Case(condition: String, id: String, action: String) : Default(id, action) {
 

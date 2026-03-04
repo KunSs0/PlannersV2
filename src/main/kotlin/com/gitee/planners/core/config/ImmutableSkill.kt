@@ -3,9 +3,11 @@ package com.gitee.planners.core.config
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.core.skill.callback.SkillHitCallbackManager
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
+import org.bukkit.entity.Player
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.common.util.asList
@@ -96,10 +98,33 @@ class ImmutableSkill(config: Configuration) : Skill {
             variables.forEach { (k, v) -> set(k, v) }
         }
 
+        // 求值并注入所有 YAML variables（如 damage, rectX 等）
+        immutableVariables.forEach { (key, variable) ->
+            val value = variable.run(options).getNow(null)
+            if (value != null) options.set(key, value)
+        }
+
+        val player = (sender.instance as? Player)
+
+        val doExecute: () -> Any? = {
+            val session = ScriptManager.openSession(options)
+            session.eval(action)
+            if (session.hasFunction("main")) {
+                session.invokeFunction("main")
+            }
+            // 注册 handleHit 回调（若无 handleHit 则 register 内部自动关闭 session）
+            if (player != null) {
+                SkillHitCallbackManager.register(player, session)
+            } else {
+                session.runCatching { close() }
+            }
+            null
+        }
+
         return if (async) {
-            CompletableFuture.supplyAsync { ScriptManager.eval(action, options) }
+            CompletableFuture.supplyAsync(doExecute)
         } else {
-            CompletableFuture.completedFuture(ScriptManager.eval(action, options))
+            CompletableFuture.completedFuture(doExecute())
         }
     }
 

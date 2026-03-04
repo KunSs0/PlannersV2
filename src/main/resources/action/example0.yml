@@ -9,4 +9,4 @@ __option__:
       default: 100
 
 action: |-
-  tell("${&type}:${&uuid} title = ${&title} tick = ${&tick}")
+  tell(type + ":" + uuid + " title = " + title + " tick = " + tick)
