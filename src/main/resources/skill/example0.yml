@@ -5,8 +5,8 @@ __option__:
     material: DIAMOND_SWORD
     name: "裂地斩"
     lore:
-      - "技能等级 ${&level}"
-      - "技能伤害 ${*damage}"
+      - "技能等级 ${level}"
+      - "技能伤害 ${damage}"
   variables:
     cooldown: 100
     damage: 32 * ctx.level + 100
