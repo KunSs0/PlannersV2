@@ -95,23 +95,27 @@ public final class ScriptManager {
                 Source.newBuilder("js", s, name).cached(true).buildLiteral());
     }
 
+    /** 一次性执行，Context 用完即弃 */
     public static Object eval(String source, ScriptOptions options) {
         Source compiled = getOrCompile(source, "script");
-        try (Context ctx = createContext(options)) {
+        try (Context ctx = newContext(options)) {
             return unwrap(ctx.eval(compiled));
         }
     }
 
-    private static Context createContext(ScriptOptions options) {
+    /** 创建会话，调用方管理生命周期（用于状态回调等跨调用场景） */
+    public static ScriptSession openSession(ScriptOptions options) {
+        return new ScriptSession(newContext(options));
+    }
+
+    private static Context newContext(ScriptOptions options) {
         Context ctx = Context.newBuilder("js")
                 .engine(engine)
                 .allowAllAccess(true)
                 .build();
-        Value jsBindings = ctx.getBindings("js");
-        // 注入全局函数
-        GlobalFunctions.applyTo(jsBindings);
-        // 注入上下文变量
-        options.applyTo(jsBindings);
+        Value bindings = ctx.getBindings("js");
+        GlobalFunctions.applyTo(bindings);
+        options.applyTo(bindings);
         return ctx;
     }
 
@@ -367,8 +371,356 @@ action: |
 
 1. **共享 Engine 实例** — 全局单例 `Engine`，避免重复初始化
 2. **Source 缓存** — `cached(true)` 启用编译缓存，重复执行跳过解析
-3. **Context 池化** — 高频场景考虑 Context 对象池，减少 GC 压力
+3. **ScriptSession** — 状态回调等跨调用场景使用会话模式，调用方管理生命周期
 4. **Host Access 配置** — `allowAllAccess(true)` 允许 JS 直接访问 Java 对象，避免序列化开销
+
+---
+
+## 待解决问题
+
+### 问题 1: Context 创建开销 — ❌ 无需优化
+
+Context 轻量，GC 压力可忽略，保持每次新建 + try-with-resources 即可。
+跨调用场景（状态回调）通过 `ScriptSession` 管理生命周期（见核心组件设计）。
+
+**状态**: ❌ 已关闭（无需优化）
+
+### 问题 2: 线程安全
+
+GraalJS `Context` 是单线程的，不能被多个线程并发访问。
+
+**分析现有执行路径**:
+
+| 路径 | 线程 | Context 来源 | 安全性 |
+|------|------|-------------|--------|
+| `ScriptManager.eval()` | 调用线程 | `newContext()` 每次新建 | ✅ 安全 — 独立 Context |
+| `SingletonScript.eval()` | 主线程 (sync) | 内部调 `ScriptManager.eval()` | ✅ 安全 |
+| `SingletonScript.run(async=true)` | ForkJoinPool 线程 | `supplyAsync` 内调 `ScriptManager.eval()` | ✅ 安全 — 每次调用新建独立 Context |
+| `ScriptSession` (状态回调) | 创建线程 | `openSession()` 新建 | ⚠️ 需约束：创建和调用必须在同一线程 |
+
+**结论**: 由于采用每次新建 Context 方案（问题 1 结论），绝大多数路径天然线程安全 — 每次 `eval()` 都是独立 Context，无共享状态。
+
+**唯一需要注意的点**: `ScriptSession` 跨调用持有 Context，必须保证同一线程使用。
+状态回调场景（`onStateAttach`/`onStateDetach`）由 `States.tick()` 在主线程调用，天然满足。
+
+```java
+public class ScriptSession implements AutoCloseable {
+    private final Context ctx;
+    private final long ownerThread = Thread.currentThread().getId();
+
+    // 防御性检查（可选，开发阶段启用）
+    private void checkThread() {
+        assert Thread.currentThread().getId() == ownerThread
+            : "ScriptSession must be used on the creating thread";
+    }
+
+    public Object eval(Source source) {
+        checkThread();
+        return ctx.eval(source);
+    }
+
+    public Value getFunction(String name) {
+        checkThread();
+        return ctx.getBindings("js").getMember(name);
+    }
+
+    @Override
+    public void close() {
+        ctx.close();
+    }
+}
+```
+
+**状态**: ✅ 已细化
+
+### 问题 3: 缺少执行超时 ✅ 已细化
+
+防止用户脚本死循环。GraalJS 提供两种机制：
+
+| 机制 | API | 特点 |
+|------|-----|------|
+| 语句计数限制 | `ResourceLimits.statementLimit()` | 轻量，但单条语句耗时不恒定（如 `Array.sort`） |
+| 手动取消 | `Context.close(true)` 从另一线程调用 | 可靠的时间限制，需额外调度线程 |
+
+**方案: 语句计数 + ScheduledExecutor 兜底**
+
+语句计数拦截常规死循环，ScheduledExecutor 兜底处理单条语句耗时过长的极端情况。
+
+```java
+private static final int STATEMENT_LIMIT = 100_000;
+private static final long TIMEOUT_MS = 5_000;
+private static final ScheduledExecutorService watchdog =
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "script-watchdog");
+            t.setDaemon(true);
+            return t;
+        });
+
+private static Context newContext(ScriptOptions options) {
+    ResourceLimits limits = ResourceLimits.newBuilder()
+            .statementLimit(STATEMENT_LIMIT, null)
+            .build();
+
+    Context ctx = Context.newBuilder("js")
+            .engine(engine)
+            .allowAllAccess(true)
+            .resourceLimits(limits)
+            .build();
+
+    Value bindings = ctx.getBindings("js");
+    GlobalFunctions.applyTo(bindings);
+    options.applyTo(bindings);
+    return ctx;
+}
+
+public static Object eval(String source, ScriptOptions options) {
+    Source compiled = getOrCompile(source, "script");
+    Context ctx = newContext(options);
+    // 超时兜底：5 秒后强制关闭
+    ScheduledFuture<?> timeout = watchdog.schedule(
+            () -> ctx.close(true), TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    try {
+        return unwrap(ctx.eval(compiled));
+    } catch (PolyglotException e) {
+        if (e.isCancelled() || e.isResourceExhausted()) {
+            throw new ScriptTimeoutException("脚本执行超时或超出语句限制: " + source);
+        }
+        throw e;
+    } finally {
+        timeout.cancel(false);
+        ctx.close();
+    }
+}
+```
+
+**设计要点**:
+- `statementLimit(100_000)` — 拦截 `while(true)` 等常规死循环，开销低
+- `watchdog.schedule()` — 5 秒硬超时兜底，处理 `Array.sort(巨大数组)` 等单语句耗时场景
+- watchdog 为 daemon 线程，不阻止 JVM 退出
+- `ScriptSession` 同样需要在 `close()` 中取消超时（长生命周期场景由调用方控制超时策略）
+- 超时后 Context 不可复用（GraalJS 限制），符合当前每次新建的方案
+
+**ScriptSession 的超时处理**:
+
+状态回调等长生命周期场景，单次函数调用仍应有超时保护：
+
+```java
+public class ScriptSession implements AutoCloseable {
+    public Object eval(Source source) {
+        checkThread();
+        ScheduledFuture<?> timeout = ScriptManager.watchdog.schedule(
+                () -> ctx.close(true), TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        try {
+            return ctx.eval(source);
+        } finally {
+            timeout.cancel(false);
+        }
+    }
+}
+```
+
+> 注意：`ctx.close(true)` 后 Context 不可用，ScriptSession 需感知此状态并在后续调用中快速失败。
+
+**状态**: ✅ 已细化
+
+### 问题 4: allowAllAccess 安全隐患 ✅ 已细化
+
+`allowAllAccess(true)` 使用户脚本可访问任意 Java 类（如 `java.lang.Runtime.exec()`）。
+
+**分析注入到脚本的对象**:
+
+| 变量 | 类型 | 来源 |
+|------|------|------|
+| `sender` | ProxyTarget / Player / Entity | 技能/触发器 |
+| `level` | int | 技能等级 |
+| `skill` | ImmutableSkill | 技能定义 |
+| `ctx` | SkillContext | 执行上下文 |
+| `profile` | PlayerTemplate | 玩家档案 |
+| `origin` | Location | 位置 |
+| `event` | Event | 触发事件 |
+| `state` | State | 状态对象 |
+
+脚本通过 `GlobalFunctions` 注册的全局函数（如 `damage()`、`tell()`）操作游戏逻辑，
+不需要直接调用注入对象的 Java 方法。注入对象主要作为参数传递给全局函数。
+
+**方案: 分离 Host Access 与 Public Access**
+
+```java
+private static final HostAccess HOST_ACCESS = HostAccess.newBuilder()
+        .allowPublicAccess(true)           // 允许访问注入对象的 public 方法
+        .allowAllImplementations(true)     // 允许 JS 实现 Java 接口 (ProxyExecutable 需要)
+        .allowArrayAccess(true)            // JS 数组 ↔ Java 数组
+        .allowListAccess(true)             // JS 数组 ↔ Java List
+        .allowMapAccess(true)              // JS 对象 ↔ Java Map
+        .build();
+
+private static Context newContext(ScriptOptions options) {
+    Context ctx = Context.newBuilder("js")
+            .engine(engine)
+            .allowHostAccess(HOST_ACCESS)
+            // 不设置 allowAllAccess(true)
+            // 不设置 allowHostClassLookup — 禁止 JS 通过 Java.type() 访问任意类
+            .build();
+    // ...
+}
+```
+
+**效果**:
+- ✅ 脚本可以读取注入对象的 public 属性/方法（如 `sender.getName()`）
+- ✅ 全局函数正常工作（ProxyExecutable）
+- ❌ 脚本无法 `Java.type("java.lang.Runtime")` 访问任意 Java 类
+- ❌ 脚本无法访问 private/protected 成员
+
+**状态**: ✅ 已细化
+
+### 问题 5: Source 缓存 key 策略 — ❌ 无需优化
+
+`ConcurrentHashMap` 用 String 做 key 时，查找基于 `hashCode()`（O(1)），不会逐字符比较。
+Java String 的 hashCode 在首次计算后缓存，后续调用是常数时间。
+实际脚本数量有限（几十到几百），不构成性能问题。
+
+**状态**: ❌ 已关闭（无需优化）
+
+### 问题 6: 状态回调函数发现机制 ✅ 已细化
+
+**旧方案 (Fluxon)**:
+```kotlin
+// 1. 执行脚本，注册函数到环境
+script.eval(env)
+// 2. 解析调用语句来调用函数，不存在则 catch 忽略
+try { FluxonScriptCache.getOrParse("onStateAttach()").eval(env) }
+catch (_: Exception) { }
+```
+
+问题：通过解析+执行调用语句来发现函数，不够直接。
+
+**新方案 (GraalJS + ScriptSession)**:
+
+JS eval 后函数自然注册到 bindings 中，直接通过 `getMember()` 获取：
+
+```java
+// States.invokeCallback 改造
+private void invokeCallback(State state, ProxyTarget<?> entity, Object event, String funcName) {
+    if (state.getSession() == null) return;
+    ScriptSession session = state.getSession();
+
+    Value fn = session.getFunction(funcName);
+    if (fn != null && fn.canExecute()) {
+        fn.execute();
+    }
+}
+```
+
+**State 生命周期与 ScriptSession 绑定**:
+
+```java
+// ImmutableState 持有 ScriptSession
+public class ImmutableState {
+    private ScriptSession session;
+
+    /** 状态初始化时创建 Session，执行脚本注册回调函数 */
+    public void init(ScriptOptions options) {
+        this.session = ScriptManager.openSession(options);
+        session.eval(ScriptManager.getOrCompile(actionSource, id));
+        // 此时 onStateAttach / onStateDetach 等函数已注册到 bindings
+        // 调用 main()（如果存在）
+        Value main = session.getFunction("main");
+        if (main != null && main.canExecute()) {
+            main.execute();
+        }
+    }
+
+    /** 状态完全关闭时释放 Session */
+    public void destroy() {
+        if (session != null) {
+            session.close();
+            session = null;
+        }
+    }
+}
+```
+
+**回调约定（保持不变）**:
+| 回调函数 | 触发时机 |
+|---------|---------|
+| `main()` | 状态初始化时执行一次 |
+| `onStateAttach()` | 状态附加到实体 |
+| `onStateDetach()` | 状态从实体移除 |
+| `onStateMount()` | 状态首次挂载 |
+| `onStateClose()` | 状态完全关闭 |
+| `onStateEnd()` | 状态自然结束 |
+
+**对比旧方案的优势**:
+- 直接 `getMember()` 获取函数引用，无需每次解析调用语句
+- `canExecute()` 显式判断函数是否存在，不靠 try-catch
+- ScriptSession 与 State 生命周期绑定，回调函数引用在整个生命周期内有效
+
+**状态**: ✅ 已细化
+
+### 问题 7: 脚本异常处理 ✅ 已细化
+
+脚本执行中可能出现的异常：
+
+| 异常类型 | 场景 | PolyglotException 属性 |
+|---------|------|----------------------|
+| 语法错误 | `Source.build()` 或首次 `eval()` | `isSyntaxError()` |
+| 运行时错误 | 空引用、类型错误等 | `isGuestException()` |
+| 超时/语句超限 | 死循环 (问题 3) | `isCancelled()` / `isResourceExhausted()` |
+| Host 异常 | 全局函数内部抛出 Java 异常 | `isHostException()` |
+
+**方案: ScriptManager 统一捕获 + 日志**
+
+```java
+public static Object eval(String source, ScriptOptions options) {
+    Source compiled;
+    try {
+        compiled = getOrCompile(source, "script");
+    } catch (PolyglotException e) {
+        logScriptError("编译失败", source, e);
+        return null;
+    }
+
+    Context ctx = newContext(options);
+    ScheduledFuture<?> timeout = watchdog.schedule(
+            () -> ctx.close(true), TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    try {
+        return unwrap(ctx.eval(compiled));
+    } catch (PolyglotException e) {
+        handlePolyglotException(source, e);
+        return null;
+    } finally {
+        timeout.cancel(false);
+        ctx.close();
+    }
+}
+
+private static void handlePolyglotException(String source, PolyglotException e) {
+    if (e.isCancelled() || e.isResourceExhausted()) {
+        logScriptError("执行超时", source, e);
+    } else if (e.isSyntaxError()) {
+        logScriptError("语法错误", source, e);
+    } else if (e.isHostException()) {
+        // 全局函数内部异常，打印完整堆栈便于开发者排查
+        logScriptError("内部错误", source, e.asHostException());
+    } else {
+        logScriptError("运行时错误", source, e);
+    }
+}
+
+private static void logScriptError(String type, String source, Throwable e) {
+    // 截取脚本前 80 字符作为摘要
+    String preview = source.length() > 80 ? source.substring(0, 80) + "..." : source;
+    Logger.warn("[Script] {} | {} | {}", type, preview, e.getMessage());
+}
+```
+
+**设计要点**:
+- 异常不上抛，返回 `null` — 与现有 Fluxon 行为一致（脚本错误不应崩溃服务器）
+- Host 异常用 `asHostException()` 取出原始 Java 异常，保留完整堆栈
+- 日志包含脚本摘要，便于定位问题脚本
+- `ScriptSession` 的异常处理交给调用方（States 等），保持灵活性
+
+**状态**: ✅ 已细化
 
 ---
 
@@ -377,10 +729,11 @@ action: |
 | 风险 | 应对 |
 |-----|------|
 | GraalJS 首次预热慢 (~200ms) | 插件启动时预热执行一次空脚本 |
-| Context 创建开销 | 评估 Context 池化方案 |
-| 用户脚本死循环 | 设置 `ResourceLimits` 限制执行时间 |
-| Java 对象在 JS 中的类型映射 | 用 `@HostAccess.Export` 注解或 ProxyObject 适配 |
+| Context 创建开销 | Context 池化 (见问题 1) |
+| 用户脚本死循环 | ResourceLimits 限制执行时间 (见问题 3) |
+| Java 对象在 JS 中的类型映射 | `@HostAccess.Export` 注解或 ProxyObject 适配 |
 | 依赖体积增大 (~20MB) | GraalJS 仅运行时需要，不影响编译 |
+| 安全风险 | HostAccess 白名单 (见问题 4) |
 
 ---
 
