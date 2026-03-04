@@ -1,8 +1,8 @@
 package com.gitee.planners.core.config.level
 
 import com.gitee.planners.api.common.Unique
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
-import com.gitee.planners.module.fluxon.SingletonFluxonScript
+import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import org.bukkit.entity.Player
 import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
@@ -25,12 +25,12 @@ interface Algorithm {
 
         override val maxLevel = root.getInt("max")
 
-        private val action = SingletonFluxonScript(root.getString("experience"))
+        private val action = SingletonScript(root.getString("experience"))
 
         override fun getExp(player: Player, level: Int): CompletableFuture<Int> {
-            val options = FluxonScriptOptions.create {
-                set("sender", player)
-                set("level", level)
+            val options = ScriptOptions.create {
+                it.set("sender", player)
+                it.set("level", level)
             }
             return action.run(options).thenApply { it?.cint ?: Int.MAX_VALUE }
         }

@@ -1,7 +1,7 @@
 package com.gitee.planners.module.currency
 
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
-import com.gitee.planners.module.fluxon.SingletonFluxonScript
+import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.warning
 import taboolib.common5.cdouble
@@ -63,16 +63,16 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
     }
 
 
-    class SimpleAction(action: String) : SingletonFluxonScript(action) {
+    class SimpleAction(action: String) : SingletonScript(action) {
 
         fun runNow(player: Player, vararg args: Pair<String, Any?>) {
-            val options = FluxonScriptOptions.common(player)
+            val options = ScriptOptions.common(player)
             args.forEach { (k, v) -> options.set(k, v) }
             this.run(options)
         }
 
         inline fun <reified T> getNow(sender: Player, parser: Function<Any?, T>): T {
-            val options = FluxonScriptOptions.common(sender)
+            val options = ScriptOptions.common(sender)
             return parser.apply(this.eval(options))
         }
 

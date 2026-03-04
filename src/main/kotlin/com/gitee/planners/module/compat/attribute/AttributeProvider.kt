@@ -2,8 +2,8 @@ package com.gitee.planners.module.compat.attribute
 
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
-import com.gitee.planners.module.fluxon.SingletonFluxonScript
+import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.event.player.PlayerSetRouteEvent
 import com.gitee.planners.api.event.player.PlayerSkillEvent
@@ -75,7 +75,7 @@ object AttributeProvider {
             return emptyList()
         }
 
-        val options = FluxonScriptOptions.common(player)
+        val options = ScriptOptions.common(player)
 
         return attributes.map { parse(it, options) }
     }
@@ -100,7 +100,7 @@ object AttributeProvider {
         return attributes.map { parse(it, options) }
     }
 
-    fun parse(text: String, options: FluxonScriptOptions): String {
-        return SingletonFluxonScript.replaceNested(text.trim(), options)
+    fun parse(text: String, options: ScriptOptions): String {
+        return SingletonScript.replaceNested(text.trim(), options)
     }
 }

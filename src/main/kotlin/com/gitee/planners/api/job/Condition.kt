@@ -1,7 +1,7 @@
 package com.gitee.planners.api.job
 
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
-import com.gitee.planners.module.fluxon.SingletonFluxonScript
+import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import taboolib.common5.cbool
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
@@ -9,29 +9,29 @@ import java.util.concurrent.CompletableFuture
 
 interface Condition {
 
-    fun match(options: FluxonScriptOptions): CompletableFuture<Boolean>
+    fun match(options: ScriptOptions): CompletableFuture<Boolean>
 
-    fun consumeTo(options: FluxonScriptOptions)
+    fun consumeTo(options: ScriptOptions)
 
     class Messaged(val condition: String, message: String?, post: String?) : Condition,
-        SingletonFluxonScript(condition) {
+        SingletonScript(condition) {
 
-        val post = SingletonFluxonScript(post)
+        val post = SingletonScript(post)
 
-        private val message = SingletonFluxonScript(message)
+        private val message = SingletonScript(message)
 
-        override fun match(options: FluxonScriptOptions): CompletableFuture<Boolean> {
+        override fun match(options: ScriptOptions): CompletableFuture<Boolean> {
             return this.run(options).thenApply { it.cbool }
         }
 
-        fun getMessage(options: FluxonScriptOptions) : String {
+        fun getMessage(options: ScriptOptions): String {
             if (message.isNotNull) {
                 return message.eval(options)?.toString() ?: ""
             }
             return ""
         }
 
-        override fun consumeTo(options: FluxonScriptOptions) {
+        override fun consumeTo(options: ScriptOptions) {
             if (post.isNotNull) { post.run(options) }
         }
 
@@ -39,15 +39,15 @@ interface Condition {
 
     class Combined(private val values: List<Condition>) : Condition {
 
-        override fun consumeTo(options: FluxonScriptOptions) {
+        override fun consumeTo(options: ScriptOptions) {
             values.forEach { it.consumeTo(options) }
         }
 
-        fun getMessage(options: FluxonScriptOptions) : List<String> {
+        fun getMessage(options: ScriptOptions): List<String> {
             return values.filterIsInstance<Messaged>().map { it.getMessage(options) }.filter { it.isNotEmpty() }
         }
 
-        override fun match(options: FluxonScriptOptions): CompletableFuture<Boolean> {
+        override fun match(options: ScriptOptions): CompletableFuture<Boolean> {
             return CompletableFuture.completedFuture(this.values.all {
                 it.match(options).getNow(false)
             })
@@ -56,7 +56,7 @@ interface Condition {
         /**
          * the sync method
          */
-        fun verify(options: FluxonScriptOptions): VerifyInfo {
+        fun verify(options: ScriptOptions): VerifyInfo {
             return VerifyInfo(this.values.filter {
                 !it.match(options).getNow(false)
             })

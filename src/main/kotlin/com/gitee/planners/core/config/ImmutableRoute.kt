@@ -5,7 +5,7 @@ import com.gitee.planners.api.job.Condition
 import com.gitee.planners.api.job.Job
 import com.gitee.planners.api.job.Route
 import com.gitee.planners.api.job.Router
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import taboolib.library.configuration.ConfigurationSection
@@ -41,8 +41,8 @@ class ImmutableRoute(private val parent: Router, private val config: Configurati
         return Registries.JOB.getOrNull(id) ?: error("Couldn't find job with id $id")
     }
 
-    override fun isInfer(player: Player, options: FluxonScriptOptions): Condition.VerifyInfo {
-        return condition.verify(FluxonScriptOptions.sender(player, options))
+    override fun isInfer(player: Player, options: ScriptOptions): Condition.VerifyInfo {
+        return condition.verify(ScriptOptions.sender(player, options))
     }
 
 }

@@ -1,7 +1,5 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.module.fluxon.FluxonScriptCache
-import org.tabooproject.fluxon.parser.ParsedScript
 import taboolib.library.configuration.ConfigurationSection
 
 class ImmutableState(val config: ConfigurationSection) : State {
@@ -16,7 +14,5 @@ class ImmutableState(val config: ConfigurationSection) : State {
 
     override val isStatic: Boolean = config.getBoolean("static", false)
 
-    override val action: ParsedScript? = config.getString("action")?.let { actionStr ->
-        if (actionStr.isBlank()) null else FluxonScriptCache.getOrParse(actionStr)
-    }
+    override val action: String? = config.getString("action")?.takeIf { it.isNotBlank() }
 }

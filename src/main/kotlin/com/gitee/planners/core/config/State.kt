@@ -1,7 +1,5 @@
 package com.gitee.planners.core.config
 
-import org.tabooproject.fluxon.parser.ParsedScript
-
 /**
  * 状态定义接口。
  */
@@ -31,7 +29,7 @@ interface State {
     val name: String
 
     /**
-     * 状态脚本，通过约定函数名调用内置事件处理器。
+     * 状态脚本源码，通过约定函数名调用内置事件处理器。
      *
      * 内置事件函数：
      * - main(): 状态加载时执行一次
@@ -41,5 +39,5 @@ interface State {
      * - onStateClose(): 状态完全关闭时触发
      * - onStateEnd(): 状态自然结束时触发
      */
-    val action: ParsedScript?
+    val action: String?
 }

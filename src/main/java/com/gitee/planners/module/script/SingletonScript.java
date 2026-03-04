@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
  * <p>
  * 替代 SingletonFluxonScript，封装单个脚本源码并提供执行入口。
  */
-public class SingletonScript {
+public class SingletonScript implements Script {
 
     private static final Pattern NESTED_PATTERN = Pattern.compile("\\{\\{(.+?)}}");
 
@@ -30,6 +30,7 @@ public class SingletonScript {
     /**
      * 执行脚本，根据 async 标志决定同步/异步
      */
+    @Override
     public CompletableFuture<Object> run(ScriptOptions options) {
         if (action.isEmpty()) {
             return CompletableFuture.completedFuture(null);

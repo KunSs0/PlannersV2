@@ -9,7 +9,7 @@ import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.core.skill.ExecutableResult
 import com.gitee.planners.core.skill.cooler.Cooler
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
 import taboolib.common5.cint
 import java.util.concurrent.CompletableFuture
@@ -37,7 +37,7 @@ object PlannersAPI {
      */
     fun getVariableValue(player: Player, skill: ImmutableSkill, variable: Variable): CompletableFuture<Any?> {
         val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
-        val options = FluxonScriptOptions.forSkill(player, level)
+        val options = ScriptOptions.forSkill(player, level)
         return variable.run(options)
     }
 
@@ -58,23 +58,23 @@ object PlannersAPI {
     /**
      * 创建技能选项
      */
-    fun newOptions(player: Player, skill: ImmutableSkill): FluxonScriptOptions {
+    fun newOptions(player: Player, skill: ImmutableSkill): ScriptOptions {
         val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
-        return FluxonScriptOptions.forSkill(player, level)
+        return ScriptOptions.forSkill(player, level)
     }
 
     /**
      * 创建技能选项
      */
-    fun newOptions(player: Player, skill: PlayerSkill): FluxonScriptOptions {
-        return FluxonScriptOptions.forSkill(player, skill.level)
+    fun newOptions(player: Player, skill: PlayerSkill): ScriptOptions {
+        return ScriptOptions.forSkill(player, skill.level)
     }
 
     /**
      * 创建技能选项
      */
-    fun newOptions(player: Player, skill: ImmutableSkill, level: Int): FluxonScriptOptions {
-        return FluxonScriptOptions.forSkill(player, level)
+    fun newOptions(player: Player, skill: ImmutableSkill, level: Int): ScriptOptions {
+        return ScriptOptions.forSkill(player, level)
     }
 
     /**

@@ -3,13 +3,11 @@ package com.gitee.planners.core.config
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
-import com.gitee.planners.module.fluxon.FluxonScriptCache
+import com.gitee.planners.module.script.ScriptManager
+import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
-import org.tabooproject.fluxon.parser.ParsedScript
-import taboolib.common.LifeCycle
-import taboolib.common.platform.function.registerLifeCycleTask
-import taboolib.common.platform.function.warning
 import taboolib.common.util.asList
 import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
@@ -70,23 +68,6 @@ class ImmutableSkill(config: Configuration) : Skill {
         return null
     }
 
-    /** 解析后的脚本 (延迟加载) */
-    val script: ParsedScript? by lazy {
-        if (action.isEmpty()) {
-            null
-        } else {
-            FluxonScriptCache.getOrParse(action)
-        }
-    }
-
-    init {
-        // 在 ENABLE 阶段预编译脚本
-        registerLifeCycleTask(LifeCycle.ENABLE) {
-            // 触发延迟加载
-            script
-        }
-    }
-
     /** 开始等级 */
     val startedLevel = option.getInt("started-level", 0)
 
@@ -105,20 +86,20 @@ class ImmutableSkill(config: Configuration) : Skill {
         level: Int = 0,
         variables: Map<String, Any?> = emptyMap()
     ): CompletableFuture<Any?> {
-        val parsedScript = script ?: return CompletableFuture.completedFuture(null)
+        if (action.isEmpty()) return CompletableFuture.completedFuture(null)
 
-        val env = parsedScript.newEnvironment().apply {
-            defineRootVariable("sender", sender)
-            defineRootVariable("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
-            defineRootVariable("level", level)
-            defineRootVariable("skill", this@ImmutableSkill)
-            variables.forEach { (k, v) -> defineRootVariable(k, v) }
+        val options = ScriptOptions.of().apply {
+            set("sender", sender)
+            set("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
+            set("level", level)
+            set("skill", this@ImmutableSkill)
+            variables.forEach { (k, v) -> set(k, v) }
         }
 
         return if (async) {
-            CompletableFuture.supplyAsync { parsedScript.eval(env) }
+            CompletableFuture.supplyAsync { ScriptManager.eval(action, options) }
         } else {
-            CompletableFuture.completedFuture(parsedScript.eval(env))
+            CompletableFuture.completedFuture(ScriptManager.eval(action, options))
         }
     }
 
@@ -138,11 +119,7 @@ class ImmutableSkill(config: Configuration) : Skill {
 
         class Amount(val expression: String, val mark: Boolean) {
 
-            /** 解析后的脚本 */
-            private val script: ParsedScript? by lazy {
-                if (expression.isEmpty()) null
-                else FluxonScriptCache.getOrParse(expression)
-            }
+            private val script = SingletonScript(expression)
 
             val isNotNull: Boolean
                 get() = expression.isNotEmpty()
@@ -151,11 +128,10 @@ class ImmutableSkill(config: Configuration) : Skill {
              * 执行表达式
              */
             fun eval(variables: Map<String, Any?> = emptyMap()): Any? {
-                val parsedScript = script ?: return null
-                val env = parsedScript.newEnvironment().apply {
-                    variables.forEach { (k, v) -> defineRootVariable(k, v) }
-                }
-                return parsedScript.eval(env)
+                if (!script.isNotNull) return null
+                val options = ScriptOptions.of()
+                variables.forEach { (k, v) -> options.set(k, v) }
+                return script.eval(options)
             }
         }
     }

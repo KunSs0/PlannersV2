@@ -1,31 +1,25 @@
-package com.gitee.planners.module.fluxon.finder
+package com.gitee.planners.module.script.finder
 
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.ProxyTargetContainer
-import com.gitee.planners.module.fluxon.FluxonScriptCache
 
 import org.bukkit.Location
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
-import org.tabooproject.fluxon.runtime.FunctionSignature.returns
-import org.tabooproject.fluxon.runtime.Type
-import org.tabooproject.fluxon.runtime.java.Export
-import taboolib.common.LifeCycle
-import taboolib.common.platform.Awake
 
 /**
  * 链式目标查找器 - 立即执行模式
  *
  * 示例：
- * ```fluxon
+ * ```js
  * // 基础用法
- * var targets = finder()::range(10)::type("zombie")::limit(3)::build()
+ * var targets = finder().range(10).type("zombie").limit(3).build()
  *
  * // 多区域选择
- * var multi = finder()::range(10)::origin(locB)::range(5)::build()
+ * var multi = finder().range(10).origin(locB).range(5).build()
  *
  * // 多类型 (OR 逻辑)
- * var undead = finder()::range(15)::type("zombie,skeleton")::build()
+ * var undead = finder().range(15).type("zombie,skeleton").build()
  * ```
  */
 class TargetFinder(
@@ -39,7 +33,6 @@ class TargetFinder(
 
     // === 选择器 (立即执行，累加结果) ===
 
-    @Export
     fun range(r: Double): TargetFinder {
         val world = origin.world ?: return this
         val nearby = world.getNearbyEntities(origin, r, r, r)
@@ -52,13 +45,11 @@ class TargetFinder(
 
     // === 状态修改 ===
 
-    @Export
     fun origin(location: Location): TargetFinder {
         this.origin = location
         return this
     }
 
-    @Export
     fun includeSelf(): TargetFinder {
         this.includeSelf = true
         return this
@@ -66,7 +57,6 @@ class TargetFinder(
 
     // === 过滤器 (立即执行，修改结果集) ===
 
-    @Export
     fun type(type: String): TargetFinder {
         val types = type.split(",").map { it.trim() }.mapNotNull { name ->
             EntityType.values().find { it.name.equals(name, ignoreCase = true) }
@@ -76,7 +66,6 @@ class TargetFinder(
         return this
     }
 
-    @Export
     fun excludeType(type: String): TargetFinder {
         val types = type.split(",").map { it.trim() }.mapNotNull { name ->
             EntityType.values().find { it.name.equals(name, ignoreCase = true) }
@@ -86,14 +75,12 @@ class TargetFinder(
         return this
     }
 
-    @Export
     fun name(pattern: String): TargetFinder {
         val patterns = pattern.split(",").map { Regex(it.trim(), RegexOption.IGNORE_CASE) }
         entities.retainAll { entity -> patterns.any { it.containsMatchIn(entity.name) } }
         return this
     }
 
-    @Export
     fun inWorld(world: String): TargetFinder {
         val worlds = world.split(",").map { it.trim().lowercase() }
         entities.retainAll { it.world.name.lowercase() in worlds }
@@ -102,7 +89,6 @@ class TargetFinder(
 
     // === 限制器 (立即执行) ===
 
-    @Export
     fun limit(n: Int): TargetFinder {
         if (entities.size > n) {
             val toKeep = entities.take(n).toSet()
@@ -111,7 +97,6 @@ class TargetFinder(
         return this
     }
 
-    @Export
     fun sort(type: String): TargetFinder {
         val sortType = SortType.values().find { it.name.equals(type, ignoreCase = true) }
             ?: error("未知排序类型: $type")
@@ -125,7 +110,6 @@ class TargetFinder(
         return this
     }
 
-    @Export
     fun sortReverse(): TargetFinder {
         val reversed = entities.reversed()
         entities.clear()
@@ -133,7 +117,6 @@ class TargetFinder(
         return this
     }
 
-    @Export
     fun shuffle(): TargetFinder {
         val shuffled = entities.shuffled()
         entities.clear()
@@ -143,47 +126,9 @@ class TargetFinder(
 
     // === 构建结果 ===
 
-    @Export
     fun build(): ProxyTargetContainer {
         return ProxyTargetContainer().apply {
             entities.forEach { add(ProxyTarget.of(it)) }
-        }
-    }
-
-    companion object {
-
-        @Awake(LifeCycle.LOAD)
-        private fun init() {
-            val runtime = FluxonScriptCache.runtime
-
-            runtime.exportRegistry.registerClass(TargetFinder::class.java)
-
-            // finder() -> TargetFinder
-            runtime.registerFunction("finder", returns(Type.OBJECT).noParams()) { ctx ->
-                val origin = (ctx.environment.rootVariables["sender"] as? LivingEntity)?.location
-                    ?: error("无法解析 origin，请传入 Location 或确保 sender 是 LivingEntity")
-                val sender = ctx.environment.rootVariables["sender"] as? LivingEntity
-                TargetFinder(origin, sender)
-            }
-
-            // finder(origin) -> TargetFinder
-            runtime.registerFunction("finder", returns(Type.OBJECT).params(Type.OBJECT)) { ctx ->
-                val origin = resolveLocation(ctx.getRef(0))
-                    ?: (ctx.environment.rootVariables["sender"] as? LivingEntity)?.location
-                    ?: error("无法解析 origin，请传入 Location 或确保 sender 是 LivingEntity")
-                val sender = ctx.environment.rootVariables["sender"] as? LivingEntity
-                TargetFinder(origin, sender)
-            }
-        }
-
-        private fun resolveLocation(arg: Any?): Location? {
-            return when (arg) {
-                is Location -> arg
-                is ProxyTarget.BukkitLocation -> arg.getBukkitLocation()
-                is ProxyTarget.BukkitEntity -> arg.getBukkitLocation()
-                is LivingEntity -> arg.location
-                else -> null
-            }
         }
     }
 }

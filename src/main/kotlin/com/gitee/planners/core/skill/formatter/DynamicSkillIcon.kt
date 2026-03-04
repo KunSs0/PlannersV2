@@ -3,7 +3,7 @@ package com.gitee.planners.core.skill.formatter
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
-import com.gitee.planners.module.fluxon.SingletonFluxonScript
+import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
@@ -16,7 +16,7 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         if (player != null) {
             PlannersAPI.newOptions(player, skill, level)
         } else {
-            com.gitee.planners.module.fluxon.FluxonScriptOptions.forSkill(sender.instance ?: sender, level)
+            com.gitee.planners.module.script.ScriptOptions.forSkill(sender.instance ?: sender, level)
         }
     }
 
@@ -24,7 +24,7 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         if (text == null) {
             return ""
         }
-        return SingletonFluxonScript.replaceNested(text.trim(), options)
+        return SingletonScript.replaceNested(text.trim(), options)
     }
 
     companion object {

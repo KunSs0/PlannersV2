@@ -9,8 +9,8 @@ import com.gitee.planners.api.job.target.hasState
 import com.gitee.planners.api.job.target.isExpired
 import com.gitee.planners.api.job.target.removeState
 import com.gitee.planners.core.config.State
-import com.gitee.planners.module.fluxon.FluxonScriptCache
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.script.ScriptManager
+import com.gitee.planners.module.script.ScriptOptions
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.Schedule
@@ -24,16 +24,19 @@ object States {
     @Awake(LifeCycle.ENABLE)
     fun init() {
         for (state in Registries.STATE.values()) {
-            val script = state.action ?: continue
-            val env = script.newEnvironment()
+            val source = state.action ?: continue
+            val options = ScriptOptions.of()
+            val session = ScriptManager.openSession(options)
             try {
-                script.eval(env)
-                try {
-                    FluxonScriptCache.getOrParse("main()").eval(env)
-                } catch (_: Exception) {}
+                session.eval(source)
+                if (session.hasFunction("main")) {
+                    session.invokeFunction("main")
+                }
             } catch (e: Exception) {
                 warning("Failed to initialize state script: ${state.id}")
                 e.printStackTrace()
+            } finally {
+                session.close()
             }
         }
     }
@@ -99,27 +102,26 @@ object States {
     }
 
     private fun invokeCallback(state: State, entity: ProxyTarget<*>, event: Any, funcName: String) {
-        val script = state.action ?: return
+        val source = state.action ?: return
         val target = entity as? ProxyTarget.Entity<*> ?: return
         if (!target.hasState(state)) return
 
-        val env = script.newEnvironment()
-        env.defineRootVariable("sender", target.instance)
-        env.defineRootVariable("event", event)
-        env.defineRootVariable("state", state)
+        val options = ScriptOptions.create {
+            it.set("sender", target.instance)
+            it.set("event", event)
+            it.set("state", state)
+        }
 
-        FluxonScriptOptions.create {
-            set("sender", target.instance)
-            set("event", event)
-            set("state", state)
-        }.applyTo(env)
-
-        script.eval(env)
-
+        val session = ScriptManager.openSession(options)
         try {
-            FluxonScriptCache.getOrParse("$funcName()").eval(env)
+            session.eval(source)
+            if (session.hasFunction(funcName)) {
+                session.invokeFunction(funcName)
+            }
         } catch (_: Exception) {
-            // 函数不存在，忽略
+            // 函数不存在或执行失败，忽略
+        } finally {
+            session.close()
         }
     }
 }

@@ -1,6 +1,6 @@
 package com.gitee.planners.module.script.functions;
 
-import com.gitee.planners.module.fluxon.mythicmobs.MythicObject;
+import com.gitee.planners.module.script.mythicmobs.MythicObject;
 import com.gitee.planners.module.script.GlobalFunctions;
 
 /**

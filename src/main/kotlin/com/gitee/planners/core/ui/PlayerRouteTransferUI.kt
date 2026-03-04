@@ -2,7 +2,7 @@ package com.gitee.planners.core.ui
 
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
+import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.util.replaceInfix
 import org.bukkit.entity.Player
@@ -19,7 +19,7 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
 
     override fun onClick(event: ClickEvent, element: ImmutableRoute) {
         val player = event.clicker
-        val verify = element.condition.verify(FluxonScriptOptions.common(player))
+        val verify = element.condition.verify(ScriptOptions.common(player))
         // 如果校验不通过
         if (verify.isInvalid) {
             player.sendLang("player-transfer-invalid")
@@ -34,7 +34,7 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
 
     override fun onGenerate(player: Player, element: ImmutableRoute, index: Int, slot: Int): ItemStack {
         return (element.icon ?: XMaterial.STONE.parseItem())!!.replaceInfix("\$message") {
-            element.condition.getMessage(FluxonScriptOptions.common(player))
+            element.condition.getMessage(ScriptOptions.common(player))
         }
     }
 

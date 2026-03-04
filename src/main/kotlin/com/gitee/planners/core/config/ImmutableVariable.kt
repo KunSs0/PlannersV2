@@ -1,8 +1,8 @@
 package com.gitee.planners.core.config
 
 import com.gitee.planners.api.job.Variable
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
-import com.gitee.planners.module.fluxon.SingletonFluxonScript
+import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import taboolib.common5.cbool
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
@@ -29,16 +29,16 @@ interface ImmutableVariable : Variable {
 
     }
 
-    open class Default(override val id: String, action: String) : SingletonFluxonScript(action), ImmutableVariable
+    open class Default(override val id: String, action: String) : SingletonScript(action), ImmutableVariable
 
     class Case(condition: String, id: String, action: String) : Default(id, action) {
 
-        val condition = SingletonFluxonScript(condition)
+        val condition = SingletonScript(condition)
 
         /**
          * 玩家是否匹配条件
          */
-        fun match(options: FluxonScriptOptions): Boolean {
+        fun match(options: ScriptOptions): Boolean {
             return condition.run(options).thenApply { it.cbool }.getNow(false)
         }
 
@@ -53,7 +53,7 @@ interface ImmutableVariable : Variable {
             Case(condition, id, action)
         }
 
-        override fun run(options: FluxonScriptOptions): CompletableFuture<Any?> {
+        override fun run(options: ScriptOptions): CompletableFuture<Any?> {
             val case = cases.firstOrNull { it.match(options) } ?: return CompletableFuture.completedFuture(false)
 
             return case.run(options)

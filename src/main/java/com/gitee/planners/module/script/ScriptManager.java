@@ -26,8 +26,10 @@ public final class ScriptManager {
      */
     public static void init() {
         if (engine != null) return;
+        // 先注册所有函数到 GlobalFunctions
+        ScriptFunctionRegistry.registerAll();
         engine = createEngine();
-        // 注入已注册的全局函数
+        // 注入已注册的全局函数到引擎
         GlobalFunctions.applyTo(engine);
         LOGGER.info("[Script] 引擎初始化完成: " + engine.name());
     }

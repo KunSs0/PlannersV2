@@ -1,6 +1,6 @@
 package com.gitee.planners.module.script.functions;
 
-import com.gitee.planners.module.fluxon.finder.TargetFinder;
+import com.gitee.planners.module.script.finder.TargetFinder;
 import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
 import com.gitee.planners.module.script.ScriptContext;

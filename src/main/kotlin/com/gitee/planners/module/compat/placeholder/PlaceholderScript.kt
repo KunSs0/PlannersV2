@@ -1,7 +1,7 @@
 package com.gitee.planners.module.compat.placeholder
 
-import com.gitee.planners.module.fluxon.FluxonScriptOptions
-import com.gitee.planners.module.fluxon.SingletonFluxonScript
+import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import org.bukkit.entity.Player
 
 /**
@@ -10,8 +10,8 @@ import org.bukkit.entity.Player
 object PlaceholderScript {
 
     fun parse(player: Player, args: String): String {
-        val script = SingletonFluxonScript(args)
-        val options = FluxonScriptOptions.common(player)
+        val script = SingletonScript(args)
+        val options = ScriptOptions.common(player)
         return script.eval(options)?.toString() ?: ""
     }
 
