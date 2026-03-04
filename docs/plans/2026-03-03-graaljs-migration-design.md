@@ -1,26 +1,40 @@
-# Fluxon → GraalJS 脚本引擎迁移计划
+# Fluxon → JavaScript 脚本引擎迁移计划
 
 > 版本: 5.0
 > 日期: 2026-03-03
 > 策略: 完全替换，脚本语法改为标准 JavaScript
 > 实现语言: **Java** (新增代码放置在 Java 源码目录)
-> 状态: 📋 计划中
+> 状态: 🚧 Phase 1 实施中
 
 ## 概述
 
-将脚本引擎从 Fluxon (自研脚本语言) 迁移到 GraalJS (标准 JS 引擎)。
-迁移动机：更高的执行性能（预编译+缓存后微秒级）、标准语法降低用户学习成本。
+将脚本引擎从 Fluxon (自研脚本语言) 迁移到标准 JavaScript。
+迁移动机：标准语法降低用户学习成本、更高的执行性能。
 
 ## 迁移决策
 
 | 决策项 | 选择 |
 |-------|------|
-| 引擎 | GraalJS (org.graalvm.polyglot) |
-| 脚本语法 | 标准 JavaScript (ES2023+) |
+| 引擎 | 双引擎: Nashorn (Java 8~14) / GraalJS (Java 17+) |
+| 脚本语法 | 标准 JavaScript |
 | 旧脚本兼容 | 不兼容，用户需重写为 JS |
 | API 暴露方式 | 全局函数 (如 `damage(10)`) |
 | 异步模型 | CompletableFuture，保持现有模式 |
 | 迁移顺序 | 自底向上 (引擎核心 → 扩展函数 → 上层集成) |
+| Java 兼容性 | 编译目标 Java 8，运行时自动选择引擎 |
+
+### 双引擎架构
+
+```
+JsEngine (接口)
+├── NashornEngine   — Java 8~14，javax.script API，内置无额外依赖
+└── GraalJsEngine   — Java 17+，polyglot API，高性能 JIT (后续实现)
+
+ScriptManager (门面)
+└── 运行时检测 Java 版本 → 自动选择引擎
+    ├── >= 17 且 GraalJS 可用 → GraalJsEngine
+    └── 其他 → NashornEngine
+```
 
 ---
 
@@ -32,9 +46,10 @@ dependencies {
     // 移除
     - taboo("org.tabooproject.fluxon:core:1.6.1")
 
-    // 新增
-    + implementation("org.graalvm.polyglot:polyglot:24.1.1")
-    + implementation("org.graalvm.polyglot:js:24.1.1")
+    // 新增 (GraalJS 仅运行时，不影响 Java 8 编译)
+    + runtimeOnly("org.graalvm.polyglot:polyglot:24.1.1")
+    + runtimeOnly("org.graalvm.polyglot:js:24.1.1")
+    // Nashorn: Java 8~14 内置，无需额外依赖
 }
 ```
 
@@ -45,18 +60,18 @@ dependencies {
 ### 核心映射
 
 ```
-旧 (Fluxon)                        新 (GraalJS)
+旧 (Fluxon)                        新 (JS)
 ───────────────────────────────────────────────────
-FluxonRuntime                  →   GraalJS Engine (共享 Context Pool)
-Fluxon.parse(source)           →   Source.newBuilder("js", ...).build()
-ParsedScript                   →   Source (预编译缓存)
-Environment                    →   Value bindings (Context.getBindings)
-ParsedScript.eval(env)         →   Context.eval(source)
-runtime.registerFunction()     →   bindings.putMember("name", ProxyExecutable)
-FunctionContext                →   标准 JS 函数参数 (Value[])
-FluxonScriptOptions            →   ScriptOptions (保留"执行选项"语义，含 variables + async 标志)
+FluxonRuntime                  →   JsEngine (接口，双引擎实现)
+Fluxon.parse(source)           →   JsEngine.eval() / Compilable.compile()
+ParsedScript                   →   CompiledScript (Nashorn) / Source (GraalJS)
+Environment                    →   Bindings (Nashorn) / Value (GraalJS)
+ParsedScript.eval(env)         →   JsEngine.eval(source, variables)
+runtime.registerFunction()     →   GlobalFunctions.register(name, JsFunction)
+FunctionContext                →   Object[] (统一参数数组)
+FluxonScriptOptions            →   ScriptOptions (保留"执行选项"语义)
 SingletonFluxonScript          →   SingletonScript (保留"单次脚本封装"语义)
-FluxonScriptCache              →   ScriptManager (避免与 GraalJS Engine / javax.script.ScriptEngine 冲突)
+FluxonScriptCache              →   ScriptManager (静态门面)
 FluxonTrigger                  →   ScriptTrigger (新封装)
 ```
 
@@ -64,7 +79,7 @@ FluxonTrigger                  →   ScriptTrigger (新封装)
 
 ```
 旧: env.defineRootVariable("sender", sender)
-新: bindings.putMember("sender", sender)
+新: ScriptOptions.set("sender", sender) → 自动注入到引擎 Bindings
 
 注入变量 (保持一致):
   sender   - 执行者 (Player/Entity)

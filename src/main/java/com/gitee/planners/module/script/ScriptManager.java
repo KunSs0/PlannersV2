@@ -1,0 +1,114 @@
+package com.gitee.planners.module.script;
+
+import com.gitee.planners.module.script.nashorn.NashornEngine;
+
+import java.util.Map;
+import java.util.logging.Logger;
+
+/**
+ * 脚本管理器 (静态门面)
+ * <p>
+ * 运行时自动选择最佳 JS 引擎:
+ * <ul>
+ *   <li>Java 8~14: Nashorn</li>
+ *   <li>Java 17+: GraalJS (后续实现)</li>
+ * </ul>
+ */
+public final class ScriptManager {
+
+    private static final Logger LOGGER = Logger.getLogger("Script");
+    private static volatile JsEngine engine;
+
+    private ScriptManager() {}
+
+    /**
+     * 初始化引擎 (插件启动时调用)
+     */
+    public static void init() {
+        if (engine != null) return;
+        engine = createEngine();
+        // 注入已注册的全局函数
+        GlobalFunctions.applyTo(engine);
+        LOGGER.info("[Script] 引擎初始化完成: " + engine.name());
+    }
+
+    /**
+     * 执行脚本
+     */
+    public static Object eval(String source, ScriptOptions options) {
+        ensureInit();
+        return engine.eval(source, options.getVariables());
+    }
+
+    /**
+     * 执行脚本 (无上下文变量)
+     */
+    public static Object eval(String source) {
+        return eval(source, new ScriptOptions());
+    }
+
+    /**
+     * 打开会话 (状态回调等跨调用场景)
+     */
+    public static JsSession openSession(ScriptOptions options) {
+        ensureInit();
+        return engine.openSession(options.getVariables());
+    }
+
+    /**
+     * 获取当前引擎
+     */
+    public static JsEngine getEngine() {
+        ensureInit();
+        return engine;
+    }
+
+    /**
+     * 关闭引擎 (插件卸载时调用)
+     */
+    public static void shutdown() {
+        if (engine != null) {
+            engine.close();
+            engine = null;
+        }
+    }
+
+    private static JsEngine createEngine() {
+        int version = getMajorJavaVersion();
+
+        // Java 17+: 尝试 GraalJS
+        if (version >= 17) {
+            JsEngine graal = tryCreateGraalEngine();
+            if (graal != null) return graal;
+        }
+
+        // Java 8~14: Nashorn
+        return new NashornEngine();
+    }
+
+    /**
+     * 尝试通过反射加载 GraalJS 引擎 (避免 Java 8 编译时依赖)
+     */
+    private static JsEngine tryCreateGraalEngine() {
+        try {
+            Class<?> clazz = Class.forName("com.gitee.planners.module.script.graaljs.GraalJsEngine");
+            return (JsEngine) clazz.getDeclaredConstructor().newInstance();
+        } catch (Throwable e) {
+            LOGGER.warning("[Script] GraalJS 不可用，回退到 Nashorn: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static int getMajorJavaVersion() {
+        String version = System.getProperty("java.version");
+        if (version.startsWith("1.")) {
+            return Integer.parseInt(version.substring(2, 3));
+        }
+        int dot = version.indexOf('.');
+        return Integer.parseInt(dot > 0 ? version.substring(0, dot) : version);
+    }
+
+    private static void ensureInit() {
+        if (engine == null) init();
+    }
+}
