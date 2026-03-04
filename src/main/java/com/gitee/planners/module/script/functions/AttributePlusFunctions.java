@@ -12,13 +12,15 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.serverct.ersha.api.AttributeAPI;
 import org.serverct.ersha.attribute.AttributeHandle;
 import org.serverct.ersha.attribute.data.AttributeData;
 import org.serverct.ersha.attribute.data.AttributeSource;
-import taboolib.common.platform.function.AdapterKt;
-import taboolib.common.util.SyncKt;
-import taboolib.platform.util.ItemUtilKt;
+import taboolib.common.util.SyncExecutorKt;
+import taboolib.platform.BukkitPlugin;
+
+import org.bukkit.Bukkit;
 
 import java.util.Arrays;
 
@@ -73,7 +75,7 @@ public final class AttributePlusFunctions {
 
         AttributeData data;
         if (isolation) {
-            data = AttributeData.create(sender);
+            data = AttributeData.Companion.create(sender);
         } else {
             data = AttributeAPI.getAttrData(sender);
         }
@@ -99,7 +101,7 @@ public final class AttributePlusFunctions {
                     EntityDamageEvent.DamageCause.CUSTOM, 0.0
             );
 
-            AttributeHandle handle = SyncKt.runSync(() ->
+            AttributeHandle handle = SyncExecutorKt.runSync(() ->
                     new AttributeHandle(data, AttributeAPI.getAttrData(entity))
             ).init(env, false, true).handleAttackOrDefenseAttribute();
 
@@ -107,11 +109,11 @@ public final class AttributePlusFunctions {
                 double finalDamage = handle.getDamage(finalSender);
 
                 if (finalDamage > entity.getHealth()) {
-                    ItemUtilKt.setMeta(entity, "killer", finalSender);
+                    entity.setMetadata("killer", new FixedMetadataValue(BukkitPlugin.getInstance(), finalSender));
                 }
 
                 handle.sendAttributeMessage();
-                SyncKt.runSync(() -> {
+                SyncExecutorKt.runSync(() -> {
                     entity.damage(finalDamage);
                     return null;
                 });
@@ -119,7 +121,8 @@ public final class AttributePlusFunctions {
                 if (finalSender instanceof Player) {
                     new PlayerDamageEntityEvent(
                             (Player) finalSender, entity, finalDamage,
-                            EntityDamageEvent.DamageCause.CUSTOM
+                            EntityDamageEvent.DamageCause.CUSTOM,
+                            null
                     ).call();
                 }
 
@@ -127,10 +130,7 @@ public final class AttributePlusFunctions {
 
                 double reflectDamage = handle.getDamage(entity);
                 if (reflectDamage > 0.0) {
-                    AdapterKt.submit(false, false, 0L, 0L, () -> {
-                        finalSender.damage(reflectDamage);
-                        return null;
-                    });
+                    Bukkit.getScheduler().runTask(BukkitPlugin.getInstance(), () -> finalSender.damage(reflectDamage));
                 }
             }
         }

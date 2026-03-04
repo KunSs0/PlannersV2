@@ -31,7 +31,7 @@ public final class CooldownFunctions {
             if (skill == null) return null;
             Player player = ScriptArgs.getPlayer(args, 1);
             if (player == null) return null;
-            return Cooler.INSTANCE.get(player, skill);
+            return Cooler.Companion.getINSTANCE().get(player, skill);
         });
 
         // setCooldown(skill, ticks) 或 setCooldown(skill, ticks, player)
@@ -41,7 +41,7 @@ public final class CooldownFunctions {
             int ticks = ScriptArgs.getInt(args, 1);
             Player player = ScriptArgs.getPlayer(args, 2);
             if (player == null) return null;
-            Cooler.INSTANCE.set(player, skill, ticks);
+            Cooler.Companion.getINSTANCE().set(player, skill, ticks);
             return null;
         });
 
@@ -51,7 +51,7 @@ public final class CooldownFunctions {
             if (skill == null) return null;
             Player player = ScriptArgs.getPlayer(args, 1);
             if (player == null) return null;
-            Cooler.INSTANCE.set(player, skill, 0);
+            Cooler.Companion.getINSTANCE().set(player, skill, 0);
             return null;
         });
 
@@ -61,7 +61,7 @@ public final class CooldownFunctions {
             if (skill == null) return null;
             Player player = ScriptArgs.getPlayer(args, 1);
             if (player == null) return null;
-            return Cooler.INSTANCE.get(player, skill) > 0;
+            return Cooler.Companion.getINSTANCE().get(player, skill) > 0;
         });
     }
 }

@@ -11,8 +11,8 @@ import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
 
 import org.bukkit.Location;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import taboolib.platform.util.PlatformUtilKt;
 import taboolib.type.BukkitEquipment;
 
 import java.util.UUID;
@@ -202,7 +202,7 @@ public final class GermPluginFunctions {
             } else {
                 continue;
             }
-            for (Player player : PlatformUtilKt.getOnlinePlayers()) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
                 GermPacketAPI.sendEffect(player, name, index, x, y, z);
             }
         }
@@ -230,7 +230,7 @@ public final class GermPluginFunctions {
             if (target instanceof ProxyTarget.BukkitEntity) {
                 Object instance = ((ProxyTarget.BukkitEntity) target).getInstance();
                 int entityId = ((ProxyTarget.BukkitEntity) target).getInstance().getEntityId();
-                for (Player sender : PlatformUtilKt.getOnlinePlayers()) {
+                for (Player sender : Bukkit.getOnlinePlayers()) {
                     if (instance instanceof Player) {
                         GermPacketAPI.sendBendAction(sender, entityId, animData);
                     } else {
@@ -246,7 +246,7 @@ public final class GermPluginFunctions {
             if (target instanceof ProxyTarget.BukkitEntity) {
                 Object instance = ((ProxyTarget.BukkitEntity) target).getInstance();
                 int entityId = ((ProxyTarget.BukkitEntity) target).getInstance().getEntityId();
-                for (Player sender : PlatformUtilKt.getOnlinePlayers()) {
+                for (Player sender : Bukkit.getOnlinePlayers()) {
                     if (instance instanceof Player) {
                         GermPacketAPI.sendBendClear(sender, entityId);
                     } else {

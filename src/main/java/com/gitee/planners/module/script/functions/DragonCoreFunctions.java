@@ -8,9 +8,9 @@ import com.gitee.planners.module.script.ScriptArgs;
 
 import eos.moe.dragoncore.api.CoreAPI;
 import eos.moe.dragoncore.network.PacketSender;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import taboolib.platform.util.PlatformUtilKt;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -159,7 +159,7 @@ public final class DragonCoreFunctions {
             } else {
                 continue;
             }
-            for (Player player : PlatformUtilKt.getOnlinePlayers()) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
                 PacketSender.addParticle(player, scheme, id, posOrEntityId, x + "," + y + "," + z, tile);
             }
         }
@@ -231,7 +231,7 @@ public final class DragonCoreFunctions {
                 Object instance = ((ProxyTarget.BukkitEntity) target).getInstance();
                 if (instance instanceof LivingEntity) {
                     UUID entityUuid = ((LivingEntity) instance).getUniqueId();
-                    for (Player player : PlatformUtilKt.getOnlinePlayers()) {
+                    for (Player player : Bukkit.getOnlinePlayers()) {
                         PacketSender.runEntityAnimationFunction(player, entityUuid, function);
                     }
                 }

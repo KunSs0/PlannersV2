@@ -30,7 +30,7 @@ public final class SkillCommandFunctions {
         GlobalFunctions.register("damage", args -> {
             double amount = ScriptArgs.getDouble(args, 0);
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 1, LeastType.SENDER);
-            applyDamage(amount, null, DamageCause.of("SKILL"), targets);
+            applyDamage(amount, null, DamageCause.Companion.of("SKILL"), targets);
             return null;
         });
 
@@ -39,7 +39,7 @@ public final class SkillCommandFunctions {
             double amount = ScriptArgs.getDouble(args, 0);
             LivingEntity source = ScriptArgs.resolveLivingEntity(ScriptArgs.get(args, 1));
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 2, LeastType.SENDER);
-            applyDamage(amount, source, DamageCause.of("SKILL"), targets);
+            applyDamage(amount, source, DamageCause.Companion.of("SKILL"), targets);
             return null;
         });
 
@@ -48,7 +48,7 @@ public final class SkillCommandFunctions {
             double amount = ScriptArgs.getDouble(args, 0);
             String cause = ScriptArgs.getString(args, 1);
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 2, LeastType.SENDER);
-            applyDamage(amount, null, DamageCause.of(cause), targets);
+            applyDamage(amount, null, DamageCause.Companion.of(cause), targets);
             return null;
         });
 
@@ -58,7 +58,7 @@ public final class SkillCommandFunctions {
             String cause = ScriptArgs.getString(args, 1);
             LivingEntity source = ScriptArgs.resolveLivingEntity(ScriptArgs.get(args, 2));
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 3, LeastType.SENDER);
-            applyDamage(amount, source, DamageCause.of(cause), targets);
+            applyDamage(amount, source, DamageCause.Companion.of(cause), targets);
             return null;
         });
 
@@ -76,7 +76,7 @@ public final class SkillCommandFunctions {
             if (!(t instanceof ProxyTarget.BukkitEntity)) continue;
             Object instance = ((ProxyTarget.BukkitEntity) t).getInstance();
             if (!(instance instanceof LivingEntity)) continue;
-            ProxyDamage.builder()
+            ProxyDamage.Companion.builder()
                     .source(source)
                     .target((LivingEntity) instance)
                     .damage(amount)

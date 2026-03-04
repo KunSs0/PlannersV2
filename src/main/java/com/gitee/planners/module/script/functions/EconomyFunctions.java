@@ -5,6 +5,7 @@ import com.gitee.planners.module.script.ScriptArgs;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.RegisteredServiceProvider;
 
 /**
  * 经济系统函数 (Vault Economy)
@@ -23,7 +24,7 @@ public final class EconomyFunctions {
 
     private static Economy getEconomy() {
         try {
-            var reg = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
+            RegisteredServiceProvider<Economy> reg = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
             return reg != null ? reg.getProvider() : null;
         } catch (Exception e) {
             return null;
