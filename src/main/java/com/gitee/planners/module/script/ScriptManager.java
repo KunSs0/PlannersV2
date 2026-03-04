@@ -37,7 +37,13 @@ public final class ScriptManager {
      */
     public static Object eval(String source, ScriptOptions options) {
         ensureInit();
-        return engine.eval(source, options.getVariables());
+        Map<String, Object> variables = options.getVariables();
+        ScriptContext.setCurrent(variables);
+        try {
+            return engine.eval(source, variables);
+        } finally {
+            ScriptContext.clear();
+        }
     }
 
     /**
