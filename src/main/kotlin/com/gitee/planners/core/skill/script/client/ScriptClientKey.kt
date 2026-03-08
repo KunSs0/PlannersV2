@@ -3,10 +3,18 @@ package com.gitee.planners.core.skill.script.client
 import com.gitee.planners.api.event.ProxyClientKeyEvents
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
+import com.gitee.planners.core.config.State
+import com.gitee.planners.core.skill.entity.state.ScriptClientKeyCallbackImpl
+import com.gitee.planners.core.skill.entity.state.ScriptCallbackImpl
 import com.gitee.planners.core.skill.script.ScriptBukkitEventHolder
 import org.bukkit.event.Event
 
 abstract class ScriptClientKey<T : Event> : ScriptBukkitEventHolder<T>() {
+
+    override fun getAssignCallback(state: State, trigger: State.Trigger): ScriptCallbackImpl<T> {
+        // 使用自定义回调实现按键过滤逻辑
+        return ScriptClientKeyCallbackImpl(state, trigger, this.name)
+    }
 
     object Up : ScriptClientKey<ProxyClientKeyEvents.Up>() {
 

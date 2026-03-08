@@ -2,6 +2,7 @@ package com.gitee.planners.core.skill.binding
 
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
+import com.gitee.planners.api.event.ProxyClientKeyEvents
 import com.gitee.planners.api.event.action.CombinedEvent
 import com.gitee.planners.api.job.KeyBinding
 import org.bukkit.event.player.PlayerInteractEvent
@@ -49,6 +50,22 @@ object CombinedHandler {
             }
             CombinedAnalyzer.processAction(e.player, type)
         }
+    }
+
+    /**
+     * 客户端按键按下 -> PRESS
+     */
+    @SubscribeEvent
+    fun onClientKeyDown(e: ProxyClientKeyEvents.Down) {
+        CombinedAnalyzer.processAction(e.sender, InteractionActionKey(e.key, InteractionActionKey.Type.PRESS))
+    }
+
+    /**
+     * 客户端按键释放 -> RELEASE
+     */
+    @SubscribeEvent
+    fun onClientKeyUp(e: ProxyClientKeyEvents.Up) {
+        CombinedAnalyzer.processAction(e.sender, InteractionActionKey(e.key, InteractionActionKey.Type.RELEASE))
     }
 
     @SubscribeEvent
