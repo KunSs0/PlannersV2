@@ -1,6 +1,5 @@
 package com.gitee.planners.core.skill
 
-import com.sun.xml.internal.ws.util.CompletedFuture
 
 enum class ExecutableResult() {
 
