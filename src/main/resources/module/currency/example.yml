@@ -4,8 +4,8 @@ money:
     # 余额查询
     hook: getBalance()
     # 余额提取
-    withdraw: takeBalance(&arg)
+    withdraw: takeBalance(arg)
     # 余额存入
-    deposit: giveBalance(&arg)
+    deposit: giveBalance(arg)
     # 余额设置
-    set: setBalance(&arg)
+    set: setBalance(arg)

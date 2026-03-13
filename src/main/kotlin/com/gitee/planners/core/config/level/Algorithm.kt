@@ -17,7 +17,7 @@ interface Algorithm {
     fun getExp(player: Player, level: Int): CompletableFuture<Int>
 
 
-    class Fluxon(val root: ConfigurationSection) : Algorithm, Unique {
+    class Js(val root: ConfigurationSection) : Algorithm, Unique {
 
         override val id: String = root.name
 
@@ -43,7 +43,7 @@ interface Algorithm {
             if (root == null) {
                 return null
             }
-            return Fluxon(root)
+            return Js(root)
         }
 
     }

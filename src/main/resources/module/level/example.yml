@@ -2,15 +2,9 @@ def0:
   min: 1
   max: 100
   experience: |
-    if &level <= 10 then
-      &level * 200
-    else if &level <= 20 then
-      &level * 600
-    else if &level <= 30 then
-      &level * 900
-    else if &level <= 40 then
-      &level * 1200
-    else if &level <= 50 then
-      &level * 1600
-    else
-      &level * 3000
+    level <= 10 ? level * 200 :
+    level <= 20 ? level * 600 :
+    level <= 30 ? level * 900 :
+    level <= 40 ? level * 1200 :
+    level <= 50 ? level * 1600 :
+    level * 3000

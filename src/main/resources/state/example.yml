@@ -3,21 +3,21 @@ state0:
   max-layer: 3
   name: "眩晕"
   action: |
-    def main() {
+    function main() {
       // 状态加载时执行一次，可自行注册 listener
     }
-    def onStateAttach() {
+    function onStateAttach() {
       tell("眩晕层数增加")
     }
-    def onStateDetach() {
+    function onStateDetach() {
       tell("眩晕层数减少")
     }
-    def onStateMount() {
+    function onStateMount() {
       tell("首次获得眩晕")
     }
-    def onStateClose() {
+    function onStateClose() {
       tell("完全解除眩晕")
     }
-    def onStateEnd() {
+    function onStateEnd() {
       tell("眩晕自然结束")
     }
