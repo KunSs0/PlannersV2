@@ -2,7 +2,6 @@ package com.gitee.planners.module.compat.placeholder
 
 import com.gitee.planners.api.common.script.ComplexCompiledScript
 import com.gitee.planners.api.common.script.ComplexScriptPlatform
-import com.gitee.planners.api.common.script.KetherScriptOptions
 import com.gitee.planners.api.common.script.kether.KetherHelper
 import com.gitee.planners.api.job.target.Target
 import com.gitee.planners.api.job.target.adaptTarget
@@ -23,7 +22,7 @@ object PlaceholderScript {
         val compiledScript = createSimpleComplexScript(PlaceholderHooked.identifier, args, namespaces, platform)
         val context = createSimpleContext(sender, compiledScript)
 
-        return context.run(KetherScriptOptions.common(sender)).thenApply { it.toString() }.get()
+        return context.run(context.optionsBuilder()).thenApply { it.toString() }.get()
     }
 
     fun createSimpleContext(sender: Target<*>, complexScript: ComplexCompiledScript): AbstractComplexScriptContext {

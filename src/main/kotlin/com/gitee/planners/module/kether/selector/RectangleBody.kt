@@ -18,14 +18,11 @@ import org.bukkit.Location
 import org.bukkit.Particle
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
-import taboolib.common.platform.function.adaptPlayer
-import taboolib.common.platform.function.info
 import taboolib.common.util.Vector
 import taboolib.common.util.runSync
 import taboolib.common5.Quat
 import taboolib.common5.cdouble
 import taboolib.library.kether.Parser
-import taboolib.library.xseries.ProxyParticle
 import taboolib.module.kether.ParserHolder.bool
 import taboolib.module.kether.ParserHolder.command
 import taboolib.module.kether.ParserHolder.defaultsTo
@@ -289,6 +286,7 @@ object RectangleBody : AbstractSelector("rectangle","ra"),Selector.Filterable {
 
             // 设定粒子数量，基于距离
             val particlesCount = (distance * 10).toInt() // 每单位距离10个粒子
+            if (particlesCount <= 0) return
 
             // 计算方向向量的增量
             val dx = (x2 - x1) / particlesCount
@@ -296,12 +294,12 @@ object RectangleBody : AbstractSelector("rectangle","ra"),Selector.Filterable {
             val dz = (z2 - z1) / particlesCount
 
             // 循环生成粒子
+            val world = sender.world
             for (i in 0 until particlesCount) {
                 val px = x1 + dx * i
                 val py = y1 + dy * i
                 val pz = z1 + dz * i
-                // 在计算出的位置生成粒子，这里使用了火焰粒子，你可以根据需要更改
-//                ProxyParticle.FLAME.sendTo(adaptPlayer(sender), taboolib.common.util.Location(null, px, py, pz))
+                sender.spawnParticle(Particle.FLAME, px, py, pz, 1, 0.0, 0.0, 0.0, 0.0)
             }
         }
     }
