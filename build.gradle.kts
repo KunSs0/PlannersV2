@@ -43,7 +43,7 @@ repositories {
 tasks.withType<Jar> {
 //    destinationDir = file("$projectDir/build-jar")
 //    destinationDirectory = file("F:\\minecraft\\server\\paper-1.12.2\\plugins")
-    destinationDirectory = file("F:\\minecraft\\server\\paper-1.20.1\\plugins")
+    destinationDirectory = file("F:\\minecraft\\haider\\server\\server-main\\plugins")
 //    destinationDir = file("F:/Server/paper 1.19.4/plugins")
 }
 dependencies {
@@ -70,6 +70,8 @@ dependencies {
     testCompileOnly("org.ejml:ejml-simple:0.41")
     testCompileOnly("org.ejml:ejml-fdense:0.41")
     compileOnly("com.mojang:datafixerupper:4.0.26")
+    compileOnly("org.graalvm.polyglot:polyglot:24.1.1")
+    compileOnly("org.graalvm.js:js-language:24.1.1")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 }

@@ -1,5 +1,6 @@
 package com.gitee.planners.module.script;
 
+import com.gitee.planners.module.script.graaljs.GraalJsEngine;
 import com.gitee.planners.module.script.nashorn.NashornEngine;
 
 import java.util.Map;
@@ -84,27 +85,17 @@ public final class ScriptManager {
     private static JsEngine createEngine() {
         int version = getMajorJavaVersion();
 
-        // Java 17+: 尝试 GraalJS
+        // Java 17+: GraalJS
         if (version >= 17) {
-            JsEngine graal = tryCreateGraalEngine();
-            if (graal != null) return graal;
+            try {
+                return new GraalJsEngine();
+            } catch (Throwable e) {
+                LOGGER.warning("[Script] GraalJS 不可用，回退到 Nashorn: " + e.getMessage());
+            }
         }
 
         // Java 8~14: Nashorn
         return new NashornEngine();
-    }
-
-    /**
-     * 尝试通过反射加载 GraalJS 引擎 (避免 Java 8 编译时依赖)
-     */
-    private static JsEngine tryCreateGraalEngine() {
-        try {
-            Class<?> clazz = Class.forName("com.gitee.planners.module.script.graaljs.GraalJsEngine");
-            return (JsEngine) clazz.getDeclaredConstructor().newInstance();
-        } catch (Throwable e) {
-            LOGGER.warning("[Script] GraalJS 不可用，回退到 Nashorn: " + e.getMessage());
-            return null;
-        }
     }
 
     private static int getMajorJavaVersion() {

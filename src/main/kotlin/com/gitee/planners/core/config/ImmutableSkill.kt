@@ -3,6 +3,7 @@ package com.gitee.planners.core.config
 import com.gitee.planners.api.job.Skill
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.module.script.ScriptContext
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
@@ -96,10 +97,25 @@ class ImmutableSkill(config: Configuration) : Skill {
             variables.forEach { (k, v) -> set(k, v) }
         }
 
+        val task = {
+            val vars = options.variables
+            ScriptContext.setCurrent(vars)
+            val session = ScriptManager.openSession(options)
+            try {
+                session.eval(action)
+                if (session.hasFunction("main")) {
+                    session.invokeFunction("main")
+                } else null
+            } finally {
+                session.close()
+                ScriptContext.clear()
+            }
+        }
+
         return if (async) {
-            CompletableFuture.supplyAsync { ScriptManager.eval(action, options) }
+            CompletableFuture.supplyAsync(task)
         } else {
-            CompletableFuture.completedFuture(ScriptManager.eval(action, options))
+            CompletableFuture.completedFuture(task())
         }
     }
 

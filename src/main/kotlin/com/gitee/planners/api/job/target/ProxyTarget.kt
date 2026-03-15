@@ -340,6 +340,7 @@ sealed interface ProxyTarget<T> {
 
         fun of(any: Any): ProxyTarget<*> {
             return when (any) {
+                is ProxyTarget<*> -> any
                 is org.bukkit.command.CommandSender -> of(any)
                 is org.bukkit.Location -> BukkitLocation(any)
                 is Block -> TargetBlock(any)
