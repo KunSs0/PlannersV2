@@ -222,7 +222,6 @@ def areaProtection = {
 | Name Selector | [名称选择器](./selector/SelectorName.md) | 按名称选择目标 | 基础筛选 |
 | Range Selector | [范围选择器](./selector/SelectorRange.md) | 按距离范围选择 | 空间筛选 |
 | Rectangle Body Selector | [矩形区域选择器](./selector/SelectorRectangleBody.md) | 按矩形区域选择 | 空间筛选 |
-| Sector Selector | [扇形区域选择器](./selector/SelectorSector.md) | 按扇形区域选择 | 空间筛选 |
 | Shuffle Selector | [随机选择器](./selector/SelectorShuffle.md) | 随机选择目标 | 结果处理 |
 | Sort Selector | [排序选择器](./selector/SelectorSort.md) | 对目标进行排序 | 结果处理 |
 

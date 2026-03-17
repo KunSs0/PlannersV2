@@ -1,5 +1,6 @@
 package com.gitee.planners.module.script.finder
 
+import com.gitee.planners.api.common.util.SectorNearestEntityFinder
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.ProxyTargetContainer
 
@@ -52,6 +53,24 @@ class TargetFinder(
 
     fun includeSelf(): TargetFinder {
         this.includeSelf = true
+        return this
+    }
+
+    /**
+     * 扇形选择器
+     * @param radius 半径
+     * @param angle 扇形角度（度）
+     * @param yaw 可选方向覆盖，默认使用 origin 的 yaw
+     */
+    fun sector(radius: Double, angle: Double, yaw: Float? = null): TargetFinder {
+        val world = origin.world ?: return this
+        val loc = origin.clone()
+        if (yaw != null) loc.yaw = yaw
+        val sampling = world.getNearbyEntities(loc, radius, radius, radius)
+            .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
+        val found = SectorNearestEntityFinder(loc, angle, radius, loc.yaw, sampling).request()
+            .filterIsInstance<LivingEntity>()
+        entities.addAll(found)
         return this
     }
 

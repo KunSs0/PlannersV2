@@ -55,6 +55,29 @@ finder().range(5).build()
 - 只选取 LivingEntity（活体实体）
 - 使用球形范围（不是立方体）
 
+### sector(radius, angle, yaw?) — 扇形选择
+
+```javascript
+// 前方 10 格半径、90 度扇形
+finder().sector(10, 90).build()
+
+// 指定方向（180 = 南方）
+finder().sector(8, 45, 180).build()
+
+// 配合类型过滤
+finder().sector(12, 120).type("ZOMBIE,SKELETON").limit(5).build()
+```
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `radius` | Double | 扇形半径（格） |
+| `angle` | Double | 扇形张角（度，0-360） |
+| `yaw` | Float? | 可选，扇形朝向角度。省略时使用 sender 当前朝向 |
+
+- 以 origin 为圆心，在水平面上做扇形判定
+- 先用 `getNearbyEntities` 粗筛，再用 `SectorNearestEntityFinder` 精确过滤
+- 默认排除 sender 自己（除非调用了 `includeSelf()`）
+
 ### origin(location) — 改变原点
 
 ```javascript
@@ -206,6 +229,25 @@ var targets = finder()
   .range(5)
   .excludeType("PLAYER")
   .build()
+```
+
+### 扇形范围攻击
+
+```javascript
+function main() {
+  // 前方 120 度扇形，半径 12 格
+  var targets = finder()
+    .sector(12, 120)
+    .excludeType("PLAYER")
+    .sort("DISTANCE")
+    .limit(8)
+    .build()
+
+  damage(40 + level * 15, targets)
+  velocityAdd(0, 0.3, 0, targets)
+  sound("ENTITY_PLAYER_ATTACK_SWEEP", 1.0, 0.8)
+  setCooldown(skill, 80)
+}
 ```
 
 ### 完整技能示例
