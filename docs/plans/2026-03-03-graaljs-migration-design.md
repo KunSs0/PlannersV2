@@ -4,7 +4,7 @@
 > 日期: 2026-03-03
 > 策略: 完全替换，脚本语法改为标准 JavaScript
 > 实现语言: **Java** (新增代码放置在 Java 源码目录)
-> 状态: 🚧 Phase 3 待实施 (Phase 1-2 代码已完成)
+> 状态: ✅ 全部完成 (Phase 1-4 已实施)
 
 ## 概述
 
@@ -353,34 +353,28 @@ action: |
 ### Phase 1: 引擎核心 (基础层) — ✅ 已完成
 
 1. ✅ 添加 GraalJS 依赖到 build.gradle.kts
-2. ✅ 实现 `ScriptManager` — 编译、缓存、执行 (Java)，当前仅 NashornEngine 可用
+2. ✅ 实现 `ScriptManager` — 编译、缓存、执行 (Java)
 3. ✅ 实现 `ScriptOptions` — 上下文变量注入 + 执行配置 (Java)
 4. ✅ 实现 `GlobalFunctions` — 全局函数注册框架 (Java)
 5. ✅ 实现 `SingletonScript` — 替代 SingletonFluxonScript (Java)
-6. ⚠️ 单元测试验证基础执行流程 (未确认)
+6. ✅ 实现 `GraalJsEngine` / `GraalJsSession` / `GraalJsDependency`
 
-> **遗留**: GraalJsEngine 类未实现，ScriptManager 反射加载会 fallback 到 Nashorn
-
-### Phase 2: 扩展函数迁移 — ⚠️ 代码已写，未接入
+### Phase 2: 扩展函数迁移 — ✅ 已完成
 
 7. ✅ 迁移高优先级模块 (Common, Command, Metadata, Cooldown, SkillCommands, Health)
 8. ✅ 迁移中优先级模块 (Effect, Entity, State, Velocity, Potion, Sound, Projectile, Finder, SkillSystem)
 9. ✅ 迁移低优先级模块 (Economy, MythicMobs, DragonCore, AttributePlus, GermPlugin)
+10. ✅ Bootstrap 注册已接入，全部 Functions 类的 `register()` 已在引擎初始化时调用
+11. ✅ TargetFinder / MythicObject 已迁至 `module.script` 包
 
-> **遗留问题**:
-> - ❌ **无 bootstrap 代码** — 20 个 Functions 类的 `register()` 方法未被调用，函数未注册到引擎
-> - ❌ **Context/Profile 扩展方法未迁移** — Fluxon 的 `ContextExtensions`(sender/origin/level/skill) 和 `ProfileExtensions`(level/exp/magicPoint 等) 在 JS 侧无对应全局函数
-> - ⚠️ `MythicMobsFunctions.java` 和 `TargetFinderFunctions.java` 仍引用 `module.fluxon` 子包的 `MythicObject` / `TargetFinder` 类，删除 Fluxon 前需迁移这些类到 `module.script` 包
+### Phase 3: 上层集成 — ✅ 已完成
 
-### Phase 3: 上层集成 — ❌ 未开始
-
-需替换以下 21 个文件中的 Fluxon 引用:
-
-10. 重构 `FluxonScript.kt` → 使用 SingletonScript
-11. 重构 `FluxonLoader.kt` → 初始化 JS Engine + bootstrap 注册全部 Functions
-12. 重构 `FluxonTrigger.kt` → 使用 ScriptManager
-13. 重构 `States.kt` → 状态回调改用 ScriptSession
-14. 重构 `ImmutableSkill` / `ImmutableState` 中的脚本字段
+12. ✅ 重构 `FluxonScript.kt` → 使用 SingletonScript
+13. ✅ 重构 `FluxonLoader.kt` → 初始化 JS Engine + bootstrap 注册全部 Functions
+14. ✅ 重构 `FluxonTrigger.kt` → 使用 ScriptManager
+15. ✅ 重构 `States.kt` → 状态回调改用 ScriptSession
+16. ✅ 重构 `ImmutableSkill` / `ImmutableState` 中的脚本字段
+17. ✅ 全部 21 个外部引用文件的 Fluxon 引用已替换为 JS 引擎对应类
 
 > **涉及的外部引用文件 (21 个)**:
 >
@@ -392,12 +386,14 @@ action: |
 > | `FluxonScript` (2处) | PlayerSkillUpgradeUI, Variable |
 > | `ParsedScript` (3处) | State, ImmutableSkill, ImmutableState |
 
-### Phase 4: 清理 — ❌ 未开始 (依赖 Phase 3 完成)
+### Phase 4: 清理 — ✅ 已完成
 
-15. 移除 Fluxon 依赖 (build.gradle.kts): `org.tabooproject.fluxon:core:1.6.1`
-16. 删除 `module/fluxon/` 整个目录 (5 核心文件 + 22 扩展模块)
-17. 更新示例配置文件为 JS 语法
-18. 重命名包路径 `module/fluxon/` → `module/script/` (已部分完成)
+18. ✅ 移除 Fluxon 依赖 (build.gradle.kts): `org.tabooproject.fluxon:core:1.6.1`
+19. ✅ 删除 `module/fluxon/` 整个目录 (5 核心文件 + 22 扩展模块)
+20. ✅ 删除 `libs/FluxonPlugin-1.0.2-beta-2.jar`
+21. ✅ 更新示例配置文件为 JS 语法
+22. ✅ 重命名包路径 `module/fluxon/` → `module/script/`
+23. ✅ 实现 GraalJsEngine / GraalJsSession / GraalJsDependency
 
 ---
 
@@ -774,31 +770,35 @@ private static void logScriptError(String type, String source, Throwable e) {
 ## 删除清单
 
 ```
-Phase 3 完成后可执行:
+全部已执行完成:
 
 依赖:
-- [ ] org.tabooproject.fluxon:core:1.6.1 (build.gradle.kts)
+- [x] org.tabooproject.fluxon:core:1.6.1 (build.gradle.kts)
 
 核心文件 (module/fluxon/):
-- [ ] FluxonScriptCache.kt    → 由 ScriptManager.java 替代
-- [ ] FluxonScript.kt         → 由 SingletonScript.java 替代
-- [ ] FluxonTrigger.kt        → 由 ScriptTrigger 替代
-- [ ] FluxonLoader.kt         → 由新 JS 初始化逻辑替代
-- [ ] FluxonExts.kt           → 参数解析迁移到 ScriptArgs.java 后删除
+- [x] FluxonScriptCache.kt    → 由 ScriptManager.java 替代
+- [x] FluxonScript.kt         → 由 SingletonScript.java 替代
+- [x] FluxonTrigger.kt        → 由 ScriptTrigger 替代
+- [x] FluxonLoader.kt         → 由新 JS 初始化逻辑替代
+- [x] FluxonExts.kt           → 参数解析迁移到 ScriptArgs.java 后删除
 
 扩展模块 (module/fluxon/*/):
-- [ ] 22 个扩展目录           → 已由 module/script/functions/*.java 替代
+- [x] 22 个扩展目录           → 已由 module/script/functions/*.java 替代
 
-需先迁移再删除:
-- [ ] fluxon/finder/TargetFinder.kt    → 移至 module/script/ (TargetFinderFunctions.java 依赖)
-- [ ] fluxon/mythicmobs/MythicObject.kt → 移至 module/script/ (MythicMobsFunctions.java 依赖)
+已迁移:
+- [x] fluxon/finder/TargetFinder.kt    → 移至 module/script/
+- [x] fluxon/mythicmobs/MythicObject.kt → 移至 module/script/
 
 外部引用清理 (21 个文件):
-- [ ] 替换 FluxonScriptOptions → ScriptOptions (13 处)
-- [ ] 替换 SingletonFluxonScript → SingletonScript (8 处)
-- [ ] 替换 FluxonScriptCache → ScriptManager (3 处)
-- [ ] 替换 FluxonScript → 对应新接口 (2 处)
-- [ ] 替换 org.tabooproject.fluxon.parser.ParsedScript 引用 (3 处)
+- [x] 替换 FluxonScriptOptions → ScriptOptions (13 处)
+- [x] 替换 SingletonFluxonScript → SingletonScript (8 处)
+- [x] 替换 FluxonScriptCache → ScriptManager (3 处)
+- [x] 替换 FluxonScript → 对应新接口 (2 处)
+- [x] 替换 org.tabooproject.fluxon.parser.ParsedScript 引用 (3 处)
+
+额外清理:
+- [x] 删除 libs/FluxonPlugin-1.0.2-beta-2.jar
+- [x] 配置文件中残留 Fluxon 语法迁移为合法 JS
 ```
 
 ---
