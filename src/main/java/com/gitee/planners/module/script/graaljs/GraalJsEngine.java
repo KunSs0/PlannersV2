@@ -8,12 +8,15 @@ import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
+import taboolib.common.platform.Ghost;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * GraalJS 引擎实现 (Java 17+)
  */
+@Ghost
 public class GraalJsEngine implements JsEngine {
 
     private final Map<String, JsFunction> globalFunctions = new ConcurrentHashMap<>();
@@ -95,6 +98,7 @@ public class GraalJsEngine implements JsEngine {
     /**
      * 将 JsFunction 包装为 GraalJS 可调用的函数代理
      */
+    @Ghost
     public static class FunctionProxy implements org.graalvm.polyglot.proxy.ProxyExecutable {
 
         private final JsFunction function;

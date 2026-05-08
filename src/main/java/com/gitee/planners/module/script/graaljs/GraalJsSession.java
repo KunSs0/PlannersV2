@@ -3,10 +3,12 @@ package com.gitee.planners.module.script.graaljs;
 import com.gitee.planners.module.script.JsSession;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
+import taboolib.common.platform.Ghost;
 
 /**
  * GraalJS 会话实现
  */
+@Ghost
 public class GraalJsSession implements JsSession {
 
     private final Context context;
