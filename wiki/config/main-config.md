@@ -34,7 +34,7 @@ settings:
         - worldguard xxx
   magic-point:
     resume:
-      expression: "1 + Math::random(1, 2)"
+      expression: "1 + random(1, 2)"
       update-tick: 20
     upper-limit:
       expression: "profile.level * 2 + 100"
@@ -154,7 +154,7 @@ settings:
 settings:
   magic-point:
     resume:
-      expression: "1 + Math::random(1, 2)"
+      expression: "1 + random(1, 2)"
       update-tick: 20
     upper-limit:
       expression: "profile.level * 2 + 100"
@@ -169,9 +169,9 @@ settings:
 | `update-tick` | Int | `20` | 恢复间隔，单位 tick（20 tick = 1 秒） |
 
 **表达式中可用的变量**：
-- `Math::random(min, max)` — 生成 min 到 max 之间的随机整数
+- `random(min, max)` — 生成 min 到 max 之间的随机整数
 
-**示例**：`"1 + Math::random(1, 2)"` 表示每次恢复 2~3 点法力值。
+**示例**：`"1 + random(1, 2)"` 表示每次恢复 2~3 点法力值。
 
 #### upper-limit（法力值上限）
 

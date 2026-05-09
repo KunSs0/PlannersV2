@@ -6,6 +6,8 @@ import com.gitee.planners.api.job.target.ProxyTargetContainer;
 import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * 通用扩展函数
  * <pre>{@code
@@ -18,6 +20,13 @@ public final class CommonFunctions {
     private CommonFunctions() {}
 
     public static void register() {
+        // random(min, max) — 返回 [min, max] 之间的随机整数
+        GlobalFunctions.register("random", args -> {
+            int min = ScriptArgs.getInt(args, 0);
+            int max = ScriptArgs.getInt(args, 1);
+            return ThreadLocalRandom.current().nextInt(min, max + 1);
+        });
+
         // tell(message) 或 tell(message, targets)
         GlobalFunctions.register("tell", args -> {
             String message = ScriptArgs.getString(args, 0);
