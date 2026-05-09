@@ -1,6 +1,7 @@
 package com.gitee.planners.core.player.magic
 
 import com.gitee.planners.Planners
+import com.gitee.planners.api.PlayerTemplateAPI.plannersLoaded
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
 import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
@@ -71,6 +72,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     fun executeUpdateTask(player: Player) {
+        if (!player.plannersLoaded) return
         expressionResume.get().run(ScriptOptions.common(player)).thenAccept { data ->
             val template = player.plannersTemplate
             template.magicPoint += (data?.cint ?: 0)
@@ -85,6 +87,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
     }
 
     fun executeUpdateTaskInUpperLimit(player: Player) {
+        if (!player.plannersLoaded) return
         expressionUpperLimit.get().run(ScriptOptions.common(player)).thenAccept { data ->
             this.setPointInUpperLimit(player, data?.cint ?: 0)
         }
