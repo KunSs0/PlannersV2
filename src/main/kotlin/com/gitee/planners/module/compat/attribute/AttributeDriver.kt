@@ -48,6 +48,18 @@ interface AttributeDriver {
             INSTANCES.forEach { it.remove(target, id) }
         }
 
+        /**
+         * 获取实体属性值
+         *
+         * @param entity 实体
+         * @param attrName 属性名
+         * @return 属性值数组，不存在返回空列表
+         */
+        fun get(entity: Entity, attrName: String): List<Double> {
+            INSTANCES.forEach { return it.get(entity, attrName) }
+            return emptyList()
+        }
+
     }
 
     /**
@@ -84,6 +96,15 @@ interface AttributeDriver {
      * @param id 属性id
      */
     fun remove(target: ProxyTarget<*>, id: String)
+
+    /**
+     * 获取实体属性值
+     *
+     * @param entity 实体
+     * @param attrName 属性名
+     * @return 属性值数组，不存在返回空列表
+     */
+    fun get(entity: Entity, attrName: String): List<Double>
 
     @Awake
     class Visitor : ClassVisitor(0) {

@@ -53,5 +53,14 @@ object AttributePlus3Driver : AttributeDriver {
         AttributeAPI.takeSourceAttribute(original, id)
     }
 
+    override fun get(entity: Entity, attrName: String): List<Double> {
+        if (entity !is LivingEntity) {
+            return emptyList()
+        }
+        val data = AttributeAPI.getAttrData(entity)
+        val values = data.getAttributeValue(attrName) ?: return emptyList()
+        return values.map { it.toDouble() }
+    }
+
 
 }
