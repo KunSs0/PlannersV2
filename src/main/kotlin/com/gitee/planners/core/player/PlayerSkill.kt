@@ -16,6 +16,9 @@ class PlayerSkill(var index: Long, private val skillId: String, level: Int, priv
     val immutable: ImmutableSkill
         get() = Registries.SKILL.getOrNull(skillId) ?: error("Couldn't find skill with id $skillId'")
 
+    val hooks: Map<String, ImmutableSkill.Hook>
+        get() = immutable.hooks
+
     var level = level
         set(value) {
             field = value

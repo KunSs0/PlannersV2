@@ -16,6 +16,7 @@ import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import taboolib.module.configuration.util.mapSection
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 
 class ImmutableSkill(config: Configuration) : Skill {
 
@@ -77,6 +78,44 @@ class ImmutableSkill(config: Configuration) : Skill {
 
     val immutableVariables = option.mapValueWithId("variables") { id: String, value: Any ->
         ImmutableVariable.parse(id, value)
+    }
+
+    /** 外部插件实现的 Hook 标记接口 */
+    interface Hook
+
+    /** Hook 解码器：从配置段解析出 Hook 实例 */
+    fun interface Decoder {
+        fun decode(section: ConfigurationSection): Hook
+    }
+
+    /** 懒加载 hooks，首次访问时遍历 YAML hooks.* 并用注册的 Decoder 解码 */
+    val hooks: Map<String, Hook> by lazy {
+        val section = config.getConfigurationSection("hooks")
+        if (section == null) {
+            emptyMap<String, Hook>()
+        } else {
+            val result = linkedMapOf<String, Hook>()
+            for (ns in section.getKeys(false)) {
+                val nsSection = section.getConfigurationSection(ns)
+                if (nsSection == null) {
+                    continue
+                }
+                val decoder = decoders[ns]
+                if (decoder == null) {
+                    continue
+                }
+                result[ns] = decoder.decode(nsSection)
+            }
+            result
+        }
+    }
+
+    companion object {
+        private val decoders = ConcurrentHashMap<String, Decoder>()
+
+        fun registerHook(namespace: String, decoder: Decoder) {
+            decoders[namespace] = decoder
+        }
     }
 
     /**
