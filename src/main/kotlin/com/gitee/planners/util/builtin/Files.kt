@@ -1,8 +1,10 @@
 package com.gitee.planners.util.builtin
 
 import taboolib.common.platform.function.getDataFolder
+import taboolib.common.platform.function.info
 import taboolib.common.platform.function.releaseResourceFile
 import taboolib.library.configuration.ConfigurationSection
+import taboolib.module.configuration.util.mapSection
 import java.io.File
 
 /**
@@ -107,6 +109,25 @@ fun <T> createLocalBuiltin(path: String, type: DefaultBuiltinReader.SourceType, 
     return builtin
 }
 
+
+/**
+ * 从配置节点创建 BuiltinReader
+ * @param provider 提供 ConfigurationSection 的 lambda
+ * @param invoker 构造器
+ */
+fun <T> createConfigSectionBuiltin(provider: () -> ConfigurationSection?, invoker: (ConfigurationSection) -> T): BuiltinReader<String, T> {
+    val builtin = object : BuiltinReader<String, T>, BuiltinHash<String, T>() {
+        override fun load() {
+            this.clear()
+            val section = provider() ?: return
+            section.mapSection { it }.forEach { (key, value) ->
+                this[key] = invoker(value)
+                info("Loaded $key from config section")
+            }
+        }
+    }
+    return builtin
+}
 
 fun deepListFiles(file: File): List<File> {
     val result = ArrayList<File>()

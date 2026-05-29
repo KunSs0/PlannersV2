@@ -1,6 +1,6 @@
 # 按键绑定
 
-按键绑定配置位于 `plugins/Planners/key-binding.yml`，定义可用的按键槽位。玩家可以在技能面板中将技能绑定到这些按键上。
+按键绑定配置在 `plugins/Planners/config.yml` 的 `settings.keybinding.keymapping` 节点下，定义可用的按键槽位。玩家可以在技能面板中将技能绑定到这些按键上。
 
 ---
 

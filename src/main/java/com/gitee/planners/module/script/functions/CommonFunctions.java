@@ -6,6 +6,8 @@ import com.gitee.planners.api.job.target.ProxyTargetContainer;
 import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
 
+import org.bukkit.Bukkit;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -25,6 +27,20 @@ public final class CommonFunctions {
             int min = ScriptArgs.getInt(args, 0);
             int max = ScriptArgs.getInt(args, 1);
             return ThreadLocalRandom.current().nextInt(min, max + 1);
+        });
+
+        // sleep(millis) — 暂停当前脚本执行（仅异步上下文可用）
+        GlobalFunctions.register("sleep", args -> {
+            long millis = ScriptArgs.getLong(args, 0);
+            if (Bukkit.isPrimaryThread()) {
+                throw new IllegalStateException("sleep() 不能在主线程调用，请确保技能配置 async: true");
+            }
+            try {
+                Thread.sleep(millis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return null;
         });
 
         // tell(message) 或 tell(message, targets)

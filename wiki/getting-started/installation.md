@@ -24,8 +24,7 @@
 
 ```
 plugins/Planners/
-├── config.yml              # 主配置文件
-├── key-binding.yml         # 按键绑定配置
+├── config.yml              # 主配置文件（含按键绑定）
 ├── lang/
 │   └── zh_CN.yml           # 语言文件
 ├── job/                    # 职业配置目录（支持子目录）

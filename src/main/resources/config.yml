@@ -61,6 +61,18 @@ settings:
       empty-skill:
         material: STONE
         name: '空技能 | 待学习'
+  keybinding:
+    # 按键映射
+    keymapping:
+      key0:
+        name: R
+        matching-type: strict
+        request-tick: 30
+        mapping: R
+    # 技能背包配置（预留）
+    backpack:
+      enable: false
+      slots: 4
   bukkit-launch:
     unimpeded-types:
       - AIR

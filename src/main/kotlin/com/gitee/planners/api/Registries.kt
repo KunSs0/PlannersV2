@@ -1,13 +1,14 @@
 package com.gitee.planners.api
 
+import com.gitee.planners.Planners
 import com.gitee.planners.api.damage.DamageCause
 import com.gitee.planners.core.config.*
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
 import com.gitee.planners.util.builtin.AutoReloadable
+import com.gitee.planners.util.builtin.createConfigSectionBuiltin
 import com.gitee.planners.util.builtin.createDeepMultiBuiltin
 import com.gitee.planners.util.builtin.createDeepSingleBuiltin
-import com.gitee.planners.util.builtin.createSingleMultiBuiltin
 import taboolib.module.configuration.Configuration
 
 object Registries {
@@ -37,7 +38,9 @@ object Registries {
         Algorithm.Js(it)
     }
 
-    val KEYBINDING = createSingleMultiBuiltin("key-binding.yml") {
+    val KEYBINDING = createConfigSectionBuiltin({
+        Planners.config.getConfigurationSection("settings.keybinding.keymapping")
+    }) {
         ImmutableKeyBinding(it)
     }
 

@@ -133,7 +133,7 @@ warrior:
 
 ## 第四步：配置按键
 
-编辑 `key-binding.yml`：
+编辑 `config.yml` 中的 `settings.keybinding.keymapping` 节点：
 
 ```yaml
 # 按键 ID（唯一标识）
