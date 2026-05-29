@@ -9,6 +9,7 @@ import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
+import taboolib.common.platform.function.warning
 import taboolib.common.util.unsafeLazy
 import taboolib.common5.clong
 import taboolib.module.database.*
@@ -58,6 +59,9 @@ class DatabaseSQL : Database {
         add("node") { type(ColumnTypeSQL.VARCHAR, 60) }
         add("level") { type(ColumnTypeSQL.INT) }
         add("binding") { type(ColumnTypeSQL.VARCHAR, 60) }
+        add("equipped") { type(ColumnTypeSQL.INT) }
+        add("backpack_page") { type(ColumnTypeSQL.VARCHAR, 60) }
+        add("backpack_slot") { type(ColumnTypeSQL.VARCHAR, 60) }
     }
 
     init {
@@ -65,6 +69,36 @@ class DatabaseSQL : Database {
         tableRoute.createTable(dataSource)
         tableMetadata.createTable(dataSource)
         tableSkill.createTable(dataSource)
+        migrateBackpackColumns()
+    }
+
+    private fun migrateBackpackColumns() {
+        try {
+            val columns = dataSource.connection.use { conn ->
+                val rs = conn.createStatement().executeQuery("SHOW COLUMNS FROM ${prefix}_skill")
+                val cols = mutableSetOf<String>()
+                while (rs.next()) cols.add(rs.getString("Field"))
+                rs.close()
+                cols
+            }
+            if (!columns.contains("equipped")) {
+                dataSource.connection.use { conn ->
+                    conn.createStatement().execute("ALTER TABLE ${prefix}_skill ADD COLUMN equipped INT DEFAULT 0")
+                }
+            }
+            if (!columns.contains("backpack_page")) {
+                dataSource.connection.use { conn ->
+                    conn.createStatement().execute("ALTER TABLE ${prefix}_skill ADD COLUMN backpack_page VARCHAR(60)")
+                }
+            }
+            if (!columns.contains("backpack_slot")) {
+                dataSource.connection.use { conn ->
+                    conn.createStatement().execute("ALTER TABLE ${prefix}_skill ADD COLUMN backpack_slot VARCHAR(60)")
+                }
+            }
+        } catch (e: Exception) {
+            warning("Failed to migrate backpack columns: ${e.message}")
+        }
     }
 
     // 该方法最好运行在异步 否则向数据库插入数据时会耗时
@@ -150,8 +184,13 @@ class DatabaseSQL : Database {
     private fun getPlayerSkills(route: Long): List<PlayerSkill> {
         return tableSkill.select(dataSource) {
             where { "route" eq route }
-            rows("id", "node", "level", "binding")
-        }.map { PlayerSkill(getLong("id"), getString("node"), getInt("level"), getString("binding")) }
+            rows("id", "node", "level", "binding", "equipped", "backpack_page", "backpack_slot")
+        }.map {
+            PlayerSkill(
+                getLong("id"), getString("node"), getInt("level"),
+                getInt("equipped") != 0, getString("backpack_page"), getString("backpack_slot")
+            )
+        }
     }
 
     private fun getRouteById(id: Long): PlayerRoute {
@@ -207,14 +246,10 @@ class DatabaseSQL : Database {
         val route = template.route?.bindingId ?: error("Player ${template.onlinePlayer.name} not find route")
         if (skill is ImmutableSkill) {
             tableSkill.insert(dataSource, "route", "node", "level") {
-                value(
-                    route,
-                    skill.id,
-                    skill.startedLevel,
-                )
+                value(route, skill.id, skill.startedLevel)
                 onFinally {
                     val id = getId(generatedKeys)
-                    future.complete(PlayerSkill(id, skill.id, skill.startedLevel, null))
+                    future.complete(PlayerSkill(id, skill.id, skill.startedLevel))
                 }
             }
         } else if (skill is PlayerSkill && skill.index == -1L) {
@@ -222,7 +257,9 @@ class DatabaseSQL : Database {
                 set("route", route)
                 set("node", skill.id)
                 set("level", skill.level)
-                set("binding", skill.binding?.id)
+                set("equipped", if (skill.equipped) 1 else 0)
+                set("backpack_page", skill.backpackPage)
+                set("backpack_slot", skill.backpackSlot)
                 onFinally {
                     skill.index = getId(generatedKeys)
                     future.complete(skill)
@@ -244,7 +281,9 @@ class DatabaseSQL : Database {
         tableSkill.update(dataSource) {
             where { "id" eq skill.index }
             set("level", skill.level)
-            set("binding", skill.binding?.id)
+            set("equipped", if (skill.equipped) 1 else 0)
+            set("backpack_page", skill.backpackPage)
+            set("backpack_slot", skill.backpackSlot)
         }
     }
 

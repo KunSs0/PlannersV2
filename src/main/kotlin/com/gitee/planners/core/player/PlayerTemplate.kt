@@ -3,7 +3,6 @@ package com.gitee.planners.core.player
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataContainer
 import com.gitee.planners.api.common.metadata.metadataValue
-import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.Leveling
 import com.gitee.planners.core.config.level.AlgorithmLevel
@@ -205,8 +204,17 @@ class PlayerTemplate(val id: Long, val onlinePlayer: Player, route: PlayerRoute?
         return route?.getSkillOrNull(id)
     }
 
-    fun getRegisteredSkillOrNull(binding: KeyBinding): PlayerSkill? {
-        return getRegisteredSkill().values.firstOrNull { it.binding == binding }
+    fun getEquippedSkillByBackpackSlot(page: String, slot: String): PlayerSkill? {
+        return route?.getEquippedSkill(page, slot)
+    }
+
+    fun getEquippedSkillsForPage(page: String): Map<String, PlayerSkill?> {
+        val pageConfig = com.gitee.planners.api.Registries.BACKPACK.getPage(page) ?: return emptyMap()
+        val result = mutableMapOf<String, PlayerSkill?>()
+        pageConfig.slots.keys.forEach { slotId ->
+            result[slotId] = route?.getEquippedSkill(page, slotId)
+        }
+        return result
     }
 
     fun executeUpdatedDefaultSkill(): CompletableFuture<Void> {

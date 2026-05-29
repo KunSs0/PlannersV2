@@ -1,6 +1,5 @@
 package com.gitee.planners.core.ui
 
-import com.gitee.planners.core.ui.KeyBindingsEditorUI.title
 import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack

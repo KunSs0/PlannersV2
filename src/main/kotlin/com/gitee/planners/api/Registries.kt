@@ -48,6 +48,9 @@ object Registries {
         ImmutableState(it)
     }
 
+    val BACKPACK: BackpackConfig
+        get() = Planners.backpackConfig.get()
+
     fun handleReload() {
         DamageCause.reload()
         AutoReloadable.onReload()

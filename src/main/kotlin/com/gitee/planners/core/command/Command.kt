@@ -70,6 +70,9 @@ object Command {
     }
 
     @CommandBody
+    val backpack = CommandBackpack
+
+    @CommandBody
     val console = CommandConsole
 
     fun withImmutableSkill(block: ProxyCommandSender.(player: Player, skill: ImmutableSkill) -> Unit): SimpleCommandBody {

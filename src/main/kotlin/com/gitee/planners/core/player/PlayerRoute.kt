@@ -37,8 +37,24 @@ class PlayerRoute(val bindingId: Long, private val routerId: String, private val
         return route.getBranches()
     }
 
+    private val equippedByPageSlot = mutableMapOf<String, PlayerSkill>()
+
     fun registerSkill(skill: PlayerSkill) {
         this.skills[skill.id] = skill
+        if (skill.equipped && skill.backpackPage != null && skill.backpackSlot != null) {
+            equippedByPageSlot["${skill.backpackPage}:${skill.backpackSlot}"] = skill
+        }
+    }
+
+    fun getEquippedSkill(page: String, slot: String): PlayerSkill? {
+        return equippedByPageSlot["$page:$slot"]
+    }
+
+    fun updateEquippedIndex(skill: PlayerSkill) {
+        equippedByPageSlot.entries.removeIf { it.value == skill }
+        if (skill.equipped && skill.backpackPage != null && skill.backpackSlot != null) {
+            equippedByPageSlot["${skill.backpackPage}:${skill.backpackSlot}"] = skill
+        }
     }
 
     fun getRegisteredSkill(): Map<String, PlayerSkill> {

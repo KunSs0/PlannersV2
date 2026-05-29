@@ -1,6 +1,5 @@
 package com.gitee.planners.api.event.player
 
-import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerSkill
@@ -14,7 +13,5 @@ abstract class PlayerSkillEvent(val template: PlayerTemplate, val skill: PlayerS
     val player = template.onlinePlayer
 
     class LevelChange(template: PlayerTemplate, skill: PlayerSkill, val form: Int, val to: Int) : PlayerSkillEvent(template, skill)
-
-    class BindingChange(template: PlayerTemplate, skill: PlayerSkill, val binding: KeyBinding?) : PlayerSkillEvent(template, skill)
 
 }

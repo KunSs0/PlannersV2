@@ -245,29 +245,6 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     }
 
     /**
-     * 设置技能绑定
-     *
-     * @param template 玩家模板
-     * @param skill 技能
-     * @param binding 快捷键绑定
-     */
-    fun setSkillBinding(template: PlayerTemplate, skill: PlayerSkill, binding: KeyBinding?) {
-        PlayerSkillEvent.BindingChange(template, skill, binding).call()
-        // 如果 binding 为 null 代表解绑
-        if (binding == null) {
-            skill.binding = null
-        }
-        // 解绑相同的快捷键的技能
-        else {
-            val registriedSkill = template.getRegisteredSkillOrNull(binding)
-            if (registriedSkill != null) {
-                setSkillBinding(template, registriedSkill, null)
-            }
-            skill.binding = binding
-        }
-    }
-
-    /**
      * 加载
      */
     @SubscribeEvent

@@ -1,5 +1,6 @@
 package com.gitee.planners.core.skill.binding
 
+import com.gitee.planners.api.BackpackAPI
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.event.action.CombinedEvent
@@ -55,7 +56,7 @@ object CombinedHandler {
     fun e(e: CombinedEvent.Close) {
         val combined = e.combined
         if (combined is KeyBinding) {
-            val skill = e.player.plannersTemplate.getRegisteredSkillOrNull(combined)
+            val skill = BackpackAPI.getSkillByKey(e.player.plannersTemplate, combined.id)
             if (skill != null) {
                 PlannersAPI.cast(e.player, skill)
             }

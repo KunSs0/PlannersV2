@@ -1,6 +1,7 @@
 package com.gitee.planners
 
 import com.gitee.planners.api.Registries
+import com.gitee.planners.core.config.BackpackConfig
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import taboolib.common.platform.Platform
@@ -12,6 +13,7 @@ import taboolib.module.configuration.Config
 import taboolib.module.configuration.ConfigNode
 import taboolib.module.configuration.ConfigNodeTransfer
 import taboolib.module.configuration.Configuration
+import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.metrics.Metrics
 import taboolib.platform.BukkitPlugin
 
@@ -46,6 +48,11 @@ object Planners : Plugin() {
                 return@mapNotNull null
             }
         }
+    }
+
+    @ConfigNode("settings.keybinding.backpack")
+    val backpackConfig = ConfigNodeTransfer<ConfigurationSection, BackpackConfig> {
+        BackpackConfig(this)
     }
 
     /**

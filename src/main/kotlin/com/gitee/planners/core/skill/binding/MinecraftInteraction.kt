@@ -1,5 +1,6 @@
 package com.gitee.planners.core.skill.binding
 
+import com.gitee.planners.api.BackpackAPI
 import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
@@ -27,40 +28,42 @@ object MinecraftInteraction {
     }
 
     fun clearInventory(player: Player) {
-        Registries.KEYBINDING.values().forEach { binding ->
-            val indexOf = Registries.KEYBINDING.values().indexOf(binding)
-            player.inventory.setItem(indexOf, null)
+        Registries.KEYBINDING.values().forEachIndexed { index, _ ->
+            player.inventory.setItem(index, null)
         }
     }
 
     fun updateInventory(player: Player) = updateInventory(player.plannersTemplate)
 
-    fun updateInventory(template: PlayerTemplate) = Registries.KEYBINDING.values().forEach { binding ->
-        updateBinding(template, binding)
-    }
+    fun updateInventory(template: PlayerTemplate) {
+        val player = template.onlinePlayer
+        val currentPage = BackpackAPI.getCurrentPage(template)
+        val pageConfig = Registries.BACKPACK.getPage(currentPage) ?: return
 
-    fun updateBinding(template: PlayerTemplate, binding: KeyBinding) {
-        if (template.route == null) {
-            return
+        // 清空所有 keybinding 对应的 hotbar 槽位
+        clearInventory(player)
+
+        // 按当前页的槽位填充
+        pageConfig.slots.forEach { (slotId, slotConfig) ->
+            val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key) ?: return@forEach
+            val skill = template.getEquippedSkillByBackpackSlot(currentPage, slotId)
+            if (skill != null) {
+                val formatter = KeyBindingAPI.createIconFormatter(player, skill)
+                val index = Registries.KEYBINDING.values().indexOf(keybinding)
+                player.inventory.setItem(index, formatter.build())
+            }
         }
-
-        val skill = template.getRegisteredSkillOrNull(binding)
-        if (skill != null) {
-            val formatter = KeyBindingAPI.createIconFormatter(template.onlinePlayer, skill)
-            updateBinding(template.onlinePlayer, binding, formatter.build())
-        }
-    }
-
-    fun updateBinding(player: Player, binding: KeyBinding, itemStack: ItemStack) {
-        val indexOf = Registries.KEYBINDING.values().indexOf(binding)
-        player.inventory.setItem(indexOf, itemStack)
     }
 
     fun updateInventory(template: PlayerTemplate, skill: PlayerSkill) {
-        val binding = skill.binding ?: return
+        if (!skill.equipped || skill.backpackPage == null || skill.backpackSlot == null) return
+        val pageConfig = Registries.BACKPACK.getPage(skill.backpackPage!!) ?: return
+        val slotConfig = pageConfig.slots[skill.backpackSlot!!] ?: return
+        val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key) ?: return
         val player = template.onlinePlayer
         val formatter = KeyBindingAPI.createIconFormatter(player, skill)
-        updateBinding(template.onlinePlayer, binding, formatter.build())
+        val index = Registries.KEYBINDING.values().indexOf(keybinding)
+        player.inventory.setItem(index, formatter.build())
     }
 
     fun execute(func: () -> Unit) {
@@ -87,6 +90,5 @@ object MinecraftInteraction {
             onlinePlayers.forEach { updateInventory(it) }
         }
     }
-
 
 }

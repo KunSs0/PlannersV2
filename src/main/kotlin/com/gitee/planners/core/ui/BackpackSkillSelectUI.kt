@@ -5,36 +5,39 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import taboolib.common.util.asList
-import taboolib.common.util.replaceWithOrder
 import taboolib.module.ui.ClickEvent
 import taboolib.platform.util.buildItem
 
-object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.yml") {
+object BackpackSkillSelectUI : SingletonChoiceUI<PlayerSkill>("backpack-skill-select.yml") {
 
-    @Option("__option__.append-text")
-    val appendString = simpleConfigNodeTo<List<*>, List<String>> {
-        this.asList()
-    }
+    private val callback = mutableMapOf<Player, (PlayerSkill) -> Unit>()
 
     override fun onGenerate(player: Player, element: PlayerSkill, index: Int, slot: Int): ItemStack {
         return buildItem(KeyBindingAPI.createIconFormatter(player, element).build()) {
-            val slotInfo = if (element.equipped) {
-                "§a[${element.backpackPage}:${element.backpackSlot}]"
+            val status = if (element.equipped) {
+                "§a[已装备] §7${element.backpackPage}:${element.backpackSlot}"
             } else {
                 "§7[未装备]"
             }
-            lore += appendString.get().map { it.replaceWithOrder(slotInfo) }
+            lore += listOf("", status)
         }
     }
 
     override fun onClick(event: ClickEvent, element: PlayerSkill) {
-        // 打开技能背包
-        BackpackUI.openTo(event.clicker)
+        callback[event.clicker]?.invoke(element)
+        event.clicker.closeInventory()
     }
 
     override fun getElements(player: Player): Collection<PlayerSkill> {
         return player.plannersTemplate.getRegisteredSkill().values
     }
 
+    fun choice(player: Player, func: (PlayerSkill) -> Unit) {
+        callback[player] = func
+        openTo(player)
+    }
+
+    override fun onClose(player: Player) {
+        callback.remove(player)
+    }
 }

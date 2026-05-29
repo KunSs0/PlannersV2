@@ -62,17 +62,33 @@ settings:
         material: STONE
         name: '空技能 | 待学习'
   keybinding:
-    # 按键映射
+    # 按键映射（注册表）
     keymapping:
-      key0:
-        name: R
-        matching-type: strict
-        request-tick: 30
-        mapping: R
-    # 技能背包配置（预留）
+      key0: { name: R, matching-type: strict, request-tick: 30, mapping: R }
+      key1: { name: T, matching-type: strict, request-tick: 30, mapping: T }
+      key2: { name: F, matching-type: strict, request-tick: 30, mapping: F }
+      key3: { name: G, matching-type: strict, request-tick: 30, mapping: G }
+      key4: { name: Q, matching-type: strict, request-tick: 30, mapping: Q }
+      key5: { name: E, matching-type: strict, request-tick: 30, mapping: E }
+      key6: { name: X, matching-type: strict, request-tick: 30, mapping: X }
+    # 技能背包
     backpack:
-      enable: false
-      slots: 4
+      default-page: "0"
+      pages:
+        "0":
+          name: "战斗页"
+          slots:
+            slot0: { key: key0 }
+            slot1: { key: key1 }
+            slot2: { key: key2 }
+            slot3: { key: key3 }
+        "1":
+          name: "辅助页"
+          slots:
+            slot0: { key: key0 }
+            slot1: { key: key4 }
+            slot2: { key: key5 }
+            slot3: { key: key6 }
   bukkit-launch:
     unimpeded-types:
       - AIR
