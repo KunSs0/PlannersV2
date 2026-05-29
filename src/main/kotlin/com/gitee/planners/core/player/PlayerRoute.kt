@@ -1,6 +1,7 @@
 package com.gitee.planners.core.player
 
 import com.gitee.planners.api.Registries
+import java.util.concurrent.ConcurrentHashMap
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.api.job.*
 import com.gitee.planners.core.config.ImmutableJob
@@ -37,7 +38,15 @@ class PlayerRoute(val bindingId: Long, private val routerId: String, private val
         return route.getBranches()
     }
 
-    private val equippedByPageSlot = mutableMapOf<String, PlayerSkill>()
+    private val equippedByPageSlot = ConcurrentHashMap<String, PlayerSkill>()
+
+    init {
+        skills.forEach { skill ->
+            if (skill.equipped && skill.backpackPage != null && skill.backpackSlot != null) {
+                equippedByPageSlot["${skill.backpackPage}:${skill.backpackSlot}"] = skill
+            }
+        }
+    }
 
     fun registerSkill(skill: PlayerSkill) {
         this.skills[skill.id] = skill

@@ -4,13 +4,20 @@ import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
+import taboolib.common.platform.event.SubscribeEvent
 import taboolib.module.ui.ClickEvent
 import taboolib.platform.util.buildItem
 
 object BackpackSkillSelectUI : SingletonChoiceUI<PlayerSkill>("backpack-skill-select.yml") {
 
     private val callback = mutableMapOf<Player, (PlayerSkill) -> Unit>()
+
+    @SubscribeEvent
+    fun e(e: PlayerQuitEvent) {
+        callback.remove(e.player)
+    }
 
     override fun onGenerate(player: Player, element: PlayerSkill, index: Int, slot: Int): ItemStack {
         return buildItem(KeyBindingAPI.createIconFormatter(player, element).build()) {

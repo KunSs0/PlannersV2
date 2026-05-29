@@ -5,6 +5,7 @@ import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
+import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.event.player.PlayerSkillEvent
 import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.core.player.PlayerTemplate
@@ -68,6 +69,11 @@ object MinecraftInteraction {
 
     fun execute(func: () -> Unit) {
         if (isEnable) func()
+    }
+
+    @SubscribeEvent
+    fun e(e: PlayerProfileLoadedEvent) {
+        updateInventory(e.template)
     }
 
     @SubscribeEvent
