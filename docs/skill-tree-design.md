@@ -175,8 +175,17 @@ exper / consume 表达式执行时可访问以下预注入变量：
 
 #### 3.1.6 代码接口
 
+实现文件：
+
+| 文件 | 路径 |
+|------|------|
+| `ConditionConfig` | `core/condition/ConditionConfig.kt` |
+| `ConditionRegistry` | `core/condition/ConditionRegistry.kt` |
+| `ConditionEvaluator` | `core/condition/ConditionEvaluator.kt` |
+| `PlayerBridge` | `module/script/bridge/PlayerBridge.java` |
+
 ```kotlin
-// core/condition/ConditionConfig.kt
+// ConditionConfig — 数据类
 data class ConditionConfig(
     val key: String,                // 条件名
     val exper: String,              // JS 校验表达式，返回 Boolean
@@ -185,24 +194,23 @@ data class ConditionConfig(
     val consume: String?            // JS 消耗语句，null 表示无消耗
 )
 
-// core/condition/ConditionRegistry.kt
+// ConditionRegistry — 单例注册表
 object ConditionRegistry {
-    fun init()                          // Planners.onEnable() 调用
-    fun reload()                        // PluginReloadEvents.Post 时重载
+    fun init()                           // Planners.onEnable() 调用
+    fun reload()                         // PluginReloadEvents.Post 时重载
     fun get(key: String): ConditionConfig
     fun getOrNull(key: String): ConditionConfig?
     fun contains(key: String): Boolean
 }
 
-// core/condition/ConditionEvaluator.kt
+// ConditionEvaluator — 执行器
 class ConditionEvaluator {
     data class VerifyResult(val passed: Boolean, val hints: List<String>)
 
-    /** 校验条件组，全部通过才返回 true */
-    fun verify(conditions: Map<String, Map<String, Any>>, player: Player): VerifyResult
-
-    /** 执行消耗（校验通过后调用） */
-    fun consume(conditions: Map<String, Map<String, Any>>, player: Player)
+    fun verify(conditions: Map<String, Map<String, Any>>, 
+               player: Player, contextVars: Map<String, Any> = emptyMap()): VerifyResult
+    fun consume(conditions: Map<String, Map<String, Any>>, 
+                player: Player, contextVars: Map<String, Any> = emptyMap())
 }
 ```
 
@@ -461,10 +469,10 @@ object SkillPointsManager {
 | `DatabaseLocal` / `DatabaseSQL` | `planners_route` 表已新增 `sp_current` / `sp_used` 列 + 迁移 + `updateSkillPoints()` |
 | `SkillPointsManager` | ✅ 已完成 — 配置加载、等级事件监听、累计计算（带缓存） |
 | `SkillPointsFunctions` | ✅ 已完成 — JS 全局函数 `availablePoints()` / `takePoints()` |
-| `ConditionConfig` | 新文件 — 条件配置数据类 |
-| `ConditionRegistry` | 新文件 — 加载 `settings.condition` + PluginReloadEvents 重载 |
-| `ConditionEvaluator` | 新文件 — 校验 + 消耗：遍历 conditions → 合并 props → eval exper → 收集 hint |
-| `PlayerBridge` | 新文件（Java）— 注入 JS 的 `player` 桥接对象 |
+| `ConditionConfig` | ✅ 已完成 — 条件配置数据类（exper/props/hint/consume） |
+| `ConditionRegistry` | ✅ 已完成 — 加载 `settings.condition` + PluginReloadEvents 重载 |
+| `ConditionEvaluator` | ✅ 已完成 — 校验 + 消耗：遍历 conditions → 合并 props → eval exper → 收集 hint；props 支持常量/String公式 |
+| `PlayerBridge` | ✅ 已完成（Java）— 注入 JS 的 `player` 桥接对象；`currency/hasItem/takeCurrency/takeItem` 占位 |
 | `Planners` | `onEnable()` 中调用 `ConditionRegistry.init()` |
 | `config.yml` | 新增 `settings.condition` 节点 |
 | `Condition` (旧) | ✅ 已删除 — 原有 `Condition` 接口 / `Messaged` / `Combined` / `VerifyInfo` 全部移除 |
@@ -474,7 +482,13 @@ object SkillPointsManager {
 ## 六、开发顺序
 
 ```
-Phase A → Condition 条件模块（settings.condition 加载 + Registry + Evaluator + PlayerBridge）
+Phase A → Condition 条件模块 ✅ 已完成
+          ├── ConditionConfig 数据类
+          ├── ConditionRegistry（加载 settings.condition + PluginReloadEvents 重载）
+          ├── ConditionEvaluator（verify 遍历AND→合并props→eval exper→收集hint / consume）
+          ├── PlayerBridge（JS player 对象：level/availablePoints/getSkillLevel/getJob/takePoints）
+          ├── Planners.onEnable 调用 ConditionRegistry.init()
+          └── config.yml 新增 settings.condition 节点（7条预置条件）
 Phase B → SkillData 数据加载（skilltree/*.yml 加载 + 校验）
 Phase C → PlayerRoute.SkillTree（learn/upgrade/getLevel）
 Phase D → SkillPoints 技能点模块 ✅ 已完成
