@@ -8,6 +8,7 @@ import org.bukkit.inventory.ItemStack
 import taboolib.common.util.asList
 import taboolib.common.util.replaceWithOrder
 import taboolib.module.ui.ClickEvent
+import taboolib.platform.util.asLangText
 import taboolib.platform.util.buildItem
 
 object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.yml") {
@@ -20,9 +21,9 @@ object PlayerSkillOperatorUI : SingletonChoiceUI<PlayerSkill>("skill-operator.ym
     override fun onGenerate(player: Player, element: PlayerSkill, index: Int, slot: Int): ItemStack {
         return buildItem(KeyBindingAPI.createIconFormatter(player, element).build()) {
             val slotInfo = if (element.equipped) {
-                "§a[${element.backpackPage}:${element.backpackSlot}]"
+                player.asLangText("skill-operator-equipped", element.backpackPage ?: "?", element.backpackSlot ?: "?")
             } else {
-                "§7[未装备]"
+                player.asLangText("skill-operator-unequipped")
             }
             lore += appendString.get().map { it.replaceWithOrder(slotInfo) }
         }

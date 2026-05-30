@@ -8,6 +8,7 @@ import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.module.ui.ClickEvent
+import taboolib.platform.util.asLangText
 import taboolib.platform.util.buildItem
 
 object BackpackSkillSelectUI : SingletonChoiceUI<PlayerSkill>("backpack-skill-select.yml") {
@@ -22,9 +23,9 @@ object BackpackSkillSelectUI : SingletonChoiceUI<PlayerSkill>("backpack-skill-se
     override fun onGenerate(player: Player, element: PlayerSkill, index: Int, slot: Int): ItemStack {
         return buildItem(KeyBindingAPI.createIconFormatter(player, element).build()) {
             val status = if (element.equipped) {
-                "§a[已装备] §7${element.backpackPage}:${element.backpackSlot}"
+                player.asLangText("backpack-skill-equipped", element.backpackPage ?: "?", element.backpackSlot ?: "?")
             } else {
-                "§7[未装备]"
+                player.asLangText("backpack-skill-unequipped")
             }
             lore += listOf("", status)
         }

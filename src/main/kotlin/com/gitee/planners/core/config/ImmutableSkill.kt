@@ -26,7 +26,7 @@ class ImmutableSkill(config: Configuration) : Unique {
     private val option = config.getOption()
 
     /** 技能图标 */
-    val icon = option.getItemStack("icon-formatter")
+    val icon = option.getConfigurationSection("display")?.getItemStack("icon")
 
     /** 技能分类 */
     val categories = option["category", "*"]!!.asList()

@@ -1,12 +1,13 @@
 __option__:
   name: "裂地斩"
 
-  icon-formatter:
-    material: DIAMOND_SWORD
-    name: "裂地斩"
-    lore:
-      - "技能等级 {{level}}"
-      - "技能伤害 {{32 * level + 100}}"
+  display:
+    icon:
+      material: DIAMOND_SWORD
+      name: "裂地斩"
+      lore:
+        - "技能等级 {{level}}"
+        - "技能伤害 {{32 * level + 100}}"
   variables:
     cooldown: 100
     damage: 32 * level + 100

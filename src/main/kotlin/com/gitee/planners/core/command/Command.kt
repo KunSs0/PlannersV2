@@ -9,6 +9,8 @@ import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import taboolib.common.platform.ProxyCommandSender
+import taboolib.module.lang.sendLang
+import taboolib.platform.util.sendLang
 import taboolib.common.platform.command.*
 import taboolib.common.util.asList
 import taboolib.common5.cint
@@ -47,13 +49,13 @@ object Command {
                 execute<Player> { player, context, argument ->
                     val state = Registries.STATE.getOrNull(context["state"])
                     if (state == null) {
-                        player.sendMessage("State '$argument' not found.")
+                        player.sendLang("command-state-not-found", context["state"] ?: argument)
                         return@execute
                     }
                     val duration = argument.clong
                     // 测试添加状态
                     player.asTarget().attachState(state, duration, true)
-                    player.sendMessage("Test.")
+                    player.sendLang("command-test")
                 }
             }
         }
@@ -65,7 +67,7 @@ object Command {
             PluginReloadEvents.Pre().call()
             Registries.handleReload()
             PluginReloadEvents.Post().call()
-            sender.sendMessage("Reloaded.")
+            sender.sendLang("command-reloaded")
         }
     }
 

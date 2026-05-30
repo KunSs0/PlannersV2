@@ -7,6 +7,7 @@ import com.gitee.planners.core.skill.binding.MinecraftInteraction
 import com.gitee.planners.core.ui.BackpackUI
 import org.bukkit.entity.Player
 import taboolib.common.platform.command.*
+import taboolib.platform.util.sendLang
 
 object CommandBackpack {
 
@@ -24,7 +25,7 @@ object CommandBackpack {
                 val template = player.plannersTemplate
                 BackpackAPI.setCurrentPage(template, pageId)
                 MinecraftInteraction.updateInventory(template)
-                player.sendMessage("§a已切换到: ${Registries.BACKPACK.getPage(pageId)?.name ?: pageId}")
+                player.sendLang("command-backpack-switched", Registries.BACKPACK.getPage(pageId)?.name ?: pageId)
             }
         }
     }

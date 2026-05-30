@@ -1,7 +1,8 @@
 __option__:
   name: "x1"
-  icon-formatter:
-    material: DIAMOND_SWORD
+  display:
+    icon:
+      material: DIAMOND_SWORD
   variables:
     cooldown: 100
     damage: 32 * level + 100

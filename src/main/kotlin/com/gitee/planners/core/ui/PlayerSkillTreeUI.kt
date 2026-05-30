@@ -6,7 +6,9 @@ import com.gitee.planners.core.player.PlayerRoute
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import taboolib.platform.util.asLangText
 import taboolib.platform.util.buildItem
+import taboolib.platform.util.sendLang
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -19,11 +21,11 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
     fun open(player: Player) {
         val template = player.plannersTemplate
         val route = template.route ?: run {
-            player.sendMessage("§cYou haven't selected a job route yet")
+            player.sendLang("skill-tree-no-route")
             return
         }
         val tree = route.skillTree ?: run {
-            player.sendMessage("§cCurrent route has no skill tree")
+            player.sendLang("skill-tree-no-tree")
             return
         }
         val ordered = topologicalOrder(tree.immutable.graph)
@@ -51,7 +53,7 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
                 }
 
                 // Row 0: Scroll up
-                set(0, buildScrollUpItem(scroll)) {
+                set(0, buildScrollUpItem(player, scroll)) {
                     if (scroll > 0) {
                         scrollOffsets[player] = scroll - 1
                         open(player)
@@ -67,13 +69,13 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
                 }
 
                 // Row 5: Scroll down + SP
-                set(45, buildScrollDownItem(scroll, ordered.size)) {
+                set(45, buildScrollDownItem(player, scroll, ordered.size)) {
                     if (scroll + 4 < ordered.size) {
                         scrollOffsets[player] = scroll + 1
                         open(player)
                     }
                 }
-                buildSPDisplay(route)
+                buildSPDisplay(player, route)
             }
         }
     }
@@ -98,15 +100,15 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
         }
 
         // Col1: skill name + current level
-        set(baseSlot + 1, buildSkillNameItem(skillDisplayName, skillId, level, skillNode.maxLevel))
+        set(baseSlot + 1, buildSkillNameItem(player, skillDisplayName, skillId, level, skillNode.maxLevel))
 
         // Col3-8: level slots Lv1-Lv6
         for (lv in 1..6) {
             val colSlot = baseSlot + 2 + lv
             if (lv > skillNode.maxLevel) {
-                set(colSlot, buildBeyondItem(lv))
+                set(colSlot, buildBeyondItem(player, lv))
             } else {
-                val item = buildLevelItem(skillId, lv, level)
+                val item = buildLevelItem(player, skillId, lv, level)
                 set(colSlot, item) {
                     handleLevelClick(player, tree, skillId, lv, level)
                 }
@@ -114,44 +116,48 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
         }
     }
 
-    private fun buildSkillNameItem(skillName: String, skillId: String, level: Int, maxLevel: Int): ItemStack {
+    private fun buildSkillNameItem(player: Player, skillName: String, skillId: String, level: Int, maxLevel: Int): ItemStack {
         return buildItem(Material.PAPER) {
-            name = "§e$skillName"
-            lore.add("§7ID: §f$skillId")
-            lore.add("§7Level: §fLv$level / Lv$maxLevel")
+            name = player.asLangText("skill-tree-item-name", skillName)
+            lore.add(player.asLangText("skill-tree-id-lore", skillId))
+            lore.add(player.asLangText("skill-tree-level-lore", level, maxLevel))
             lore.add("")
         }
     }
 
     // === Level slot items ===
 
-    private fun buildLevelItem(skillId: String, slotLv: Int, currentLevel: Int): ItemStack {
+    private fun buildLevelItem(player: Player, skillId: String, slotLv: Int, currentLevel: Int): ItemStack {
         if (slotLv <= currentLevel) {
             return buildItem(Material.GOLD_NUGGET) {
-                name = "§eLv$slotLv §a* Learned"
-                lore.add("§7Already mastered")
-                lore.add("§7Skill: §f$skillId")
+                name = player.asLangText("skill-tree-learned-name", slotLv)
+                lore.add(player.asLangText("skill-tree-already-mastered"))
+                lore.add(player.asLangText("skill-tree-skill-lore", skillId))
             }
         }
         if (slotLv == currentLevel + 1) {
-            val action = if (currentLevel == 0) "Learn" else "Upgrade"
+            val action = if (currentLevel == 0) {
+                player.asLangText("skill-tree-learn-action")
+            } else {
+                player.asLangText("skill-tree-upgrade-action")
+            }
             return buildItem(Material.KNOWLEDGE_BOOK) {
-                name = "§eLv$slotLv §6§l>> $action"
-                lore.add("§e§lClick to $action")
-                lore.add("§7Skill: §f$skillId")
+                name = player.asLangText("skill-tree-actionable-name", slotLv, action)
+                lore.add(player.asLangText("skill-tree-actionable-lore", action))
+                lore.add(player.asLangText("skill-tree-skill-lore", skillId))
             }
         }
         return buildItem(Material.LIGHT_GRAY_STAINED_GLASS_PANE) {
-            name = "§eLv$slotLv §7Locked"
-            lore.add("§7Need previous level first")
-            lore.add("§7Skill: §f$skillId")
+            name = player.asLangText("skill-tree-locked-name", slotLv)
+            lore.add(player.asLangText("skill-tree-need-previous"))
+            lore.add(player.asLangText("skill-tree-skill-lore", skillId))
         }
     }
 
-    private fun buildBeyondItem(lv: Int): ItemStack {
+    private fun buildBeyondItem(player: Player, lv: Int): ItemStack {
         return buildItem(Material.GRAY_STAINED_GLASS_PANE) {
-            name = "§8- Lv$lv"
-            lore.add("§7Beyond max level")
+            name = player.asLangText("skill-tree-beyond-name", lv)
+            lore.add(player.asLangText("skill-tree-beyond-lore"))
         }
     }
 
@@ -177,37 +183,45 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
                 open(player)
             }.exceptionally { e ->
                 val msg = e.cause?.message ?: e.message ?: "Unknown error"
-                player.sendMessage("§cFailed: $msg")
+                player.sendLang("skill-tree-failed", msg)
                 null
             }
         } catch (e: Exception) {
-            player.sendMessage("§c${e.message}")
+            player.sendLang("skill-tree-failed", e.message ?: "Unknown error")
         }
     }
 
     // === Scroll buttons ===
 
-    private fun buildScrollUpItem(scroll: Int): ItemStack {
+    private fun buildScrollUpItem(player: Player, scroll: Int): ItemStack {
         return buildItem(if (scroll > 0) Material.SPECTRAL_ARROW else Material.GRAY_DYE) {
-            name = if (scroll > 0) "§e▲ Scroll Up" else "§7▲ At Top"
+            name = if (scroll > 0) {
+                player.asLangText("skill-tree-scroll-up")
+            } else {
+                player.asLangText("skill-tree-scroll-up-top")
+            }
         }
     }
 
-    private fun buildScrollDownItem(scroll: Int, total: Int): ItemStack {
+    private fun buildScrollDownItem(player: Player, scroll: Int, total: Int): ItemStack {
         return buildItem(if (scroll + 4 < total) Material.SPECTRAL_ARROW else Material.GRAY_DYE) {
-            name = if (scroll + 4 < total) "§e▼ Scroll Down" else "§7▼ At Bottom"
+            name = if (scroll + 4 < total) {
+                player.asLangText("skill-tree-scroll-down")
+            } else {
+                player.asLangText("skill-tree-scroll-down-bottom")
+            }
         }
     }
 
     // === SP display ===
 
-    private fun BaseUI.Chest.buildSPDisplay(route: PlayerRoute) {
+    private fun BaseUI.Chest.buildSPDisplay(player: Player, route: PlayerRoute) {
         set(48, buildItem(Material.NETHER_STAR) {
-            name = "§e✦ Skill Points"
-            lore.add("§fAvailable: §6${route.skillPointsCurrent}")
-            lore.add("§fTotal spent: §7${route.skillPointsUsed}")
+            name = player.asLangText("skill-tree-points-title")
+            lore.add(player.asLangText("skill-tree-points-available", route.skillPointsCurrent))
+            lore.add(player.asLangText("skill-tree-points-spent", route.skillPointsUsed))
             lore.add("")
-            lore.add("§7Earned by leveling up")
+            lore.add(player.asLangText("skill-tree-points-earned"))
         })
     }
 

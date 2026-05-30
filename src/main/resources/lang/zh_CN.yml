@@ -27,3 +27,62 @@ command-magicpoint-reset: "&8[&6✦&8] &f已重置 {0} 的法力值"
 # ==================== 技能系统 ====================
 skill-upgrade-failed: "&8[&6✦&8] &c技能升级失败，等级已达上限或条件不满足"
 skill-upgrade-success: "&8[&6✦&8] &a成功将 {0} 升级"
+
+# ==================== 技能树 UI ====================
+skill-tree-no-route: "&cYou haven't selected a job route yet"
+skill-tree-no-tree: "&cCurrent route has no skill tree"
+skill-tree-failed: "&cFailed: {0}"
+skill-tree-item-name: "&e{0}"
+skill-tree-id-lore: "&7ID: &f{0}"
+skill-tree-level-lore: "&7Level: &fLv{0} / Lv{1}"
+skill-tree-learned-name: "&eLv{0} &a* Learned"
+skill-tree-already-mastered: "&7Already mastered"
+skill-tree-skill-lore: "&7Skill: &f{0}"
+skill-tree-learn-action: "Learn"
+skill-tree-upgrade-action: "Upgrade"
+skill-tree-actionable-name: "&eLv{0} &6&l>> {1}"
+skill-tree-actionable-lore: "&e&lClick to {0}"
+skill-tree-locked-name: "&eLv{0} &7Locked"
+skill-tree-need-previous: "&7Need previous level first"
+skill-tree-beyond-name: "&8- Lv{0}"
+skill-tree-beyond-lore: "&7Beyond max level"
+skill-tree-scroll-up: "&e▲ Scroll Up"
+skill-tree-scroll-up-top: "&7▲ At Top"
+skill-tree-scroll-down: "&e▼ Scroll Down"
+skill-tree-scroll-down-bottom: "&7▼ At Bottom"
+skill-tree-points-title: "&e✦ Skill Points"
+skill-tree-points-available: "&fAvailable: &6{0}"
+skill-tree-points-spent: "&fTotal spent: &7{0}"
+skill-tree-points-earned: "&7Earned by leveling up"
+
+# ==================== 技能操作 UI ====================
+skill-operator-equipped: "&a[{0}:{1}]"
+skill-operator-unequipped: "&7[未装备]"
+
+# ==================== 背包技能选择 UI ====================
+backpack-skill-equipped: "&a[已装备] &7{0}:{1}"
+backpack-skill-unequipped: "&7[未装备]"
+
+# ==================== 技能系统（校验/异常提示） ====================
+skill-learn-already: "技能 {0} 已学习"
+skill-not-in-tree: "技能树 '{0}' 中不存在技能 '{1}'"
+skill-no-lv1-condition: "技能 '{0}' 未定义 Lv1 条件"
+skill-learn-condition-fail: "不满足学习条件: {0}"
+skill-not-found: "技能 '{0}' 不存在"
+skill-not-learned: "技能 {0} 未学习"
+skill-not-in-tree-node: "技能树中不存在技能 '{0}'"
+skill-max-level: "技能 {0} 已满级 ({1}/{2})"
+skill-no-level-condition: "技能 '{0}' 未定义 Lv{1} 条件"
+skill-upgrade-condition-fail: "不满足升级条件: {0}"
+
+# ==================== 指令 ====================
+command-state-not-found: "&cState '{0}' not found."
+command-reloaded: "&aReloaded."
+command-console-casted: "&fcasted {0}"
+command-backpack-switched: "&a已切换到: {0}"
+command-test: "&fTest."
+
+# ==================== 脚本语言 ====================
+script-sleep-main-thread: "&csleep() 不能在主线程调用，请确保技能配置 async: true"
+finder-unknown-entity-type: "未知实体类型: {0}"
+finder-unknown-sort-type: "未知排序类型: {0}"
