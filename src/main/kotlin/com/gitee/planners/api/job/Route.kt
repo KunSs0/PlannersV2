@@ -1,8 +1,6 @@
 package com.gitee.planners.api.job
 
 import com.gitee.planners.api.common.Unique
-import com.gitee.planners.module.script.ScriptOptions
-import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 interface Route : Unique {
@@ -13,7 +11,5 @@ interface Route : Unique {
     fun getJob() : Job
 
     fun getIcon() : ItemStack?
-
-    fun isInfer(player: Player, options: ScriptOptions): Condition.VerifyInfo
 
 }

@@ -6,15 +6,12 @@ import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.script.ScriptContext
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
-import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.common.util.asList
-import taboolib.common5.cint
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
-import taboolib.module.configuration.util.mapSection
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
@@ -44,31 +41,6 @@ class ImmutableSkill(config: Configuration) : Skill {
      * 技能提供的属性
      */
     val attributes: List<String> = option.getStringList("hook.attributes")
-
-    /** 升级条件 */
-    val conditionAsUpgrade = option.mapSection("upgrade.condition") {
-        val split = it.name.split("-")
-        val begin = split[0].toInt()
-        val end = split.getOrElse(1) { "$begin" }.cint
-        IndexedUpgrade(begin, end, it.mapValueWithId { _, value ->
-            if (value is ConfigurationSection) {
-                IndexedUpgrade.Amount(value.getString("experience", "0")!!, value.getBoolean("mark", false))
-            } else {
-                IndexedUpgrade.Amount(value.toString(), false)
-            }
-        })
-    }
-
-    fun getConditionAsUpgrade(index: Int): IndexedUpgrade? {
-        conditionAsUpgrade.values.forEach {
-            if (it.begin == it.end && it.begin == index) {
-                return it
-            } else if (index in it.begin..it.end) {
-                return it
-            }
-        }
-        return null
-    }
 
     /** 开始等级 */
     val startedLevel = option.getInt("started-level", 0)
@@ -170,24 +142,4 @@ class ImmutableSkill(config: Configuration) : Skill {
         return "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
     }
 
-    class IndexedUpgrade(val begin: Int, val end: Int, val args: Map<String, Amount>) {
-
-        class Amount(val expression: String, val mark: Boolean) {
-
-            private val script = SingletonScript(expression)
-
-            val isNotNull: Boolean
-                get() = expression.isNotEmpty()
-
-            /**
-             * 执行表达式
-             */
-            fun eval(variables: Map<String, Any?> = emptyMap()): Any? {
-                if (!script.isNotNull) return null
-                val options = ScriptOptions.of()
-                variables.forEach { (k, v) -> options.set(k, v) }
-                return script.eval(options)
-            }
-        }
-    }
 }

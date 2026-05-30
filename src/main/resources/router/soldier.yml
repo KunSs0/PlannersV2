@@ -26,10 +26,6 @@ swordsman:
 
 blade-master:
   branch: grand-master
-  condition:
-    m0:
-      if: "true"
-      message: "金币所需100"
   icon:
     material: DIAMOND_SWORD
     name: "职业: 剑魂"
@@ -47,10 +43,6 @@ blade-master:
       - '&e难度： ||'
 
 grand-master:
-  condition:
-    m0:
-      if: "false"
-      message: "金币所需100"
   icon:
     material: DIAMOND_SWORD
     name: "职业: 剑圣"

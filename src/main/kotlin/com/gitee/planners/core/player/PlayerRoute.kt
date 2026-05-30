@@ -2,13 +2,11 @@ package com.gitee.planners.core.player
 
 import com.gitee.planners.api.Registries
 import java.util.concurrent.ConcurrentHashMap
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.api.job.*
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.core.database.Database
-import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import taboolib.common.platform.function.submitAsync
 
@@ -109,10 +107,6 @@ class PlayerRoute(
 
     override fun getIcon(): ItemStack? {
         return route.getIcon()
-    }
-
-    override fun isInfer(player: Player, options: ScriptOptions): Condition.VerifyInfo {
-        throw IllegalStateException("Not implemented")
     }
 
     override fun getVariables(): Map<String, Variable> {
