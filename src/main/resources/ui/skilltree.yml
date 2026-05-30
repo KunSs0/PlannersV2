@@ -2,6 +2,11 @@ __option__:
   rows: 6
   title: "技能树"
 
+  skill-icon-offset: 0
+  level-start-offset: 2
+  level-count: 6
+  rows-per-page: 4
+
   # === 已学习（DynamicSkillIcon + append） ===
   icon-learned:
     name:
@@ -44,39 +49,49 @@ __option__:
 
   # === 上/下翻（技能） ===
   icon-scroll-up:
+    slot: 0
     material: SPECTRAL_ARROW
     name: "&e▲ 上翻"
   icon-scroll-up-top:
+    slot: 0
     material: GRAY_DYE
     name: "&7▲ 已置顶"
   icon-scroll-down:
+    slot: 45
     material: SPECTRAL_ARROW
     name: "&e下翻 ▼"
   icon-scroll-down-bottom:
+    slot: 45
     material: GRAY_DYE
     name: "&7已到底 ▼"
 
   # === 左/右翻（等级） ===
   icon-scroll-left:
+    slot: 47
     material: SPECTRAL_ARROW
     name: "&e◀ 左翻"
   icon-scroll-left-end:
+    slot: 47
     material: GRAY_DYE
     name: "&7◀ 到头"
   icon-scroll-right:
+    slot: 53
     material: SPECTRAL_ARROW
     name: "&e右翻 ▶"
   icon-scroll-right-end:
+    slot: 53
     material: GRAY_DYE
     name: "&7到头 ▶"
 
   # === 等级标签 ===
   icon-level-label:
+    slots: [2, 3, 4, 5, 6, 7]
     material: LIME_STAINED_GLASS_PANE
     name: "&aLv{lv}"
 
   # === SP 展示 ===
   icon-sp-display:
+    slot: 46
     material: NETHER_STAR
     name: "&e✦ 技能点"
     lore:
@@ -86,34 +101,7 @@ __option__:
       - "&7通过升级获得"
 
 # ===== 装饰玻璃 =====
-# Row0 Col1 | Rows1-4 Col1,8 | Row5 Col0,3-6
 icon-#:
-  slots: [1, 10, 17, 19, 26, 28, 35, 37, 44, 45, 48, 49, 50, 51]
+  slots: [1, 8, 10, 17, 19, 26, 28, 35, 37, 44, 48, 49, 50, 51, 52]
   material: GRAY_STAINED_GLASS_PANE
   name: " "
-
-# ===== 等级标签 (Row 0, Col2-7) =====
-icon-lv1:
-  slot: 2
-  material: LIME_STAINED_GLASS_PANE
-  name: "&aLv1"
-icon-lv2:
-  slot: 3
-  material: LIME_STAINED_GLASS_PANE
-  name: "&aLv2"
-icon-lv3:
-  slot: 4
-  material: LIME_STAINED_GLASS_PANE
-  name: "&aLv3"
-icon-lv4:
-  slot: 5
-  material: LIME_STAINED_GLASS_PANE
-  name: "&aLv4"
-icon-lv5:
-  slot: 6
-  material: LIME_STAINED_GLASS_PANE
-  name: "&aLv5"
-icon-lv6:
-  slot: 7
-  material: LIME_STAINED_GLASS_PANE
-  name: "&aLv6"
