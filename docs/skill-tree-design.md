@@ -47,9 +47,24 @@
 | 字段 | 类型 | 必填 | 含义 |
 |------|------|------|------|
 | **exper** | String | ✅ | JS 校验表达式，返回 `Boolean`，上下文注入 `player`、`props` |
-| **props** | Section | 否 | 静态参数默认值，注入上下文 `props` |
+| **props** | Section | 否 | 静态参数默认值，注入上下文 `props`；值可以是常量或 JS 公式字符串 |
 | **hint** | String | ✅ | 校验失败时提示文本，支持 `{props.xxx}` 变量插值 |
 | **consume** | String | 否 | JS 执行语句，所有条件通过后执行，如 `player.takePoints(props.amount)` |
+
+**props 值支持两种形式：**
+- 常量值：数字、字符串等，直接传递到 JS 上下文
+- JS 公式字符串：以 `"` 包裹的字符串，执行时先 eval 求值，再注入 JS 上下文。公式可引用上下文变量（如 `skillLevel`、`player`）
+
+```yaml
+# 调用方示例
+levels:
+  1:
+    consume_sp: { amount: 1 }                           # 常量
+  2:
+    consume_sp: { amount: "1 + 1" }                     # 公式
+  3:
+    consume_sp: { amount: "1 + skillLevel * 0.5" }      # 公式引用变量
+```
 
 #### 3.1.2 配置格式
 
@@ -101,16 +116,31 @@ settings:
       consume: "player.takeItem(props.itemId, props.count)"
 ```
 
-#### 3.1.3 执行流程
+#### 3.1.3 逻辑运算符
+
+YAML 层默认 **AND**：所有条件全部通过才算通过，任一失败立即中止。需要 **OR** 的场景，在 `exper` 中用 JS `||` 运算符组合：
+
+```yaml
+    warrior_or_mage:
+      exper: "player.getJob() == 'warrior' || player.getJob() == 'mage'"
+      props: {}
+      hint: "需要战士或法师职业"
+```
+
+一个 condition = 一个语义 = 一个 hint。调用方纯 AND 平铺，OR 封装在 condition 定义的 exper 中。
+
+#### 3.1.4 执行流程
 
 ```
 遍历 conditions (按 key 的顺序)
   ↓
-读取 props，合并引用处传参覆盖默认值
+读取默认 props + 引用处传参合并覆盖
   ↓
-执行 exper 表达式 → 返回 false → 收集 hint 为失败原因 → 终止遍历
+逐值处理 props：若值为 String → ScriptManager.eval(表达式) → 数值，否则直接用
+  ↓
+执行 exper 表达式 (注入 player + 求值后的 props)
   ↓                              ↓
-返回 true                      返回 (false, hint)
+返回 true                      返回 false → 收集 hint → 终止遍历
   ↓
 所有条件通过 → 逐项执行各 condition 的 consume (JS语句)
 ```
@@ -121,43 +151,59 @@ settings:
 - consume 在所有条件通过后才统一执行
 - hint 中的 `{props.xxx}` 插值在提示时动态替换
 
-#### 3.1.4 JS 上下文绑定
+#### 3.1.5 JS 上下文绑定
+
+`player` 注入为 `PlayerBridge` Java 对象（实现：`module/script/bridge/PlayerBridge.java`），通过 `ScriptOptions.set("player", bridge)` 注入。`props` 注入为已求值的 `Map`。
 
 exper / consume 表达式执行时可访问以下预注入变量：
 
 | 变量 | 类型 | 来源 |
 |------|------|------|
-| `player` | Player | Bukkit Player 对象 |
-| `props` | Map | 定义中的 props + 引用处传参合并 |
+| `player` | PlayerBridge | Bukkit Player 桥接对象 |
+| `props` | Map | 定义中的 props + 引用处传参合并（已求值） |
 | `player.level` | Int | PlayerTemplate.getLevel() |
 | `player.availablePoints()` | Int | 当前可用技能点 |
 | `player.getSkillLevel(skillId)` | Int | 已学习技能等级（未学习返回0） |
-| `player.hasItem(itemId, count)` | Boolean | 背包持有物品 |
-| `player.currency()` | Long | 金币余额 |
+| `player.hasItem(itemId, count)` | Boolean | 背包持有物品（占位） |
+| `player.currency()` | Long | 金币余额（占位） |
 | `player.getJob()` | String | 当前职业ID |
 | `player.takePoints(amount)` | — | 扣除技能点 |
-| `player.takeCurrency(amount)` | — | 扣除金币 |
-| `player.takeItem(itemId, count)` | — | 扣除物品 |
+| `player.takeCurrency(amount)` | — | 扣除金币（占位） |
+| `player.takeItem(itemId, count)` | — | 扣除物品（占位） |
 
-#### 3.1.5 代码接口
+> `currency`、`hasItem`、`takeCurrency`、`takeItem` 在 Phase A 为占位实现（抛 UnsupportedOperationException），后续对接经济/背包系统。
+
+#### 3.1.6 代码接口
 
 ```kotlin
-interface ConditionEvaluator {
+// core/condition/ConditionConfig.kt
+data class ConditionConfig(
+    val key: String,                // 条件名
+    val exper: String,              // JS 校验表达式，返回 Boolean
+    val props: Map<String, Any>,    // 默认参数（值可为常量或 String 公式）
+    val hint: String,               // 校验失败提示，支持 {props.xxx}
+    val consume: String?            // JS 消耗语句，null 表示无消耗
+)
+
+// core/condition/ConditionRegistry.kt
+object ConditionRegistry {
+    fun init()                          // Planners.onEnable() 调用
+    fun reload()                        // PluginReloadEvents.Post 时重载
+    fun get(key: String): ConditionConfig
+    fun getOrNull(key: String): ConditionConfig?
+    fun contains(key: String): Boolean
+}
+
+// core/condition/ConditionEvaluator.kt
+class ConditionEvaluator {
     data class VerifyResult(val passed: Boolean, val hints: List<String>)
 
     /** 校验条件组，全部通过才返回 true */
-    fun verify(conditions: Map<String, Map<String, Any>>, context: ConditionContext): VerifyResult
+    fun verify(conditions: Map<String, Map<String, Any>>, player: Player): VerifyResult
 
     /** 执行消耗（校验通过后调用） */
-    fun consume(conditions: Map<String, Map<String, Any>>, context: ConditionContext)
+    fun consume(conditions: Map<String, Map<String, Any>>, player: Player)
 }
-
-data class ConditionConfig(
-    val exper: String,
-    val props: Map<String, Any>,
-    val hint: String,
-    val consume: String?       // JS 语句，null 表示无消耗
-)
 ```
 
 ---
@@ -407,24 +453,28 @@ object SkillPointsManager {
 
 | 现有组件 | 改动 |
 |---------|------|
-| `ImmutableSkill` | 不变，node key 即其 id |
+| `ImmutableSkill` | 不存在，node key 即其 id |
 | `PlayerSkill` | 不变，已有 `level` 字段即技能树等级 |
-| `PlayerRoute` | 新增 `skillPointsCurrent` / `skillPointsUsed` 字段 + `addSkillPoints()` / `takeSkillPoints()` + 内部类 `SkillTree`（待实现） |
+| `PlayerRoute` | 已新增 `skillPointsCurrent` / `skillPointsUsed` 字段 + `addSkillPoints()` / `takeSkillPoints()`；内部类 `SkillTree` 待实现 |
 | `PlayerTemplate` | 不变 |
-| `Database` | 新增 `updateSkillPoints()` 接口方法 |
-| `DatabaseLocal` / `DatabaseSQL` | `planners_route` 表新增 `sp_current` / `sp_used` 列 + 迁移 + 实现 `updateSkillPoints()` |
-| `SkillPointsManager` | 新文件 — 配置加载、等级事件监听、累计计算（带缓存） |
-| `SkillPointsFunctions` | 新文件 — JS 全局函数 `availablePoints()` / `takePoints()` |
-| `GlobalFunctions` / `ScriptFunctionRegistry` | 注册 `SkillPointsFunctions` |
-| `Planners` | `onEnable()` 中调用 `SkillPointsManager.init()` |
-| `config.yml` | 新增 `settings.condition`（待实现）+ `settings.skill-points` 节点 |
-
----
+| `Database` | 已新增 `updateSkillPoints()` 接口方法 |
+| `DatabaseLocal` / `DatabaseSQL` | `planners_route` 表已新增 `sp_current` / `sp_used` 列 + 迁移 + `updateSkillPoints()` |
+| `SkillPointsManager` | ✅ 已完成 — 配置加载、等级事件监听、累计计算（带缓存） |
+| `SkillPointsFunctions` | ✅ 已完成 — JS 全局函数 `availablePoints()` / `takePoints()` |
+| `ConditionConfig` | 新文件 — 条件配置数据类 |
+| `ConditionRegistry` | 新文件 — 加载 `settings.condition` + PluginReloadEvents 重载 |
+| `ConditionEvaluator` | 新文件 — 校验 + 消耗：遍历 conditions → 合并 props → eval exper → 收集 hint |
+| `PlayerBridge` | 新文件（Java）— 注入 JS 的 `player` 桥接对象 |
+| `Planners` | `onEnable()` 中调用 `ConditionRegistry.init()` |
+| `config.yml` | 新增 `settings.condition` 节点 |
+| `Condition` (旧) | ✅ 已删除 — 原有 `Condition` 接口 / `Messaged` / `Combined` / `VerifyInfo` 全部移除 |
+| `Route.isInfer()` | ✅ 已删除 — 死代码，无人调用 |
+| `ImmutableSkill.conditionAsUpgrade` | ✅ 已删除 — 升级条件移到技能树 |
 
 ## 六、开发顺序
 
 ```
-Phase A → Condition 条件模块（settings.condition 加载 + Evaluator）
+Phase A → Condition 条件模块（settings.condition 加载 + Registry + Evaluator + PlayerBridge）
 Phase B → SkillData 数据加载（skilltree/*.yml 加载 + 校验）
 Phase C → PlayerRoute.SkillTree（learn/upgrade/getLevel）
 Phase D → SkillPoints 技能点模块 ✅ 已完成
@@ -439,4 +489,6 @@ Phase D → SkillPoints 技能点模块 ✅ 已完成
 
 ## 七、待细化项
 
-1. ConditionEvaluator 与现有 ScriptManager 的集成方式
+1. SkillData YAML 的加载与校验（Phase B）
+2. PlayerRoute.SkillTree 内部类的具体实现（Phase C）
+3. PlayerBridge 中 currency/hasItem/takeCurrency/takeItem 对接经济/背包系统
