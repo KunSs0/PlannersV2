@@ -1,12 +1,18 @@
 package com.gitee.planners.core.player
 
+import com.gitee.planners.api.PlayerTemplateAPI
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import com.gitee.planners.api.job.*
+import com.gitee.planners.core.condition.ConditionEvaluator
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
+import com.gitee.planners.core.config.ImmutableSkillTree
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.core.database.Database
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import taboolib.common.platform.function.submitAsync
 
@@ -139,6 +145,133 @@ class PlayerRoute(
 
     override fun getSkillOrNull(id: String): PlayerSkill? {
         return this.skills[id]
+    }
+
+    // ---- SkillTree ----
+
+    /** 当前激活的技能树 */
+    var skillTree: SkillTree? = null
+        private set
+
+    /**
+     * 初始化技能树。
+     * 玩家首次选择职业后调用。
+     */
+    fun initSkillTree(treeId: String) {
+        val immutable = Registries.SKILL_TREE[treeId]
+        skillTree = SkillTree(immutable)
+    }
+
+    /**
+     * 技能树内部类。
+     * 封装技能的学习与升级逻辑。
+     */
+    inner class SkillTree(
+        val immutable: ImmutableSkillTree
+    ) {
+        private val evaluator = ConditionEvaluator()
+
+        val treeId: String
+            get() = immutable.id
+
+        /** 获取已学技能等级（未学返回 0） */
+        fun getLevel(skillId: String): Int {
+            return skills[skillId]?.level ?: 0
+        }
+
+        /** 获取所有已学技能 */
+        fun getLearnedSkills(): Map<String, PlayerSkill> {
+            return skills.filterKeys { immutable.nodes.containsKey(it) }
+        }
+
+        /**
+         * 首次学习技能。
+         * 校验 Lv1 条件并消耗，最后创建 PlayerSkill。
+         */
+        fun learn(player: Player, skillId: String): CompletableFuture<Void> {
+            // 1. 确认未学
+            if (skills.containsKey(skillId)) {
+                throw IllegalStateException("技能 $skillId 已学习")
+            }
+            // 2. 确认节点存在
+            val node = immutable.nodes[skillId]
+                ?: throw IllegalArgumentException("技能树 '${immutable.id}' 中不存在技能 '$skillId'")
+            val conditions = node.levels[1]
+                ?: throw IllegalArgumentException("技能 '$skillId' 未定义 Lv1 条件")
+
+            // 3. 校验
+            val result = evaluator.verify(conditions, player)
+            if (!result.passed) {
+                throw IllegalStateException("不满足学习条件: ${result.hints.joinToString(", ")}")
+            }
+
+            // 4. 消耗
+            evaluator.consume(conditions, player)
+
+            // 5. 创建 PlayerSkill
+            val template = player.plannersTemplate
+            val immutable = getImmutableSkill(skillId)
+                ?: throw IllegalArgumentException("ImmutableSkill '$skillId' 不存在")
+
+            return Database.INSTANCE.createPlayerSkill(template, immutable).thenApply { ps ->
+                registerSkill(ps)
+                PlayerTemplateAPI.setSkillLevel(template, ps, 1)
+                null
+            }
+        }
+
+        /**
+         * 升级已学技能。
+         * 校验目标等级条件并消耗。
+         */
+        fun upgrade(player: Player, skillId: String): CompletableFuture<Void> {
+            // 1. 确认已学
+            val ps = skills[skillId]
+                ?: throw IllegalStateException("技能 $skillId 未学习")
+            // 2. 确认可升级
+            val node = immutable.nodes[skillId]
+                ?: throw IllegalArgumentException("技能树中不存在技能 '$skillId'")
+            if (ps.level >= node.maxLevel) {
+                throw IllegalStateException("技能 $skillId 已满级 (${ps.level}/${node.maxLevel})")
+            }
+            val targetLevel = ps.level + 1
+            val conditions = node.levels[targetLevel]
+                ?: throw IllegalArgumentException("技能 '$skillId' 未定义 Lv$targetLevel 条件")
+
+            // 3. 校验
+            val result = evaluator.verify(conditions, player)
+            if (!result.passed) {
+                throw IllegalStateException("不满足升级条件: ${result.hints.joinToString(", ")}")
+            }
+
+            // 4. 消耗
+            evaluator.consume(conditions, player)
+
+            // 5. 升级
+            val template = player.plannersTemplate
+            PlayerTemplateAPI.setSkillLevel(template, ps, targetLevel)
+
+            return CompletableFuture.completedFuture(null)
+        }
+
+        /** 判断技能是否可学（所有前置条件满足） */
+        fun canLearn(player: Player, skillId: String): ConditionEvaluator.VerifyResult {
+            val node = immutable.nodes[skillId] ?: return ConditionEvaluator.VerifyResult(false, listOf("技能不存在"))
+            val conditions = node.levels[1] ?: return ConditionEvaluator.VerifyResult(false, listOf("未定义 Lv1 条件"))
+            return evaluator.verify(conditions, player)
+        }
+
+        /** 判断技能是否可升级 */
+        fun canUpgrade(player: Player, skillId: String): ConditionEvaluator.VerifyResult {
+            val ps = skills[skillId] ?: return ConditionEvaluator.VerifyResult(false, listOf("未学习"))
+            val node = immutable.nodes[skillId] ?: return ConditionEvaluator.VerifyResult(false, listOf("技能不存在"))
+            if (ps.level >= node.maxLevel) {
+                return ConditionEvaluator.VerifyResult(false, listOf("已满级"))
+            }
+            val conditions = node.levels[ps.level + 1]
+                ?: return ConditionEvaluator.VerifyResult(false, listOf("未定义 Lv${ps.level + 1} 条件"))
+            return evaluator.verify(conditions, player)
+        }
     }
 
     /**

@@ -26,6 +26,10 @@ object Registries {
         ImmutableSkill(it as Configuration)
     }
 
+    val SKILL_TREE = createDeepMultiBuiltin("skilltree", "warrior.yml") {
+        ImmutableSkillTree.parse(it.name, it)
+    }
+
     val ROUTER = createDeepSingleBuiltin("router", "soldier.yml") {
         ImmutableRouter(it as Configuration)
     }

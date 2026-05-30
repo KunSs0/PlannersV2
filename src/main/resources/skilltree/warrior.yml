@@ -1,0 +1,30 @@
+# 战士 — 先锋流派
+warrior_vanguard:
+  name: "先锋"
+  class: warrior
+  type: base
+
+  nodes:
+    shoulder_bash:
+      maxLevel: 3
+      levels:
+        1: { player_lv: {min:1}, is_warrior: {}, consume_sp: {amount:1} }
+        2: { player_lv: {min:5}, consume_sp: {amount:1} }
+        3: { player_lv: {min:9}, consume_sp: {amount:2} }
+
+    vanguard_heart:
+      maxLevel: 3
+      levels:
+        1: { player_lv: {min:8}, need_skill: {skillId:"shoulder_bash",lv:1}, consume_sp: {amount:1} }
+        2: { player_lv: {min:18}, consume_sp: {amount:1} }
+        3: { player_lv: {min:28}, consume_sp: {amount:1} }
+
+    vanguard_rupture:
+      maxLevel: 1
+      levels:
+        1: { player_lv: {min:30}, need_skill: {skillId:"vanguard_heart",lv:3}, consume_sp: {amount:5} }
+
+  graph:
+    shoulder_bash: []
+    vanguard_heart:   ["shoulder_bash"]
+    vanguard_rupture: ["vanguard_heart"]
