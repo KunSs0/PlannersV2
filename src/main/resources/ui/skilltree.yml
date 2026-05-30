@@ -1,0 +1,42 @@
+__option__:
+  rows: 6
+  title: "技能树"
+
+# 装饰玻璃 — 仅填充空白区
+icon-#:
+  slots: [
+    1, 2, 10, 11, 19, 20, 28, 29, 37, 38, 46, 47
+  ]
+  material: GRAY_STAINED_GLASS_PANE
+  name: " "
+
+# 等级标签 (Row 0, Col 3-8)
+icon-lv1:
+  slot: 3
+  material: LIME_STAINED_GLASS_PANE
+  name: "&aLv1"
+
+icon-lv2:
+  slot: 4
+  material: LIME_STAINED_GLASS_PANE
+  name: "&aLv2"
+
+icon-lv3:
+  slot: 5
+  material: LIME_STAINED_GLASS_PANE
+  name: "&aLv3"
+
+icon-lv4:
+  slot: 6
+  material: LIME_STAINED_GLASS_PANE
+  name: "&aLv4"
+
+icon-lv5:
+  slot: 7
+  material: LIME_STAINED_GLASS_PANE
+  name: "&aLv5"
+
+icon-lv6:
+  slot: 8
+  material: LIME_STAINED_GLASS_PANE
+  name: "&aLv6"
