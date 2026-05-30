@@ -26,7 +26,7 @@ object Registries {
         ImmutableSkill(it as Configuration)
     }
 
-    val SKILL_TREE = createDeepMultiBuiltin("skilltree", "warrior.yml") {
+    val SKILL_TREE = createDeepMultiBuiltin("skilltree") {
         ImmutableSkillTree.parse(it.name, it)
     }
 

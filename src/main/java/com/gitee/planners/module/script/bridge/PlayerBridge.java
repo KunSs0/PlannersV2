@@ -44,7 +44,7 @@ public final class PlayerBridge {
     public int getSkillLevel(String skillId) {
         PlayerRoute route = route();
         if (route == null) return 0;
-        var skill = route.getSkillOrNull(skillId);
+        com.gitee.planners.core.player.PlayerSkill skill = route.getSkillOrNull(skillId);
         return skill != null ? skill.getLevel() : 0;
     }
 
