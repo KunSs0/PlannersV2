@@ -298,21 +298,27 @@ class PlayerRoute {
 
 #### 3.4.1 存储
 
-点数存储在 `PlayerRoute` 上，持久化到 `planners_route` 表：
+点数存储在 `PlayerRoute` 上（`private set`，外部通过方法修改），持久化到 `planners_route` 表：
 
 ```kotlin
 class PlayerRoute {
-    var skillPointsCurrent: Int   // 当前可用
-    var skillPointsUsed: Int      // 累计消耗
+    var skillPointsCurrent: Int = 0   // 当前可用 (private set)
+        private set
+    var skillPointsUsed: Int = 0      // 累计消耗 (private set)
+        private set
+
+    fun addSkillPoints(amount: Int)        // 升级时增加，内部持久化
+    fun takeSkillPoints(amount: Int): Boolean  // 消耗时扣减，内部持久化
 }
 ```
 
 | 字段 | 数据库列 | 含义 |
 |------|---------|------|
-| `current` | `sp_current` | 当前可用余额 |
-| `used` | `sp_used` | 累计已消耗 |
+| `skillPointsCurrent` | `sp_current` | 当前可用余额 |
+| `skillPointsUsed` | `sp_used` | 累计已消耗 |
 
-`可用 = current`，`总获得 = current + used`。
+`可用 = skillPointsCurrent`，`总获得 = current + used`。
+每次变更通过 `Database.updateSkillPoints(route)` 异步持久化。
 
 #### 3.4.2 配置
 
@@ -350,29 +356,27 @@ settings:
 
 ```kotlin
 object SkillPointsManager {
+    init()                                 // Planners.onEnable() 调用，加载配置
+    reloadConfig()                         // PluginReloadEvents 时重新加载，清除缓存
 
-    /** 可用点数 */
-    fun getAvailable(route: PlayerRoute): Int = route.skillPointsCurrent
-
-    /** 增加点数（升级时调用） */
-    fun addPoints(route: PlayerRoute, amount: Int)
-
-    /** 消耗点数（学技能时调用） */
-    fun takePoints(route: PlayerRoute, amount: Int): Boolean
-
-    /** 计算指定等级的累计获得 */
-    fun calcAccumulated(level: Int): Int
+    fun getAvailable(route: PlayerRoute): Int       // → route.skillPointsCurrent
+    fun takePoints(route: PlayerRoute, n: Int): Boolean  // → route.takeSkillPoints(n)
+    fun calcAccumulated(level: Int): Int             // 累计点数计算（带缓存）
 }
 ```
 
+`addPoints` 由 `PlayerLevelChangeEvent` 监听器内部调用 `route.addSkillPoints()`。
+
 #### 3.4.5 JS 上下文
 
-| 变量 | 来源 |
-|------|------|
-| `player.availablePoints()` | `SkillPointsManager.getAvailable(route)` |
-| `player.takePoints(n)` | `SkillPointsManager.takePoints(route, n)` |
+当前以全局函数形式注册（`SkillPointsFunctions.java` → `ScriptFunctionRegistry`），待 Phase A Condition 系统完成后迁移为 `player` 对象的方法：
 
-通过 `GlobalFunctions` 注册。
+| 函数 | 签名 | 来源 |
+|------|------|------|
+| `availablePoints()` | `() → Int` | `SkillPointsManager.getAvailable(route)` |
+| `takePoints(n)` | `(amount) → Boolean` | `SkillPointsManager.takePoints(route, n)` |
+
+均支持可选 player 参数（默认取 `ScriptContext.sender`）。
 
 ---
 
@@ -380,17 +384,20 @@ object SkillPointsManager {
 
 ```
 玩家升级 (PlayerLevelChangeEvent)
-  → SkillPointsManager 计算增量 = 累计(newLevel) - 累计(oldLevel)
-  → route.skillPointsCurrent += delta → 持久化 database.updateRoute()
+  → SkillPointsManager 计算增量 = calcAccumulated(to) - calcAccumulated(form)
+  → route.addSkillPoints(delta)
+    → skillPointsCurrent += delta
+    → submitAsync { Database.updateSkillPoints(this) }
 
 请求升级技能
   → 读取节点目标等级的 conditions
   → evaluator.verify(conditions, context)
   → 失败: 返回 hints 列表
   → 通过: evaluator.consume(conditions, context)
-    → consume_sp: player.takePoints(n)
-      → route.skillPointsCurrent -= n, route.skillPointsUsed += n
-      → 持久化 database.updateRoute()
+    → consume_sp: takePoints(n)
+      → route.takeSkillPoints(n)
+        → skillPointsCurrent -= n, skillPointsUsed += n
+        → submitAsync { Database.updateSkillPoints(this) }
   → SkillTree.upgrade(skillId) → PlayerSkill.level += 1
 ```
 
@@ -402,11 +409,15 @@ object SkillPointsManager {
 |---------|------|
 | `ImmutableSkill` | 不变，node key 即其 id |
 | `PlayerSkill` | 不变，已有 `level` 字段即技能树等级 |
-| `PlayerRoute` | 新增 `skillPointsCurrent` / `skillPointsUsed` 字段 + 内部类 `SkillTree` |
+| `PlayerRoute` | 新增 `skillPointsCurrent` / `skillPointsUsed` 字段 + `addSkillPoints()` / `takeSkillPoints()` + 内部类 `SkillTree`（待实现） |
 | `PlayerTemplate` | 不变 |
-| `GlobalFunctions` | 注册 `player.availablePoints` / `player.takePoints` 到 JS 上下文 |
-| `config.yml` | 新增 `settings.condition` + `settings.skill-points` 节点 |
-| `planners_route` 表 | 新增 `sp_current` / `sp_used` 列 |
+| `Database` | 新增 `updateSkillPoints()` 接口方法 |
+| `DatabaseLocal` / `DatabaseSQL` | `planners_route` 表新增 `sp_current` / `sp_used` 列 + 迁移 + 实现 `updateSkillPoints()` |
+| `SkillPointsManager` | 新文件 — 配置加载、等级事件监听、累计计算（带缓存） |
+| `SkillPointsFunctions` | 新文件 — JS 全局函数 `availablePoints()` / `takePoints()` |
+| `GlobalFunctions` / `ScriptFunctionRegistry` | 注册 `SkillPointsFunctions` |
+| `Planners` | `onEnable()` 中调用 `SkillPointsManager.init()` |
+| `config.yml` | 新增 `settings.condition`（待实现）+ `settings.skill-points` 节点 |
 
 ---
 
@@ -416,12 +427,12 @@ object SkillPointsManager {
 Phase A → Condition 条件模块（settings.condition 加载 + Evaluator）
 Phase B → SkillData 数据加载（skilltree/*.yml 加载 + 校验）
 Phase C → PlayerRoute.SkillTree（learn/upgrade/getLevel）
-Phase D → SkillPoints 技能点模块
+Phase D → SkillPoints 技能点模块 ✅ 已完成
           ├── config.yml 加载 per-level / bonuses JS
-          ├── PlayerRoute 新增 sp_current / sp_used 字段
-          ├── Database 新增 planners_route 对应列
-          ├── SkillPointsManager（监听 PlayerLevelChangeEvent、addPoints / takePoints / calcAccumulated）
-          └── GlobalFunctions 注册 player.availablePoints / player.takePoints
+          ├── PlayerRoute 新增 skillPointsCurrent / skillPointsUsed + addSkillPoints / takeSkillPoints
+          ├── Database 新增 planners_route.sp_current / sp_used 列 + 迁移
+          ├── SkillPointsManager（监听 PlayerLevelChangeEvent、calcAccumulated 带缓存）
+          └── SkillPointsFunctions 注册 availablePoints / takePoints 到 JS 全局函数
 ```
 
 ---
