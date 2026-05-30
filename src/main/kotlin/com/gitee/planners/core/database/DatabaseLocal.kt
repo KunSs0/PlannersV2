@@ -157,9 +157,9 @@ class DatabaseLocal : Database {
         if (this.cachedId.containsKey(player.uniqueId)) {
             return Id(this.cachedId[player.uniqueId]!!, false)
         }
-        return nativeUserId(player).also {
-            this.cachedId[player.uniqueId] = it.id
-        }
+        val userId = nativeUserId(player)
+        this.cachedId[player.uniqueId] = userId.id
+        return userId
     }
 
     private fun nativeUserId(player: Player): Id {

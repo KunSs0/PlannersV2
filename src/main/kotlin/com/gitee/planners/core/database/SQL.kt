@@ -34,12 +34,12 @@ class ActionNullableInsert(val table: String) : Action {
 
     fun build(): ActionInsert {
 
-        return ActionInsert(table, keys.toTypedArray()).also {
-            it.values(values)
-            it.onFinally {
-                this@ActionNullableInsert.callFinally(this, it)
-            }
+        val action = ActionInsert(table, keys.toTypedArray())
+        action.values(values)
+        action.onFinally {
+            this@ActionNullableInsert.callFinally(this, it)
         }
+        return action
     }
 
     override val query: String

@@ -11,8 +11,10 @@ import taboolib.common.env.RuntimeEnv
  */
 object GraalJsDependency {
 
-    private val IS_MODERN = !System.getProperty("java.version").let { v ->
-        if (v.startsWith("1.")) v.substring(2, 3).toInt() < 17 else v.substringBefore(".").toInt() < 17
+    private val IS_MODERN = run {
+        val v = System.getProperty("java.version")
+        val major = if (v.startsWith("1.")) v.substring(2, 3).toInt() else v.substringBefore(".").toInt()
+        major >= 17
     }
 
     init {

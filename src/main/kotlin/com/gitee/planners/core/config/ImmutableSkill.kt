@@ -98,14 +98,17 @@ class ImmutableSkill(config: Configuration) : Unique {
         level: Int = 0,
         variables: Map<String, Any?> = emptyMap()
     ): CompletableFuture<Any?> {
-        if (action.isEmpty()) return CompletableFuture.completedFuture(null)
+        if (action.isEmpty()) {
+            return CompletableFuture.completedFuture(null)
+        }
 
-        val options = ScriptOptions.of().apply {
-            set("sender", sender)
-            set("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
-            set("level", level)
-            set("skill", this@ImmutableSkill)
-            variables.forEach { (k, v) -> set(k, v) }
+        val options = ScriptOptions.of()
+        options.set("sender", sender)
+        options.set("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
+        options.set("level", level)
+        options.set("skill", this@ImmutableSkill)
+        for ((k, v) in variables) {
+            options.set(k, v)
         }
 
         val task = {

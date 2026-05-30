@@ -8,41 +8,16 @@ import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
 import taboolib.common.platform.event.SubscribeEvent
 
-/**
- * 技能点管理器
- * <p>
- * 监听玩家等级变化，根据配置的 per-level / bonuses JS 表达式计算点数增量，
- * 直接累加到 PlayerRoute.skillPointsCurrent。
- */
 object SkillPointsManager {
 
-    private var perLevelExpr: String = "level <= 30 ? 3 : 2"
-    private val bonuses = mutableMapOf<Int, String>()
     private val accumulatedCache = mutableMapOf<Int, Int>()
-
-    /** 初始化，由 Planners.onEnable() 调用 */
-    fun init() {
-        reloadConfig()
-    }
-
-    /** 重新加载配置（清除缓存） */
-    fun reloadConfig() {
-        accumulatedCache.clear()
-        bonuses.clear()
-        val section = Planners.config.getConfigurationSection("settings.skill-points") ?: return
-        perLevelExpr = section.getString("per-level") ?: "level <= 30 ? 3 : 2"
-        section.getConfigurationSection("bonuses")?.let { bonusSection ->
-            bonusSection.getKeys(false).forEach { key ->
-                bonuses[key.toInt()] = bonusSection.getString(key) ?: "0"
-            }
-        }
-    }
-
-    // ---- 事件 ----
 
     @SubscribeEvent
     fun e(e: PlayerLevelChangeEvent) {
-        val route = e.template.route ?: return
+        val route = e.template.route
+        if (route == null) {
+            return
+        }
         val delta = calcAccumulated(e.to) - calcAccumulated(e.form)
         if (delta != 0) {
             route.addSkillPoints(delta)
@@ -52,27 +27,35 @@ object SkillPointsManager {
     @SubscribeEvent
     @Suppress("UNUSED_PARAMETER")
     fun e(e: PluginReloadEvents.Post) {
-        reloadConfig()
+        accumulatedCache.clear()
     }
 
-    // ---- 公共 API ----
+    fun getAvailable(route: PlayerRoute): Int {
+        return route.skillPointsCurrent
+    }
 
-    /** 当前可用技能点 */
-    fun getAvailable(route: PlayerRoute): Int = route.skillPointsCurrent
+    fun takePoints(route: PlayerRoute, amount: Int): Boolean {
+        return route.takeSkillPoints(amount)
+    }
 
-    /** 消耗技能点，返回是否成功 */
-    fun takePoints(route: PlayerRoute, amount: Int): Boolean = route.takeSkillPoints(amount)
-
-    /** 计算指定等级的累计获得点数 */
     fun calcAccumulated(level: Int): Int {
-        if (level <= 0) return 0
-        accumulatedCache[level]?.let { return it }
+        if (level <= 0) {
+            return 0
+        }
+        val cached = accumulatedCache[level]
+        if (cached != null) {
+            return cached
+        }
 
         var total = 0
+        val perLevelExpr = Planners.skillPointsPerLevel.get()
         for (lv in 1..level) {
             total += evalExpr(perLevelExpr, lv)
         }
-        bonuses.forEach { (bonusLv, expr) ->
+        val bonuses = Planners.skillPointsBonuses.get()
+        for ((bonusKey, bonusPair) in bonuses) {
+            val bonusLv = bonusPair.first
+            val expr = bonusPair.second
             if (level >= bonusLv) {
                 total += evalExpr(expr, bonusLv)
             }
@@ -80,8 +63,6 @@ object SkillPointsManager {
         accumulatedCache[level] = total
         return total
     }
-
-    // ---- 内部 ----
 
     private fun evalExpr(expr: String, level: Int): Int {
         return try {

@@ -1,9 +1,9 @@
 package com.gitee.planners
 
 import com.gitee.planners.api.Registries
-import com.gitee.planners.core.condition.ConditionRegistry
+import com.gitee.planners.core.condition.ConditionConfig
 import com.gitee.planners.core.config.BackpackConfig
-import com.gitee.planners.core.skill.SkillPointsManager
+import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import taboolib.common.platform.Platform
@@ -52,9 +52,41 @@ object Planners : Plugin() {
         }
     }
 
+    @ConfigNode("settings.skill-points.per-level")
+    val skillPointsPerLevel = ConfigNodeTransfer<String, String> {
+        this
+    }
+
+    @ConfigNode("settings.skill-points.bonuses")
+    val skillPointsBonuses = configNodeToMap { key, value ->
+        Pair(key.toInt(), value as String)
+    }
+
     @ConfigNode("settings.keybinding.backpack")
     val backpackConfig = ConfigNodeTransfer<ConfigurationSection, BackpackConfig> {
         BackpackConfig(this)
+    }
+
+    @ConfigNode("settings.condition")
+    val conditions = configNodeToMap { key, value ->
+        val cfg = value as ConfigurationSection
+        val exper = cfg.getString("exper") ?: error("Condition '$key' missing 'exper'")
+        val hint = cfg.getString("hint") ?: error("Condition '$key' missing 'hint'")
+        val propsSection = cfg.getConfigurationSection("props")
+        val props: Map<String, Any>
+        if (propsSection != null) {
+            props = propsSection.getValues(false).mapValues { it.value ?: "" }
+        } else {
+            props = emptyMap()
+        }
+        val consumeStr = cfg.getString("consume")
+        val consume: String?
+        if (consumeStr != null && consumeStr.isNotEmpty()) {
+            consume = consumeStr
+        } else {
+            consume = null
+        }
+        ConditionConfig(key, exper, props, hint, consume)
     }
 
     /**
@@ -68,9 +100,7 @@ object Planners : Plugin() {
     override fun onEnable() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
-        ConditionRegistry.init()
         Registries.init()
-        SkillPointsManager.init()
     }
 
 }

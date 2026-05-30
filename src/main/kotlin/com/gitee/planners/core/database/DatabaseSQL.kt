@@ -161,9 +161,9 @@ class DatabaseSQL : Database {
             return Id(this.cachedId[player.uniqueId]!!, false)
         }
         // 添加到map 由于id是唯一的 不用在join和quit维护id
-        return nativeUserId(player).also {
-            this.cachedId[player.uniqueId] = it.id
-        }
+        val id = nativeUserId(player)
+        this.cachedId[player.uniqueId] = id.id
+        return id
     }
 
     private fun nativeUserId(player: Player): Id {

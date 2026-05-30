@@ -146,8 +146,10 @@ class TargetFinder(
     // === 构建结果 ===
 
     fun build(): ProxyTargetContainer {
-        return ProxyTargetContainer().apply {
-            entities.forEach { add(ProxyTarget.of(it)) }
+        val container = ProxyTargetContainer()
+        for (entity in entities) {
+            container.add(ProxyTarget.of(entity))
         }
+        return container
     }
 }

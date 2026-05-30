@@ -1,5 +1,6 @@
 package com.gitee.planners.core.condition
 
+import com.gitee.planners.Planners
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.bridge.PlayerBridge
@@ -36,7 +37,10 @@ class ConditionEvaluator {
         val hints = mutableListOf<String>()
 
         for ((key, overrideProps) in conditions) {
-            val cfg = ConditionRegistry.get(key)
+            val cfg = Planners.conditions.get()[key]
+            if (cfg == null) {
+                error("Unknown condition key: $key")
+            }
             val props = resolveProps(cfg.props, overrideProps, bridge, contextVars)
 
             val options = ScriptOptions.of()
@@ -72,8 +76,13 @@ class ConditionEvaluator {
         val bridge = PlayerBridge(player)
 
         for ((key, overrideProps) in conditions) {
-            val cfg = ConditionRegistry.get(key)
-            if (cfg.consume == null) continue
+            val cfg = Planners.conditions.get()[key]
+            if (cfg == null) {
+                error("Unknown condition key: $key")
+            }
+            if (cfg.consume == null) {
+                continue
+            }
 
             val props = resolveProps(cfg.props, overrideProps, bridge, contextVars)
 
@@ -126,8 +135,13 @@ class ConditionEvaluator {
         contextVars: Map<String, Any>
     ): Any {
         // 纯数字字符串
-        expr.toDoubleOrNull()?.let {
-            return if (it % 1 == 0.0) it.toInt() else it
+        val doubleValue = expr.toDoubleOrNull()
+        if (doubleValue != null) {
+            if (doubleValue % 1 == 0.0) {
+                return doubleValue.toInt()
+            } else {
+                return doubleValue
+            }
         }
         // JS 公式
         return try {

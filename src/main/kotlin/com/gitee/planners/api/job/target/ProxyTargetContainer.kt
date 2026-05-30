@@ -15,9 +15,9 @@ class ProxyTargetContainer : ArrayList<ProxyTarget<*>>() {
     companion object {
 
         fun of(vararg target: ProxyTarget<*>): ProxyTargetContainer {
-            return ProxyTargetContainer().also {
-                it += target
-            }
+            val container = ProxyTargetContainer()
+            container += target
+            return container
         }
     }
 }

@@ -19,7 +19,10 @@ object EntityStateManager {
         }
         val container = target as? ProxyTarget.Containerization ?: return false
         val holder = TargetStateHolder.parse(container.getMetadata(state.path()))
-        return holder?.let { it.isValid && it.layer > 0 } ?: false
+        if (holder != null && holder.isValid && holder.layer > 0) {
+            return true
+        }
+        return false
     }
 
     fun isExpired(target: ProxyTarget.Entity<*>, state: State): Boolean {
