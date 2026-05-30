@@ -3,36 +3,38 @@ __option__:
   title: "技能背包 - {0}"
   slots: [ 10, 11, 12, 13 ]
 
+  # 独立 icon
+  icon-empty-slot:
+    material: GRAY_STAINED_GLASS_PANE
+    name: "&7空槽位 [{keyName}]"
+    lore:
+      - "&f左键装备技能"
+
+  icon-prev-page:
+    material: ARROW
+    name: "&a上一页"
+
+  icon-next-page:
+    material: ARROW
+    name: "&a下一页"
+
+  icon-page-info:
+    material: PAPER
+    name: "&e第 {pageCurrent} / {pageTotal} 页"
+
+  icon-skill-list:
+    material: BOOK
+    name: "&a技能列表"
+    lore:
+      - "&f点击查看已学技能"
+
+  # append 配置（追加到已装备技能图标 lore）
+  icon-equipped-skill:
+    lore:
+      append:
+        - "&f右键卸下"
+
 border:
   slots: [ 0,1,2,3,4,5,6,7,8,9,14,15,16,17,18,26,27,28,29,30,31,32,33,34,35 ]
   material: BLACK_STAINED_GLASS_PANE
   name: " "
-
-empty-slot:
-  material: GRAY_STAINED_GLASS_PANE
-  name: "&7空槽位 [{0}]"
-  lore:
-    - "&f左键装备技能"
-    - "&f右键卸下技能"
-
-prev-page:
-  material: ARROW
-  name: "&a上一页"
-
-next-page:
-  material: ARROW
-  name: "&a下一页"
-
-page-info:
-  material: PAPER
-  name: "&e第 {0} / {1} 页"
-
-skill-list:
-  material: BOOK
-  name: "&a技能列表"
-  lore:
-    - "&f点击查看已学技能"
-
-equipped-skill:
-  lore:
-    - "&f右键卸下"

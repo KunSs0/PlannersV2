@@ -162,7 +162,7 @@ class PlayerRoute(
     val skillTree: SkillTree?
         get() {
             val treeId = resolveSkillTreeId() ?: return null
-            val immutable = Registries.SKILL_TREE[treeId]
+            val immutable = Registries.SKILL_TREE.getOrNull(treeId) ?: return null
             return SkillTree(immutable)
         }
 

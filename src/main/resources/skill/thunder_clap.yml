@@ -1,0 +1,20 @@
+__option__:
+  name: "雷霆一击"
+  display:
+    icon:
+      material: LIGHTNING_ROD
+      name: "&e雷霆一击"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7伤害 &e{{25 * level + 50}}"
+        - "&7麻痹 &e{{1 + level / 3}}&7秒"
+  variables:
+    cooldown: 120
+    damage: 25 * level + 50
+    stun_duration: 1 + level / 3
+  max-level: 8
+action: |
+  function main() {
+    tell("&e雷霆一击 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

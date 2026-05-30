@@ -2,6 +2,78 @@ __option__:
   rows: 6
   title: "技能树"
 
+  # === 等级槽位 append 配置（以 DynamicSkillIcon 为底） ===
+  icon-learned:
+    name:
+      append: "&eLv{lv} &a* 已学习"
+    lore:
+      append:
+        - "&7已掌握"
+        - "&7技能: &f{skillId}"
+
+  icon-learn:
+    name:
+      append: "&eLv{lv} &6&l>> 学习"
+    lore:
+      append:
+        - "&e&l点击学习"
+        - "&7技能: &f{skillId}"
+
+  icon-upgrade:
+    name:
+      append: "&eLv{lv} &6&l>> 升级"
+    lore:
+      append:
+        - "&e&l点击升级"
+        - "&7技能: &f{skillId}"
+
+  icon-locked:
+    name:
+      append: "&eLv{lv} &7未解锁"
+    lore:
+      append:
+        - "&7需先学习前置等级"
+        - "&7技能: &f{skillId}"
+
+  icon-beyond:
+    material: GRAY_STAINED_GLASS_PANE
+    name: "&8- Lv{lv}"
+    lore:
+      - "&7超出最高等级"
+
+  # Col1 技能信息（以 DynamicSkillIcon 为底）
+  icon-skill-info:
+    name:
+      append: "&e{skillName}"
+    lore:
+      append:
+        - "&7ID: &f{skillId}"
+        - "&7等级: &fLv{level} / Lv{maxLevel}"
+
+  # 翻页按钮（独立 icon）
+  icon-scroll-up:
+    material: SPECTRAL_ARROW
+    name: "&e▲ 上翻"
+  icon-scroll-up-top:
+    material: GRAY_DYE
+    name: "&7▲ 已置顶"
+  icon-scroll-down:
+    material: SPECTRAL_ARROW
+    name: "&e▼ 下翻"
+  icon-scroll-down-bottom:
+    material: GRAY_DYE
+    name: "&7▼ 已到底"
+
+  # SP 展示（独立 icon）
+  icon-sp-display:
+    material: NETHER_STAR
+    name: "&e✦ 技能点"
+    lore:
+      - "&f可用: &6{spCurrent}"
+      - "&f已消耗: &7{spUsed}"
+      - ""
+      - "&7通过升级获得"
+
 # 装饰玻璃 — 仅填充空白区
 icon-#:
   slots: [

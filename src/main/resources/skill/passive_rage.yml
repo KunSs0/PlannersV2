@@ -1,0 +1,13 @@
+__option__:
+  name: "怒火"
+  display:
+    icon:
+      material: BLAZE_ROD
+      name: "&6怒火"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7攻击 &6+{{3 * level + 2}}"
+        - "&7被动"
+  variables: {}
+  max-level: 5
+action: ""

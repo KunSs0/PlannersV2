@@ -1,0 +1,19 @@
+__option__:
+  name: "绝境求生"
+  display:
+    icon:
+      material: TOTEM_OF_UNDYING
+      name: "&6绝境求生"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7血量低于&c30%&7时触发"
+        - "&7恢复 &c{{50 * level + 100}} &7生命"
+  variables:
+    cooldown: 600
+    heal: 50 * level + 100
+  max-level: 1
+action: |
+  function main() {
+    tell("&6绝境求生触发")
+    setCooldown(skill, skill.variables.cooldown)
+  }

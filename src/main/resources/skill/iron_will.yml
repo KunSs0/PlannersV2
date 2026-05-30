@@ -1,0 +1,20 @@
+__option__:
+  name: "钢铁意志"
+  display:
+    icon:
+      material: NETHERITE_SCRAP
+      name: "&e钢铁意志"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7防御加成 &9{{8 * level + 20}}%"
+        - "&7持续 &b{{4 * level}}&7秒"
+  variables:
+    cooldown: 100
+    defense_buff: 8 * level + 20
+    duration: 4 * level
+  max-level: 4
+action: |
+  function main() {
+    tell("&a钢铁意志 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

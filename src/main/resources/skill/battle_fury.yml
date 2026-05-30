@@ -1,0 +1,20 @@
+__option__:
+  name: "战斗狂热"
+  display:
+    icon:
+      material: BLAZE_POWDER
+      name: "&e战斗狂热"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7攻击速度 &c{{10 * level + 50}}%"
+        - "&7持续 &b{{2 * level + 5}}&7秒"
+  variables:
+    cooldown: 150
+    attack_speed: 10 * level + 50
+    duration: 2 * level + 5
+  max-level: 6
+action: |
+  function main() {
+    tell("&a战斗狂热 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

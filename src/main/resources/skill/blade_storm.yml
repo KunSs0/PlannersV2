@@ -1,0 +1,20 @@
+__option__:
+  name: "剑刃风暴"
+  display:
+    icon:
+      material: DIAMOND_SWORD
+      name: "&b剑刃风暴"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7段数 &b{{2 * level + 5}}"
+        - "&7每段伤害 &b{{15 * level + 60}}"
+  variables:
+    cooldown: 300
+    hits: 2 * level + 5
+    damage_per_hit: 15 * level + 60
+  max-level: 18
+action: |
+  function main() {
+    tell("&b剑刃风暴 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

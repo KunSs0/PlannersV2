@@ -1,0 +1,241 @@
+warrior_vanguard:
+  name: "先锋战士"
+  class: none
+  type: base
+
+  nodes:
+    slash:
+      maxLevel: 8
+      levels:
+        1:  { player_lv: { min: 1 },  consume_sp: { amount: 1 } }
+        2:  { player_lv: { min: 2 },  consume_sp: { amount: 1 } }
+        3:  { player_lv: { min: 3 },  consume_sp: { amount: 2 } }
+        4:  { player_lv: { min: 5 },  consume_sp: { amount: 2 } }
+        5:  { player_lv: { min: 7 },  consume_sp: { amount: 3 } }
+        6:  { player_lv: { min: 10 }, consume_sp: { amount: 3 } }
+        7:  { player_lv: { min: 14 }, consume_sp: { amount: 4 } }
+        8:  { player_lv: { min: 18 }, consume_sp: { amount: 5 } }
+
+    charge:
+      maxLevel: 6
+      levels:
+        1:  { player_lv: { min: 2 },  consume_sp: { amount: 1 } }
+        2:  { player_lv: { min: 4 },  consume_sp: { amount: 2 } }
+        3:  { player_lv: { min: 6 },  consume_sp: { amount: 2 } }
+        4:  { player_lv: { min: 10 }, consume_sp: { amount: 3 } }
+        5:  { player_lv: { min: 15 }, consume_sp: { amount: 4 } }
+        6:  { player_lv: { min: 20 }, consume_sp: { amount: 5 } }
+
+    shield_bash:
+      maxLevel: 5
+      levels:
+        1:  { player_lv: { min: 2 },  consume_sp: { amount: 1 } }
+        2:  { player_lv: { min: 5 },  consume_sp: { amount: 2 } }
+        3:  { player_lv: { min: 8 },  consume_sp: { amount: 2 } }
+        4:  { player_lv: { min: 12 }, consume_sp: { amount: 3 } }
+        5:  { player_lv: { min: 16 }, consume_sp: { amount: 4 } }
+
+    war_cry:
+      maxLevel: 10
+      levels:
+        1:  { player_lv: { min: 4 },  consume_sp: { amount: 2 } }
+        2:  { player_lv: { min: 6 },  consume_sp: { amount: 2 } }
+        3:  { player_lv: { min: 9 },  consume_sp: { amount: 3 } }
+        4:  { player_lv: { min: 12 }, consume_sp: { amount: 3 } }
+        5:  { player_lv: { min: 16 }, consume_sp: { amount: 4 } }
+        6:  { player_lv: { min: 20 }, consume_sp: { amount: 4 } }
+        7:  { player_lv: { min: 24 }, consume_sp: { amount: 5 } }
+        8:  { player_lv: { min: 28 }, consume_sp: { amount: 5 } }
+        9:  { player_lv: { min: 32 }, consume_sp: { amount: 6 } }
+        10: { player_lv: { min: 36 }, consume_sp: { amount: 7 } }
+
+    battle_fury:
+      maxLevel: 12
+      levels:
+        1:  { player_lv: { min: 8 },  consume_sp: { amount: 2 } }
+        2:  { player_lv: { min: 10 }, consume_sp: { amount: 3 } }
+        3:  { player_lv: { min: 13 }, consume_sp: { amount: 3 } }
+        4:  { player_lv: { min: 16 }, consume_sp: { amount: 4 } }
+        5:  { player_lv: { min: 19 }, consume_sp: { amount: 4 } }
+        6:  { player_lv: { min: 22 }, consume_sp: { amount: 5 } }
+        7:  { player_lv: { min: 25 }, consume_sp: { amount: 5 } }
+        8:  { player_lv: { min: 28 }, consume_sp: { amount: 6 } }
+        9:  { player_lv: { min: 32 }, consume_sp: { amount: 6 } }
+        10: { player_lv: { min: 36 }, consume_sp: { amount: 7 } }
+        11: { player_lv: { min: 40 }, consume_sp: { amount: 8 } }
+        12: { player_lv: { min: 45 }, consume_sp: { amount: 10 } }
+
+    iron_will:
+      maxLevel: 7
+      levels:
+        1:  { player_lv: { min: 6 },  consume_sp: { amount: 2 } }
+        2:  { player_lv: { min: 9 },  consume_sp: { amount: 2 } }
+        3:  { player_lv: { min: 13 }, consume_sp: { amount: 3 } }
+        4:  { player_lv: { min: 17 }, consume_sp: { amount: 3 } }
+        5:  { player_lv: { min: 21 }, consume_sp: { amount: 4 } }
+        6:  { player_lv: { min: 26 }, consume_sp: { amount: 5 } }
+        7:  { player_lv: { min: 32 }, consume_sp: { amount: 6 } }
+
+    heavy_slash:
+      maxLevel: 15
+      levels:
+        1:  { player_lv: { min: 5 },  consume_sp: { amount: 2 } }
+        2:  { player_lv: { min: 7 },  consume_sp: { amount: 3 } }
+        3:  { player_lv: { min: 10 }, consume_sp: { amount: 3 } }
+        4:  { player_lv: { min: 13 }, consume_sp: { amount: 4 } }
+        5:  { player_lv: { min: 16 }, consume_sp: { amount: 4 } }
+        6:  { player_lv: { min: 19 }, consume_sp: { amount: 5 } }
+        7:  { player_lv: { min: 22 }, consume_sp: { amount: 5 } }
+        8:  { player_lv: { min: 25 }, consume_sp: { amount: 6 } }
+        9:  { player_lv: { min: 28 }, consume_sp: { amount: 6 } }
+        10: { player_lv: { min: 32 }, consume_sp: { amount: 7 } }
+        11: { player_lv: { min: 36 }, consume_sp: { amount: 8 } }
+        12: { player_lv: { min: 40 }, consume_sp: { amount: 9 } }
+        13: { player_lv: { min: 44 }, consume_sp: { amount: 10 } }
+        14: { player_lv: { min: 48 }, consume_sp: { amount: 12 } }
+        15: { player_lv: { min: 52 }, consume_sp: { amount: 15 } }
+
+    counter_strike:
+      maxLevel: 4
+      levels:
+        1: { player_lv: { min: 3 },  consume_sp: { amount: 1 } }
+        2: { player_lv: { min: 6 },  consume_sp: { amount: 2 } }
+        3: { player_lv: { min: 10 }, consume_sp: { amount: 3 } }
+        4: { player_lv: { min: 15 }, consume_sp: { amount: 4 } }
+
+    berserk:
+      maxLevel: 18
+      levels:
+        1:  { player_lv: { min: 10 }, consume_sp: { amount: 3 } }
+        2:  { player_lv: { min: 12 }, consume_sp: { amount: 3 } }
+        3:  { player_lv: { min: 14 }, consume_sp: { amount: 4 } }
+        4:  { player_lv: { min: 17 }, consume_sp: { amount: 4 } }
+        5:  { player_lv: { min: 20 }, consume_sp: { amount: 5 } }
+        6:  { player_lv: { min: 23 }, consume_sp: { amount: 5 } }
+        7:  { player_lv: { min: 26 }, consume_sp: { amount: 6 } }
+        8:  { player_lv: { min: 29 }, consume_sp: { amount: 6 } }
+        9:  { player_lv: { min: 33 }, consume_sp: { amount: 7 } }
+        10: { player_lv: { min: 37 }, consume_sp: { amount: 7 } }
+        11: { player_lv: { min: 41 }, consume_sp: { amount: 8 } }
+        12: { player_lv: { min: 45 }, consume_sp: { amount: 9 } }
+        13: { player_lv: { min: 49 }, consume_sp: { amount: 10 } }
+        14: { player_lv: { min: 53 }, consume_sp: { amount: 12 } }
+        15: { player_lv: { min: 57 }, consume_sp: { amount: 15 } }
+        16: { player_lv: { min: 62 }, consume_sp: { amount: 18 } }
+        17: { player_lv: { min: 68 }, consume_sp: { amount: 22 } }
+        18: { player_lv: { min: 75 }, consume_sp: { amount: 30 } }
+
+    blade_storm:
+      maxLevel: 18
+      levels:
+        1:  { player_lv: { min: 12 }, consume_sp: { amount: 4 } }
+        2:  { player_lv: { min: 15 }, consume_sp: { amount: 4 } }
+        3:  { player_lv: { min: 18 }, consume_sp: { amount: 5 } }
+        4:  { player_lv: { min: 21 }, consume_sp: { amount: 5 } }
+        5:  { player_lv: { min: 24 }, consume_sp: { amount: 6 } }
+        6:  { player_lv: { min: 27 }, consume_sp: { amount: 6 } }
+        7:  { player_lv: { min: 30 }, consume_sp: { amount: 7 } }
+        8:  { player_lv: { min: 33 }, consume_sp: { amount: 7 } }
+        9:  { player_lv: { min: 37 }, consume_sp: { amount: 8 } }
+        10: { player_lv: { min: 41 }, consume_sp: { amount: 9 } }
+        11: { player_lv: { min: 45 }, consume_sp: { amount: 10 } }
+        12: { player_lv: { min: 49 }, consume_sp: { amount: 12 } }
+        13: { player_lv: { min: 53 }, consume_sp: { amount: 15 } }
+        14: { player_lv: { min: 57 }, consume_sp: { amount: 18 } }
+        15: { player_lv: { min: 62 }, consume_sp: { amount: 22 } }
+        16: { player_lv: { min: 68 }, consume_sp: { amount: 26 } }
+        17: { player_lv: { min: 75 }, consume_sp: { amount: 32 } }
+        18: { player_lv: { min: 82 }, consume_sp: { amount: 40 } }
+
+    thunder_clap:
+      maxLevel: 8
+      levels:
+        1:  { player_lv: { min: 3 },  consume_sp: { amount: 1 } }
+        2:  { player_lv: { min: 5 },  consume_sp: { amount: 2 } }
+        3:  { player_lv: { min: 8 },  consume_sp: { amount: 2 } }
+        4:  { player_lv: { min: 11 }, consume_sp: { amount: 3 } }
+        5:  { player_lv: { min: 14 }, consume_sp: { amount: 4 } }
+        6:  { player_lv: { min: 18 }, consume_sp: { amount: 5 } }
+        7:  { player_lv: { min: 23 }, consume_sp: { amount: 6 } }
+        8:  { player_lv: { min: 28 }, consume_sp: { amount: 8 } }
+
+    last_stand:
+      maxLevel: 1
+      levels:
+        1: { player_lv: { min: 20 }, consume_sp: { amount: 10 } }
+
+    whirlwind:
+      maxLevel: 10
+      levels:
+        1:  { player_lv: { min: 6 },  consume_sp: { amount: 2 } }
+        2:  { player_lv: { min: 8 },  consume_sp: { amount: 2 } }
+        3:  { player_lv: { min: 11 }, consume_sp: { amount: 3 } }
+        4:  { player_lv: { min: 14 }, consume_sp: { amount: 3 } }
+        5:  { player_lv: { min: 17 }, consume_sp: { amount: 4 } }
+        6:  { player_lv: { min: 20 }, consume_sp: { amount: 5 } }
+        7:  { player_lv: { min: 24 }, consume_sp: { amount: 6 } }
+        8:  { player_lv: { min: 28 }, consume_sp: { amount: 7 } }
+        9:  { player_lv: { min: 33 }, consume_sp: { amount: 8 } }
+        10: { player_lv: { min: 38 }, consume_sp: { amount: 10 } }
+
+    earth_splitter:
+      maxLevel: 14
+      levels:
+        1:  { player_lv: { min: 8 },  consume_sp: { amount: 3 } }
+        2:  { player_lv: { min: 11 }, consume_sp: { amount: 3 } }
+        3:  { player_lv: { min: 14 }, consume_sp: { amount: 4 } }
+        4:  { player_lv: { min: 17 }, consume_sp: { amount: 4 } }
+        5:  { player_lv: { min: 20 }, consume_sp: { amount: 5 } }
+        6:  { player_lv: { min: 23 }, consume_sp: { amount: 6 } }
+        7:  { player_lv: { min: 27 }, consume_sp: { amount: 7 } }
+        8:  { player_lv: { min: 31 }, consume_sp: { amount: 8 } }
+        9:  { player_lv: { min: 35 }, consume_sp: { amount: 10 } }
+        10: { player_lv: { min: 40 }, consume_sp: { amount: 12 } }
+        11: { player_lv: { min: 45 }, consume_sp: { amount: 15 } }
+        12: { player_lv: { min: 50 }, consume_sp: { amount: 18 } }
+        13: { player_lv: { min: 56 }, consume_sp: { amount: 22 } }
+        14: { player_lv: { min: 62 }, consume_sp: { amount: 28 } }
+
+    blood_lust:
+      maxLevel: 2
+      levels:
+        1: { player_lv: { min: 15 }, consume_sp: { amount: 5 } }
+        2: { player_lv: { min: 25 }, consume_sp: { amount: 8 } }
+
+    passive_toughness:
+      maxLevel: 6
+      levels:
+        1: { player_lv: { min: 1 },  consume_sp: { amount: 1 } }
+        2: { player_lv: { min: 2 },  consume_sp: { amount: 1 } }
+        3: { player_lv: { min: 4 },  consume_sp: { amount: 2 } }
+        4: { player_lv: { min: 7 },  consume_sp: { amount: 2 } }
+        5: { player_lv: { min: 11 }, consume_sp: { amount: 3 } }
+        6: { player_lv: { min: 16 }, consume_sp: { amount: 4 } }
+
+    passive_rage:
+      maxLevel: 5
+      levels:
+        1: { player_lv: { min: 3 },  consume_sp: { amount: 1 } }
+        2: { player_lv: { min: 6 },  consume_sp: { amount: 2 } }
+        3: { player_lv: { min: 10 }, consume_sp: { amount: 2 } }
+        4: { player_lv: { min: 15 }, consume_sp: { amount: 3 } }
+        5: { player_lv: { min: 21 }, consume_sp: { amount: 5 } }
+
+  graph:
+    slash: []
+    charge: [slash]
+    shield_bash: [slash]
+    counter_strike: [shield_bash]
+    heavy_slash: [slash, charge]
+    war_cry: [charge, counter_strike]
+    iron_will: [war_cry]
+    thunder_clap: [slash, shield_bash]
+    whirlwind: [thunder_clap, heavy_slash]
+    battle_fury: [war_cry, whirlwind]
+    earth_splitter: [battle_fury, heavy_slash]
+    berserk: [battle_fury, iron_will]
+    blade_storm: [berserk, earth_splitter]
+    blood_lust: [berserk, iron_will]
+    last_stand: [blade_storm, blood_lust, earth_splitter]
+    passive_toughness: []
+    passive_rage: [passive_toughness]

@@ -1,0 +1,20 @@
+__option__:
+  name: "盾击"
+  display:
+    icon:
+      material: SHIELD
+      name: "&e盾击"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7眩晕 &c{{1 + level}}&7秒"
+        - "&7伤害 &c{{10 * level + 30}}"
+  variables:
+    cooldown: 100
+    stun: 1 + level
+    damage: 10 * level + 30
+  max-level: 3
+action: |
+  function main() {
+    tell("&a盾击 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

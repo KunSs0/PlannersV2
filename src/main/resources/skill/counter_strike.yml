@@ -1,0 +1,18 @@
+__option__:
+  name: "反击"
+  display:
+    icon:
+      material: IRON_CHESTPLATE
+      name: "&e反击"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7反伤 &c{{20 * level + 40}}%"
+  variables:
+    cooldown: 80
+    reflect: 20 * level + 40
+  max-level: 4
+action: |
+  function main() {
+    tell("&e反击 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

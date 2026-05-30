@@ -3,11 +3,12 @@ package com.gitee.planners.core.ui
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.core.player.PlayerRoute
+import com.gitee.planners.core.skill.formatter.DynamicSkillIcon
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import taboolib.platform.util.asLangText
-import taboolib.platform.util.buildItem
+import taboolib.library.configuration.ConfigurationSection
+import taboolib.module.chat.colored
 import taboolib.platform.util.sendLang
 import java.util.concurrent.ConcurrentHashMap
 
@@ -17,6 +18,39 @@ import java.util.concurrent.ConcurrentHashMap
 object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
 
     private val scrollOffsets = ConcurrentHashMap<Player, Int>()
+
+    @Option("__option__.icon-learned")
+    val iconLearned = simpleConfigNodeTo<ConfigurationSection, SkillIconAppend> { SkillIconAppend(this) }
+
+    @Option("__option__.icon-learn")
+    val iconLearn = simpleConfigNodeTo<ConfigurationSection, SkillIconAppend> { SkillIconAppend(this) }
+
+    @Option("__option__.icon-upgrade")
+    val iconUpgrade = simpleConfigNodeTo<ConfigurationSection, SkillIconAppend> { SkillIconAppend(this) }
+
+    @Option("__option__.icon-locked")
+    val iconLocked = simpleConfigNodeTo<ConfigurationSection, SkillIconAppend> { SkillIconAppend(this) }
+
+    @Option("__option__.icon-beyond")
+    val iconBeyondCfg = simpleConfigNodeTo<ConfigurationSection, Icon> { Icon(this) }
+
+    @Option("__option__.icon-skill-info")
+    val iconSkillInfo = simpleConfigNodeTo<ConfigurationSection, SkillIconAppend> { SkillIconAppend(this) }
+
+    @Option("__option__.icon-scroll-up")
+    val iconScrollUpCfg = simpleConfigNodeTo<ConfigurationSection, Icon> { Icon(this) }
+
+    @Option("__option__.icon-scroll-up-top")
+    val iconScrollUpTopCfg = simpleConfigNodeTo<ConfigurationSection, Icon> { Icon(this) }
+
+    @Option("__option__.icon-scroll-down")
+    val iconScrollDownCfg = simpleConfigNodeTo<ConfigurationSection, Icon> { Icon(this) }
+
+    @Option("__option__.icon-scroll-down-bottom")
+    val iconScrollDownBottomCfg = simpleConfigNodeTo<ConfigurationSection, Icon> { Icon(this) }
+
+    @Option("__option__.icon-sp-display")
+    val iconSpDisplayCfg = simpleConfigNodeTo<ConfigurationSection, Icon> { Icon(this) }
 
     fun open(player: Player) {
         val template = player.plannersTemplate
@@ -53,7 +87,7 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
                 }
 
                 // Row 0: Scroll up
-                set(0, buildScrollUpItem(player, scroll)) {
+                set(0, buildScrollUpItem(scroll)) {
                     if (scroll > 0) {
                         scrollOffsets[player] = scroll - 1
                         open(player)
@@ -69,13 +103,13 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
                 }
 
                 // Row 5: Scroll down + SP
-                set(45, buildScrollDownItem(player, scroll, ordered.size)) {
+                set(45, buildScrollDownItem(scroll, ordered.size)) {
                     if (scroll + 4 < ordered.size) {
                         scrollOffsets[player] = scroll + 1
                         open(player)
                     }
                 }
-                buildSPDisplay(player, route)
+                buildSPDisplay(route)
             }
         }
     }
@@ -91,74 +125,94 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
         val baseSlot = (row + 1) * 9
         val skillNode = tree.immutable.nodes[skillId] ?: return
         val level = tree.getLevel(skillId)
-        val immutableSkill = Registries.SKILL.getOrNull(skillId)
-        val skillDisplayName = immutableSkill?.name ?: skillId
+        val immutableSkill = Registries.SKILL.getOrNull(skillId) ?: return
 
-        // Col0: skill icon
-        set(baseSlot, immutableSkill?.icon ?: ItemStack(Material.STONE)) {
-            // click placeholder
-        }
+        // Col0: skill icon (current level)
+        set(baseSlot, DynamicSkillIcon.build(player, immutableSkill, level)) {}
 
         // Col1: skill name + current level
-        set(baseSlot + 1, buildSkillNameItem(player, skillDisplayName, skillId, level, skillNode.maxLevel))
+        set(baseSlot + 1, buildSkillNameItem(player, immutableSkill, level, skillNode.maxLevel)) {}
 
         // Col3-8: level slots Lv1-Lv6
         for (lv in 1..6) {
             val colSlot = baseSlot + 2 + lv
             if (lv > skillNode.maxLevel) {
-                set(colSlot, buildBeyondItem(player, lv))
+                set(colSlot, buildBeyondItem(lv)) {}
             } else {
-                val item = buildLevelItem(player, skillId, lv, level)
-                set(colSlot, item) {
-                    handleLevelClick(player, tree, skillId, lv, level)
+                val item = buildLevelItem(player, immutableSkill, lv, level)
+                if (lv == level + 1) {
+                    set(colSlot, item) {
+                        handleLevelClick(player, tree, skillId, lv, level)
+                    }
+                } else {
+                    set(colSlot, item) {}
                 }
             }
         }
     }
 
-    private fun buildSkillNameItem(player: Player, skillName: String, skillId: String, level: Int, maxLevel: Int): ItemStack {
-        return buildItem(Material.PAPER) {
-            name = player.asLangText("skill-tree-item-name", skillName)
-            lore.add(player.asLangText("skill-tree-id-lore", skillId))
-            lore.add(player.asLangText("skill-tree-level-lore", level, maxLevel))
-            lore.add("")
-        }
+    private fun buildSkillNameItem(player: Player, skill: com.gitee.planners.core.config.ImmutableSkill, level: Int, maxLevel: Int): ItemStack {
+        val item = DynamicSkillIcon.build(player, skill, level)
+        val cfg = iconSkillInfo.get()
+        setAppend(item, cfg, mapOf(
+            "{skillName}" to skill.name,
+            "{skillId}" to skill.id,
+            "{level}" to level.toString(),
+            "{maxLevel}" to maxLevel.toString()
+        ))
+        return item
     }
 
     // === Level slot items ===
 
-    private fun buildLevelItem(player: Player, skillId: String, slotLv: Int, currentLevel: Int): ItemStack {
+    private fun buildLevelItem(player: Player, skill: com.gitee.planners.core.config.ImmutableSkill, slotLv: Int, currentLevel: Int): ItemStack {
+        val item = DynamicSkillIcon.build(player, skill, slotLv)
         if (slotLv <= currentLevel) {
-            return buildItem(Material.GOLD_NUGGET) {
-                name = player.asLangText("skill-tree-learned-name", slotLv)
-                lore.add(player.asLangText("skill-tree-already-mastered"))
-                lore.add(player.asLangText("skill-tree-skill-lore", skillId))
-            }
-        }
-        if (slotLv == currentLevel + 1) {
-            val action = if (currentLevel == 0) {
-                player.asLangText("skill-tree-learn-action")
+            setAppend(item, iconLearned.get(), mapOf("{lv}" to slotLv.toString(), "{skillId}" to skill.id))
+        } else if (slotLv == currentLevel + 1) {
+            if (currentLevel == 0) {
+                setAppend(item, iconLearn.get(), mapOf("{lv}" to slotLv.toString(), "{skillId}" to skill.id))
             } else {
-                player.asLangText("skill-tree-upgrade-action")
+                setAppend(item, iconUpgrade.get(), mapOf("{lv}" to slotLv.toString(), "{skillId}" to skill.id))
             }
-            return buildItem(Material.KNOWLEDGE_BOOK) {
-                name = player.asLangText("skill-tree-actionable-name", slotLv, action)
-                lore.add(player.asLangText("skill-tree-actionable-lore", action))
-                lore.add(player.asLangText("skill-tree-skill-lore", skillId))
-            }
+        } else {
+            setAppend(item, iconLocked.get(), mapOf("{lv}" to slotLv.toString(), "{skillId}" to skill.id))
         }
-        return buildItem(Material.LIGHT_GRAY_STAINED_GLASS_PANE) {
-            name = player.asLangText("skill-tree-locked-name", slotLv)
-            lore.add(player.asLangText("skill-tree-need-previous"))
-            lore.add(player.asLangText("skill-tree-skill-lore", skillId))
-        }
+        return item
     }
 
-    private fun buildBeyondItem(player: Player, lv: Int): ItemStack {
-        return buildItem(Material.GRAY_STAINED_GLASS_PANE) {
-            name = player.asLangText("skill-tree-beyond-name", lv)
-            lore.add(player.asLangText("skill-tree-beyond-lore"))
+    private fun buildBeyondItem(lv: Int): ItemStack {
+        val cfg = iconBeyondCfg.get()
+        val item = cfg.icon.clone()
+        val meta = item.itemMeta ?: return item
+        meta.setDisplayName(meta.displayName.replace("{lv}", lv.toString()).colored())
+        if (meta.hasLore()) {
+            meta.lore = meta.lore!!.colored()
         }
+        item.itemMeta = meta
+        return item
+    }
+
+    private fun setAppend(item: ItemStack, cfg: SkillIconAppend, placeholders: Map<String, String>) {
+        val meta = item.itemMeta ?: return
+        val lore = meta.lore?.colored() ?: mutableListOf()
+        val nameAppend = cfg.nameAppend.replacePlaceholders(placeholders).colored()
+        val loreAppend = cfg.loreAppend.map { it.replacePlaceholders(placeholders).colored() }
+        meta.setDisplayName(nameAppend)
+        meta.lore = lore + loreAppend
+        item.itemMeta = meta
+    }
+
+    private fun String.replacePlaceholders(placeholders: Map<String, String>): String {
+        var result = this
+        for ((key, value) in placeholders) {
+            result = result.replace(key, value)
+        }
+        return result
+    }
+
+    private fun List<String>.replacePlaceholders(placeholders: Map<String, String>): List<String> {
+        return this.map { it.replacePlaceholders(placeholders) }
     }
 
     // === Click handler ===
@@ -193,36 +247,45 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
 
     // === Scroll buttons ===
 
-    private fun buildScrollUpItem(player: Player, scroll: Int): ItemStack {
-        return buildItem(if (scroll > 0) Material.SPECTRAL_ARROW else Material.GRAY_DYE) {
-            name = if (scroll > 0) {
-                player.asLangText("skill-tree-scroll-up")
-            } else {
-                player.asLangText("skill-tree-scroll-up-top")
-            }
-        }
+    private fun buildScrollUpItem(scroll: Int): ItemStack {
+        val cfg = if (scroll > 0) iconScrollUpCfg.get() else iconScrollUpTopCfg.get()
+        return cfg.icon.clone().applyColored()
     }
 
-    private fun buildScrollDownItem(player: Player, scroll: Int, total: Int): ItemStack {
-        return buildItem(if (scroll + 4 < total) Material.SPECTRAL_ARROW else Material.GRAY_DYE) {
-            name = if (scroll + 4 < total) {
-                player.asLangText("skill-tree-scroll-down")
-            } else {
-                player.asLangText("skill-tree-scroll-down-bottom")
-            }
+    private fun buildScrollDownItem(scroll: Int, total: Int): ItemStack {
+        val cfg = if (scroll + 4 < total) iconScrollDownCfg.get() else iconScrollDownBottomCfg.get()
+        return cfg.icon.clone().applyColored()
+    }
+
+    private fun ItemStack.applyColored(): ItemStack {
+        val meta = itemMeta ?: return this
+        if (meta.hasDisplayName()) {
+            meta.setDisplayName(meta.displayName.colored())
         }
+        if (meta.hasLore()) {
+            meta.lore = meta.lore!!.colored()
+        }
+        itemMeta = meta
+        return this
     }
 
     // === SP display ===
 
-    private fun BaseUI.Chest.buildSPDisplay(player: Player, route: PlayerRoute) {
-        set(48, buildItem(Material.NETHER_STAR) {
-            name = player.asLangText("skill-tree-points-title")
-            lore.add(player.asLangText("skill-tree-points-available", route.skillPointsCurrent))
-            lore.add(player.asLangText("skill-tree-points-spent", route.skillPointsUsed))
-            lore.add("")
-            lore.add(player.asLangText("skill-tree-points-earned"))
-        })
+    private fun BaseUI.Chest.buildSPDisplay(route: PlayerRoute) {
+        val cfg = iconSpDisplayCfg.get()
+        val icon = cfg.icon.clone()
+        val meta = icon.itemMeta ?: return
+        meta.setDisplayName(meta.displayName.colored())
+        if (meta.hasLore()) {
+            val lore = meta.lore!!.map {
+                it.replace("{spCurrent}", route.skillPointsCurrent.toString())
+                    .replace("{spUsed}", route.skillPointsUsed.toString())
+                    .colored()
+            }
+            meta.lore = lore
+        }
+        icon.itemMeta = meta
+        set(48, icon) {}
     }
 
     // === Topological sort ===

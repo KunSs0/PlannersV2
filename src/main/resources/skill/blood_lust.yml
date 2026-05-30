@@ -1,0 +1,20 @@
+__option__:
+  name: "嗜血"
+  display:
+    icon:
+      material: RED_DYE
+      name: "&4嗜血"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7吸血 &4{{15 * level + 25}}%"
+        - "&7持续 &4{{5 * level}}&7秒"
+  variables:
+    cooldown: 180
+    lifesteal: 15 * level + 25
+    duration: 5 * level
+  max-level: 2
+action: |
+  function main() {
+    tell("&4嗜血 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

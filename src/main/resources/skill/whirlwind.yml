@@ -1,0 +1,20 @@
+__option__:
+  name: "旋风斩"
+  display:
+    icon:
+      material: IRON_SWORD
+      name: "&a旋风斩"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7范围 &a{{level + 2}}&7格"
+        - "&7伤害 &a{{18 * level + 40}}"
+  variables:
+    cooldown: 90
+    range: level + 2
+    damage: 18 * level + 40
+  max-level: 10
+action: |
+  function main() {
+    tell("&a旋风斩 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

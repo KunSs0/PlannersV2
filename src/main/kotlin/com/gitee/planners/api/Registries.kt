@@ -22,11 +22,32 @@ object Registries {
         ImmutableJob(it as Configuration)
     }
 
-    val SKILL = createDeepSingleBuiltin("skill", "example0.yml") {
+    val SKILL = createDeepSingleBuiltin(
+        "skill",
+        "example0.yml",
+        "example1.yml",
+        "slash.yml",
+        "charge.yml",
+        "shield_bash.yml",
+        "counter_strike.yml",
+        "heavy_slash.yml",
+        "war_cry.yml",
+        "iron_will.yml",
+        "thunder_clap.yml",
+        "whirlwind.yml",
+        "battle_fury.yml",
+        "earth_splitter.yml",
+        "berserk.yml",
+        "blade_storm.yml",
+        "blood_lust.yml",
+        "last_stand.yml",
+        "passive_toughness.yml",
+        "passive_rage.yml"
+    ) {
         ImmutableSkill(it as Configuration)
     }
 
-    val SKILL_TREE = createDeepMultiBuiltin("skilltree", "example.yml") {
+    val SKILL_TREE = createDeepMultiBuiltin("skilltree", "example.yml", "warrior_vanguard.yml") {
         ImmutableSkillTree.parse(it.name, it)
     }
 

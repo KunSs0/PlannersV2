@@ -1,0 +1,18 @@
+__option__:
+  name: "冲锋"
+  display:
+    icon:
+      material: IRON_BOOTS
+      name: "&e冲锋"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7速度 &b{{15 * level + 80}}%"
+  variables:
+    cooldown: 80
+    speed: 15 * level + 80
+  max-level: 3
+action: |
+  function main() {
+    tell("&a冲锋 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

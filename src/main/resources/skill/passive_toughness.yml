@@ -1,0 +1,13 @@
+__option__:
+  name: "坚韧"
+  display:
+    icon:
+      material: IRON_INGOT
+      name: "&7坚韧"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7防御 &7+{{4 * level + 5}}"
+        - "&7被动"
+  variables: {}
+  max-level: 6
+action: ""

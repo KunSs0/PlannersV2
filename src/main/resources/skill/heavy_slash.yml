@@ -1,0 +1,18 @@
+__option__:
+  name: "重斩"
+  display:
+    icon:
+      material: DIAMOND_AXE
+      name: "&c重斩"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7伤害 &c{{35 * level + 80}}"
+  variables:
+    cooldown: 100
+    damage: 35 * level + 80
+  max-level: 15
+action: |
+  function main() {
+    tell("&c释放重斩 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

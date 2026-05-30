@@ -1,0 +1,20 @@
+__option__:
+  name: "狂暴"
+  display:
+    icon:
+      material: REDSTONE
+      name: "&4狂暴"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7伤害加成 &4{{6 * level + 20}}%"
+        - "&7受伤增加 &8{{3 * level + 10}}%"
+  variables:
+    cooldown: 200
+    damage_buff: 6 * level + 20
+    damage_taken: 3 * level + 10
+  max-level: 18
+action: |
+  function main() {
+    tell("&4狂暴 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

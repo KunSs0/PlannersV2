@@ -20,7 +20,13 @@ interface ImmutableVariable : Variable {
                 is Boolean, is Int, is Float, is Double, is Long -> Default(id, "$value")
 
                 is List<*> -> {
-                    When(id, value.map { Configuration.fromMap(it as Map<*, *>) })
+                    val first = value.firstOrNull()
+                    if (first is Map<*, *>) {
+                        @Suppress("UNCHECKED_CAST")
+                        When(id, value.map { Configuration.fromMap(it as Map<*, *>) })
+                    } else {
+                        Default(id, value.joinToString())
+                    }
                 }
 
                 else -> error("Unsupported value type ${value::class.java}")

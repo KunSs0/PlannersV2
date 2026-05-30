@@ -1,0 +1,19 @@
+__option__:
+  name: "斩击"
+  display:
+    icon:
+      material: IRON_SWORD
+      name: "&e斩击"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7伤害 &c{{20 * level + 50}}"
+  variables:
+    cooldown: 60
+    damage: 20 * level + 50
+  max-level: 3
+action: |
+  function main() {
+    tell("&a释放斩击 Lv" + level)
+    damage(sender, target, skill.variables.damage)
+    setCooldown(skill, skill.variables.cooldown)
+  }

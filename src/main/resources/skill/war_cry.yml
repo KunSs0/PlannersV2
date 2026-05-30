@@ -1,0 +1,20 @@
+__option__:
+  name: "战吼"
+  display:
+    icon:
+      material: GOAT_HORN
+      name: "&e战吼"
+      lore:
+        - "&7等级 &fLv{{level}}"
+        - "&7攻击加成 &c{{5 * level + 10}}%"
+        - "&7持续 &b{{3 * level}}&7秒"
+  variables:
+    cooldown: 120
+    attack_buff: 5 * level + 10
+    duration: 3 * level
+  max-level: 5
+action: |
+  function main() {
+    tell("&a战吼 Lv" + level)
+    setCooldown(skill, skill.variables.cooldown)
+  }

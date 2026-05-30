@@ -1,4 +1,20 @@
 __option__:
   name: 剑士
   skill:
-    - example0
+    - slash
+    - charge
+    - shield_bash
+    - counter_strike
+    - heavy_slash
+    - war_cry
+    - iron_will
+    - thunder_clap
+    - whirlwind
+    - battle_fury
+    - earth_splitter
+    - berserk
+    - blade_storm
+    - blood_lust
+    - last_stand
+    - passive_toughness
+    - passive_rage

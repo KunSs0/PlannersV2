@@ -92,6 +92,11 @@ abstract class AutomationBaseUI(name: String) : BaseUI {
 
     }
 
+    class SkillIconAppend(config: ConfigurationSection) {
+        val nameAppend: String = config.getString("name.append") ?: ""
+        val loreAppend: List<String> = config.getStringList("lore.append")
+    }
+
     @Awake
     class ConfigVisitor : ClassVisitor(1) {
 
