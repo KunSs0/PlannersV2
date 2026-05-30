@@ -274,25 +274,47 @@ warrior_vanguard:
           player_lv: { min: 30 }
           need_skill: { skillId: "vanguard_heart", lv: 3 }
           consume_sp: { amount: 5 }
+
+  graph:
+    shoulder_bash: []
+    vanguard_heart:   ["shoulder_bash"]
+    vanguard_rupture: ["vanguard_heart"]
 ```
 
 #### 3.2.3 数据字段说明
 
-**SkillData 层：**
+**SkillData 层（ImmutableSkillTree）：**
 
 | 字段 | 含义 |
 |------|------|
+| `id` | 技能树 ID（配置 key，如 `warrior_vanguard`） |
 | `name` | 流派显示名 |
 | `class` | 所属职业 |
-| `type` | base(基础流派) / branch(分支流派) |
+| `type` | base（基础流派）/ branch（分支流派） |
 | `nodes` | 技能节点集合，key = ImmutableSkill.id |
+| `graph` | 纯拓扑关系，`nodeId → [前置 nodeId]`；UI 读 graph 画连线 |
 
-**Node 层：**
+**Node 层（SkillNode）：**
 
 | 字段 | 含义 |
 |------|------|
 | `maxLevel` | 该技能最大可升级等级 |
 | `levels[N]` | 第 N 级引用的 condition key + 传参（覆盖默认 props） |
+
+**graph 说明：**
+- 与 nodes 平级，纯拓扑声明，不携带业务语义
+- UI 层：读取 graph → 画连线图
+- 校验层：graph 不参与条件校验，前置等级要求走 `levels` 里的 `need_skill` condition
+- 数组形式支持多前驱，无前驱用空数组 `[]`
+
+#### 3.2.4 加载
+
+`Registries.SKILL_TREE` = `createDeepMultiBuiltin("skilltree")`，每个 section key → `ImmutableSkillTree`。
+
+加载时校验：
+- node key 必须在 `Registries.SKILL` 中存在（警告但不阻塞）
+- condition key 必须在 `ConditionRegistry` 中存在（抛异常）
+- graph 中声明的节点都必须在 `nodes` 中
 
 ---
 
@@ -304,39 +326,44 @@ warrior_vanguard:
 
 ```kotlin
 class PlayerRoute {
-    lateinit var skillTree: SkillTree           // Lv1 选职业后初始化
+    var skillTree: SkillTree? = null        // 选职业后通过 initSkillTree() 初始化
 
-    inner class SkillTree {
-        val treeId: String                       // 关联 SkillData ID
-        private val nodes: Map<String, PlayerSkill>  // skillId → PlayerSkill
+    fun initSkillTree(treeId: String)       // 首次选择职业后调用
 
-        /** 获取某技能当前等级（未学习返回0） */
+    inner class SkillTree(
+        val immutable: ImmutableSkillTree
+    ) {
+        val treeId: String                  // immutable.id
+        private val evaluator = ConditionEvaluator()
+
         fun getLevel(skillId: String): Int
-
-        /** 首次学习 */
-        fun learn(skillId: String, evaluator: ConditionEvaluator): CompletableFuture<Void>
-
-        /** 升级 */
-        fun upgrade(skillId: String, evaluator: ConditionEvaluator): CompletableFuture<Void>
+        fun getLearnedSkills(): Map<String, PlayerSkill>
+        fun learn(player: Player, skillId: String): CompletableFuture<Void>
+        fun upgrade(player: Player, skillId: String): CompletableFuture<Void>
+        fun canLearn(player: Player, skillId: String): VerifyResult
+        fun canUpgrade(player: Player, skillId: String): VerifyResult
     }
 }
 ```
 
 #### 3.3.2 操作流程
 
-**learn(skillId):**
-1. 确认 `!nodes.containsKey(skillId)`
-2. 加载 SkillData 配置中该技能 Lv1 的 conditions
-3. `evaluator.verify()` → 失败则抛异常
-4. `evaluator.consume()`
-5. 创建 `PlayerSkill(level=1)` → 写入 nodes → 持久化
+**learn(player, skillId):**
+1. 确认未学习（`!skills.containsKey`）
+2. 加载 SkillData 中该技能 Lv1 的 conditions
+3. `evaluator.verify(conditions, player)` → 失败抛异常（含 hints）
+4. `evaluator.consume(conditions, player)`
+5. `Database.createPlayerSkill()` → `registerSkill()` → `setSkillLevel(template, ps, 1)`
 
-**upgrade(skillId):**
-1. 从 nodes 取当前 level
+**upgrade(player, skillId):**
+1. 从 skills 取当前 PlayerSkill，确认未满级
 2. 加载目标等级 (level+1) 的 conditions
-3. `evaluator.verify()` → 失败则抛异常
+3. `evaluator.verify()` → 失败抛异常
 4. `evaluator.consume()`
-5. `PlayerSkill.level += 1` → 持久化
+5. `setSkillLevel(template, ps, targetLevel)`
+
+**canLearn / canUpgrade：**
+仅校验不消耗，返回 `VerifyResult`，供 UI 预览。
 
 ---
 
@@ -463,7 +490,7 @@ object SkillPointsManager {
 |---------|------|
 | `ImmutableSkill` | 不存在，node key 即其 id |
 | `PlayerSkill` | 不变，已有 `level` 字段即技能树等级 |
-| `PlayerRoute` | 已新增 `skillPointsCurrent` / `skillPointsUsed` 字段 + `addSkillPoints()` / `takeSkillPoints()`；内部类 `SkillTree` 待实现 |
+| `PlayerRoute` | 已新增 `skillPointsCurrent` / `skillPointsUsed` + `addSkillPoints()` / `takeSkillPoints()` + 内部类 `SkillTree`（learn/upgrade/getLevel/canLearn/canUpgrade） |
 | `PlayerTemplate` | 不变 |
 | `Database` | 已新增 `updateSkillPoints()` 接口方法 |
 | `DatabaseLocal` / `DatabaseSQL` | `planners_route` 表已新增 `sp_current` / `sp_used` 列 + 迁移 + `updateSkillPoints()` |
@@ -478,6 +505,11 @@ object SkillPointsManager {
 | `Condition` (旧) | ✅ 已删除 — 原有 `Condition` 接口 / `Messaged` / `Combined` / `VerifyInfo` 全部移除 |
 | `Route.isInfer()` | ✅ 已删除 — 死代码，无人调用 |
 | `ImmutableSkill.conditionAsUpgrade` | ✅ 已删除 — 升级条件移到技能树 |
+| `ImmutableSkillTree` | ✅ 已完成 — 技能树定义（nodes + graph） |
+| `SkillNode` | ✅ 已完成 — 技能节点（maxLevel + levels） |
+| `Registries.SKILL_TREE` | ✅ 已完成 — 加载 `skilltree/*.yml` |
+| `PlayerRoute.SkillTree` | ✅ 已完成 — learn/upgrade/getLevel/canLearn/canUpgrade |
+| `PlayerRoute.initSkillTree()` | ✅ 已完成 — 选职业后初始化技能树 |
 
 ## 六、开发顺序
 
@@ -489,8 +521,17 @@ Phase A → Condition 条件模块 ✅ 已完成
           ├── PlayerBridge（JS player 对象：level/availablePoints/getSkillLevel/getJob/takePoints）
           ├── Planners.onEnable 调用 ConditionRegistry.init()
           └── config.yml 新增 settings.condition 节点（7条预置条件）
-Phase B → SkillData 数据加载（skilltree/*.yml 加载 + 校验）
-Phase C → PlayerRoute.SkillTree（learn/upgrade/getLevel）
+Phase B → SkillData 数据加载 ✅ 已完成
+          ├── SkillNode（maxLevel + levels → conditions）
+          ├── ImmutableSkillTree（nodes + graph + 校验）
+          ├── Registries.SKILL_TREE（skilltree/*.yml → DEEP_MULTI）
+          └── skilltree/warrior.yml（先锋流派样例）
+Phase C → PlayerRoute.SkillTree ✅ 已完成
+          ├── initSkillTree(treeId)
+          ├── learn(player, skillId)：校验→消耗→创建PlayerSkill→设为Lv1
+          ├── upgrade(player, skillId)：校验→消耗→升级
+          ├── canLearn / canUpgrade：预览校验（仅校验不消耗）
+          └── getLevel / getLearnedSkills
 Phase D → SkillPoints 技能点模块 ✅ 已完成
           ├── config.yml 加载 per-level / bonuses JS
           ├── PlayerRoute 新增 skillPointsCurrent / skillPointsUsed + addSkillPoints / takeSkillPoints
@@ -503,6 +544,6 @@ Phase D → SkillPoints 技能点模块 ✅ 已完成
 
 ## 七、待细化项
 
-1. SkillData YAML 的加载与校验（Phase B）
-2. PlayerRoute.SkillTree 内部类的具体实现（Phase C）
+1. 技能树 UI（基于 graph 连线的可视化面板）
+2. 转职与技能树切换（分支流派解锁）
 3. PlayerBridge 中 currency/hasItem/takeCurrency/takeItem 对接经济/背包系统
