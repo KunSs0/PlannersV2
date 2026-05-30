@@ -20,7 +20,7 @@ import taboolib.common.platform.function.submitAsync
 
 class PlayerRoute(
     val bindingId: Long,
-    private val routerId: String,
+    val routerId: String,
     private val current: Node,
     skills: List<PlayerSkill>,
     /** 当前可用技能点（初始值，来自数据库） */

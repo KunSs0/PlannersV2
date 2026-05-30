@@ -6,10 +6,10 @@ import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerRoute
+import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.getDataFolder
-import taboolib.common.platform.function.warning
 import taboolib.common.util.unsafeLazy
 import taboolib.common5.clong
 import taboolib.module.database.*
@@ -64,66 +64,20 @@ class DatabaseLocal : Database {
         add("backpack_slot") { type(ColumnTypeSQLite.TEXT) }
     }
 
+    val tableRouter = Table("planners_router", host) {
+        add { id() }
+        add("user") { type(ColumnTypeSQLite.INTEGER) }
+        add("router") { type(ColumnTypeSQLite.TEXT) }
+        add("level") { type(ColumnTypeSQLite.INTEGER) }
+        add("experience") { type(ColumnTypeSQLite.INTEGER) }
+    }
+
     init {
         tableUser.createTable(dataSource)
         tableRoute.createTable(dataSource)
         tableMetadata.createTable(dataSource)
         tableSkill.createTable(dataSource)
-        migrateBackpackColumns()
-        migrateSkillPointsColumns()
-    }
-
-    private fun migrateBackpackColumns() {
-        try {
-            val columns = dataSource.connection.use { conn ->
-                val rs = conn.createStatement().executeQuery("PRAGMA table_info(planners_skill)")
-                val cols = mutableSetOf<String>()
-                while (rs.next()) cols.add(rs.getString("name"))
-                rs.close()
-                cols
-            }
-            if (!columns.contains("equipped")) {
-                dataSource.connection.use { conn ->
-                    conn.createStatement().execute("ALTER TABLE planners_skill ADD COLUMN equipped INTEGER DEFAULT 0")
-                }
-            }
-            if (!columns.contains("backpack_page")) {
-                dataSource.connection.use { conn ->
-                    conn.createStatement().execute("ALTER TABLE planners_skill ADD COLUMN backpack_page TEXT")
-                }
-            }
-            if (!columns.contains("backpack_slot")) {
-                dataSource.connection.use { conn ->
-                    conn.createStatement().execute("ALTER TABLE planners_skill ADD COLUMN backpack_slot TEXT")
-                }
-            }
-        } catch (e: Exception) {
-            warning("Failed to migrate backpack columns: ${e.message}")
-        }
-    }
-
-    private fun migrateSkillPointsColumns() {
-        try {
-            val columns = dataSource.connection.use { conn ->
-                val rs = conn.createStatement().executeQuery("PRAGMA table_info(planners_route)")
-                val cols = mutableSetOf<String>()
-                while (rs.next()) cols.add(rs.getString("name"))
-                rs.close()
-                cols
-            }
-            if (!columns.contains("sp_current")) {
-                dataSource.connection.use { conn ->
-                    conn.createStatement().execute("ALTER TABLE planners_route ADD COLUMN sp_current INTEGER DEFAULT 0")
-                }
-            }
-            if (!columns.contains("sp_used")) {
-                dataSource.connection.use { conn ->
-                    conn.createStatement().execute("ALTER TABLE planners_route ADD COLUMN sp_used INTEGER DEFAULT 0")
-                }
-            }
-        } catch (e: Exception) {
-            warning("Failed to migrate skill points columns: ${e.message}")
-        }
+        tableRouter.createTable(dataSource)
     }
 
     override fun getPlayerProfile(player: Player): PlayerTemplate {
@@ -311,6 +265,38 @@ class DatabaseLocal : Database {
 
     override fun createPlayerJob(template: PlayerTemplate, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
         return createPlayerJob(template, template.route?.bindingId ?: -1L, route)
+    }
+
+    override fun loadPlayerRouter(userId: Long, routerId: String): PlayerRouter? {
+        return tableRouter.select(dataSource) {
+            where {
+                "user" eq userId
+                "router" eq routerId
+            }
+            rows("id", "level", "experience")
+        }.firstOrNull {
+            PlayerRouter(getLong("id"), routerId, getInt("level"), getInt("experience"))
+        }
+    }
+
+    override fun createPlayerRouter(userId: Long, routerId: String, initialLevel: Int): PlayerRouter {
+        val future = CompletableFuture<PlayerRouter>()
+        tableRouter.insert(dataSource, "user", "router", "level", "experience") {
+            value(userId, routerId, initialLevel, 0)
+            onFinally {
+                val id = getId(generatedKeys)
+                future.complete(PlayerRouter(id, routerId, initialLevel, 0))
+            }
+        }
+        return future.get()
+    }
+
+    override fun updatePlayerRouter(router: PlayerRouter) {
+        tableRouter.update(dataSource) {
+            where { "id" eq router.bindingId }
+            set("level", router.level)
+            set("experience", router.experience)
+        }
     }
 
     private fun getId(resultSet: ResultSet): Long {

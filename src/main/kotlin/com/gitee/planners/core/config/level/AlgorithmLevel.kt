@@ -11,7 +11,6 @@ import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerExpChangeEvent
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.module.configuration.ConfigNode
-import taboolib.module.configuration.lazyConversion
 
 object AlgorithmLevel {
 
@@ -23,11 +22,6 @@ object AlgorithmLevel {
 
     @ConfigNode("settings.level.synchronize")
     val synchronize = false
-
-    @ConfigNode("settings.level.isolation")
-    val isolation = lazyConversion<String?, Isolation> {
-        Isolation.valueOf(this?.uppercase() ?: "ALL")
-    }
 
     val default: Algorithm?
         get() = Registries.LEVEL.getOrNull(__default__)
@@ -84,35 +78,6 @@ object AlgorithmLevel {
      */
     fun syncingUpdated(template: PlayerTemplate) {
         syncingUpdated(template, template.level)
-    }
-
-    fun getInstance(template: PlayerTemplate): Algorithm {
-        return if (isolation.get() == Isolation.ROUTER && template.route != null) {
-            template.route!!.router.algorithmLevel ?: error("Player router algorithm is null.")
-        } else if (isolation.get() == Isolation.JOB && template.route != null) {
-            template.route!!.algorithmLevel ?: error("Player job algorithm is null.")
-        } else {
-            default ?: error("Default algorithm is null.")
-        }
-    }
-
-    fun getStoragePathInIsolation(template: PlayerTemplate, node: String): String {
-        val builder = StringBuilder("@$node")
-        if (isolation.get() == Isolation.ROUTER && template.route != null) {
-            builder.append(".${template.route!!.router.id}")
-        }
-        if (isolation.get() == Isolation.JOB && template.route != null) {
-            builder.append(".${template.route!!.router.id}.${template.route!!.bindingId}")
-        }
-        return builder.toString()
-    }
-
-    enum class Isolation {
-
-        ALL,
-        ROUTER,
-        JOB
-
     }
 
 }
