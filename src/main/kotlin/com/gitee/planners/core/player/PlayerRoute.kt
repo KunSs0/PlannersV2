@@ -193,8 +193,9 @@ class PlayerRoute(
          * 校验 Lv1 条件并消耗，最后创建 PlayerSkill。
          */
         fun learn(player: Player, skillId: String): CompletableFuture<Void> {
-            // 1. 确认未学
-            if (skills.containsKey(skillId)) {
+            // 1. 确认未学（level>0 才视为已学习，level=0 只是已注册）
+            val existing = skills[skillId]
+            if (existing != null && existing.level > 0) {
                 throw IllegalStateException("技能 $skillId 已学习")
             }
             // 2. 确认节点存在
@@ -212,8 +213,13 @@ class PlayerRoute(
             // 4. 消耗
             evaluator.consume(conditions, player)
 
-            // 5. 创建 PlayerSkill
+            // 5. 使用已有或创建 PlayerSkill
             val template = player.plannersTemplate
+            if (existing != null) {
+                PlayerTemplateAPI.setSkillLevel(template, existing, 1)
+                return CompletableFuture.completedFuture(null)
+            }
+
             val immutable = getImmutableSkill(skillId)
                 ?: throw IllegalArgumentException("ImmutableSkill '$skillId' 不存在")
 

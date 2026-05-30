@@ -37,8 +37,13 @@ class PlayerTemplate(val id: Long, val onlinePlayer: Player, route: PlayerRoute?
 
     var level: Int
         @JvmName("level0")
-        get() = this[AlgorithmLevel.getStoragePathInIsolation(this, "level")]?.asInt()
-            ?: AlgorithmLevel.getInstance(this).minLevel
+        get() {
+            val stored = this[AlgorithmLevel.getStoragePathInIsolation(this, "level")]?.asInt()
+            if (stored != null) {
+                return maxOf(stored, AlgorithmLevel.getInstance(this).minLevel)
+            }
+            return AlgorithmLevel.getInstance(this).minLevel
+        }
         @JvmName("level1")
         private set(value) {
             this[AlgorithmLevel.getStoragePathInIsolation(this, "level")] = metadataValue(value)
