@@ -7,11 +7,21 @@ import com.gitee.planners.api.job.*
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.level.Algorithm
+import com.gitee.planners.core.database.Database
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import taboolib.common.platform.function.submitAsync
 
-class PlayerRoute(val bindingId: Long, private val routerId: String, private val current: Node, skills: List<PlayerSkill>) :
-    Route, Job {
+class PlayerRoute(
+    val bindingId: Long,
+    private val routerId: String,
+    private val current: Node,
+    skills: List<PlayerSkill>,
+    /** 当前可用技能点（初始值，来自数据库） */
+    initialSPCurrent: Int = 0,
+    /** 累计已消耗技能点（初始值，来自数据库） */
+    initialSPUsed: Int = 0
+) : Route, Job {
 
     val router: Router
         get() = Registries.ROUTER.getOrNull(routerId) ?: error("Could not find router with id $routerId")
@@ -30,6 +40,29 @@ class PlayerRoute(val bindingId: Long, private val routerId: String, private val
         get() = routerId
 
     private val skills = mutableMapOf(*skills.map { it.id to it }.toTypedArray())
+
+    /** 当前可用技能点 */
+    var skillPointsCurrent: Int = initialSPCurrent
+        private set
+
+    /** 累计已消耗技能点 */
+    var skillPointsUsed: Int = initialSPUsed
+        private set
+
+    /** 增加技能点（升级时） */
+    fun addSkillPoints(amount: Int) {
+        skillPointsCurrent = maxOf(0, skillPointsCurrent + amount)
+        submitAsync { Database.INSTANCE.updateSkillPoints(this@PlayerRoute) }
+    }
+
+    /** 消耗技能点（学技能时），返回是否成功 */
+    fun takeSkillPoints(amount: Int): Boolean {
+        if (skillPointsCurrent < amount) return false
+        skillPointsCurrent -= amount
+        skillPointsUsed += amount
+        submitAsync { Database.INSTANCE.updateSkillPoints(this@PlayerRoute) }
+        return true
+    }
 
     override val name: String
         get() = job.name

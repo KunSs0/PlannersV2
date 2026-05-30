@@ -9,6 +9,16 @@ database:
     table: planners_v2
 
 settings:
+  # 技能点配置
+  skill-points:
+    # 每级获得点数，JS 表达式，变量: level
+    per-level: "level <= 30 ? 3 : 2"
+    # 关键等级额外奖励，JS 表达式，变量: level
+    bonuses:
+      10: "5"
+      20: "5"
+      30: "10"
+      50: "15"
   # 自定义伤害类型（防止拼写错误）
   damage-causes:
     - SKILL

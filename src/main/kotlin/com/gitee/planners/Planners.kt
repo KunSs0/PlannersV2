@@ -2,6 +2,7 @@ package com.gitee.planners
 
 import com.gitee.planners.api.Registries
 import com.gitee.planners.core.config.BackpackConfig
+import com.gitee.planners.core.skill.SkillPointsManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import taboolib.common.platform.Platform
@@ -67,6 +68,7 @@ object Planners : Plugin() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
         Registries.init()
+        SkillPointsManager.init()
     }
 
 }

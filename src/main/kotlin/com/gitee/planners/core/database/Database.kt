@@ -43,6 +43,8 @@ interface Database {
 
     fun updateSkill(skill: PlayerSkill)
 
+    fun updateSkillPoints(route: PlayerRoute)
+
     fun createPlayerSkill(template: PlayerTemplate, skill: Skill): CompletableFuture<PlayerSkill>
 
     fun createPlayerJob(template: PlayerTemplate, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute>

@@ -42,6 +42,8 @@ class DatabaseSQL : Database {
         add("router") { type(ColumnTypeSQL.VARCHAR, 60) }
         add("parent") { type(ColumnTypeSQL.INT) }
         add("route") { type(ColumnTypeSQL.VARCHAR, 60) }
+        add("sp_current") { type(ColumnTypeSQL.INT) }
+        add("sp_used") { type(ColumnTypeSQL.INT) }
     }
 
     val tableMetadata = Table("${prefix}_metadata", host) {
@@ -70,6 +72,7 @@ class DatabaseSQL : Database {
         tableMetadata.createTable(dataSource)
         tableSkill.createTable(dataSource)
         migrateBackpackColumns()
+        migrateSkillPointsColumns()
     }
 
     private fun migrateBackpackColumns() {
@@ -98,6 +101,30 @@ class DatabaseSQL : Database {
             }
         } catch (e: Exception) {
             warning("Failed to migrate backpack columns: ${e.message}")
+        }
+    }
+
+    private fun migrateSkillPointsColumns() {
+        try {
+            val columns = dataSource.connection.use { conn ->
+                val rs = conn.createStatement().executeQuery("SHOW COLUMNS FROM ${prefix}_route")
+                val cols = mutableSetOf<String>()
+                while (rs.next()) cols.add(rs.getString("Field"))
+                rs.close()
+                cols
+            }
+            if (!columns.contains("sp_current")) {
+                dataSource.connection.use { conn ->
+                    conn.createStatement().execute("ALTER TABLE ${prefix}_route ADD COLUMN sp_current INT DEFAULT 0")
+                }
+            }
+            if (!columns.contains("sp_used")) {
+                dataSource.connection.use { conn ->
+                    conn.createStatement().execute("ALTER TABLE ${prefix}_route ADD COLUMN sp_used INT DEFAULT 0")
+                }
+            }
+        } catch (e: Exception) {
+            warning("Failed to migrate skill points columns: ${e.message}")
         }
     }
 
@@ -196,13 +223,15 @@ class DatabaseSQL : Database {
     private fun getRouteById(id: Long): PlayerRoute {
         return tableRoute.select(dataSource) {
             where { "id" eq id }
-            rows("id", "router", "parent", "route")
+            rows("id", "router", "parent", "route", "sp_current", "sp_used")
         }.first {
             PlayerRoute(
                 getLong("id"),
                 getString("router"),
                 PlayerRoute.Node(getLong("parent"), getString("route")),
-                getPlayerSkills(id)
+                getPlayerSkills(id),
+                getInt("sp_current"),
+                getInt("sp_used")
             )
         }
     }
@@ -287,6 +316,14 @@ class DatabaseSQL : Database {
         }
     }
 
+    override fun updateSkillPoints(route: PlayerRoute) {
+        tableRoute.update(dataSource) {
+            where { "id" eq route.bindingId }
+            set("sp_current", route.skillPointsCurrent)
+            set("sp_used", route.skillPointsUsed)
+        }
+    }
+
     override fun createPlayerJob(
         template: PlayerTemplate,
         parentId: Long,
@@ -294,10 +331,10 @@ class DatabaseSQL : Database {
     ): CompletableFuture<PlayerRoute> {
         val future = CompletableFuture<PlayerRoute>()
         val node = PlayerRoute.Node(parentId, route.id)
-        tableRoute.insert(dataSource, "user", "router", "parent", "route") {
-            value(template.id, route.routerId, node.parentId, node.route)
+        tableRoute.insert(dataSource, "user", "router", "parent", "route", "sp_current", "sp_used") {
+            value(template.id, route.routerId, node.parentId, node.route, 0, 0)
             onFinally {
-                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, node, emptyList()))
+                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, node, emptyList(), 0, 0))
             }
         }
         return future
