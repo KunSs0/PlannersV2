@@ -9,6 +9,53 @@ database:
     table: planners_v2
 
 settings:
+  # 条件定义（供技能树/转职/EC等引用）
+  condition:
+    player_lv:
+      exper: "player.level >= props.min"
+      props:
+        min: 1
+      hint: "需要等级{props.min}"
+
+    need_skill:
+      exper: "player.getSkillLevel(props.skillId) >= props.lv"
+      props:
+        skillId: ""
+        lv: 1
+      hint: "需要{props.skillId} Lv{props.lv}"
+
+    consume_sp:
+      exper: "player.availablePoints() >= props.amount"
+      props:
+        amount: 0
+      hint: "技能点不足"
+      consume: "player.takePoints(props.amount)"
+
+    is_warrior:
+      exper: "player.getJob() == 'warrior'"
+      props: {}
+      hint: "需要战士职业"
+
+    is_mage:
+      exper: "player.getJob() == 'mage'"
+      props: {}
+      hint: "需要法师职业"
+
+    need_coin:
+      exper: "player.currency() >= props.amount"
+      props:
+        amount: 0
+      hint: "金币不足{props.amount}"
+      consume: "player.takeCurrency(props.amount)"
+
+    need_item:
+      exper: "player.hasItem(props.itemId, props.count)"
+      props:
+        itemId: ""
+        count: 1
+      hint: "需要{props.itemId} x{props.count}"
+      consume: "player.takeItem(props.itemId, props.count)"
+
   # 技能点配置
   skill-points:
     # 每级获得点数，JS 表达式，变量: level

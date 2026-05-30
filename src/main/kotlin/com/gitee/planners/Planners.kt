@@ -1,6 +1,7 @@
 package com.gitee.planners
 
 import com.gitee.planners.api.Registries
+import com.gitee.planners.core.condition.ConditionRegistry
 import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.core.skill.SkillPointsManager
 import org.bukkit.Bukkit
@@ -69,6 +70,7 @@ object Planners : Plugin() {
         LOGO.forEach(::info)
         Registries.init()
         SkillPointsManager.init()
+        ConditionRegistry.init()
     }
 
 }

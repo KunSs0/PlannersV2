@@ -28,7 +28,7 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
 
     override fun onGenerate(player: Player, element: ImmutableRoute, index: Int, slot: Int): ItemStack {
         return (element.icon ?: XMaterial.STONE.parseItem())!!.replaceInfix("\$message") {
-            ""  // 条件提示由后续 ConditionEvaluator 接管
+            emptyList()  // 条件提示由后续 ConditionEvaluator 接管
         }
     }
 
