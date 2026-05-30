@@ -1,6 +1,6 @@
 package com.gitee.planners.module.script.functions;
 
-import com.gitee.planners.api.job.Skill;
+import com.gitee.planners.core.config.ImmutableSkill;
 import com.gitee.planners.core.skill.cooler.Cooler;
 import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
@@ -27,7 +27,7 @@ public final class CooldownFunctions {
     public static void register() {
         // getCooldown(skill) 或 getCooldown(skill, player)
         GlobalFunctions.register("getCooldown", args -> {
-            Skill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
+            ImmutableSkill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
             if (skill == null) return null;
             Player player = ScriptArgs.getPlayer(args, 1);
             if (player == null) return null;
@@ -36,7 +36,7 @@ public final class CooldownFunctions {
 
         // setCooldown(skill, ticks) 或 setCooldown(skill, ticks, player)
         GlobalFunctions.register("setCooldown", args -> {
-            Skill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
+            ImmutableSkill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
             if (skill == null) return null;
             int ticks = ScriptArgs.getInt(args, 1);
             Player player = ScriptArgs.getPlayer(args, 2);
@@ -47,7 +47,7 @@ public final class CooldownFunctions {
 
         // resetCooldown(skill) 或 resetCooldown(skill, player)
         GlobalFunctions.register("resetCooldown", args -> {
-            Skill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
+            ImmutableSkill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
             if (skill == null) return null;
             Player player = ScriptArgs.getPlayer(args, 1);
             if (player == null) return null;
@@ -57,7 +57,7 @@ public final class CooldownFunctions {
 
         // hasCooldown(skill) 或 hasCooldown(skill, player)
         GlobalFunctions.register("hasCooldown", args -> {
-            Skill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
+            ImmutableSkill skill = ScriptArgs.resolveSkill(ScriptArgs.get(args, 0));
             if (skill == null) return null;
             Player player = ScriptArgs.getPlayer(args, 1);
             if (player == null) return null;

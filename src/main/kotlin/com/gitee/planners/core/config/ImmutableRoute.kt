@@ -1,18 +1,15 @@
 package com.gitee.planners.core.config
 
 import com.gitee.planners.api.Registries
-import com.gitee.planners.api.job.Job
-import com.gitee.planners.api.job.Route
-import com.gitee.planners.api.job.Router
 import org.bukkit.inventory.ItemStack
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 
-class ImmutableRoute(private val parent: Router, private val config: ConfigurationSection) : Route {
+class ImmutableRoute(private val parent: ImmutableRouter, private val config: ConfigurationSection) {
 
     val routerId = parent.id
 
-    override val id = config.name
+    val id = config.name
 
     val icon = config.getItemStack("icon")
         @JvmName("icon0")
@@ -27,15 +24,15 @@ class ImmutableRoute(private val parent: Router, private val config: Configurati
         config.getStringList("branch")
     }
 
-    override fun getBranches(): List<Route> {
+    fun getBranches(): List<ImmutableRoute> {
         return branches.mapNotNull { parent.getRouteOrNull(it) }
     }
 
-    override fun getIcon(): ItemStack? {
+    fun getIcon(): ItemStack? {
         return icon
     }
 
-    override fun getJob(): Job {
+    fun getJob(): ImmutableJob {
         return Registries.JOB.getOrNull(id) ?: error("Couldn't find job with id $id")
     }
 

@@ -1,6 +1,7 @@
 package com.gitee.planners.core.config
 
 import com.gitee.planners.core.condition.ConditionRegistry
+import taboolib.common.platform.function.warning
 import taboolib.library.configuration.ConfigurationSection
 
 /**
@@ -35,13 +36,11 @@ class SkillNode(
                 levels[lv] = conditions
             }
 
-            // 校验 condition key 都必须存在
+            // condition key 存在性校验（警告不阻塞 — ConditionRegistry 可能尚未初始化）
             for ((lv, conds) in levels) {
                 for (key in conds.keys) {
                     if (!ConditionRegistry.contains(key)) {
-                        throw IllegalArgumentException(
-                            "SkillNode: 未知的 condition key '$key' (level $lv)"
-                        )
+                        warning("SkillNode: 未知的 condition key '$key' (level $lv)，将在运行时校验")
                     }
                 }
             }

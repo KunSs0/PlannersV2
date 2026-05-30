@@ -1,7 +1,7 @@
 package com.gitee.planners.core.skill.cooler
 
 import com.gitee.planners.Planners
-import com.gitee.planners.api.job.Skill
+import com.gitee.planners.api.common.Unique
 import org.bukkit.entity.Player
 import taboolib.common.util.unsafeLazy
 
@@ -28,7 +28,7 @@ interface Cooler {
      * @param skill 技能
      * @param durationTick 冷却时间
      */
-    fun set(player: Player, skill: Skill, durationTick: Int)
+    fun set(player: Player, skill: Unique, durationTick: Int)
 
     /**
      * 获取玩家技能冷却到期时间 单位tick
@@ -37,6 +37,6 @@ interface Cooler {
      * @param skill 技能
      * @return 冷却剩余时间
      */
-    fun get(player: Player, skill: Skill): Long
+    fun get(player: Player, skill: Unique): Long
 
 }

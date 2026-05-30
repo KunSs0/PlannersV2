@@ -13,7 +13,7 @@ import taboolib.platform.util.sendLang
 object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml") {
 
     override fun getElements(player: Player): Collection<ImmutableRoute> {
-        return player.plannersTemplate.route!!.getBranches().map { it as ImmutableRoute }
+        return player.plannersTemplate.route!!.getBranches()
     }
 
     override fun onClick(event: ClickEvent, element: ImmutableRoute) {
@@ -22,8 +22,6 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
         val template = player.plannersTemplate
         PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, element).thenAccept { newRoute ->
             template.route = newRoute
-            // 挂载技能树
-            element.skillTree?.let { newRoute.initSkillTree(it) }
             player.sendLang("player-transfer-success", element.getJob().name)
         }
     }

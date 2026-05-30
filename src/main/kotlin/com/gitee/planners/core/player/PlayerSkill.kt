@@ -1,7 +1,7 @@
 package com.gitee.planners.core.player
 
 import com.gitee.planners.api.Registries
-import com.gitee.planners.api.job.Skill
+import com.gitee.planners.api.common.Unique
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.database.Database
@@ -14,9 +14,9 @@ class PlayerSkill(
     var equipped: Boolean = false,
     var backpackPage: String? = null,
     var backpackSlot: String? = null
-) : Skill {
+) : Unique {
 
-    override val name: String
+    val name: String
         get() = immutable.name
 
     val immutable: ImmutableSkill
@@ -34,11 +34,11 @@ class PlayerSkill(
     override val id: String
         get() = immutable.id
 
-    override fun getVariables(): Map<String, Variable> {
+    fun getVariables(): Map<String, Variable> {
         return immutable.getVariables()
     }
 
-    override fun getVariableOrNull(id: String): Variable? {
+    fun getVariableOrNull(id: String): Variable? {
         return immutable.getVariableOrNull(id)
     }
 

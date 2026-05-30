@@ -1,0 +1,17 @@
+# 示例技能树（最小可加载配置）
+# 正式使用时替换或新增文件
+example_tree:
+  name: "示例"
+  class: none
+  type: base
+
+  nodes:
+    example0:
+      maxLevel: 1
+      levels:
+        1:
+          player_lv: { min: 1 }
+          consume_sp: { amount: 1 }
+
+  graph:
+    example0: []

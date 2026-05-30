@@ -50,8 +50,9 @@ fun <T> createDeepSingleBuiltin(path: String, vararg resources: String, invoker:
  */
 fun <T> createLocalDeepBuiltin(path: String, resources: List<String> = emptyList(), type: DefaultBuiltinReader.SourceType, invoker: (ConfigurationSection) -> T): BuiltinReader<String, T> {
     val root = File(getDataFolder(), path)
-    // 创建默认资源文件
+    // 创建目录 + 默认资源文件
     if (!root.exists()) {
+        root.mkdirs()
         resources.forEach { releaseResourceFile("$path/$it", false) }
     }
     if (type == DefaultBuiltinReader.SourceType.SINGLE) {

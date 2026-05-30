@@ -1,6 +1,6 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.api.job.Skill
+import com.gitee.planners.api.common.Unique
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.script.ScriptContext
@@ -15,13 +15,13 @@ import taboolib.module.configuration.Configuration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
-class ImmutableSkill(config: Configuration) : Skill {
+class ImmutableSkill(config: Configuration) : Unique {
 
     /** 技能ID */
     override val id = config.file!!.nameWithoutExtension
 
     /** 技能名称 */
-    override val name: String = config.getString("__option__.name", id)!!
+    val name: String = config.getString("__option__.name", id)!!
 
     private val option = config.getOption()
 
@@ -130,16 +130,14 @@ class ImmutableSkill(config: Configuration) : Skill {
         }
     }
 
-    override fun getVariableOrNull(id: String): Variable? {
+    fun getVariableOrNull(id: String): Variable? {
         return immutableVariables[id]
     }
 
-    override fun getVariables(): Map<String, Variable> {
+    fun getVariables(): Map<String, Variable> {
         return immutableVariables
     }
 
-    override fun toString(): String {
-        return "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
-    }
+    override fun toString(): String = "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
 
 }

@@ -3,11 +3,13 @@ package com.gitee.planners.core.player
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
+import com.gitee.planners.api.job.Variable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import com.gitee.planners.api.job.*
 import com.gitee.planners.core.condition.ConditionEvaluator
 import com.gitee.planners.core.config.ImmutableJob
+import com.gitee.planners.core.config.ImmutableRoute
+import com.gitee.planners.core.config.ImmutableRouter
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.ImmutableSkillTree
 import com.gitee.planners.core.config.level.Algorithm
@@ -25,22 +27,22 @@ class PlayerRoute(
     initialSPCurrent: Int = 0,
     /** 累计已消耗技能点（初始值，来自数据库） */
     initialSPUsed: Int = 0
-) : Route, Job {
+) {
 
-    val router: Router
+    val router: ImmutableRouter
         get() = Registries.ROUTER.getOrNull(routerId) ?: error("Could not find router with id $routerId")
 
-    private val route: Route
+    private val route: ImmutableRoute
         get() = router.getRouteOrNull(current.route)!!
 
-    private val job: Job
+    private val job: ImmutableJob
         @JvmName("job0")
         get() = Registries.JOB.getOrNull(current.route) ?: error("Couldn't find job with id ${current.route}'")
 
     val algorithmLevel: Algorithm?
         get() = router.algorithmLevel
 
-    override val id: String
+    val id: String
         get() = routerId
 
     private val skills = mutableMapOf(*skills.map { it.id to it }.toTypedArray())
@@ -68,10 +70,10 @@ class PlayerRoute(
         return true
     }
 
-    override val name: String
+    val name: String
         get() = job.name
 
-    override fun getBranches(): List<Route> {
+    fun getBranches(): List<ImmutableRoute> {
         return route.getBranches()
     }
 
@@ -107,23 +109,23 @@ class PlayerRoute(
         return skills
     }
 
-    override fun getJob(): Job {
+    fun getJob(): ImmutableJob {
         return job
     }
 
-    override fun getIcon(): ItemStack? {
+    fun getIcon(): ItemStack? {
         return route.getIcon()
     }
 
-    override fun getVariables(): Map<String, Variable> {
+    fun getVariables(): Map<String, Variable> {
         return job.getVariables()
     }
 
-    override fun getVariableOrNull(id: String): Variable? {
+    fun getVariableOrNull(id: String): Variable? {
         return job.getVariableOrNull(id)
     }
 
-    override fun hasSkill(id: String): Boolean {
+    fun hasSkill(id: String): Boolean {
         return this.skills.containsKey(id)
     }
 
@@ -132,35 +134,37 @@ class PlayerRoute(
     }
 
     fun getImmutableSkillValues(): List<ImmutableSkill> {
-        return (job as ImmutableJob).getImmutableSkillValues()
+        return job.getImmutableSkillValues()
     }
 
     fun getImmutableSkill(id: String): ImmutableSkill? {
-        return job.getSkillOrNull(id) as? ImmutableSkill
+        return job.getSkillOrNull(id)
     }
 
     fun hasImmutableSkill(id: String): Boolean {
         return job.hasSkill(id)
     }
 
-    override fun getSkillOrNull(id: String): PlayerSkill? {
+    fun getSkillOrNull(id: String): PlayerSkill? {
         return this.skills[id]
     }
 
     // ---- SkillTree ----
 
-    /** 当前激活的技能树 */
-    var skillTree: SkillTree? = null
-        private set
-
-    /**
-     * 初始化技能树。
-     * 玩家首次选择职业后调用。
-     */
-    fun initSkillTree(treeId: String) {
-        val immutable = Registries.SKILL_TREE[treeId]
-        skillTree = SkillTree(immutable)
+    /** 解析当前路线绑定的技能树 ID */
+    private fun resolveSkillTreeId(): String? {
+        val router = Registries.ROUTER.getOrNull(routerId) ?: return null
+        val route = router.getRouteOrNull(current.route) ?: return null
+        return route.skillTree
     }
+
+    /** 当前激活的技能树（每次实时查询 Registries） */
+    val skillTree: SkillTree?
+        get() {
+            val treeId = resolveSkillTreeId() ?: return null
+            val immutable = Registries.SKILL_TREE[treeId]
+            return SkillTree(immutable)
+        }
 
     /**
      * 技能树内部类。

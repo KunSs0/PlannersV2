@@ -1,6 +1,6 @@
 package com.gitee.planners.api.event.player
 
-import com.gitee.planners.api.job.Skill
+import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import taboolib.platform.type.BukkitProxyEvent
 
@@ -18,7 +18,7 @@ class PlayerSkillCastEvent {
      * @param player 玩家
      * @param skill 技能
      */
-    class Pre(val player: Player, val skill: Skill) : BukkitProxyEvent()
+    class Pre(val player: Player, val skill: PlayerSkill) : BukkitProxyEvent()
 
     /**
      * 玩家技能释放后事件
@@ -26,6 +26,6 @@ class PlayerSkillCastEvent {
      * @param player 玩家
      * @param skill 技能
      */
-    class Post(val player: Player, val skill: Skill) : BukkitProxyEvent()
+    class Post(val player: Player, val skill: PlayerSkill) : BukkitProxyEvent()
 
 }

@@ -2,7 +2,6 @@ package com.gitee.planners.core.database
 
 import com.gitee.planners.api.common.metadata.Metadata
 import com.gitee.planners.api.common.metadata.MetadataTypeToken
-import com.gitee.planners.api.job.Skill
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerTemplate
@@ -257,32 +256,15 @@ class DatabaseLocal : Database {
         }
     }
 
-    override fun createPlayerSkill(template: PlayerTemplate, skill: Skill): CompletableFuture<PlayerSkill> {
+    override fun createPlayerSkill(template: PlayerTemplate, skill: ImmutableSkill): CompletableFuture<PlayerSkill> {
         val future = CompletableFuture<PlayerSkill>()
         val route = template.route?.bindingId ?: error("Player ${template.onlinePlayer.name} not find route")
-        if (skill is ImmutableSkill) {
-            tableSkill.insert(dataSource, "route", "node", "level") {
-                value(route, skill.id, skill.startedLevel)
-                onFinally {
-                    val id = getId(generatedKeys)
-                    future.complete(PlayerSkill(id, skill.id, skill.startedLevel))
-                }
+        tableSkill.insert(dataSource, "route", "node", "level") {
+            value(route, skill.id, skill.startedLevel)
+            onFinally {
+                val id = getId(generatedKeys)
+                future.complete(PlayerSkill(id, skill.id, skill.startedLevel))
             }
-        } else if (skill is PlayerSkill && skill.index == -1L) {
-            tableSkill.nullableInsert(dataSource) {
-                set("route", route)
-                set("node", skill.id)
-                set("level", skill.level)
-                set("equipped", if (skill.equipped) 1 else 0)
-                set("backpack_page", skill.backpackPage)
-                set("backpack_slot", skill.backpackSlot)
-                onFinally {
-                    skill.index = getId(generatedKeys)
-                    future.complete(skill)
-                }
-            }
-        } else {
-            future.complete(null)
         }
         return future
     }

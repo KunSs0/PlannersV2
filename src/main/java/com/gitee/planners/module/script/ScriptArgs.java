@@ -1,7 +1,7 @@
 package com.gitee.planners.module.script;
 
 import com.gitee.planners.api.Registries;
-import com.gitee.planners.api.job.Skill;
+import com.gitee.planners.core.config.ImmutableSkill;
 import com.gitee.planners.api.job.target.LeastType;
 import com.gitee.planners.api.job.target.ProxyTarget;
 import com.gitee.planners.api.job.target.ProxyTargetContainer;
@@ -141,12 +141,12 @@ public final class ScriptArgs {
      * <p>
      * 支持: String (通过 ID 查找), Skill (直接返回)
      */
-    public static Skill resolveSkill(Object arg) {
+    public static ImmutableSkill resolveSkill(Object arg) {
         if (arg instanceof String) {
             return Registries.INSTANCE.getSKILL().get((String) arg);
         }
-        if (arg instanceof Skill) {
-            return (Skill) arg;
+        if (arg instanceof ImmutableSkill) {
+            return (ImmutableSkill) arg;
         }
         return null;
     }

@@ -1,19 +1,18 @@
 package com.gitee.planners.core.config
 
 import com.gitee.planners.api.Registries
-import com.gitee.planners.api.job.Job
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.module.configuration.Configuration
 
-class ImmutableJob(private val config: Configuration) : Job {
+class ImmutableJob(private val config: Configuration) {
 
-    override val id = config.file!!.nameWithoutExtension
+    val id = config.file!!.nameWithoutExtension
 
     private val option = config.getOption()
 
-    override val name = option.getString("name", id)!!
+    val name = option.getString("name", id)!!
 
     val immutableVariables = option.mapValueWithId("variables") { id: String, value: Any ->
         ImmutableVariable.parse(id, value)
@@ -26,7 +25,7 @@ class ImmutableJob(private val config: Configuration) : Job {
      */
     val attributes: List<String> = option.getStringList("hook.attributes")
 
-    override fun hasSkill(id: String): Boolean {
+    fun hasSkill(id: String): Boolean {
         return this.immutableSkillKeys.contains(id)
     }
 
@@ -34,15 +33,15 @@ class ImmutableJob(private val config: Configuration) : Job {
         return Registries.SKILL.values().filter { it.id in immutableSkillKeys }
     }
 
-    override fun getSkillOrNull(id: String): ImmutableSkill? {
+    fun getSkillOrNull(id: String): ImmutableSkill? {
         return Registries.SKILL.getOrNull(id)
     }
 
-    override fun getVariableOrNull(id: String): Variable? {
+    fun getVariableOrNull(id: String): Variable? {
         return immutableVariables[id]
     }
 
-    override fun getVariables(): Map<String, Variable> {
+    fun getVariables(): Map<String, Variable> {
         return immutableVariables
     }
 }
