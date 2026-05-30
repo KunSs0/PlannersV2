@@ -20,6 +20,8 @@ __option__:
 
 swordsman:
   # 分支 可以多分支转职
+  skill:
+    tree: warrior_vanguard
   branch:
     - blade-master
     - grand-master

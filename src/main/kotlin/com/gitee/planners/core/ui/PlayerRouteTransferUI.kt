@@ -20,8 +20,10 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
         val player = event.clicker
         // 转职条件校验由后续 ConditionEvaluator 接管
         val template = player.plannersTemplate
-        PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, element).thenAccept {
-            template.route = it
+        PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, element).thenAccept { newRoute ->
+            template.route = newRoute
+            // 挂载技能树
+            element.skillTree?.let { newRoute.initSkillTree(it) }
             player.sendLang("player-transfer-success", element.getJob().name)
         }
     }

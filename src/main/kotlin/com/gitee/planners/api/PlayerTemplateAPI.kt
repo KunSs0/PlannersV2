@@ -46,6 +46,8 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         if (PlayerSetRouteEvent.Pre(template, route).call()) {
             return PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, route).thenApply {
                 template.route = it
+                // 挂载技能树
+                route.skillTree?.let { treeId -> it.initSkillTree(treeId) }
                 PlayerSetRouteEvent.Post(template, it).call()
 
                 it
