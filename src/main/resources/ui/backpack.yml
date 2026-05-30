@@ -3,7 +3,6 @@ __option__:
   title: "技能背包 - {0}"
   slots: [ 10, 11, 12, 13 ]
 
-  # 独立 icon
   icon-empty-slot:
     material: GRAY_STAINED_GLASS_PANE
     name: "&7空槽位 [{keyName}]"
@@ -11,24 +10,27 @@ __option__:
       - "&f左键装备技能"
 
   icon-prev-page:
+    slot: 18
     material: ARROW
     name: "&a上一页"
 
   icon-next-page:
+    slot: 26
     material: ARROW
     name: "&a下一页"
 
   icon-page-info:
+    slot: 22
     material: PAPER
     name: "&e第 {pageCurrent} / {pageTotal} 页"
 
   icon-skill-list:
+    slot: 31
     material: BOOK
     name: "&a技能列表"
     lore:
       - "&f点击查看已学技能"
 
-  # append 配置（追加到已装备技能图标 lore）
   icon-equipped-skill:
     lore:
       append:
