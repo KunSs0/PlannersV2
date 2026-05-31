@@ -77,12 +77,12 @@ object Registries {
         get() = Planners.backpackConfig.get()
 
     fun handleReload() {
-        DamageCause.reload(Planners.damageCauses.get())
+        DamageCause.load(Planners.damageCauses.get())
         AutoReloadable.onReload()
     }
 
     fun init() {
-        DamageCause.reload(Planners.damageCauses.get())
+        DamageCause.load(Planners.damageCauses.get())
     }
 
 }

@@ -50,7 +50,7 @@ sealed interface DamageCause {
         fun isRegistered(name: String): Boolean = registry.containsKey(name.uppercase())
 
         /** 从外部传入的列表加载自定义伤害类型 */
-        fun reload(causes: List<String>) {
+        fun load(causes: List<String>) {
             registry.clear()
             for (name in causes) {
                 register(name)
