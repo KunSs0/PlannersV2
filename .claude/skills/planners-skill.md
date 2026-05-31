@@ -1,6 +1,6 @@
 ---
 name: planners-skill
-description: 编写 Planners 插件技能配置和脚本的参考指南。涵盖技能/职业/路由 YAML 配置、JS 脚本 API、变量系统、背包系统、状态效果、属性系统、伤害类型、延迟释放、外部按键桥接等。
+description: 编写 Planners 插件技能配置和脚本的完整参考指南。涵盖技能/职业/路由/技能树 YAML 配置、JS 脚本 API、变量系统、背包系统、状态效果、属性系统、伤害类型、延迟释放、外部按键桥接、config.yml 全部配置项、配置目录结构、30+ 命令参考等。
 ---
 
 # Planners 技能编写指南
@@ -721,49 +721,269 @@ damageExBy(100, "ATTRIBUTE", target)  // 完整指定
 
 ---
 
-## 十一、config.yml 关键配置
+## 十一、config.yml 完整配置
+
+### database（数据库）
+
+| 配置项 | 含义 | 默认值 |
+|--------|------|--------|
+| `database.use` | LOCAL(SQLite) / SQL(MySQL) | SQL |
+| `database.sql.host` | MySQL 主机 | 127.0.0.1 |
+| `database.sql.port` | MySQL 端口 | 3306 |
+| `database.sql.user` | MySQL 用户名 | root |
+| `database.sql.password` | MySQL 密码 | 123456 |
+| `database.sql.database` | 数据库名 | bukkit_plugin |
+| `database.sql.table` | 数据表前缀 | planners_v2 |
+
+### settings.level（等级系统）
+
+| 配置项 | 含义 |
+|--------|------|
+| `level.isolation` | 隔离模式：`all` 全职业统一 / `router` 职业路线独立 / `job` 职业独立 |
+| `level.synchronize` | 是否同步原版 Minecraft 等级 |
+| `level.original-hook` | 是否兼容原版经验获取机制 |
+| `level.algorithm` | isolation=all 时的经验算法 ID（引用 module/level/*.yml） |
+
+### settings.skill-points（技能点系统）
+
+| 配置项 | 含义 |
+|--------|------|
+| `per-level` | 每升一级获得的技能点数（JS 表达式，`level` 为变量） |
+| `bonuses` | 关键等级额外奖励：Map `<等级, 奖励点数>` |
+
+### settings.magic-point（法力值系统）
+
+| 配置项 | 含义 |
+|--------|------|
+| `resume.expression` | 每更新周期恢复量（JS 表达式） |
+| `resume.update-tick` | 恢复更新间隔（tick） |
+| `upper-limit.expression` | 法力上限公式（JS，`profile.level` 可用） |
+| `upper-limit.update-tick` | 上限更新间隔（tick） |
+
+### settings.cooler（冷却系统）
+
+| 配置项 | 含义 |
+|--------|------|
+| `cooler.use` | `memory`（内存/重启清空）或 `persistence`（持久化） |
+
+### settings.damage-causes（伤害类型）
 
 ```yaml
-database:
-  use: LOCAL                    # LOCAL(SQLite) / SQL(MySQL)
-
-settings:
-  damage-causes: [SKILL, ATTRIBUTE, MYTHIC]  # 注册自定义伤害类型
-
-  magic-point:
-    resume:
-      expression: "1 + random(1, 2)"   # 每 tick 恢复值
-      update-tick: 20                  # 更新间隔
-    upper-limit:
-      expression: "profile.level * 2 + 100"  # 上限公式
-      update-tick: 20
-
-  level:
-    isolation: all              # all / router / job
-    synchronize: true           # 同步原版等级
-
-  cooler:
-    use: memory                 # memory(内存) / persistence(持久化)
-
-  keybinding:
-    keymapping: { ... }         # 按键注册表
-    backpack:                   # 技能背包
-      default-page: "0"
-      pages: { ... }
+damage-causes: [SKILL, ATTRIBUTE, MYTHIC]
 ```
+
+在 `config.yml` 中声明后，`DamageCause.of("SKILL")` 才能识别。自定义伤害类型需在此注册。
+
+### settings.attribute.registry（属性注册表）
+
+逻辑属性到物理属性的转换映射，详见 [九、属性系统](#九属性系统-attributeproxy)。
+
+### settings.placeholder（占位符）
+
+| 配置项 | 含义 |
+|--------|------|
+| `placeholder.use` | `script`（JS 计算）/ `literal`（直接取值） |
+
+### settings.attack.protect（攻击保护）
+
+| 配置项 | 含义 |
+|--------|------|
+| `protect.enable` | 是否启用 |
+| `protect.scene` | 生效场景列表（world / dungeonplus / team / worldguard 匹配） |
+
+### settings.condition（条件定义）
+
+供技能树、转职等引用的通用条件池，每个条件包含：
+
+| 字段 | 含义 |
+|------|------|
+| `exper` | JS 表达式，返回 true 时满足 |
+| `props` | 条件参数（如 `min`、`skillId`、`amount`） |
+| `hint` | 不满足时的提示文本 |
+| `consume` | 满足后执行的消耗动作（可选） |
+
+预定义条件：`player_lv`（等级检查）、`need_skill`（前置技能）、`consume_sp`（消耗技能点）、`need_coin`（消耗金币）、`need_item`（消耗物品）、`is_warrior`/`is_mage`（职业检查）。
+
+### settings.keybinding（按键绑定）
+
+**keymapping** — 按键注册表，每个 key 包含：
+
+| 字段 | 含义 |
+|------|------|
+| `name` | 显示名称 |
+| `matching-type` | `strict`（顺序）/ `fuzzy`（无序） |
+| `request-tick` | 组合键输入窗口（tick） |
+| `mapping` | 对应 Minecraft 按键代码 |
+
+**backpack** — 技能背包页配置：
+
+| 字段 | 含义 |
+|------|------|
+| `default-page` | 默认页 ID |
+| `pages.<id>.name` | 页名称 |
+| `pages.<id>.slots.<slotN>.key` | 槽位→按键引用（keymapping 中的 key ID） |
+
+### settings.minecraft.interaction-action（交互动作）
+
+| 配置项 | 含义 |
+|--------|------|
+| `enable` | 是否启用空手交互触发热键栏技能 |
+| `empty-skill.material` | 空槽位材质 |
+| `empty-skill.name` | 空槽位名称 |
+
+### settings.bukkit-launch.unimpeded-types（穿透方块）
+
+技能射线检测时穿透的方块类型列表，默认：`AIR, SHORT_GRASS, GLASS, WATER, DANDELION`。
 
 ---
 
-## 十二、命令参考
+## 十二、配置目录结构
+
+```
+resources/
+├── config.yml              # 核心配置
+├── lang/zh_CN.yml          # 语言文件（30条）
+├── skill/*.yml             # 技能配置（~20个）
+├── job/<路线>/*.yml         # 职业配置
+├── router/*.yml            # 职业路由
+├── skilltree/*.yml         # 技能树（节点+依赖图）
+├── module/
+│   ├── level/*.yml         # 等级经验算法
+│   └── currency/*.yml      # 自定义货币
+├── state/*.yml             # 状态效果
+├── action/*.yml            # 自定义动作
+└── ui/*.yml                # GUI 布局（7个）
+```
+
+### skilltree/（技能树配置）
+
+定义技能节点、升级条件和依赖关系图：
+
+```yaml
+nodes:
+  slash:                          # 节点 ID（对应技能 ID）
+    lv-1:                         # 第 1 级条件
+      condition:
+        player_lv: { min: 1 }
+        consume_sp: { amount: 1 }
+    lv-2:                         # 第 2 级条件
+      condition:
+        player_lv: { min: 5 }
+        consume_sp: { amount: 2 }
+    # ... lv-N
+  charge:
+    lv-1:
+      condition: { ... }
+    graph:                        # 前置依赖
+      - slash                     # 必须先解锁 slash
+```
+
+条件 ID 引用 `config.yml → settings.condition` 池。
+
+### module/level/（经验算法）
+
+```yaml
+def0:                              # 算法 ID
+  min: 1                           # 最低等级
+  max: 100                         # 最高等级
+  experience: |                    # 升级经验（JS 三目表达式）
+    level <= 10 ? level * 200 :
+    level <= 20 ? level * 600 :
+    level * 3000
+```
+
+### module/currency/（自定义货币）
+
+```yaml
+money:
+  name: '金币'
+  action:
+    hook: getBalance()             # 查询
+    withdraw: takeBalance(arg)     # 扣除
+    deposit: giveBalance(arg)      # 存入
+    set: setBalance(arg)           # 设置
+```
+
+### action/（自定义动作）
+
+```yaml
+__option__:
+  id: "example"
+  format: [type, uuid]            # 参数列表
+  props:                          # 可选参数及默认值
+    - { id: title, default: "abc" }
+action: |-                        # JS 脚本
+  tell(type + ":" + uuid)
+```
+
+### ui/（GUI 配置）
+
+7 个 YAML 文件定义 GUI 布局：槽位位置、材质、名称、Lore、点击行为。UI 文件与对应的 `*UI.kt` 类配合加载。
+
+### lang/zh_CN.yml（语言文件）
+
+覆盖职业、转职、经验、等级、法力、技能、UI、指令等模块共 30 条本地化消息，支持 `&` 颜色码。
+
+---
+
+## 十三、完整命令参考
+
+**根命令**：`/planners`（别名 `/pl`、`/ps`），权限 `planners.command`（所有子命令继承）。
+
+### 技能操作
+
+| 命令 | 说明 | 补全 |
+|------|------|------|
+| `/pl skill open <player>` | 打开技能操作 UI | 在线玩家 |
+| `/pl skill tree <player>` | 打开技能树 UI | 在线玩家 |
+| `/pl skill upgrade <player> <id>` | 打开技能升级 UI | 技能 ID |
+| `/pl skill cast <player> <id>` | 释放技能（完整 CD/MP 流程） | 玩家已学技能 |
+| `/pl skill run <player> <id> [level]` | 执行脚本（绕过检查，默认 1 级） | 所有注册技能 |
+
+### 背包
+
+| 命令 | 说明 | 补全 |
+|------|------|------|
+| `/pl backpack open <player>` | 打开背包 UI | 在线玩家 |
+| `/pl backpack page <player> <page>` | 切换背包页并刷新物品栏 | 背包页 ID |
+
+### 职业与转职
+
+| 命令 | 说明 | 补全 |
+|------|------|------|
+| `/pl route open <player>` | 打开职业选择 UI | 在线玩家 |
+| `/pl route select <player> <router>` | 直接设置职业路线 | 路由 ID |
+| `/pl route transfer <player>` | 打开转职 UI | 在线玩家 |
+| `/pl route clear <player>` | 清除职业路线 | 在线玩家 |
+
+### 玩家属性管理（profile）
 
 | 命令 | 说明 |
 |------|------|
-| `/pl skill open` | 打开技能操作 UI |
-| `/pl skill upgrade <skill>` | 技能升级 UI |
-| `/pl skill cast <player> <skill>` | 释放技能（完整流程） |
-| `/pl skill run <player> <skill> [level]` | 执行技能脚本（绕过检查） |
-| `/pl backpack open` | 打开背包 UI |
-| `/pl backpack page <id>` | 切换背包页 |
-| `/pl route open` | 职业选择 UI |
-| `/pl route transfer` | 转职 UI |
-| `/pl reload` | 重载配置 |
+| `/pl profile level add <player> <value>` | 增加等级 |
+| `/pl profile level take <player> <value>` | 减少等级 |
+| `/pl profile level set <player> <value>` | 设置等级 |
+| `/pl profile experience add <player> <value>` | 增加经验 |
+| `/pl profile experience take <player> <value>` | 减少经验 |
+| `/pl profile experience set <player> <value>` | 设置经验 |
+| `/pl profile magicpoint add <player> <value>` | 增加法力 |
+| `/pl profile magicpoint take <player> <value>` | 减少法力 |
+| `/pl profile magicpoint set <player> <value>` | 设置法力 |
+| `/pl profile magicpoint reset <player>` | 重置法力到上限 |
+
+别名：`/pl profile mp ...` = `/pl profile magicpoint ...`
+
+### 状态与测试
+
+| 命令 | 说明 |
+|------|------|
+| `/pl state trigger <player> <name>` | 触发指定状态 |
+| `/pl test <state> <duration>` | 为自己附加状态（Player only） |
+
+### 其他
+
+| 命令 | 说明 |
+|------|------|
+| `/pl main` | 显示命令帮助 |
+| `/pl reload` | 重载全部配置 |
+| `/pl console cast <id> [level]` | 以控制台身份执行技能 |
