@@ -4,7 +4,7 @@ __option__:
   slots: [ 10, 11, 12, 13 ]
 
   icon-empty-slot:
-    material: GRAY_STAINED_GLASS_PANE
+    material: BOOK
     name: "&7空槽位 [{keyName}]"
     lore:
       - "&f按键: {keyMapping}"
