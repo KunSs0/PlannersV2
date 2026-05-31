@@ -73,7 +73,9 @@ object MinecraftInteraction {
 
     @SubscribeEvent
     fun e(e: PlayerProfileLoadedEvent) {
-        updateInventory(e.template)
+        execute {
+            updateInventory(e.template)
+        }
     }
 
     @SubscribeEvent
