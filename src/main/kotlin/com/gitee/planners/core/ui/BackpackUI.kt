@@ -34,6 +34,9 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
     @Option("__option__.icon-equipped-skill")
     val equippedSkillAppend = simpleConfigNodeTo<ConfigurationSection, SkillIconAppend> { SkillIconAppend(this) }
 
+    @Option("__option__.icon-#")
+    val borderCfg = simpleConfigNodeTo<ConfigurationSection, Icon> { Icon(this) }
+
     override fun display(player: Player): BaseUI.Display {
         val template = player.plannersTemplate
         val pages = Registries.BACKPACK.pages
@@ -43,6 +46,11 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
         val currentIndex = pageIds.indexOf(currentPageId)
 
         return BaseUI.chest(this) {
+            val border = borderCfg.get()
+            for (slot in border.slots) {
+                set(slot, border.icon.clone()) {}
+            }
+
             page.slots.entries.forEachIndexed { index, (slotId, slotConfig) ->
                 if (index < uiSlots.get().size) {
                     val invSlot = uiSlots.get()[index]
