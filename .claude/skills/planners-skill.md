@@ -1,6 +1,6 @@
 ---
 name: planners-skill
-description: 编写 Planners 插件技能配置和脚本的参考指南。涵盖技能/职业/路由 YAML 配置、JS 脚本 API、变量系统、背包系统、状态效果、升级条件等。
+description: 编写 Planners 插件技能配置和脚本的参考指南。涵盖技能/职业/路由 YAML 配置、JS 脚本 API、变量系统、背包系统、状态效果、属性系统、伤害类型、延迟释放、外部按键桥接等。
 ---
 
 # Planners 技能编写指南
@@ -57,10 +57,10 @@ __option__:
         experience: "50 * level"
         mark: true                 # 标记为里程碑
 
-  # 属性钩子 (${} 表达式)
+  # 属性钩子 (Map 结构，值为 JS 表达式)
   hook:
     attributes:
-      - "攻击力 +${10 * level}"
+      STR: "10 + level * 2"
 
 # JS 脚本 (必须有 main 函数)
 action: |
@@ -325,7 +325,7 @@ var targets = finder()
                              │ skill != null
                     ┌────────▼────────┐
                     │ PlayerSkillCast │
-                    │ Event.Pre       │──取消→ CANCEL_WITH_EVENT
+                    │ Event.Check     │──取消→ CANCEL_WITH_EVENT
                     └────────┬────────┘
                              │
                     ┌────────▼────────┐
@@ -337,10 +337,20 @@ var targets = finder()
                     └────────┬────────┘
                              │
                     ┌────────▼────────┐
+                    │ PlayerSkillCast │
+                    │ Event.Pre       │──取消→ CANCEL_WITH_EVENT
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
                     │ 设置冷却         │
                     │ 扣除法力         │
                     └────────┬────────┘
                              │
+                    ┌────────▼────────┐
+                    │ Hook 拦截?      │──是→ INTERCEPTED (等待 resume)
+                    │ SkillInputExec  │
+                    └────────┬────────┘
+                             │ 否
                     ┌────────▼────────┐
                     │ skill.execute() │
                     │ → function main │
@@ -355,6 +365,39 @@ var targets = finder()
                     │ SUCCESS         │
                     └─────────────────┘
 ```
+
+### ExecutableResult 枚举
+
+| 值 | 含义 |
+|----|------|
+| `COOLING` | 技能冷却中 |
+| `MAGICPOINT_INSUFFICIENT` | 法力不足 |
+| `CANCEL_WITH_EVENT` | 被 Check/Pre 事件取消 |
+| `INTERCEPTED` | 被 SkillInputExecHook 接管，等待 resume() |
+| `SUCCESS` | 释放成功 |
+
+### SkillInputExec — 延迟释放机制
+
+当外部插件（如动画系统）需要在技能执行前播放招式动画时，可通过 `SkillInputExecHook` 拦截释放流程：
+
+```kotlin
+// 外部插件实现拦截器
+class AnimHook : SkillInputExecHook {
+    override fun intercept(ctx: SkillInputExec.Context) {
+        // 播放动画...
+        animation.play(ctx.player) {
+            ctx.resume()  // 动画结束后继续执行技能
+        }
+    }
+}
+
+// 注册
+PlannersAPI.registerSkillInputExecHook(AnimHook())
+```
+
+**流程**：`cast()` 在锁定资源后、`execute()` 前调用 hook → hook 可延迟调用 `resume()` → `resume()` 执行脚本 + 触发 Post 事件。
+
+**注意**：全局只能有一个 hook（`registerSkillInputExecHook` 替换旧值）。`cast()` 返回 `INTERCEPTED` 时不代表失败，而是等待 hook 异步恢复。
 
 ### PlannersAPI.cast(player, ImmutableSkill, level)
 
@@ -375,8 +418,8 @@ __option__:
   variables:                      # 职业级变量（同技能变量系统）
     atkBonus: "level * 2"
   hook:
-    attributes:                   # 职业级属性
-      - "力量 +5"
+    attributes:                   # 职业级属性 (Map 结构)
+      STR: "10 + level * 2"
 ```
 
 玩家选择职业后，其下的所有 skill 会自动创建 PlayerSkill 实例（学习）。
@@ -503,13 +546,34 @@ getSkillByKey(template, keyId) → PlayerSkill?  // 按键→技能
 
 ---
 
+### KeyBindingBridge — 外部按键接入
+
+供外部插件（如 FightCore）将自定义按键事件送入 CombinedAnalyzer 组合键匹配：
+
+```kotlin
+KeyBindingBridge.processKeyAction(player: Player, keyCode: String)
+```
+
+`keyCode` 需与 config.yml 中 `keymapping.*.mapping` 的值一致（如 `"R"`, `"mouse.left"`, `"keyboard.r"`）。
+
+**两种按键入口**：
+| 入口 | 来源 | 说明 |
+|------|------|------|
+| `CombinedHandler` | Bukkit 原生事件 | 左/右键、潜行、疾跑、跳跃 |
+| `KeyBindingBridge` | 外部插件调用 | 自定义热键面板、技能轮盘等 |
+
+两者最终都汇入 `CombinedAnalyzer.processAction()`，走相同的组合键匹配引擎。
+
+---
+
 ## 八、事件系统
 
 ### 技能相关
 
 | 事件 | 触发时机 | 可取消 |
 |------|---------|--------|
-| `PlayerSkillCastEvent.Pre` | 技能释放前 | 是 |
+| `PlayerSkillCastEvent.Check` | 技能释放最早阶段（CD/MP检查前） | 是 |
+| `PlayerSkillCastEvent.Pre` | CD/MP 检查后，资源锁定前 | 是 |
 | `PlayerSkillCastEvent.Post` | 释放成功后 | 否 |
 | `PlayerSkillCooldownEvent.Set` | 冷却设置时 | 是 |
 | `PlayerSkillEvent.LevelChange` | 技能等级变化 | 是 |
@@ -546,7 +610,118 @@ getSkillByKey(template, keyId) → PlayerSkill?  // 按键→技能
 
 ---
 
-## 九、config.yml 关键配置
+## 九、属性系统 (AttributeProxy)
+
+### 架构
+
+```
+AttributeSource (多来源)
+    ├── HookAttributeSource (技能/职业 hook.attributes，priority=5)
+    ├── 外部 AttributeSource 实现 (priority 自定义)
+    └── ...
+        ↓ 所有来源汇总
+AttributeProxy (编排器，按 priority 排序)
+    ↓ 分流
+    ├── 逻辑属性 (在 registry 中) → AttributeConversion.convert → 物理属性
+    └── 物理属性 (不在 registry 中) → 直接推送
+        ↓
+AttributeDriver.set(entity, "planners-proxy", attributes)
+```
+
+### AttributeSource 接口
+
+```kotlin
+interface AttributeSource {
+    val id: String            // 来源唯一标识
+    val priority: Int         // 越小越先算，同名 key 累加
+    fun getAttributes(entity: LivingEntity): Map<String, Double>
+}
+```
+
+### 预设优先级常量
+
+| 常量 | 值 | 用途 |
+|------|-----|------|
+| `PRIORITY_BASE` | 0 | 基础值 |
+| `PRIORITY_SKILL` | 5 | 技能/职业 Hook 属性 |
+| `PRIORITY_GROWTH` | 10 | 成长属性 |
+| `PRIORITY_INVESTED` | 20 | 加点属性 |
+| `PRIORITY_EQUIP` | 30 | 装备属性 |
+| `PRIORITY_BUFF` | 40 | Buff 属性 |
+| `PRIORITY_OVERRIDE` | 100 | 覆盖/终极属性 |
+
+### 核心 API
+
+```kotlin
+AttributeProxy.register(source)              // 注册来源
+AttributeProxy.unregister(source)            // 注销来源
+AttributeProxy.get(entity, "STR")            // 获取单个属性汇总值
+AttributeProxy.sync(entity)                  // 完整重算并推送到 AttributeDriver
+```
+
+### 配置属性注册表 (config.yml)
+
+```yaml
+settings:
+  attribute:
+    registry:
+      STR:
+        name: "力量"
+        mappings:
+          ATK: 1.0       # 1 力量 = 1 攻击力
+          DEF: 0.5       # 1 力量 = 0.5 防御力
+      INT:
+        name: "智力"
+        mappings:
+          MAGIC_ATK: 1.0
+          MANA_REGEN: 0.3
+      AGI:
+        name: "敏捷"
+        mappings:
+          SPEED: 0.8
+          CRIT: 0.3
+```
+
+逻辑属性（STR/INT/AGI 等）通过 mappings 系数转换为物理属性推送到外部属性插件。
+
+### 技能/职业中配置 Hook 属性
+
+```yaml
+# skill/*.yml 或 job/*.yml
+__option__:
+  hook:
+    attributes:
+      STR: "10 + level * 2"    # JS 表达式
+```
+
+`HookAttributeSource` 自动收集当前职业和所有已学技能的 hook 属性，同名 key 累加。
+
+---
+
+## 十、DamageCause 伤害类型
+
+```kotlin
+sealed interface DamageCause {
+    class Bukkit(cause: DamageCause) : DamageCause   // 原生伤害类型
+    class Custom(name: String) : DamageCause          // 自定义伤害类型
+}
+
+DamageCause.of("SKILL")          // 按名称查找
+DamageCause.ofOrNull("MYTHIC")   // 安全查找，不存在返回 null
+```
+
+查找优先级：先匹配 Bukkit 枚举，再查 config.yml 的 `settings.damage-causes` 列表。
+
+### JS 中使用
+
+```javascript
+damageEx(100, "SKILL")           // 自定义 cause 伤害
+damageExBy(100, "ATTRIBUTE", target)  // 完整指定
+```
+
+---
+
+## 十一、config.yml 关键配置
 
 ```yaml
 database:
@@ -579,7 +754,7 @@ settings:
 
 ---
 
-## 十、命令参考
+## 十二、命令参考
 
 | 命令 | 说明 |
 |------|------|
