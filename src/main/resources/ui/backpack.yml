@@ -7,6 +7,7 @@ __option__:
     material: GRAY_STAINED_GLASS_PANE
     name: "&7空槽位 [{keyName}]"
     lore:
+      - "&f按键: {keyMapping}"
       - "&f左键装备技能"
 
   icon-prev-page:

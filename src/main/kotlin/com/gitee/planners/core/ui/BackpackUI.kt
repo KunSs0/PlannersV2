@@ -65,10 +65,19 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
                         }
                     } else {
                         val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key)
+                        val mappingDisplay = if (keybinding != null) {
+                            (keybinding as com.gitee.planners.core.skill.binding.Combined).mapping.joinToString(",")
+                        } else {
+                            slotConfig.key
+                        }
                         val icon = emptySlotCfg.get().icon.clone()
                         val meta = icon.itemMeta
-                        if (meta != null && meta.hasDisplayName()) {
-                            meta.setDisplayName(meta.displayName.replace("{keyName}", keybinding?.name ?: slotConfig.key).colored())
+                        if (meta != null) {
+                            if (meta.hasDisplayName()) {
+                                meta.setDisplayName(meta.displayName.replace("{keyName}", keybinding?.name ?: slotConfig.key).colored())
+                            }
+                            val lore = meta.lore?.colored()?.map { it.replace("{keyMapping}", mappingDisplay) } ?: mutableListOf()
+                            meta.lore = lore
                             icon.itemMeta = meta
                         }
                         set(invSlot, icon) {
