@@ -1,8 +1,6 @@
 package com.gitee.planners.api.damage
 
 import org.bukkit.event.entity.EntityDamageEvent
-import taboolib.module.configuration.Config
-import taboolib.module.configuration.Configuration
 
 /**
  * 自定义伤害原因，支持 Bukkit 枚举和自定义扩展
@@ -36,9 +34,6 @@ sealed interface DamageCause {
 
     companion object {
 
-        @Config
-        private lateinit var config: Configuration
-
         /** 已注册的自定义伤害类型 */
         private val registry = mutableMapOf<String, Custom>()
 
@@ -54,10 +49,10 @@ sealed interface DamageCause {
         /** 检查自定义类型是否已注册 */
         fun isRegistered(name: String): Boolean = registry.containsKey(name.uppercase())
 
-        /** 从配置加载自定义伤害类型 */
-        fun reload() {
+        /** 从外部传入的列表加载自定义伤害类型 */
+        fun reload(causes: List<String>) {
             registry.clear()
-            config.getStringList("settings.damage-causes").forEach { name ->
+            for (name in causes) {
                 register(name)
             }
         }

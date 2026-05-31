@@ -60,6 +60,11 @@ object Planners : Plugin() {
         this
     }
 
+    @ConfigNode("settings.damage-causes")
+    val damageCauses = ConfigNodeTransfer<List<String>, List<String>> {
+        this
+    }
+
     @ConfigNode("settings.skill-points.bonuses")
     val skillPointsBonuses = configNodeToMap { key, value ->
         Pair(key.toInt(), value as String)
