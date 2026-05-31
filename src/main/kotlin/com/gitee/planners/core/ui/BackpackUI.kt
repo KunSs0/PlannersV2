@@ -50,10 +50,17 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
                     if (skill != null) {
                         val icon = KeyBindingAPI.createIconFormatter(player, skill).build()
                         val append = equippedSkillAppend.get()
+                        val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key)
+                        val mappingDisplay = if (keybinding != null) {
+                            (keybinding as com.gitee.planners.core.skill.binding.Combined).mapping.joinToString(",")
+                        } else {
+                            slotConfig.key
+                        }
                         val meta = icon.itemMeta
                         if (meta != null && append.loreAppend.isNotEmpty()) {
                             val lore = meta.lore?.colored() ?: mutableListOf()
-                            meta.lore = lore + append.loreAppend.colored()
+                            val replaced = append.loreAppend.map { it.replace("{keyMapping}", mappingDisplay).colored() }
+                            meta.lore = lore + replaced
                             icon.itemMeta = meta
                         }
                         set(invSlot, icon) {

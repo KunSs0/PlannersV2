@@ -35,6 +35,7 @@ __option__:
   icon-equipped-skill:
     lore:
       append:
+        - "&f{keyMapping}"
         - "&f右键卸下"
 
 border:
