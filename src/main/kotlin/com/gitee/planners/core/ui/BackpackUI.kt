@@ -4,7 +4,6 @@ import com.gitee.planners.api.BackpackAPI
 import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
-import com.gitee.planners.core.skill.binding.Combined
 import com.gitee.planners.core.skill.binding.MinecraftInteraction
 import org.bukkit.entity.Player
 import taboolib.library.configuration.ConfigurationSection
@@ -115,14 +114,13 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
         if (name == null) {
             return
         }
-        val mappingDisplay = (keybinding as Combined).mapping.joinToString(",")
         val icon = emptySlotCfg.get().icon.clone()
         val meta = icon.itemMeta
         if (meta != null) {
             if (meta.hasDisplayName()) {
                 meta.setDisplayName(meta.displayName.replace("{keyName}", name).colored())
             }
-            val lore = meta.lore?.colored()?.map { it.replace("{keyMapping}", mappingDisplay) } ?: mutableListOf()
+            val lore = meta.lore?.colored()?.map { it.replace("{keyName}", name) } ?: mutableListOf()
             meta.lore = lore
             icon.itemMeta = meta
         }
@@ -146,11 +144,11 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
         val append = equippedSkillAppend.get()
         val keybinding = Registries.KEYBINDING.getOrNull(keyId)
         if (append.loreAppend.isNotEmpty() && keybinding != null) {
-            val mappingDisplay = (keybinding as Combined).mapping.joinToString(",")
+            val keyName = keybinding.name
             val meta = icon.itemMeta
             if (meta != null) {
                 val lore = meta.lore?.colored() ?: mutableListOf()
-                val replaced = append.loreAppend.map { it.replace("{keyMapping}", mappingDisplay).colored() }
+                val replaced = append.loreAppend.map { it.replace("{keyName}", keyName).colored() }
                 meta.lore = lore + replaced
                 icon.itemMeta = meta
             }

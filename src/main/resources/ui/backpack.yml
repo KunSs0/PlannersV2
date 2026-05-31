@@ -7,7 +7,7 @@ __option__:
     material: BOOK
     name: "&7空槽位 [{keyName}]"
     lore:
-      - "&f按键: {keyMapping}"
+      - "&f按键: {keyName}"
       - "&f左键装备技能"
 
   icon-prev-page:
@@ -35,7 +35,7 @@ __option__:
   icon-equipped-skill:
     lore:
       append:
-        - "&f{keyMapping}"
+        - "&f按键: {keyName}"
         - "&f右键卸下"
 
   icon-#:
