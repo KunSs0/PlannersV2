@@ -4,6 +4,7 @@ import com.gitee.planners.api.BackpackAPI
 import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
+import com.gitee.planners.core.skill.binding.Combined
 import com.gitee.planners.core.skill.binding.MinecraftInteraction
 import org.bukkit.entity.Player
 import taboolib.library.configuration.ConfigurationSection
@@ -41,74 +42,30 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
         val template = player.plannersTemplate
         val pages = Registries.BACKPACK.pages
         val currentPageId = BackpackAPI.getCurrentPage(template)
-        val page = pages[currentPageId] ?: return BaseUI.chest(this) {}
+        val page = pages[currentPageId]
+        if (page == null) {
+            return BaseUI.chest(this) {}
+        }
         val pageIds = pages.keys.toList()
         val currentIndex = pageIds.indexOf(currentPageId)
 
         return BaseUI.chest(this) {
-            val border = borderCfg.get()
-            for (slot in border.slots) {
-                set(slot, border.icon.clone()) {}
-            }
+            setIcon(borderCfg.get()) {}
 
             page.slots.entries.forEachIndexed { index, (slotId, slotConfig) ->
                 if (index < uiSlots.get().size) {
                     val invSlot = uiSlots.get()[index]
                     val skill = template.getEquippedSkillByBackpackSlot(currentPageId, slotId)
                     if (skill != null) {
-                        val icon = KeyBindingAPI.createIconFormatter(player, skill).build()
-                        val append = equippedSkillAppend.get()
-                        val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key)
-                        val mappingDisplay = if (keybinding != null) {
-                            (keybinding as com.gitee.planners.core.skill.binding.Combined).mapping.joinToString(",")
-                        } else {
-                            slotConfig.key
-                        }
-                        val meta = icon.itemMeta
-                        if (meta != null && append.loreAppend.isNotEmpty()) {
-                            val lore = meta.lore?.colored() ?: mutableListOf()
-                            val replaced = append.loreAppend.map { it.replace("{keyMapping}", mappingDisplay).colored() }
-                            meta.lore = lore + replaced
-                            icon.itemMeta = meta
-                        }
-                        set(invSlot, icon) {
-                            if (clickEvent().isRightClick) {
-                                BackpackAPI.unequipSkill(template, skill)
-                                MinecraftInteraction.updateInventory(template)
-                                BackpackUI.openTo(player)
-                            }
-                        }
+                        renderEquippedSkill(player, template, skill, slotConfig.key, invSlot)
                     } else {
-                        val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key)
-                        val mappingDisplay = if (keybinding != null) {
-                            (keybinding as com.gitee.planners.core.skill.binding.Combined).mapping.joinToString(",")
-                        } else {
-                            slotConfig.key
-                        }
-                        val icon = emptySlotCfg.get().icon.clone()
-                        val meta = icon.itemMeta
-                        if (meta != null) {
-                            if (meta.hasDisplayName()) {
-                                meta.setDisplayName(meta.displayName.replace("{keyName}", keybinding?.name ?: slotConfig.key).colored())
-                            }
-                            val lore = meta.lore?.colored()?.map { it.replace("{keyMapping}", mappingDisplay) } ?: mutableListOf()
-                            meta.lore = lore
-                            icon.itemMeta = meta
-                        }
-                        set(invSlot, icon) {
-                            BackpackSkillSelectUI.choice(player) { selectedSkill ->
-                                BackpackAPI.equipSkill(template, selectedSkill, currentPageId, slotId)
-                                MinecraftInteraction.updateInventory(template)
-                                BackpackUI.openTo(player)
-                            }
-                        }
+                        renderEmptySlot(player, template, slotConfig.key, invSlot, currentPageId, slotId)
                     }
                 }
             }
 
             if (currentIndex > 0) {
-                val cfg = prevPageCfg.get()
-                setIcon(cfg, cfg.icon) {
+                setIcon(prevPageCfg.get()) {
                     val prevPage = pageIds[currentIndex - 1]
                     BackpackAPI.setCurrentPage(template, prevPage)
                     MinecraftInteraction.updateInventory(template)
@@ -117,8 +74,7 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
             }
 
             if (currentIndex < pageIds.size - 1) {
-                val cfg = nextPageCfg.get()
-                setIcon(cfg, cfg.icon) {
+                setIcon(nextPageCfg.get()) {
                     val nextPage = pageIds[currentIndex + 1]
                     BackpackAPI.setCurrentPage(template, nextPage)
                     MinecraftInteraction.updateInventory(template)
@@ -140,9 +96,70 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
             }
             setIcon(infoCfg, infoIcon) {}
 
-            val listCfg = skillListCfg.get()
-            setIcon(listCfg, listCfg.icon) {
+            setIcon(skillListCfg.get()) {
                 BackpackSkillSelectUI.choice(player) { }
+            }
+        }
+    }
+
+    private fun BaseUI.Chest.renderEmptySlot(
+        player: Player,
+        template: com.gitee.planners.core.player.PlayerTemplate,
+        keyId: String,
+        invSlot: Int,
+        currentPageId: String,
+        slotId: String
+    ) {
+        val keybinding = Registries.KEYBINDING.getOrNull(keyId)
+        val name = keybinding?.name
+        if (name == null) {
+            return
+        }
+        val mappingDisplay = (keybinding as Combined).mapping.joinToString(",")
+        val icon = emptySlotCfg.get().icon.clone()
+        val meta = icon.itemMeta
+        if (meta != null) {
+            if (meta.hasDisplayName()) {
+                meta.setDisplayName(meta.displayName.replace("{keyName}", name).colored())
+            }
+            val lore = meta.lore?.colored()?.map { it.replace("{keyMapping}", mappingDisplay) } ?: mutableListOf()
+            meta.lore = lore
+            icon.itemMeta = meta
+        }
+        set(invSlot, icon) {
+            BackpackSkillSelectUI.choice(player) { selectedSkill ->
+                BackpackAPI.equipSkill(template, selectedSkill, currentPageId, slotId)
+                MinecraftInteraction.updateInventory(template)
+                BackpackUI.openTo(player)
+            }
+        }
+    }
+
+    private fun BaseUI.Chest.renderEquippedSkill(
+        player: Player,
+        template: com.gitee.planners.core.player.PlayerTemplate,
+        skill: com.gitee.planners.core.player.PlayerSkill,
+        keyId: String,
+        invSlot: Int
+    ) {
+        val icon = KeyBindingAPI.createIconFormatter(player, skill).build()
+        val append = equippedSkillAppend.get()
+        val keybinding = Registries.KEYBINDING.getOrNull(keyId)
+        if (append.loreAppend.isNotEmpty() && keybinding != null) {
+            val mappingDisplay = (keybinding as Combined).mapping.joinToString(",")
+            val meta = icon.itemMeta
+            if (meta != null) {
+                val lore = meta.lore?.colored() ?: mutableListOf()
+                val replaced = append.loreAppend.map { it.replace("{keyMapping}", mappingDisplay).colored() }
+                meta.lore = lore + replaced
+                icon.itemMeta = meta
+            }
+        }
+        set(invSlot, icon) {
+            if (clickEvent().isRightClick) {
+                BackpackAPI.unequipSkill(template, skill)
+                MinecraftInteraction.updateInventory(template)
+                BackpackUI.openTo(player)
             }
         }
     }
