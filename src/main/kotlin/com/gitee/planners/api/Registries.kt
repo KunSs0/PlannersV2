@@ -1,7 +1,6 @@
 package com.gitee.planners.api
 
 import com.gitee.planners.Planners
-import com.gitee.planners.api.damage.DamageCause
 import com.gitee.planners.core.config.*
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
@@ -77,12 +76,11 @@ object Registries {
         get() = Planners.backpackConfig.get()
 
     fun handleReload() {
-        DamageCause.load(Planners.damageCauses.get())
         AutoReloadable.onReload()
     }
 
     fun init() {
-        DamageCause.load(Planners.damageCauses.get())
+        // DamageCause 直接从 Planners.damageCauses 读取，无需 load
     }
 
 }

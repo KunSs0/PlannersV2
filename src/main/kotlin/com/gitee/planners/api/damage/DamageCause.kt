@@ -1,5 +1,6 @@
 package com.gitee.planners.api.damage
 
+import com.gitee.planners.Planners
 import org.bukkit.event.entity.EntityDamageEvent
 
 /**
@@ -34,61 +35,48 @@ sealed interface DamageCause {
 
     companion object {
 
-        /** 已注册的自定义伤害类型 */
-        private val registry = mutableMapOf<String, Custom>()
-
-        /** 注册自定义伤害类型 */
-        fun register(name: String): Custom {
-            val key = name.uppercase()
-            return registry.getOrPut(key) { Custom(key) }
-        }
-
-        /** 获取所有已注册的自定义类型 */
-        fun registered(): Collection<Custom> = registry.values
-
-        /** 检查自定义类型是否已注册 */
-        fun isRegistered(name: String): Boolean = registry.containsKey(name.uppercase())
-
-        /** 从外部传入的列表加载自定义伤害类型 */
-        fun load(causes: List<String>) {
-            registry.clear()
-            for (name in causes) {
-                register(name)
-            }
-        }
-
         /**
-         * 根据名称获取伤害原因
-         * @throws IllegalArgumentException 如果自定义类型未在配置中定义
+         * 根据名称获取伤害原因。
+         * 优先匹配 Bukkit 枚举，否则从 config.yml → settings.damage-causes 查找。
+         * @throws IllegalArgumentException 如果未定义
          */
         fun of(name: String): DamageCause {
             val key = name.uppercase()
-            // 优先匹配 Bukkit 枚举
-            return try {
-                Bukkit(EntityDamageEvent.DamageCause.valueOf(key))
+            try {
+                return Bukkit(EntityDamageEvent.DamageCause.valueOf(key))
             } catch (_: IllegalArgumentException) {
-                // 必须是已注册的自定义类型
-                registry[key] ?: throw IllegalArgumentException(
+                if (hasCustom(name)) {
+                    return Custom(key)
+                }
+                throw IllegalArgumentException(
                     "Unknown damage cause '$name'. Custom causes must be defined in config.yml under 'settings.damage-causes'"
                 )
             }
         }
 
         /**
-         * 根据名称获取伤害原因，未注册返回 null
+         * 根据名称获取伤害原因，未定义返回 null
          */
         fun ofOrNull(name: String): DamageCause? {
             val key = name.uppercase()
-            return try {
-                Bukkit(EntityDamageEvent.DamageCause.valueOf(key))
+            try {
+                return Bukkit(EntityDamageEvent.DamageCause.valueOf(key))
             } catch (_: IllegalArgumentException) {
-                registry[key]
+                if (hasCustom(name)) {
+                    return Custom(key)
+                }
+                return null
             }
         }
 
         /** 包装 Bukkit 伤害原因 */
         fun of(cause: EntityDamageEvent.DamageCause): Bukkit {
             return Bukkit(cause)
+        }
+
+        private fun hasCustom(name: String): Boolean {
+            val causes = Planners.damageCauses.get()
+            return causes.any { it.equals(name, ignoreCase = true) }
         }
     }
 }
