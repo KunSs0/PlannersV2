@@ -2,6 +2,8 @@ package com.gitee.planners
 
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.attribute.AttributeRegistryEntry
+import com.gitee.planners.core.attribute.AttributeProxy
+import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionConfig
 import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.util.configNodeToMap
@@ -116,6 +118,7 @@ object Planners : Plugin() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
         Registries.init()
+        AttributeProxy.register(HookAttributeSource())
     }
 
 }

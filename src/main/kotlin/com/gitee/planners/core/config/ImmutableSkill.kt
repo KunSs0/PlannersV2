@@ -38,9 +38,18 @@ class ImmutableSkill(config: Configuration) : Unique {
     val action = config.getString("action", config.getString("run", ""))!!
 
     /**
-     * 技能提供的属性
+     * 技能提供的属性。
+     * key = 属性键（在 registry 中为逻辑属性，否则为物理直通）
+     * value = JS 表达式字符串或数字
      */
-    val attributes: List<String> = option.getStringList("hook.attributes")
+    val attributes: Map<String, String>
+        get() {
+            val section = option.getConfigurationSection("hook.attributes")
+            if (section == null) {
+                return emptyMap()
+            }
+            return section.getValues(false).mapValues { it.value.toString() }
+        }
 
     /** 开始等级 */
     val startedLevel = option.getInt("started-level", 0)
