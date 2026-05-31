@@ -66,6 +66,66 @@ settings:
       20: "5"
       30: "10"
       50: "15"
+  attribute:
+    # 逻辑属性 → 物理属性的转换映射表
+    registry:
+      STR:
+        name: "力量"
+        mappings:
+          ATK: 1.0
+          DEF: 0.5
+      INT:
+        name: "智力"
+        mappings:
+          MAGIC_ATK: 1.0
+          MANA_REGEN: 0.3
+      AGI:
+        name: "敏捷"
+        mappings:
+          SPEED: 0.8
+          CRIT: 0.3
+      END:
+        name: "耐力"
+        mappings:
+          MAX_HEALTH: 12.0
+          TOUGH: 0.5
+          MAX_STAMINA: 6.0
+      CRIT:
+        name: "暴击"
+        mappings:
+          CRIT: 1.0
+      STRIKE:
+        name: "强击"
+        mappings:
+          STRIKE: 1.0
+      FAITH:
+        name: "信仰"
+        mappings:
+          FAITH: 1.0
+      HASTE:
+        name: "急速"
+        mappings:
+          HASTE: 1.0
+      TOUGH:
+        name: "坚韧"
+        mappings:
+          TOUGH: 1.0
+      SPIRIT:
+        name: "精神"
+        mappings:
+          SPIRIT: 1.0
+      HP:
+        name: "生命基数"
+        mappings:
+          MAX_HEALTH: 1.0
+      MP:
+        name: "魔力基数"
+        mappings:
+          MAX_MANA: 1.0
+      SP:
+        name: "体力基数"
+        mappings:
+          MAX_STAMINA: 1.0
   # 自定义伤害类型（防止拼写错误）
   damage-causes:
     - SKILL

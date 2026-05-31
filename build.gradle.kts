@@ -41,7 +41,7 @@ repositories {
     maven("https://repo.tabooproject.org/repository/releases")
 }
 tasks.withType<Jar> {
-    destinationDirectory = file("F:\\minecraft\\haider\\server\\server-main\\plugins")
+    destinationDirectory.set(file("F:\\minecraft\\haider\\server\\server-main\\plugins"))
 }
 dependencies {
 
