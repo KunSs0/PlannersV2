@@ -69,9 +69,9 @@ class ImmutableSkill(config: Configuration) : Unique {
         fun decode(section: ConfigurationSection): Hook
     }
 
-    /** 懒加载 hooks，首次访问时遍历 YAML hooks.* 并用注册的 Decoder 解码 */
+    /** 懒加载 hooks，首次访问时遍历 YAML __option__.hook.* 并用注册的 Decoder 解码 */
     val hooks: Map<String, Hook> by lazy {
-        val section = config.getConfigurationSection("hooks")
+        val section = config.getConfigurationSection("__option__.hook")
         if (section == null) {
             emptyMap<String, Hook>()
         } else {
