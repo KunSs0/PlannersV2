@@ -12,10 +12,17 @@ enum class ExecutableResult() {
     /* 结束于事件 */
     CANCEL_WITH_EVENT,
 
+    /* 被 SkillInputExecHook 接管 */
+    INTERCEPTED,
+
     /* 成功 */
     SUCCESS;
 
     companion object {
+
+        /** 最近一次 INTERCEPTED 的原因 */
+        var lastInterceptCause: String = ""
+            private set
 
         fun cooling() = ExecutableResult.COOLING
 
@@ -24,6 +31,11 @@ enum class ExecutableResult() {
         fun successful() = ExecutableResult.SUCCESS
 
         fun cancelledWithEvent() = ExecutableResult.CANCEL_WITH_EVENT
+
+        fun intercepted(cause: String): ExecutableResult {
+            lastInterceptCause = cause
+            return ExecutableResult.INTERCEPTED
+        }
 
     }
 
