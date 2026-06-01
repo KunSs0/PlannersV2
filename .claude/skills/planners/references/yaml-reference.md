@@ -63,20 +63,118 @@ variables:
 
 ## 职业配置 (job/*.yml)
 
+### 完整字段
+
 ```yaml
 __option__:
-  name: 战士
-  skill:                          # 该职业包含的技能 ID 列表
-    - sword-slash
-    - blade-storm
-  variables:                      # 职业级变量（同技能变量系统）
+  name: 战士                       # 必填，职业显示名
+  skill:                           # 必填，该职业包含的技能 ID 列表
+    - slash
+    - charge
+    - shield_bash
+  variables:                       # 可选，职业级变量（JS 表达式，level=职业等级）
     atkBonus: "level * 2"
+    defBonus: "10"
   hook:
-    attributes:                   # 职业级属性（Map 结构）
+    attributes:                    # 可选，职业级属性（Map 结构，值为 JS 表达式）
       STR: "10 + level * 2"
+      MAX_HEALTH: "level * 20"
 ```
 
-玩家选择职业后，其下所有 skill 自动创建 PlayerSkill 实例。
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `name` | 是 | 职业显示名 |
+| `skill` | 是 | 技能 ID 列表，引用 `skill/*.yml` 文件名 |
+| `variables` | 否 | 职业级变量，JS 表达式，`level` = 职业等级 |
+| `hook.attributes` | 否 | 职业级属性加成，key=属性名，value=JS 表达式 |
+
+### 职业与路由/技能树的绑定关系
+
+```
+router/*.yml (ImmutableRouter)
+  ├── __option__.originate → 起始职业 ID（= job 文件名）
+  └── <route-id>:           → 路由节点（ID 即职业 ID）
+        ├── skill.tree      → 绑定的 SkillTree ID（→ skilltree/*.yml）
+        └── branch          → 可转职的子职业 ID 列表
+
+job/*.yml (ImmutableJob)
+  └── __option__.skill[]    → 该职业可用的技能 ID 列表
+
+skilltree/*.yml (ImmutableSkillTree)
+  └── nodes.<skill-id>      → 每个技能的逐级学习条件 + graph 前置依赖
+```
+
+**关键规则**：
+- `router` 文件名 = ImmutableRouter ID
+- `router` 中每个路由节点 key = route ID = job 文件名（= ImmutableJob ID）
+- `router.__option__.originate` = 起始职业 ID（玩家初次选择时获得）
+- 每个 route 节点的 `skill.tree` 绑定一个 SkillTree，控制技能学习/升级条件
+- job 的 `skill` 列表声明该职业"拥有"哪些技能，但玩家需要通过 SkillTree 学习后才能使用
+
+### 玩家选择职业的运行时流程
+
+```
+1. /pl route open → PlayerRouterSelectUI（列出所有 Router）
+2. 玩家点击 → getOriginate() → 获取起始 ImmutableRoute
+3. PlayerSetRouteEvent.Pre（可取消）
+4. Database.createPlayerJob(template, parentId=-1, route)
+   → INSERT route 表（user, router, parent=-1, route）
+   → 创建 PlayerRoute 实例
+5. template.route = newRoute
+   → 创建/加载 PlayerRouter（等级+经验）
+   → 异步写入数据库
+6. PlayerSetRouteEvent.Post
+```
+
+### PlayerRoute 内部结构
+
+选择职业后，`PlayerRoute` 提供运行时能力：
+
+| 方法/属性 | 说明 |
+|-----------|------|
+| `getJob()` | 返回 ImmutableJob，可访问 name/variables/skills |
+| `skillTree` | 返回 SkillTree 内部类，提供 learn()/upgrade()/canLearn()/canUpgrade() |
+| `getImmutableSkillValues()` | 该职业下所有 ImmutableSkill（从 Registries.SKILL 过滤） |
+| `getRegisteredSkill()` | 玩家已学的 PlayerSkill Map |
+| `skillPointsCurrent` | 当前可用技能点 |
+| `getBranches()` | 可转职的子职业列表 |
+| `getVariables()` | 代理到 job.getVariables() |
+
+### 转职流程
+
+```
+1. /pl route transfer → PlayerRouteTransferUI
+2. 显示当前 route.getBranches()（转职分支列表）
+3. 玩家选择目标 → 校验 condition.cost（如金币、等级）
+4. Database.createPlayerJob(template, parentId=旧route.bindingId, 新route)
+   → parentId 链接到旧路线，形成职业路径链
+5. template.route = newRoute
+   → PlayerRouter 保留（等级经验继承）
+6. PlayerSetRouteEvent.Post
+```
+
+**转职条件**在 router YAML 的 route 节点下定义：
+```yaml
+blade-master:
+  condition:
+    cost:
+      if: "getBalance() >= 500"    # JS 条件
+      message: "\"需要500金币\""    # 失败提示
+      post: "takeMoney(500)"       # 成功后执行
+```
+
+### Job 属性收集机制
+
+`HookAttributeSource`（priority=5）在 `AttributeProxy.sync(entity)` 时自动收集：
+
+```
+1. 获取 template.route → PlayerRoute → ImmutableJob
+2. 遍历 job.hook.attributes，对每个 key→expr 用 JS eval 求值
+3. 遍历已学技能的 skill.hook.attributes，同名 key 累加
+4. 返回 Map<String, Double> → 汇入 AttributeProxy 管道
+```
+
+JS eval 时可用的上下文变量：`level`（职业等级）、`sender`（实体）、`profile`（PlayerTemplate）。
 
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: planners-skill
+name: planners
 description: 编写 Planners Bukkit RPG 插件技能脚本和配置的完整指南。当需要创建/修改技能 YAML 配置、编写技能 JS 脚本、理解技能释放流程与 API、配置职业/路由/技能树、设置属性系统、使用命令或事件时触发。涵盖所有 YAML 结构、JS API、按键背包系统、延迟释放、外部桥接、冷却/法力/等级系统。
 ---
 
@@ -246,16 +246,34 @@ getSkillByKey(template, keyId) → PlayerSkill?
 
 ## 五、职业与路由
 
+### 概念关系
+
+```
+Router (职业系)
+  ├── originate → 起始 Job（玩家首次选择）
+  └── Route 节点（= Job ID）
+        ├── skill.tree → SkillTree（技能学习/升级条件）
+        └── branch → 可转职的子 Job
+
+Job (职业)
+  └── skill[] → 该职业拥有的技能 ID 列表
+
+SkillTree (技能树)
+  └── nodes.<skill-id>.lv-N → 逐级学习条件 + graph 前置依赖
+```
+
+**关键区别**：Job 声明"拥有哪些技能"，SkillTree 控制"如何学习/升级这些技能"。
+
 ### 职业 (job/*.yml)
 
 ```yaml
 __option__:
   name: 战士
-  skill: [slash, charge]          # 技能 ID 列表
-  variables:
+  skill: [slash, charge]          # 技能 ID 列表（必填）
+  variables:                      # 职业级变量（可选，level=职业等级）
     atkBonus: "level * 2"
   hook:
-    attributes:
+    attributes:                   # 职业级属性（可选，JS 表达式）
       STR: "10 + level * 2"
 ```
 
@@ -264,22 +282,36 @@ __option__:
 ```yaml
 __option__:
   name: "战士系"
-  originate: swordsman            # 起始职业
+  originate: swordsman            # 起始职业 ID（= job 文件名）
   algorithm:
     level: def0                   # 经验算法 ID（→ module/level/*.yml）
 
-swordsman:
+swordsman:                        # 路由节点（key = 职业 ID）
   skill:
     tree: warrior_vanguard        # 技能树 ID（→ skilltree/*.yml）
   branch: [blade-master, grand-master]
 
 blade-master:
-  condition:
+  condition:                      # 转职条件
     cost:
       if: "getBalance() >= 500"
       message: "\"需要500金币\""
       post: "takeMoney(500)"
 ```
+
+### 玩家选择职业流程
+
+```
+/pl route open → Router 选择 UI → 点击
+  → PlayerSetRouteEvent.Pre（可取消）
+  → Database 创建 PlayerRoute（parentId=-1 根职业）
+  → template.route = newRoute
+    → 创建 PlayerRouter（等级/经验）
+    → 绑定 SkillTree（后续 learn/upgrade 依赖此树）
+  → PlayerSetRouteEvent.Post
+```
+
+选择职业后，`PlayerRoute` 提供 `skillTree.learn()` / `skillTree.upgrade()` / `getBranches()` 等运行时能力。转职时 `parentId` 链接旧路线形成职业路径链，等级经验继承。
 
 ### 等级算法 (module/level/*.yml)
 
@@ -292,6 +324,8 @@ def0:
     level <= 20 ? level * 600 :
     level * 3000
 ```
+
+> 完整职业配置指南（字段表、绑定关系、运行时流程、转职、属性收集）参见 `references/yaml-reference.md#职业配置-jobyml`
 
 ---
 
@@ -429,8 +463,16 @@ resources/
 
 | 文档 | 内容 |
 |------|------|
-| `references/yaml-reference.md` | 完整 YAML 结构（skill/job/router/skilltree/state/action/module） |
+| `references/yaml-reference.md` | 完整 YAML 结构（skill/job/router/skilltree/state/action/module）+ 职业配置完整指南 |
 | `references/js-api.md` | 完整 JS API（30+ 函数、Finder、target 规则） |
 | `references/events.md` | 完整事件列表（技能/玩家/背包/状态，含可取消说明） |
 | `references/commands.md` | 完整命令树（28 条含补全） |
 | `references/config-reference.md` | 完整 config.yml 参考（12 配置块 + 目录结构 + UI 列表） |
+
+### 场景配置指南
+
+| 文档 | 适用场景 |
+|------|----------|
+| `references/scenario-skill.md` | 配置/查看/修改技能 — YAML 完整字段、图标模板、When 条件变量、被动/光环/投射模式 |
+| `references/scenario-skilltree.md` | 配置/查看/修改技能树 — 节点条件、graph 前置依赖、内置条件类型、自定义条件、学习/升级流程 |
+| `references/scenario-router.md` | 配置/查看/修改职业树 — Router/Route 结构、转职条件、职业路径链、经验算法绑定 |
