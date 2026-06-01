@@ -8,3 +8,26 @@ def0:
     level <= 40 ? level * 1200 :
     level <= 50 ? level * 1600 :
     level * 3000
+  # 到达指定等级时执行的回调脚本
+  # 可用变量:
+  #   sender - 玩家对象
+  #   profile - 玩家档案
+  #   player - 玩家对象
+  #   playerName - 玩家名
+  #   uuid - 玩家 UUID
+  #   level - 当前到达等级
+  #   from - 原等级
+  #   to - 本次最终等级
+  # 普通 String 格式按控制台指令执行, 支持 {player}/{uuid}/{level}/{from}/{to} 占位符
+  # 示例:
+  # callbacks:
+  #   2: 'say {player} 到达 {level} 级'
+  #   3: |-
+  #     js:
+  #       player.sendMessage("你升级了")
+  #   5:
+  #     - 'give {player} diamond 1'
+  #     - |-
+  #       js:
+  #         player.sendMessage("等级奖励已发放")
+  callbacks: {}

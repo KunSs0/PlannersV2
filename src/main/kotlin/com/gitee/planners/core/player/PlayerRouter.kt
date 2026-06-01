@@ -20,7 +20,7 @@ class PlayerRouter(
     val router: ImmutableRouter
         get() = Registries.ROUTER.getOrNull(routerId) ?: error("Could not find router with id '$routerId'")
 
-    private val algorithm: Algorithm?
+    val algorithm: Algorithm?
         get() = router.algorithmLevel ?: AlgorithmLevel.default
 
     var level = initialLevel
