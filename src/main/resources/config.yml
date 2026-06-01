@@ -12,49 +12,47 @@ settings:
   # 条件定义（供技能树/转职/EC等引用）
   condition:
     player_lv:
-      exper: "player.level >= props.min"
+      exper: "profile.getLevel() >= props.min"
       props:
         min: 1
       hint: "需要等级{props.min}"
 
     need_skill:
-      exper: "player.getSkillLevel(props.skillId) >= props.lv"
+      exper: "profile.getRegisteredSkillOrNull(props.skillId) != null && profile.getRegisteredSkillOrNull(props.skillId).getLevel() >= props.lv"
       props:
         skillId: ""
         lv: 1
       hint: "需要{props.skillId} Lv{props.lv}"
 
     consume_sp:
-      exper: "player.availablePoints() >= props.amount"
+      exper: "route != null && route.getSkillPointsCurrent() >= props.amount"
       props:
         amount: 0
       hint: "技能点不足"
-      consume: "player.takePoints(props.amount)"
+      consume: "route.takeSkillPoints(props.amount)"
 
     is_warrior:
-      exper: "player.getJob() == 'warrior'"
+      exper: "route != null && route.getJob().getId() == 'warrior'"
       props: {}
       hint: "需要战士职业"
 
     is_mage:
-      exper: "player.getJob() == 'mage'"
+      exper: "route != null && route.getJob().getId() == 'mage'"
       props: {}
       hint: "需要法师职业"
 
     need_coin:
-      exper: "player.currency() >= props.amount"
+      exper: "false"
       props:
         amount: 0
-      hint: "金币不足{props.amount}"
-      consume: "player.takeCurrency(props.amount)"
+      hint: "金币条件未实现"
 
     need_item:
-      exper: "player.hasItem(props.itemId, props.count)"
+      exper: "false"
       props:
         itemId: ""
         count: 1
-      hint: "需要{props.itemId} x{props.count}"
-      consume: "player.takeItem(props.itemId, props.count)"
+      hint: "物品条件未实现"
 
   # 技能点配置
   skill-points:
