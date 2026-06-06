@@ -8,6 +8,7 @@ import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
+import taboolib.common.platform.function.warning
 import taboolib.common.util.asList
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
@@ -129,6 +130,11 @@ class ImmutableSkill(config: Configuration) : Unique {
                 if (session.hasFunction("main")) {
                     session.invokeFunction("main")
                 } else null
+            } catch (e: Throwable) {
+                warning("[Skill] 技能脚本执行异常: $id")
+                warning("[Skill] ${e.javaClass.simpleName}: ${e.message}")
+                e.printStackTrace()
+                null
             } finally {
                 session.close()
                 ScriptContext.clear()
