@@ -36,6 +36,7 @@ public final class ScriptFunctionRegistry {
         EconomyFunctions.register();
         AttributeDriverFunctions.register();
         SkillPointsFunctions.register();
+        VariableFunctions.register();
 
         // ---- 可选依赖 (缺失时跳过) ----
         tryRegister("MythicMobs", MythicMobsFunctions::register);

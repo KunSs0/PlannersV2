@@ -16,5 +16,5 @@ __option__:
 action: |
   function main() {
     tell("&a钢铁意志 Lv" + level)
-    setCooldown(skill, skill.variables.cooldown)
+    setCooldown(skill, getVar("cooldown"))
   }

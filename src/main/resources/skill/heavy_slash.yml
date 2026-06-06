@@ -14,5 +14,5 @@ __option__:
 action: |
   function main() {
     tell("&c释放重斩 Lv" + level)
-    setCooldown(skill, skill.variables.cooldown)
+    setCooldown(skill, getVar("cooldown"))
   }

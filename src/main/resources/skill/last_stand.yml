@@ -15,5 +15,5 @@ __option__:
 action: |
   function main() {
     tell("&6绝境求生触发")
-    setCooldown(skill, skill.variables.cooldown)
+    setCooldown(skill, getVar("cooldown"))
   }

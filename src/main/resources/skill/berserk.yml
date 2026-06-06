@@ -16,5 +16,5 @@ __option__:
 action: |
   function main() {
     tell("&4狂暴 Lv" + level)
-    setCooldown(skill, skill.variables.cooldown)
+    setCooldown(skill, getVar("cooldown"))
   }

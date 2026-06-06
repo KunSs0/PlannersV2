@@ -14,6 +14,6 @@ __option__:
 action: |
   function main() {
     tell("&a释放斩击 Lv" + level)
-    damage(sender, target, skill.variables.damage)
-    setCooldown(skill, skill.variables.cooldown)
+    damage(sender, target, getVar("damage"))
+    setCooldown(skill, getVar("cooldown"))
   }
