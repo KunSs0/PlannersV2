@@ -7,12 +7,15 @@ import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
-import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.core.skill.ExecutableResult
-import com.gitee.planners.core.skill.cooler.Cooler
+import com.gitee.planners.core.skill.precondition.CastPreCondition
+import com.gitee.planners.core.skill.precondition.CastPreConditionFeedback
+import com.gitee.planners.core.skill.precondition.CastPreConditionResult
+import com.gitee.planners.core.skill.precondition.DefaultCastPreConditionFeedback
+import com.gitee.planners.core.skill.precondition.builtin.CooldownPreCondition
+import com.gitee.planners.core.skill.precondition.builtin.MagicPointPreCondition
 import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
-import taboolib.common5.cint
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -20,12 +23,42 @@ object PlannersAPI {
 
     private val skillInputExecHooks = CopyOnWriteArrayList<SkillInputExecHook>()
 
+    /** 释放前条件列表 */
+    private val castPreConditions = CopyOnWriteArrayList<CastPreCondition>()
+
+    /** 释放前条件失败时的反馈实现 */
+    private var castPreConditionFeedback: CastPreConditionFeedback = DefaultCastPreConditionFeedback()
+
+    init {
+        // 注册内置释放前条件
+        castPreConditions.add(CooldownPreCondition())
+        castPreConditions.add(MagicPointPreCondition())
+    }
+
     fun registerSkillInputExecHook(hook: SkillInputExecHook) {
         skillInputExecHooks.add(hook)
     }
 
     /**
-     * 释放技能
+     * 注册释放前条件。
+     *
+     * @param condition 条件实现
+     */
+    fun registerCastPreCondition(condition: CastPreCondition) {
+        castPreConditions.add(condition)
+    }
+
+    /**
+     * 替换释放前条件失败时的反馈实现。
+     *
+     * @param feedback 反馈实现
+     */
+    fun setCastPreConditionFeedback(feedback: CastPreConditionFeedback) {
+        castPreConditionFeedback = feedback
+    }
+
+    /**
+     * 释放技能（无冷却版，直接执行脚本）。
      *
      * @param player 玩家
      * @param skill 技能
@@ -88,7 +121,7 @@ object PlannersAPI {
     /**
      * 释放技能，会记录冷却。
      *
-     * 流程: Check → CD检查 → MP检查 → Pre → (interceptor?) → execute → Post
+     * 流程: Check事件 → 释放前条件校验(按priority排序) → Pre事件 → 消耗资源 → (interceptor?) → execute → Post
      *
      * @param player 玩家
      * @param skill 技能
@@ -100,34 +133,29 @@ object PlannersAPI {
             return ExecutableResult.cancelledWithEvent()
         }
 
-        // ② CD 检查
-        if (Cooler.INSTANCE.get(player, skill) > 0L) {
-            return ExecutableResult.cooling()
-        }
-
         val options = newOptions(player, skill)
 
-        // ③ MP 检查
-        val magicPoint = skill.getVariableOrNull("mp")?.run(options)?.getNow(null)?.cint
-        if (magicPoint != null && magicPoint > player.plannersTemplate.magicPoint) {
-            return ExecutableResult.magicPointInsufficient()
+        // ② 释放前条件校验（按 priority 升序）
+        val sortedConditions = castPreConditions.sortedBy { it.priority }
+        for (condition in sortedConditions) {
+            val result = condition.verify(player, skill, options)
+            if (result is CastPreConditionResult.Failure) {
+                castPreConditionFeedback.onFailed(player, result)
+                return ExecutableResult.preConditionFailed(result)
+            }
         }
 
-        // ④ Pre 事件：最后确认
+        // ③ Pre 事件：最后确认
         if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
 
-        // ⑤ 锁定资源
-        val cooldown = skill.getVariableOrNull("cooldown")?.run(options)?.getNow(null)?.cint
-        if (cooldown != null) {
-            Cooler.INSTANCE.set(player, skill, cooldown)
-        }
-        if (magicPoint != null) {
-            player.plannersTemplate.magicPoint -= magicPoint
+        // ④ 消耗资源（按 priority 升序）
+        for (condition in sortedConditions) {
+            condition.consume(player, skill, options)
         }
 
-        // ⑥ 全局 SkillInputExecHook
+        // ⑤ 全局 SkillInputExecHook
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
             val ctx = SkillInputExec.Context(player, skill) {
@@ -139,7 +167,7 @@ object PlannersAPI {
             return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
         }
 
-        // ⑦ execute + Post
+        // ⑥ execute + Post
         skill.immutable.execute(ProxyTarget.BukkitEntity(player), skill.level)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()

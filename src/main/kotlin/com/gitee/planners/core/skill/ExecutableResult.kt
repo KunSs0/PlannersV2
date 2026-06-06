@@ -1,41 +1,43 @@
 package com.gitee.planners.core.skill
 
+import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 
-enum class ExecutableResult() {
+/**
+ * 技能释放结果。
+ */
+sealed class ExecutableResult(val success: Boolean) {
 
-    /* 冷却中 */
-    COOLING,
+    /** 释放成功 */
+    object Success : ExecutableResult(true)
 
-    /* 魔法点不足 */
-    MAGICPOINT_INSUFFICIENT,
+    /** 冷却中 */
+    object Cooling : ExecutableResult(false)
 
-    /* 结束于事件 */
-    CANCEL_WITH_EVENT,
+    /** 魔法值不足（向后兼容） */
+    object MagicPointInsufficient : ExecutableResult(false)
 
-    /* 被 SkillInputExecHook 接管 */
-    INTERCEPTED,
+    /** 结束于事件 */
+    object CancelledWithEvent : ExecutableResult(false)
 
-    /* 成功 */
-    SUCCESS;
+    /** 被 SkillInputExecHook 接管 */
+    class Intercepted(val cause: String) : ExecutableResult(false)
+
+    /** 释放前条件校验失败 */
+    class PreConditionFailed(val failure: CastPreConditionResult.Failure) : ExecutableResult(false)
 
     companion object {
 
-        /** 最近一次 INTERCEPTED 的原因 */
-        var lastInterceptCause: String = ""
-            private set
+        fun cooling() = Cooling
 
-        fun cooling() = ExecutableResult.COOLING
+        fun magicPointInsufficient() = MagicPointInsufficient
 
-        fun magicPointInsufficient() = ExecutableResult.MAGICPOINT_INSUFFICIENT
+        fun successful() = Success
 
-        fun successful() = ExecutableResult.SUCCESS
+        fun cancelledWithEvent() = CancelledWithEvent
 
-        fun cancelledWithEvent() = ExecutableResult.CANCEL_WITH_EVENT
+        fun intercepted(cause: String) = Intercepted(cause)
 
-        fun intercepted(cause: String): ExecutableResult {
-            lastInterceptCause = cause
-            return ExecutableResult.INTERCEPTED
-        }
+        fun preConditionFailed(failure: CastPreConditionResult.Failure) = PreConditionFailed(failure)
 
     }
 
