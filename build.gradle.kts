@@ -69,6 +69,8 @@ dependencies {
     compileOnly("com.mojang:datafixerupper:4.0.26")
     compileOnly("org.graalvm.polyglot:polyglot:24.1.1")
     compileOnly("org.graalvm.js:js-language:24.1.1")
+    testImplementation("org.graalvm.polyglot:polyglot:24.1.1")
+    testImplementation("org.graalvm.js:js-language:24.1.1")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 }
@@ -76,6 +78,12 @@ dependencies {
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
+
+task("runGraalTest", JavaExec::class) {
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("GraalJsThreadTest")
+}
+
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions {

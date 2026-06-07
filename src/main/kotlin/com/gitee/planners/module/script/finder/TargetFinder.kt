@@ -7,6 +7,7 @@ import com.gitee.planners.api.job.target.ProxyTargetContainer
 import org.bukkit.Location
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
+import taboolib.common.util.runSync
 
 /**
  * 链式目标查找器 - 立即执行模式
@@ -35,11 +36,13 @@ class TargetFinder(
     // === 选择器 (立即执行，累加结果) ===
 
     fun range(r: Double): TargetFinder {
-        val world = origin.world ?: return this
-        val nearby = world.getNearbyEntities(origin, r, r, r)
-            .filterIsInstance<LivingEntity>()
-            .filter { it.location.distance(origin) <= r }
-            .filter { includeSelf || sender == null || it.uniqueId != sender!!.uniqueId }
+        val nearby = runSync {
+            val world = origin.world ?: return@runSync emptyList()
+            world.getNearbyEntities(origin, r, r, r)
+                .filterIsInstance<LivingEntity>()
+                .filter { it.location.distance(origin) <= r }
+                .filter { includeSelf || sender == null || it.uniqueId != sender!!.uniqueId }
+        }
         entities.addAll(nearby)
         return this
     }
@@ -63,13 +66,15 @@ class TargetFinder(
      * @param yaw 可选方向覆盖，默认使用 origin 的 yaw
      */
     fun sector(radius: Double, angle: Double, yaw: Float? = null): TargetFinder {
-        val world = origin.world ?: return this
-        val loc = origin.clone()
-        if (yaw != null) loc.yaw = yaw
-        val sampling = world.getNearbyEntities(loc, radius, radius, radius)
-            .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
-        val found = SectorNearestEntityFinder(loc, angle, radius, loc.yaw, sampling).request()
-            .filterIsInstance<LivingEntity>()
+        val found = runSync {
+            val world = origin.world ?: return@runSync emptyList()
+            val loc = origin.clone()
+            if (yaw != null) loc.yaw = yaw
+            val sampling = world.getNearbyEntities(loc, radius, radius, radius)
+                .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
+            SectorNearestEntityFinder(loc, angle, radius, loc.yaw, sampling).request()
+                .filterIsInstance<LivingEntity>()
+        }
         entities.addAll(found)
         return this
     }

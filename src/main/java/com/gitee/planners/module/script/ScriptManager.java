@@ -37,15 +37,22 @@ public final class ScriptManager {
 
     /**
      * 执行脚本
+     * <p>
+     * 保存并恢复调用方的 ScriptContext，避免嵌套调用（如变量求值）清掉外层上下文。
      */
     public static Object eval(String source, ScriptOptions options) {
         ensureInit();
+        Map<String, Object> previous = ScriptContext.getCurrent();
         Map<String, Object> variables = options.getVariables();
         ScriptContext.setCurrent(variables);
         try {
             return engine.eval(source, variables);
         } finally {
-            ScriptContext.clear();
+            if (previous != null) {
+                ScriptContext.setCurrent(previous);
+            } else {
+                ScriptContext.clear();
+            }
         }
     }
 

@@ -7,7 +7,10 @@ import com.gitee.planners.module.script.ScriptContext;
 
 import org.bukkit.Location;
 import com.gitee.planners.api.job.target.ProxyTarget;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+
+import java.util.Map;
 
 /**
  * TargetFinder 入口函数
@@ -28,12 +31,18 @@ public final class TargetFinderFunctions {
             Object originArg = ScriptArgs.get(args, 0);
             Location origin = resolveLocation(originArg);
             Object senderObj = ScriptContext.getSender();
-            LivingEntity sender = senderObj instanceof LivingEntity ? (LivingEntity) senderObj : null;
+            LivingEntity sender = resolveLivingEntity(senderObj);
+            if (origin == null) {
+                Map<String, Object> context = ScriptContext.getCurrent();
+                if (context != null) {
+                    origin = resolveLocation(context.get("origin"));
+                }
+            }
             if (origin == null) {
                 if (sender != null) {
                     origin = sender.getLocation();
                 } else {
-                    throw new IllegalStateException("Cannot resolve origin: pass a Location or ensure sender is a LivingEntity");
+                    throw new IllegalStateException("Cannot resolve origin: pass a Location, set context origin, or ensure sender is a LivingEntity");
                 }
             }
             return new TargetFinder(origin, sender);
@@ -52,6 +61,17 @@ public final class TargetFinderFunctions {
         }
         if (arg instanceof LivingEntity) {
             return ((LivingEntity) arg).getLocation();
+        }
+        return null;
+    }
+
+    private static LivingEntity resolveLivingEntity(Object arg) {
+        if (arg instanceof LivingEntity) {
+            return (LivingEntity) arg;
+        }
+        if (arg instanceof ProxyTarget.BukkitEntity) {
+            Entity entity = ((ProxyTarget.BukkitEntity) arg).getInstance();
+            return entity instanceof LivingEntity ? (LivingEntity) entity : null;
         }
         return null;
     }
