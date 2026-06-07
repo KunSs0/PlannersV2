@@ -1,6 +1,7 @@
 package com.gitee.planners.api.damage
 
 import org.bukkit.entity.LivingEntity
+import taboolib.common.util.runSync
 import taboolib.platform.util.setMeta
 
 /**
@@ -21,22 +22,24 @@ class ProxyDamage private constructor(
 
     /** 执行伤害 */
     fun execute(): DamageResult {
-        if (isCancelled) return DamageResult.CANCELLED
-        if (!target.isValid) return DamageResult.CANCELLED
+        return runSync {
+            if (isCancelled) return@runSync DamageResult.CANCELLED
+            if (!target.isValid) return@runSync DamageResult.CANCELLED
 
-        // 设置击杀者标记
-        if (source != null && source != target && target.health <= finalDamage) {
-            target.setMeta("killer", source)
+            // 设置击杀者标记
+            if (source != null && source != target && target.health <= finalDamage) {
+                target.setMeta("killer", source)
+            }
+
+            // 执行伤害
+            if (source != null) {
+                target.damage(finalDamage, source)
+            } else {
+                target.damage(finalDamage)
+            }
+
+            DamageResult.SUCCESS
         }
-
-        // 执行伤害
-        if (source != null) {
-            target.damage(finalDamage, source)
-        } else {
-            target.damage(finalDamage)
-        }
-
-        return DamageResult.SUCCESS
     }
 
     override fun toString(): String {

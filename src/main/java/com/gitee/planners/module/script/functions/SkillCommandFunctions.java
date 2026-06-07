@@ -8,6 +8,7 @@ import com.gitee.planners.api.job.target.ProxyTargetContainer;
 import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
 import org.bukkit.entity.LivingEntity;
+import taboolib.common.util.SyncExecutorKt;
 
 /**
  * 技能伤害/治疗全局函数
@@ -88,12 +89,15 @@ public final class SkillCommandFunctions {
 
     @SuppressWarnings("deprecation")
     private static void applyHeal(double amount, ProxyTargetContainer targets) {
-        for (ProxyTarget<?> t : targets) {
-            if (!(t instanceof ProxyTarget.BukkitEntity)) continue;
-            Object instance = ((ProxyTarget.BukkitEntity) t).getInstance();
-            if (!(instance instanceof LivingEntity)) continue;
-            LivingEntity entity = (LivingEntity) instance;
-            entity.setHealth(Math.min(entity.getHealth() + amount, entity.getMaxHealth()));
-        }
+        SyncExecutorKt.runSync(() -> {
+            for (ProxyTarget<?> t : targets) {
+                if (!(t instanceof ProxyTarget.BukkitEntity)) continue;
+                Object instance = ((ProxyTarget.BukkitEntity) t).getInstance();
+                if (!(instance instanceof LivingEntity)) continue;
+                LivingEntity entity = (LivingEntity) instance;
+                entity.setHealth(Math.min(entity.getHealth() + amount, entity.getMaxHealth()));
+            }
+            return null;
+        });
     }
 }

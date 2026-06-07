@@ -5,7 +5,9 @@ import com.gitee.planners.api.job.target.ProxyTarget;
 import com.gitee.planners.api.job.target.ProxyTargetContainer;
 import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.LivingEntity;
+import taboolib.platform.BukkitPlugin;
 
 /**
  * 生命值操作全局函数
@@ -27,9 +29,9 @@ public final class HealthFunctions {
         GlobalFunctions.register("healthAdd", args -> {
             double amount = ScriptArgs.getDouble(args, 0);
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 1, LeastType.SENDER);
-            forEachLiving(targets, entity -> {
-                entity.setHealth(Math.min(entity.getHealth() + amount, entity.getMaxHealth()));
-            });
+            runSync(() -> forEachLiving(targets, entity ->
+                    entity.setHealth(Math.min(entity.getHealth() + amount, entity.getMaxHealth()))
+            ));
             return null;
         });
 
@@ -37,9 +39,9 @@ public final class HealthFunctions {
         GlobalFunctions.register("healthSet", args -> {
             double amount = ScriptArgs.getDouble(args, 0);
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 1, LeastType.SENDER);
-            forEachLiving(targets, entity -> {
-                entity.setHealth(Math.max(0.0, Math.min(amount, entity.getMaxHealth())));
-            });
+            runSync(() -> forEachLiving(targets, entity ->
+                    entity.setHealth(Math.max(0.0, Math.min(amount, entity.getMaxHealth())))
+            ));
             return null;
         });
 
@@ -47,11 +49,26 @@ public final class HealthFunctions {
         GlobalFunctions.register("healthTake", args -> {
             double amount = ScriptArgs.getDouble(args, 0);
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 1, LeastType.SENDER);
-            forEachLiving(targets, entity -> {
-                entity.setHealth(Math.max(entity.getHealth() - amount, 0.0));
-            });
+            runSync(() -> forEachLiving(targets, entity ->
+                    entity.setHealth(Math.max(entity.getHealth() - amount, 0.0))
+            ));
             return null;
         });
+    }
+
+    private static void runSync(Runnable action) {
+        if (Bukkit.isPrimaryThread()) {
+            action.run();
+            return;
+        }
+        try {
+            Bukkit.getScheduler().callSyncMethod(BukkitPlugin.getInstance(), () -> {
+                action.run();
+                return null;
+            }).get();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to execute health operation on main thread", e);
+        }
     }
 
     private static void forEachLiving(ProxyTargetContainer targets, java.util.function.Consumer<LivingEntity> action) {
