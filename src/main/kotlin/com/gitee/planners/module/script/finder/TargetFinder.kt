@@ -1,13 +1,20 @@
 package com.gitee.planners.module.script.finder
 
+import com.gitee.planners.Planners
 import com.gitee.planners.api.common.util.SectorNearestEntityFinder
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.ProxyTargetContainer
 
 import org.bukkit.Location
+import org.bukkit.Particle
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import taboolib.common.util.runSync
+import kotlin.math.PI
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.sin
 
 /**
  * 链式目标查找器 - 立即执行模式
@@ -72,11 +79,57 @@ class TargetFinder(
             if (yaw != null) loc.yaw = yaw
             val sampling = world.getNearbyEntities(loc, radius, radius, radius)
                 .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
-            SectorNearestEntityFinder(loc, angle, radius, loc.yaw, sampling).request()
+            val result = SectorNearestEntityFinder(loc, angle, radius, loc.yaw, sampling).request()
                 .filterIsInstance<LivingEntity>()
+            if (Planners.sectorSelectorDebug) {
+                spawnSectorDebugParticles(loc, radius, angle)
+            }
+            result
         }
         entities.addAll(found)
         return this
+    }
+
+    private fun spawnSectorDebugParticles(origin: Location, radius: Double, angle: Double) {
+        val world = origin.world ?: return
+        val safeRadius = radius.coerceAtLeast(0.0)
+        if (safeRadius == 0.0) {
+            return
+        }
+        val particle = Planners.sectorSelectorDebugParticle.get()
+        val step = Planners.sectorSelectorDebugStep.coerceAtLeast(0.1)
+        val y = origin.y + Planners.sectorSelectorDebugYOffset
+        val halfAngle = angle.coerceIn(0.0, 360.0) / 2.0
+
+        for (edgeYaw in listOf(origin.yaw - halfAngle, origin.yaw + halfAngle)) {
+            val edgeSteps = ceil(safeRadius / step).toInt().coerceAtLeast(1)
+            for (i in 0..edgeSteps) {
+                val distance = minOf(i * step, safeRadius)
+                spawnParticle(world, particle, origin.x, y, origin.z, edgeYaw, distance)
+            }
+        }
+
+        val arcStepAngle = max(1.0, Math.toDegrees(step / safeRadius))
+        val arcSteps = ceil((halfAngle * 2.0) / arcStepAngle).toInt().coerceAtLeast(1)
+        for (i in 0..arcSteps) {
+            val offset = -halfAngle + (halfAngle * 2.0) * i / arcSteps
+            spawnParticle(world, particle, origin.x, y, origin.z, origin.yaw + offset, safeRadius)
+        }
+    }
+
+    private fun spawnParticle(
+        world: org.bukkit.World,
+        particle: Particle,
+        originX: Double,
+        originY: Double,
+        originZ: Double,
+        yaw: Double,
+        distance: Double
+    ) {
+        val radians = yaw / 180.0 * PI
+        val x = originX - sin(radians) * distance
+        val z = originZ + cos(radians) * distance
+        world.spawnParticle(particle, x, originY, z, 1, 0.0, 0.0, 0.0, 0.0)
     }
 
     // === 过滤器 (立即执行，修改结果集) ===

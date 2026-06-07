@@ -9,6 +9,14 @@ database:
     table: planners_v2
 
 settings:
+  debug:
+    selector:
+      sector:
+        # 开启后 finder().sector(...) 会用粒子绘制本次扇形选择范围
+        enable: false
+        particle: END_ROD
+        step: 0.5
+        y-offset: 0.15
   # 条件定义（供技能树/转职/EC等引用）
   condition:
     player_lv:

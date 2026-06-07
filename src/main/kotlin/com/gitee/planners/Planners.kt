@@ -9,6 +9,7 @@ import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.Particle
 import taboolib.common.platform.Platform
 import taboolib.common.platform.Plugin
 import taboolib.common.platform.function.adaptCommandSender
@@ -64,6 +65,25 @@ object Planners : Plugin() {
     val damageCauses = ConfigNodeTransfer<List<String>, List<String>> {
         this
     }
+
+    @ConfigNode("settings.debug.selector.sector.enable")
+    val sectorSelectorDebug = false
+
+    @ConfigNode("settings.debug.selector.sector.particle")
+    val sectorSelectorDebugParticle = ConfigNodeTransfer<String, Particle> {
+        try {
+            Particle.valueOf(uppercase().replace(".", "_").replace("-", "_"))
+        } catch (e: Exception) {
+            warning("Unknown sector selector debug particle: $this")
+            Particle.END_ROD
+        }
+    }
+
+    @ConfigNode("settings.debug.selector.sector.step")
+    val sectorSelectorDebugStep = 0.5
+
+    @ConfigNode("settings.debug.selector.sector.y-offset")
+    val sectorSelectorDebugYOffset = 0.15
 
     @ConfigNode("settings.skill-points.bonuses")
     val skillPointsBonuses = configNodeToMap { key, value ->

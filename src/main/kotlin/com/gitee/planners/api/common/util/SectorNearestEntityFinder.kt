@@ -17,15 +17,15 @@ class SectorNearestEntityFinder(origin: Location,val angle: Double,val radius: D
 
     fun isBoundingBoxInSector(boundingBox: BoundingBox): Boolean {
         val center = boundingBox.getCenter()
-        val centerAB = Vector(center.x - this.origin.x, center.y - this.origin.y, 0.0)
-        val distanceAB = hypot(centerAB.x, centerAB.y)
+        val centerAB = Vector(center.x - this.origin.x, 0.0, center.z - this.origin.z)
+        val distanceAB = hypot(centerAB.x, centerAB.z)
         if (distanceAB > this.radius) {
             return false
         }
         // 计算向量的角度
-        val angle = Math.toDegrees(atan2(centerAB.y, centerAB.x))
+        val angle = Math.toDegrees(atan2(-centerAB.x, centerAB.z))
 
-        // 将扇形方向转换为与X轴的角度差
+        // 将扇形方向转换为与 Minecraft yaw 一致的角度差
         val difference = normalizeYaw(angle.cfloat - this.direction)
 
         // 如果矩形中心与扇形中心的角度差在扇形开角度的一半之内，则认为碰撞
