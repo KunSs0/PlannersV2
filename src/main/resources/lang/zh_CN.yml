@@ -60,6 +60,10 @@ command-console-casted: "&fcasted {0}"
 command-backpack-switched: "&a已切换到: {0}"
 command-test: "&fTest."
 
+# ==================== 释放前条件 ====================
+precondition-cooldown: "&c技能冷却中"
+precondition-mp: "&c魔法值不足 ({current}/{required})"
+
 # ==================== 脚本语言 ====================
 script-sleep-main-thread: "&csleep() 不能在主线程调用，请确保技能配置 async: true"
 finder-unknown-entity-type: "未知实体类型: {0}"

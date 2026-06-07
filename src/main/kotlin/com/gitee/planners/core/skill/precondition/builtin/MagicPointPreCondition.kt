@@ -8,6 +8,7 @@ import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
 import taboolib.common5.cint
+import taboolib.platform.util.asLangText
 
 /**
  * 魔法值检查。
@@ -18,7 +19,9 @@ class MagicPointPreCondition : CastPreCondition {
 
     override val priority = 200
 
-    override val hint = "魔法值不足 ({current}/{required})"
+    override fun hint(player: Player, failure: CastPreConditionResult.Failure): String {
+        return player.asLangText("precondition-mp")
+    }
 
     override fun verify(player: Player, skill: PlayerSkill, options: ScriptOptions): CastPreConditionResult? {
         val cost = skill.getVariableOrNull("mp")?.run(options)?.getNow(null)?.cint

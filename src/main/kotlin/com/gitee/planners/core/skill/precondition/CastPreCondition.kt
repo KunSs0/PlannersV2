@@ -18,8 +18,14 @@ interface CastPreCondition {
     /** 执行顺序，越小越先执行 */
     val priority: Int
 
-    /** 条件不满足时的提示模板，支持 {key} 占位符 */
-    val hint: String
+    /**
+     * 条件不满足时的提示消息。
+     *
+     * @param player 触发失败的玩家
+     * @param failure 失败结果，携带上下文数据
+     * @return 提示消息，支持 {key} 占位符（由调用方替换）
+     */
+    fun hint(player: Player, failure: CastPreConditionResult.Failure): String
 
     /**
      * 校验条件。

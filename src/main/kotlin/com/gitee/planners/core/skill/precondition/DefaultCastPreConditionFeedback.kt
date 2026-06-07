@@ -8,7 +8,7 @@ import org.bukkit.entity.Player
 class DefaultCastPreConditionFeedback : CastPreConditionFeedback {
 
     override fun onFailed(player: Player, failure: CastPreConditionResult.Failure) {
-        var message = failure.condition.hint
+        var message = failure.condition.hint(player, failure)
         failure.context.forEach { (key, value) ->
             message = message.replace("{$key}", value.toString())
         }

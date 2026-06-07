@@ -7,6 +7,7 @@ import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
 import taboolib.common5.cint
+import taboolib.platform.util.asLangText
 
 /**
  * 冷却检查。
@@ -20,7 +21,9 @@ class CooldownPreCondition : CastPreCondition {
 
     override val priority = 100
 
-    override val hint = "技能冷却中"
+    override fun hint(player: Player, failure: CastPreConditionResult.Failure): String {
+        return player.asLangText("precondition-cooldown")
+    }
 
     override fun verify(player: Player, skill: PlayerSkill, options: ScriptOptions): CastPreConditionResult? {
         val remaining = Cooler.INSTANCE.get(player, skill)
