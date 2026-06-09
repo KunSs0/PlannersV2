@@ -81,6 +81,7 @@ class TargetFinder(
      * @param angle 扇形角度（度）
      * @param yaw 可选方向覆盖，默认使用 origin 的 yaw
      */
+    @JvmOverloads
     fun sector(radius: Double, angle: Double, yaw: Float? = null): TargetFinder {
         val found = runSync {
             val world = origin.world ?: return@runSync emptyList()
