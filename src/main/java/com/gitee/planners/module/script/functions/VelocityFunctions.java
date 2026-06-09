@@ -1,5 +1,6 @@
 package com.gitee.planners.module.script.functions;
 
+import com.gitee.planners.api.common.facing.EntityFacingProviders;
 import com.gitee.planners.api.job.target.LeastType;
 import com.gitee.planners.api.job.target.ProxyTarget;
 import com.gitee.planners.api.job.target.ProxyTargetContainer;
@@ -7,6 +8,7 @@ import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
 
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.util.Vector;
 
 /**
@@ -65,10 +67,16 @@ public final class VelocityFunctions {
             for (ProxyTarget<?> t : targets) {
                 if (t instanceof ProxyTarget.BukkitEntity) {
                     Entity entity = ((ProxyTarget.BukkitEntity) t).getInstance();
-                    Vector direction = entity.getLocation().getDirection();
-                    Vector velocity = direction.multiply(z)
+                    if (!(entity instanceof LivingEntity)) {
+                        continue;
+                    }
+                    float yaw = EntityFacingProviders.getFacingYaw((LivingEntity) entity);
+                    double radians = Math.toRadians(yaw);
+                    Vector forward = new Vector(-Math.sin(radians), 0.0, Math.cos(radians));
+                    Vector right = forward.clone().rotateAroundY(Math.PI / 2);
+                    Vector velocity = forward.multiply(z)
                             .add(new Vector(0.0, y, 0.0))
-                            .add(direction.clone().rotateAroundY(Math.PI / 2).multiply(x));
+                            .add(right.multiply(x));
                     entity.setVelocity(entity.getVelocity().add(velocity));
                 }
             }

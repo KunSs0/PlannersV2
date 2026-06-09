@@ -1,6 +1,7 @@
 package com.gitee.planners.module.script.finder
 
 import com.gitee.planners.Planners
+import com.gitee.planners.api.common.facing.EntityFacingProviders
 import com.gitee.planners.api.common.util.SectorNearestEntityFinder
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.ProxyTargetContainer
@@ -33,7 +34,8 @@ import kotlin.math.sin
  */
 class TargetFinder(
     private var origin: Location,
-    private var sender: LivingEntity? = null
+    private var sender: LivingEntity? = null,
+    private var facingYaw: Float? = null
 ) {
     private val entities: MutableSet<LivingEntity> = mutableSetOf()
     private var includeSelf: Boolean = false
@@ -58,6 +60,13 @@ class TargetFinder(
 
     fun origin(location: Location): TargetFinder {
         this.origin = location
+        this.facingYaw = location.yaw
+        return this
+    }
+
+    fun origin(entity: LivingEntity): TargetFinder {
+        this.origin = entity.location
+        this.facingYaw = EntityFacingProviders.getFacingYaw(entity)
         return this
     }
 
@@ -76,13 +85,13 @@ class TargetFinder(
         val found = runSync {
             val world = origin.world ?: return@runSync emptyList()
             val loc = origin.clone()
-            if (yaw != null) loc.yaw = yaw
+            val directionYaw = yaw ?: facingYaw ?: loc.yaw
             val sampling = world.getNearbyEntities(loc, radius, radius, radius)
                 .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
-            val result = SectorNearestEntityFinder(loc, angle, radius, loc.yaw, sampling).request()
+            val result = SectorNearestEntityFinder(loc, angle, radius, directionYaw, sampling).request()
                 .filterIsInstance<LivingEntity>()
             if (Planners.sectorSelectorDebug) {
-                spawnSectorDebugParticles(loc, radius, angle)
+                spawnSectorDebugParticles(loc, radius, angle, directionYaw)
             }
             result
         }
@@ -90,7 +99,7 @@ class TargetFinder(
         return this
     }
 
-    private fun spawnSectorDebugParticles(origin: Location, radius: Double, angle: Double) {
+    private fun spawnSectorDebugParticles(origin: Location, radius: Double, angle: Double, directionYaw: Float) {
         val world = origin.world ?: return
         val safeRadius = radius.coerceAtLeast(0.0)
         if (safeRadius == 0.0) {
@@ -101,7 +110,7 @@ class TargetFinder(
         val y = origin.y + Planners.sectorSelectorDebugYOffset
         val halfAngle = angle.coerceIn(0.0, 360.0) / 2.0
 
-        for (edgeYaw in listOf(origin.yaw - halfAngle, origin.yaw + halfAngle)) {
+        for (edgeYaw in listOf(directionYaw - halfAngle, directionYaw + halfAngle)) {
             val edgeSteps = ceil(safeRadius / step).toInt().coerceAtLeast(1)
             for (i in 0..edgeSteps) {
                 val distance = minOf(i * step, safeRadius)
@@ -113,7 +122,7 @@ class TargetFinder(
         val arcSteps = ceil((halfAngle * 2.0) / arcStepAngle).toInt().coerceAtLeast(1)
         for (i in 0..arcSteps) {
             val offset = -halfAngle + (halfAngle * 2.0) * i / arcSteps
-            spawnParticle(world, particle, origin.x, y, origin.z, origin.yaw + offset, safeRadius)
+            spawnParticle(world, particle, origin.x, y, origin.z, directionYaw + offset, safeRadius)
         }
     }
 

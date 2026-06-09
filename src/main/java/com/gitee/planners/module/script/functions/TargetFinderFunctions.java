@@ -1,5 +1,6 @@
 package com.gitee.planners.module.script.functions;
 
+import com.gitee.planners.api.common.facing.EntityFacingProviders;
 import com.gitee.planners.module.script.finder.TargetFinder;
 import com.gitee.planners.module.script.GlobalFunctions;
 import com.gitee.planners.module.script.ScriptArgs;
@@ -30,22 +31,32 @@ public final class TargetFinderFunctions {
         GlobalFunctions.register("finder", args -> {
             Object originArg = ScriptArgs.get(args, 0);
             Location origin = resolveLocation(originArg);
+            LivingEntity originEntity = resolveLivingEntity(originArg);
             Object senderObj = ScriptContext.getSender();
             LivingEntity sender = resolveLivingEntity(senderObj);
             if (origin == null) {
                 Map<String, Object> context = ScriptContext.getCurrent();
                 if (context != null) {
-                    origin = resolveLocation(context.get("origin"));
+                    Object contextOrigin = context.get("origin");
+                    origin = resolveLocation(contextOrigin);
+                    originEntity = resolveLivingEntity(contextOrigin);
                 }
             }
             if (origin == null) {
                 if (sender != null) {
                     origin = sender.getLocation();
+                    originEntity = sender;
                 } else {
                     throw new IllegalStateException("Cannot resolve origin: pass a Location, set context origin, or ensure sender is a LivingEntity");
                 }
             }
-            return new TargetFinder(origin, sender);
+            Float facingYaw = null;
+            if (originEntity != null) {
+                facingYaw = EntityFacingProviders.getFacingYaw(originEntity);
+            } else if (sender != null) {
+                facingYaw = EntityFacingProviders.getFacingYaw(sender);
+            }
+            return new TargetFinder(origin, sender, facingYaw);
         });
     }
 
