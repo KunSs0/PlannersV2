@@ -32,7 +32,7 @@ import kotlin.math.sin
  * var undead = finder().range(15).type("zombie,skeleton").build()
  * ```
  */
-class TargetFinder(
+class TargetFinder @JvmOverloads constructor(
     private var origin: Location,
     private var sender: LivingEntity? = null,
     private var facingYaw: Float? = null
