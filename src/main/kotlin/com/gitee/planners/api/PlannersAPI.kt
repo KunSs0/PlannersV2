@@ -121,7 +121,7 @@ object PlannersAPI {
     /**
      * 释放技能，会记录冷却。
      *
-     * 流程: Check事件 → 释放前条件校验(按priority排序) → Pre事件 → 消耗资源 → (interceptor?) → execute → Post
+     * 流程: Check事件 → 释放前条件校验(按priority排序) → Pre事件 → (interceptor?) → 最终校验 → 消耗资源 → execute → Post
      *
      * @param player 玩家
      * @param skill 技能
@@ -150,24 +150,38 @@ object PlannersAPI {
             return ExecutableResult.cancelledWithEvent()
         }
 
-        // ④ 消耗资源（按 priority 升序）
-        for (condition in sortedConditions) {
-            condition.consume(player, skill, options)
-        }
-
-        // ⑤ 全局 SkillInputExecHook
+        // ④ 全局 SkillInputExecHook
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
             val ctx = SkillInputExec.Context(player, skill) {
-                skill.immutable.execute(ProxyTarget.BukkitEntity(player), skill.level)
-                PlayerSkillCastEvent.Post(player, skill).call()
-                ExecutableResult.successful()
+                continueCast(player, skill, options, sortedConditions)
             }
             interceptor.intercept(ctx)
             return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
         }
 
-        // ⑥ execute + Post
+        // ⑤ 最终校验 + 消耗资源 + execute + Post
+        return continueCast(player, skill, options, sortedConditions)
+    }
+
+    private fun continueCast(
+        player: Player,
+        skill: PlayerSkill,
+        options: ScriptOptions,
+        sortedConditions: List<CastPreCondition>
+    ): ExecutableResult {
+        for (condition in sortedConditions) {
+            val result = condition.verify(player, skill, options)
+            if (result is CastPreConditionResult.Failure) {
+                castPreConditionFeedback.onFailed(player, result)
+                return ExecutableResult.preConditionFailed(result)
+            }
+        }
+
+        for (condition in sortedConditions) {
+            condition.consume(player, skill, options)
+        }
+
         skill.immutable.execute(ProxyTarget.BukkitEntity(player), skill.level)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()
