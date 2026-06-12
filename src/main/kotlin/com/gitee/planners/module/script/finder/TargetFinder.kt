@@ -2,6 +2,7 @@ package com.gitee.planners.module.script.finder
 
 import com.gitee.planners.Planners
 import com.gitee.planners.api.common.facing.EntityFacingProviders
+import com.gitee.planners.api.common.util.RectNearestEntityFinder
 import com.gitee.planners.api.common.util.SectorNearestEntityFinder
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.ProxyTargetContainer
@@ -12,8 +13,10 @@ import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import taboolib.common.util.runSync
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.sin
 
@@ -100,6 +103,51 @@ class TargetFinder @JvmOverloads constructor(
         return this
     }
 
+    /**
+     * 矩形（3D Box）选择器
+     * 以 origin + offset 为中心、沿 facing 方向的矩形包围盒。
+     *
+     * @param w      矩形宽度（左右方向，full width）
+     * @param h      矩形高度（上下方向，full height）
+     * @param z      矩形长度（前后方向，full length）
+     * @param offset 可选偏移量 {x: 左右, y: 上下, z: 前后}，默认均为 0
+     *
+     * ```js
+     * finder().rect(5, 3, 4).build()
+     * finder().rect(5, 3, 4, {x: 0, y: 0, z: 2}).build()
+     * ```
+     */
+    fun rect(w: Double, h: Double, z: Double, offset: Map<String, Any?>? = null): TargetFinder {
+        val ox = (offset?.get("x") as? Number)?.toDouble() ?: 0.0
+        val oy = (offset?.get("y") as? Number)?.toDouble() ?: 0.0
+        val oz = (offset?.get("z") as? Number)?.toDouble() ?: 0.0
+
+        val found = runSync {
+            val world = origin.world ?: return@runSync emptyList()
+            val loc = origin.clone()
+            val directionYaw = facingYaw ?: loc.yaw
+
+            // 预筛选半径：覆盖 rect 最远角点到 origin 的距离
+            val preRadius = hypot(
+                hypot(w / 2.0 + abs(ox), z / 2.0 + abs(oz)),
+                h / 2.0 + abs(oy)
+            )
+
+            val sampling = world.getNearbyEntities(loc, preRadius, preRadius, preRadius)
+                .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
+            val result = RectNearestEntityFinder(loc, w, h, z, directionYaw, ox, oy, oz, sampling)
+                .request()
+                .filterIsInstance<LivingEntity>()
+
+            if (Planners.sectorSelectorDebug) {
+                spawnRectDebugParticles(loc, w, h, z, directionYaw, ox, oy, oz)
+            }
+            result
+        }
+        entities.addAll(found)
+        return this
+    }
+
     private fun spawnSectorDebugParticles(origin: Location, radius: Double, angle: Double, directionYaw: Float) {
         val world = origin.world ?: return
         val safeRadius = radius.coerceAtLeast(0.0)
@@ -140,6 +188,62 @@ class TargetFinder @JvmOverloads constructor(
         val x = originX - sin(radians) * distance
         val z = originZ + cos(radians) * distance
         world.spawnParticle(particle, x, originY, z, 1, 0.0, 0.0, 0.0, 0.0)
+    }
+
+    /**
+     * 绘制矩形选择器的 debug 粒子（顶面 + 底面轮廓）
+     */
+    private fun spawnRectDebugParticles(
+        origin: Location, w: Double, h: Double, z: Double,
+        directionYaw: Float, ox: Double, oy: Double, oz: Double
+    ) {
+        val world = origin.world ?: return
+        val particle = Planners.sectorSelectorDebugParticle.get()
+        val step = Planners.sectorSelectorDebugStep.coerceAtLeast(0.5)
+
+        val radians = Math.toRadians(directionYaw.toDouble())
+        val fx = -sin(radians)   // forward x
+        val fz = cos(radians)    // forward z
+        val rx = cos(radians)    // right x
+        val rz = sin(radians)    // right z
+
+        val cx = origin.x + oz * fx + ox * rx
+        val cy = origin.y + oy
+        val cz = origin.z + oz * fz + ox * rz
+        val hw = w / 2.0
+        val hh = h / 2.0
+        val hl = z / 2.0
+
+        fun corner(lx: Double, lz: Double): Pair<Double, Double> {
+            return Pair(cx + lx * rx + lz * fx, cz + lx * rz + lz * fz)
+        }
+
+        fun line(x1: Double, z1: Double, x2: Double, z2: Double, lineY: Double) {
+            val dist = hypot(x2 - x1, z2 - z1)
+            val steps = ceil(dist / step).toInt().coerceAtLeast(1)
+            for (i in 0..steps) {
+                val t = i.toDouble() / steps
+                val px = x1 + (x2 - x1) * t
+                val pz = z1 + (z2 - z1) * t
+                world.spawnParticle(particle, px, lineY, pz, 1, 0.0, 0.0, 0.0, 0.0)
+            }
+        }
+
+        val corners = listOf(
+            corner(-hw, -hl), corner(hw, -hl),
+            corner(hw, hl), corner(-hw, hl)
+        )
+
+        val topY = cy + hh + Planners.sectorSelectorDebugYOffset
+        val botY = cy - hh + Planners.sectorSelectorDebugYOffset
+
+        for (drawY in listOf(topY, botY)) {
+            for (i in 0 until 4) {
+                val (x1, z1) = corners[i]
+                val (x2, z2) = corners[(i + 1) % 4]
+                line(x1, z1, x2, z2, drawY)
+            }
+        }
     }
 
     // === 过滤器 (立即执行，修改结果集) ===
