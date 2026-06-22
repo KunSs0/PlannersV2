@@ -29,38 +29,73 @@ object MinecraftInteraction {
     }
 
     fun clearInventory(player: Player) {
+        if (!isEnable) {
+            return
+        }
         Registries.KEYBINDING.values().forEachIndexed { index, _ ->
             player.inventory.setItem(index, null)
         }
     }
 
-    fun updateInventory(player: Player) = updateInventory(player.plannersTemplate)
+    fun updateInventory(player: Player) {
+        if (!isEnable) {
+            return
+        }
+        updateInventory(player.plannersTemplate)
+    }
 
     fun updateInventory(template: PlayerTemplate) {
+        if (!isEnable) {
+            return
+        }
         val player = template.onlinePlayer
         val currentPage = BackpackAPI.getCurrentPage(template)
-        val pageConfig = Registries.BACKPACK.getPage(currentPage) ?: return
+        val pageConfig = Registries.BACKPACK.getPage(currentPage)
+        if (pageConfig == null) {
+            return
+        }
 
         // 清空所有 keybinding 对应的 hotbar 槽位
         clearInventory(player)
 
         // 按当前页的槽位填充
-        pageConfig.slots.forEach { (slotId, slotConfig) ->
-            val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key) ?: return@forEach
-            val skill = template.getEquippedSkillByBackpackSlot(currentPage, slotId)
-            if (skill != null) {
-                val formatter = KeyBindingAPI.createIconFormatter(player, skill)
-                val index = Registries.KEYBINDING.values().indexOf(keybinding)
-                player.inventory.setItem(index, formatter.build())
+        for ((slotId, slotConfig) in pageConfig.slots) {
+            val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key)
+            if (keybinding != null) {
+                val skill = template.getEquippedSkillByBackpackSlot(currentPage, slotId)
+                if (skill != null) {
+                    val formatter = KeyBindingAPI.createIconFormatter(player, skill)
+                    val index = Registries.KEYBINDING.values().indexOf(keybinding)
+                    player.inventory.setItem(index, formatter.build())
+                }
             }
         }
     }
 
     fun updateInventory(template: PlayerTemplate, skill: PlayerSkill) {
-        if (!skill.equipped || skill.backpackPage == null || skill.backpackSlot == null) return
-        val pageConfig = Registries.BACKPACK.getPage(skill.backpackPage!!) ?: return
-        val slotConfig = pageConfig.slots[skill.backpackSlot!!] ?: return
-        val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key) ?: return
+        if (!isEnable) {
+            return
+        }
+        if (!skill.equipped || skill.backpackPage == null || skill.backpackSlot == null) {
+            return
+        }
+        val backpackPage = skill.backpackPage
+        val backpackSlot = skill.backpackSlot
+        if (backpackPage == null || backpackSlot == null) {
+            return
+        }
+        val pageConfig = Registries.BACKPACK.getPage(backpackPage)
+        if (pageConfig == null) {
+            return
+        }
+        val slotConfig = pageConfig.slots[backpackSlot]
+        if (slotConfig == null) {
+            return
+        }
+        val keybinding = Registries.KEYBINDING.getOrNull(slotConfig.key)
+        if (keybinding == null) {
+            return
+        }
         val player = template.onlinePlayer
         val formatter = KeyBindingAPI.createIconFormatter(player, skill)
         val index = Registries.KEYBINDING.values().indexOf(keybinding)
@@ -68,7 +103,9 @@ object MinecraftInteraction {
     }
 
     fun execute(func: () -> Unit) {
-        if (isEnable) func()
+        if (isEnable) {
+            func()
+        }
     }
 
     @SubscribeEvent

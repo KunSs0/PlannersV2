@@ -28,6 +28,9 @@ class CombinedAnalyzer {
         }
 
         fun processAction(player: Player, action: InteractionAction) {
+            if (!MinecraftInteraction.isEnable) {
+                return
+            }
             val analyzer = builtin.computeIfAbsent(player) { CombinedAnalyzer() }
             getInferKeyBindingCombined(action).filterIsInstance<Combined>().forEach { binding ->
                 // 注册到分析器内

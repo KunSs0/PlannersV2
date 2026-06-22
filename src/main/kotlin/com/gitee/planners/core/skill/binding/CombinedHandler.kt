@@ -54,6 +54,9 @@ object CombinedHandler {
 
     @SubscribeEvent
     fun e(e: CombinedEvent.Close) {
+        if (!MinecraftInteraction.isEnable) {
+            return
+        }
         val combined = e.combined
         if (combined is KeyBinding) {
             val skill = BackpackAPI.getSkillByKey(e.player.plannersTemplate, combined.id)
