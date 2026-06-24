@@ -6,6 +6,7 @@ import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionConfig
 import com.gitee.planners.core.config.BackpackConfig
+import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -144,6 +145,16 @@ object Planners : Plugin() {
         LOGO.forEach(::info)
         Registries.init()
         AttributeProxy.register(HookAttributeSource())
+
+        // 脚本引擎自检
+        try {
+            ScriptManager.init()
+            val result = ScriptManager.eval("'Planners JS 引擎就绪 — 引擎: ' + (typeof Java !== 'undefined' ? 'GraalJS' : 'Nashorn')")
+            info("[Planners 脚本自检] ${result}")
+        } catch (e: Exception) {
+            warning("[Planners 脚本自检] 失败: ${e.message}")
+            e.printStackTrace()
+        }
     }
 
 }

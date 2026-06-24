@@ -41,9 +41,7 @@ repositories {
     mavenLocal()
     maven("https://repo.tabooproject.org/repository/releases")
 }
-tasks.withType<Jar> {
-    destinationDirectory.set(file("F:\\minecraft\\haider\\server\\server-main\\plugins"))
-}
+// 构建到默认 build/libs/，手动部署
 dependencies {
 
     compileOnly("ink.ptms:nms-all:1.0.0")
