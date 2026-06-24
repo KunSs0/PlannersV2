@@ -17,6 +17,9 @@ object CombinedHandler {
 
     @SubscribeEvent
     fun handleSneaking(e: PlayerToggleSneakEvent) {
+        if (!MinecraftInteraction.isEnable) {
+            return
+        }
         val type = if (e.isSneaking) {
             InteractionActionBukkitType.MISC_SNEAK
         } else {
@@ -27,6 +30,9 @@ object CombinedHandler {
 
     @SubscribeEvent
     fun handleSprinting(e: PlayerToggleSprintEvent) {
+        if (!MinecraftInteraction.isEnable) {
+            return
+        }
         val type = if (e.isSprinting) {
             InteractionActionBukkitType.MISC_SPRING
         } else {
@@ -37,11 +43,17 @@ object CombinedHandler {
 
     @SubscribeEvent
     fun handleJump(e: PlayerJumpEvent) {
+        if (!MinecraftInteraction.isEnable) {
+            return
+        }
         CombinedAnalyzer.processAction(e.player, InteractionActionBukkitType.MISC_JUMP)
     }
 
     @SubscribeEvent
     fun e(e: PlayerInteractEvent) {
+        if (!MinecraftInteraction.isEnable) {
+            return
+        }
         if (e.hand == EquipmentSlot.HAND) {
             val type = if (e.isLeftClick()) {
                 InteractionActionBukkitType.INTERACT_LEFT
@@ -54,9 +66,6 @@ object CombinedHandler {
 
     @SubscribeEvent
     fun e(e: CombinedEvent.Close) {
-        if (!MinecraftInteraction.isEnable) {
-            return
-        }
         val combined = e.combined
         if (combined is KeyBinding) {
             val skill = BackpackAPI.getSkillByKey(e.player.plannersTemplate, combined.id)
