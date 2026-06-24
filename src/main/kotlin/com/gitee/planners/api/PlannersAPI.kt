@@ -14,6 +14,7 @@ import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.core.skill.precondition.DefaultCastPreConditionFeedback
 import com.gitee.planners.core.skill.precondition.builtin.CooldownPreCondition
 import com.gitee.planners.core.skill.precondition.builtin.MagicPointPreCondition
+import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
 import java.util.concurrent.CompletableFuture
@@ -116,6 +117,23 @@ object PlannersAPI {
      */
     fun newOptions(player: Player, skill: ImmutableSkill, level: Int): ScriptOptions {
         return ScriptOptions.forSkill(player, level)
+    }
+
+    /**
+     * 执行玩家技能 action 中定义的回调函数。
+     *
+     * @param player 玩家
+     * @param skill 玩家技能
+     * @param method 回调函数名
+     * @param variables 额外上下文变量
+     * @param payload 回调负载
+     * @return 函数存在并完成调用时返回 true，函数不存在时返回 false
+     */
+    fun executeSkillCallback(player: Player, skill: PlayerSkill, method: String, variables: Map<String, Any>, payload: Map<String, Any>): Boolean {
+        val extraVariables = LinkedHashMap<String, Any>()
+        extraVariables.putAll(variables)
+        val options = ScriptOptions.forSkill(player, skill.level, skill.immutable, extraVariables)
+        return ScriptManager.invokeActionFunction(skill.immutable.action, method, options, payload)
     }
 
     /**

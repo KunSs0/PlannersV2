@@ -3,6 +3,7 @@ package com.gitee.planners.module.script;
 import com.gitee.scriptengine.api.ScriptSession;
 import com.gitee.scriptengine.core.JsEngine;
 import com.gitee.scriptengine.core.JsEngineFactory;
+import org.graalvm.polyglot.proxy.ProxyObject;
 
 import java.io.File;
 import java.util.Map;
@@ -78,6 +79,43 @@ public final class ScriptManager {
     }
 
     /**
+     * 执行技能 action 中定义的回调函数。
+     *
+     * <p>该方法统一处理脚本上下文、会话生命周期、action 载入和函数查找。</p>
+     *
+     * @param source action 脚本源码。
+     * @param functionName 回调函数名。
+     * @param options 脚本执行选项。
+     * @param args 回调函数参数。
+     * @return 函数存在并完成调用时返回 true，函数不存在时返回 false。
+     */
+    public static boolean invokeActionFunction(String source, String functionName, ScriptOptions options, Object... args) {
+        ensureInit();
+        Map<String, Object> previous = ScriptContext.getCurrent();
+        Map<String, Object> variables = options.getVariables();
+        ScriptContext.setCurrent(variables);
+        ScriptSession session = null;
+        try {
+            session = engine.openSession(variables);
+            session.eval(source);
+            if (!session.hasFunction(functionName)) {
+                return false;
+            }
+            session.invoke(functionName, adaptArguments(args));
+            return true;
+        } finally {
+            if (session != null) {
+                session.close();
+            }
+            if (previous != null) {
+                ScriptContext.setCurrent(previous);
+            } else {
+                ScriptContext.clear();
+            }
+        }
+    }
+
+    /**
      * 获取当前引擎。
      */
     public static JsEngine getEngine() {
@@ -99,5 +137,21 @@ public final class ScriptManager {
         if (engine == null) {
             init();
         }
+    }
+
+    private static Object[] adaptArguments(Object[] args) {
+        Object[] adapted = new Object[args.length];
+        for (int index = 0; index < args.length; index++) {
+            adapted[index] = adaptArgument(args[index]);
+        }
+        return adapted;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object adaptArgument(Object arg) {
+        if (arg instanceof Map) {
+            return ProxyObject.fromMap((Map<String, Object>) arg);
+        }
+        return arg;
     }
 }
