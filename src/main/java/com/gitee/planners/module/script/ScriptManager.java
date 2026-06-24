@@ -27,12 +27,17 @@ public final class ScriptManager {
         if (engine != null) {
             return;
         }
-        // 注册所有全局函数
+        // 注册所有全局函数到本地注册表
         ScriptFunctionRegistry.registerAll();
 
         // 通过 Script Engine 自动选择引擎
         File scriptDir = new File("plugins/Planners/scripts");
         engine = JsEngineFactory.INSTANCE.create(scriptDir);
+
+        // 将本地注册的全局函数注入引擎
+        GlobalFunctions.getAll().forEach((name, fn) ->
+            engine.registerFunction(name, fn::apply)
+        );
         LOGGER.info("[Script] 引擎初始化完成: " + engine.name());
     }
 

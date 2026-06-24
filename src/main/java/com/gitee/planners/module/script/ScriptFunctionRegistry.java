@@ -8,6 +8,7 @@ import java.util.logging.Logger;
  * 脚本函数注册表
  * <p>
  * 调用全部 Functions 类的 register() 方法。
+ * 纯粹的函数注册，不依赖任何引擎实现。
  * 在 {@link ScriptManager#init()} 中调用。
  */
 public final class ScriptFunctionRegistry {

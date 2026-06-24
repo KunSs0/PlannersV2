@@ -1,38 +1,32 @@
 package com.gitee.planners.module.script;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
- * 全局函数注册表
- * <p>
- * 在引擎初始化前注册的函数会在 {@link ScriptManager#init()} 时统一注入。
- * 初始化后注册的函数会立即注入到当前引擎。
+ * 全局函数注册表（纯数据容器，不依赖任何引擎实现）。
  */
 public final class GlobalFunctions {
 
-    private static final Map<String, JsFunction> FUNCTIONS = new ConcurrentHashMap<>();
+    private static final Map<String, Function<Object[], Object>> FUNCTIONS = new LinkedHashMap<>();
 
     private GlobalFunctions() {}
 
     /**
-     * 注册全局函数
+     * 注册全局函数。
+     *
+     * @param name 函数名，JS 侧直接调用。
+     * @param function 函数实现，接收 Object[] 参数，返回结果。
      */
-    public static void register(String name, JsFunction function) {
+    public static void register(String name, Function<Object[], Object> function) {
         FUNCTIONS.put(name, function);
     }
 
     /**
-     * 将所有已注册的函数注入到引擎
+     * @return 所有已注册函数的只读副本。
      */
-    static void applyTo(JsEngine engine) {
-        FUNCTIONS.forEach(engine::registerFunction);
-    }
-
-    /**
-     * 获取所有已注册的函数 (只读)
-     */
-    public static Map<String, JsFunction> getAll() {
-        return FUNCTIONS;
+    public static Map<String, Function<Object[], Object>> getAll() {
+        return new LinkedHashMap<>(FUNCTIONS);
     }
 }
