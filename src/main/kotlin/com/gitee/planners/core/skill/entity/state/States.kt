@@ -30,7 +30,7 @@ object States {
             try {
                 session.eval(source)
                 if (session.hasFunction("main")) {
-                    session.invokeFunction("main")
+                    session.invoke("main")
                 }
             } catch (e: Exception) {
                 warning("Failed to initialize state script: ${state.id}")
@@ -116,7 +116,7 @@ object States {
         try {
             session.eval(source)
             if (session.hasFunction(funcName)) {
-                session.invokeFunction(funcName)
+                session.invoke(funcName)
             }
         } catch (_: Exception) {
             // 函数不存在或执行失败，忽略

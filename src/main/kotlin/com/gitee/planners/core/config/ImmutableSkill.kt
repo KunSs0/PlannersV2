@@ -128,7 +128,7 @@ class ImmutableSkill(config: Configuration) : Unique {
             try {
                 session.eval(action)
                 if (session.hasFunction("main")) {
-                    session.invokeFunction("main")
+                    session.invoke("main")
                 } else null
             } catch (e: Throwable) {
                 warning("[Skill] 技能脚本执行异常: $id")

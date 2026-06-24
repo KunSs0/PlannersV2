@@ -3,7 +3,7 @@ import io.izzel.taboolib.gradle.*
 plugins {
     java
     id("io.izzel.taboolib") version "2.0.27"
-    id("org.jetbrains.kotlin.jvm") version "1.8.22"
+    id("org.jetbrains.kotlin.jvm") version "2.2.0"
 }
 
 taboolib {
@@ -27,6 +27,7 @@ taboolib {
     description {
         dependencies {
             name("MythicMobs").optional(true)
+            name("ScriptEngine")
         }
     }
 
@@ -71,6 +72,14 @@ dependencies {
     compileOnly("org.graalvm.js:js-language:24.1.1")
     testImplementation("org.graalvm.polyglot:polyglot:24.1.1")
     testImplementation("org.graalvm.js:js-language:24.1.1")
+
+    // Script Engine 前置库
+    compileOnly("com.gitee.scriptengine:scriptengine-common:1.0.0")
+    compileOnly("com.gitee.scriptengine:scriptengine-runtime:1.0.0")
+
+    // Script Engine
+    compileOnly("com.gitee.scriptengine:scriptengine-common:1.0.0")
+    compileOnly("com.gitee.scriptengine:scriptengine-runtime:1.0.0")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 }
@@ -86,13 +95,13 @@ task("runGraalTest", JavaExec::class) {
 
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "1.8"
-        freeCompilerArgs = listOf("-Xjvm-default=all")
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 
-configure<JavaPluginConvention> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
