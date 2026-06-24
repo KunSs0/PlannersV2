@@ -1,11 +1,15 @@
 package com.gitee.planners.module.script;
 
 import com.gitee.scriptengine.api.ScriptSession;
+import com.gitee.scriptengine.api.ScriptResult;
 import com.gitee.scriptengine.core.JsEngine;
 import com.gitee.scriptengine.core.JsEngineFactory;
+import com.gitee.scriptengine.core.ValueConverter;
 import org.graalvm.polyglot.proxy.ProxyObject;
+import org.graalvm.polyglot.proxy.ProxyExecutable;
 
 import java.io.File;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -75,7 +79,7 @@ public final class ScriptManager {
      */
     public static ScriptSession openSession(ScriptOptions options) {
         ensureInit();
-        return engine.openSession(options.getVariables());
+        return engine.openSession(createSessionVariables(options.getVariables()));
     }
 
     /**
@@ -96,12 +100,14 @@ public final class ScriptManager {
         ScriptContext.setCurrent(variables);
         ScriptSession session = null;
         try {
-            session = engine.openSession(variables);
-            session.eval(source);
+            session = engine.openSession(createSessionVariables(variables));
+            ScriptResult evalResult = session.eval(source);
+            checkResult("载入 action 脚本失败", evalResult);
             if (!session.hasFunction(functionName)) {
                 return false;
             }
-            session.invoke(functionName, adaptArguments(args));
+            ScriptResult invokeResult = session.invoke(functionName, adaptArguments(args));
+            checkResult("执行 action 函数失败: " + functionName, invokeResult);
             return true;
         } finally {
             if (session != null) {
@@ -137,6 +143,31 @@ public final class ScriptManager {
         if (engine == null) {
             init();
         }
+    }
+
+    private static Map<String, Object> createSessionVariables(Map<String, Object> variables) {
+        if (!"GraalJS".equals(engine.name())) {
+            return variables;
+        }
+        Map<String, Object> sessionVariables = new LinkedHashMap<>();
+        GlobalFunctions.getAll().forEach((name, fn) ->
+            sessionVariables.put(name, (ProxyExecutable) values ->
+                fn.apply(ValueConverter.INSTANCE.unwrapArray(values))
+            )
+        );
+        sessionVariables.putAll(variables);
+        return sessionVariables;
+    }
+
+    private static void checkResult(String message, ScriptResult result) {
+        if (result.getSuccess()) {
+            return;
+        }
+        Throwable error = result.getError();
+        if (error != null) {
+            throw new RuntimeException(message + ": " + error.getMessage(), error);
+        }
+        throw new RuntimeException(message);
     }
 
     private static Object[] adaptArguments(Object[] args) {

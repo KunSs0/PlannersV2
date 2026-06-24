@@ -3,6 +3,7 @@ package com.gitee.planners.core.config
 import com.gitee.planners.api.common.Unique
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.scriptengine.api.ScriptResult
 import com.gitee.planners.module.script.ScriptContext
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
@@ -126,10 +127,21 @@ class ImmutableSkill(config: Configuration) : Unique {
             ScriptContext.setCurrent(vars)
             val session = ScriptManager.openSession(options)
             try {
-                session.eval(action)
-                if (session.hasFunction("main")) {
-                    session.invoke("main")
-                } else null
+                val evalResult = session.eval(action)
+                val evalSuccess = handleScriptResult("加载", evalResult)
+                if (!evalSuccess) {
+                    null
+                } else if (session.hasFunction("main")) {
+                    val invokeResult = session.invoke("main")
+                    val invokeSuccess = handleScriptResult("执行", invokeResult)
+                    if (invokeSuccess) {
+                        invokeResult.value
+                    } else {
+                        null
+                    }
+                } else {
+                    evalResult.value
+                }
             } catch (e: Throwable) {
                 warning("[Skill] 技能脚本执行异常: $id")
                 warning("[Skill] ${e.javaClass.simpleName}: ${e.message}")
@@ -150,6 +162,19 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     fun getVariableOrNull(id: String): Variable? {
         return immutableVariables[id]
+    }
+
+    private fun handleScriptResult(stage: String, result: ScriptResult): Boolean {
+        if (result.success) {
+            return true
+        }
+        val error = result.error
+        warning("[Skill] 技能脚本${stage}异常: $id")
+        if (error != null) {
+            warning("[Skill] ${error.javaClass.simpleName}: ${error.message}")
+            error.printStackTrace()
+        }
+        return false
     }
 
     fun getVariables(): Map<String, Variable> {
