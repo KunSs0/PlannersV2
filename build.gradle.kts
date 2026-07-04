@@ -41,7 +41,9 @@ repositories {
     mavenLocal()
     maven("https://repo.tabooproject.org/repository/releases")
 }
-// 构建到默认 build/libs/，手动部署
+tasks.withType<Jar> {
+    destinationDirectory.set(file("F:\\minecraft\\haider\\server\\server-main\\plugins"))
+}
 dependencies {
 
     compileOnly("ink.ptms:nms-all:1.0.0")
@@ -71,15 +73,12 @@ dependencies {
     testImplementation("org.graalvm.polyglot:polyglot:24.1.1")
     testImplementation("org.graalvm.js:js-language:24.1.1")
 
-    // Script Engine 前置库
-    compileOnly("com.gitee.scriptengine:scriptengine-common:1.0.0")
-    compileOnly("com.gitee.scriptengine:scriptengine-runtime:1.0.0")
-
-    // Script Engine
-    compileOnly("com.gitee.scriptengine:scriptengine-common:1.0.0")
-    compileOnly("com.gitee.scriptengine:scriptengine-runtime:1.0.0")
     compileOnly(kotlin("stdlib"))
-    compileOnly(fileTree("libs"))
+    compileOnly(fileTree("libs") {
+        exclude("ScriptEngine-*.jar")
+    })
+    compileOnly("com.gitee.scriptengine:scriptengine-common:1.1.0")
+    compileOnly("com.gitee.scriptengine:scriptengine-runtime:1.1.0")
 }
 
 tasks.withType<JavaCompile> {

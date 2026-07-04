@@ -2,8 +2,8 @@ package com.gitee.planners.module.script;
 
 import com.gitee.scriptengine.api.ScriptSession;
 import com.gitee.scriptengine.api.ScriptResult;
+import com.gitee.scriptengine.core.GraalJsEngine;
 import com.gitee.scriptengine.core.JsEngine;
-import com.gitee.scriptengine.core.JsEngineFactory;
 import com.gitee.scriptengine.core.ValueConverter;
 import org.graalvm.polyglot.proxy.ProxyObject;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 /**
  * 脚本管理器（静态门面）。
  *
- * 内部通过 Script Engine 的 JsEngineFactory 自动选择 Nashorn（Java 8-14）或 GraalJS（Java 17+）。
+ * 内部通过 ScriptEngine 的 GraalJS 实现执行 JavaScript。
  */
 public final class ScriptManager {
 
@@ -35,13 +35,12 @@ public final class ScriptManager {
         // 注册所有全局函数到本地注册表
         ScriptFunctionRegistry.registerAll();
 
-        // 通过 Script Engine 自动选择引擎
         File scriptDir = new File("plugins/Planners/scripts");
-        engine = JsEngineFactory.INSTANCE.create(scriptDir);
+        engine = new GraalJsEngine(scriptDir, java.util.Collections.emptyList());
 
         // 将本地注册的全局函数注入引擎
         GlobalFunctions.getAll().forEach((name, fn) ->
-            engine.registerFunction(name, fn::apply)
+            engine.registerFunction(name, args -> fn.apply(args))
         );
         LOGGER.info("[Script] 引擎初始化完成: " + engine.name());
     }
@@ -146,9 +145,6 @@ public final class ScriptManager {
     }
 
     private static Map<String, Object> createSessionVariables(Map<String, Object> variables) {
-        if (!"GraalJS".equals(engine.name())) {
-            return variables;
-        }
         Map<String, Object> sessionVariables = new LinkedHashMap<>();
         GlobalFunctions.getAll().forEach((name, fn) ->
             sessionVariables.put(name, (ProxyExecutable) values ->

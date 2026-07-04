@@ -149,7 +149,7 @@ object Planners : Plugin() {
         // 脚本引擎自检
         try {
             ScriptManager.init()
-            val result = ScriptManager.eval("'Planners JS 引擎就绪 — 引擎: ' + (typeof Java !== 'undefined' ? 'GraalJS' : 'Nashorn')")
+            val result = ScriptManager.eval("'Planners JS 引擎就绪 — 引擎: GraalJS'")
             info("[Planners 脚本自检] ${result}")
         } catch (e: Exception) {
             warning("[Planners 脚本自检] 失败: ${e.message}")
