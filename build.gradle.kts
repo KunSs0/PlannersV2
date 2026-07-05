@@ -31,7 +31,7 @@ taboolib {
         }
     }
 
-    version { taboolib = "6.2.4-7c873bc" }
+    version { taboolib = "6.3.0-9ccc4c3" }
 
     relocate("ink.ptms.um", "com.gitee.module.um")
 }
