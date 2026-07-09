@@ -2,6 +2,8 @@ state0:
   priority: 0
   max-layer: 3
   name: "眩晕"
+  attribute:
+    - "物理攻击: 10"
   action: |
     function main() {
       // 状态加载时执行一次，可自行注册 listener

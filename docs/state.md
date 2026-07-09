@@ -48,7 +48,26 @@ state0:
 | `priority` | number | `0.0` | 状态优先级字段。当前内置挂载、移除流程不会按该字段排序。 |
 | `max-layer` | int | 无上限 | 最大叠加层数。小于等于 `0` 表示无上限。 |
 | `name` | string | 状态 ID | 状态显示名。 |
+| `attribute` | string list | 空 | 外部属性插件属性源。每层状态都会重复追加一次该列表，不参与 Planners 逻辑属性转换。 |
 | `action` | string | 空 | SE JavaScript 脚本，可定义状态生命周期函数。 |
+
+## 状态属性
+
+状态可以直接提供 AttributePlus 等外部属性插件的属性源：
+
+```yaml
+berserk:
+  priority: 0
+  max-layer: 3
+  name: "狂暴"
+  attribute:
+    - "物理攻击: 10"
+    - "暴击几率: 5"
+```
+
+`attribute` 不走 Planners 的逻辑属性/二级属性转换，也不执行公式。状态当前有几层，就把这组属性源重复追加几次。比如 `berserk` 为 3 层时，会向外部属性插件写入 3 份同样的属性行。
+
+每个状态使用独立属性源 ID：`__pl.state.<状态ID>`。状态层数变化时会覆盖该状态自己的属性源；状态完全移除时会清理该属性源。
 
 ## SE 脚本入口
 

@@ -30,7 +30,30 @@ stun:
 | `<状态ID>.priority` | number | `0.0` | 状态优先级字段。当前内置状态流程不会按该字段排序。 | `/planners reload` |
 | `<状态ID>.max-layer` | int | 无上限 | 最大叠加层数。小于等于 `0` 表示无上限。 | `/planners reload` |
 | `<状态ID>.name` | string | 状态 ID | 状态显示名称。 | `/planners reload` |
+| `<状态ID>.attribute` | string list | 空 | 外部属性插件属性源。每层状态都会重复追加一次该列表，不参与 Planners 逻辑属性转换。 | `/planners reload` |
 | `<状态ID>.action` | string | 空 | SE JavaScript 脚本，定义生命周期函数。 | `/planners reload` |
+
+## 状态属性
+
+状态属性直接写给 AttributePlus 等外部属性插件，不走 Planners 的逻辑属性/二级属性转换，也不执行公式。
+
+```yaml
+berserk:
+  priority: 0
+  max-layer: 3
+  name: "狂暴"
+  attribute:
+    - "物理攻击: 10"
+    - "暴击几率: 5"
+```
+
+层数叠加规则：
+
+```text
+最终属性源 = attribute 列表重复 当前层数 次
+```
+
+例如 `berserk` 当前 3 层时，会写入 3 份 `物理攻击: 10` 和 3 份 `暴击几率: 5`。每个状态使用独立属性源 ID：`__pl.state.<状态ID>`，完整移除状态时会自动清理。
 
 ## 生命周期函数
 

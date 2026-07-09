@@ -24,6 +24,13 @@ interface State {
     val name: String
 
     /**
+     * 状态提供给外部属性插件的属性源。
+     *
+     * 每一层状态都会重复追加一次该列表，不参与 Planners 逻辑属性转换。
+     */
+    val attribute: List<String>
+
+    /**
      * 状态脚本源码，通过约定函数名调用内置事件处理器。
      *
      * 内置事件函数：

@@ -19,6 +19,8 @@ class ImmutableState(val config: ConfigurationSection) : State {
 
     override val name: String = config.getString("name", id)!!
 
+    override val attribute: List<String> = config.getStringList("attribute")
+
     override val action: String?
     get() {
         val raw = config.getString("action")
