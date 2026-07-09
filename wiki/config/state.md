@@ -59,7 +59,6 @@ state0:
 | `priority` | Double | 否 | `0` | 优先级，数值越小优先级越高 |
 | `max-layer` | Int | 否 | 无限 | 最大叠加层数。不填或填 0 表示无限叠加 |
 | `name` | String | 否 | 状态 ID | 状态显示名称 |
-| `static` | Boolean | 否 | `false` | 是否为静态状态。静态状态永远存在，无法被移除 |
 | `action` | String | 否 | 空 | 状态脚本（标准 JavaScript） |
 
 ---

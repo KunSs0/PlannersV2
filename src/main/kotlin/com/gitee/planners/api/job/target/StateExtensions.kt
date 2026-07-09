@@ -21,7 +21,7 @@ fun ProxyTarget.Entity<*>.isExpired(state: State): Boolean {
  * 为目标挂载状态
  *
  * @param state 状态定义
- * @param duration 持续时间（tick），非静态状态必须为正数
+ * @param duration 持续时间（tick），必须为正数
  * @param refreshDuration 若状态已存在时是否刷新剩余时间
  */
 fun ProxyTarget.Entity<*>.attachState(state: State, duration: Long, refreshDuration: Boolean = false) {

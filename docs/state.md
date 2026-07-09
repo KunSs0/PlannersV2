@@ -6,7 +6,7 @@
 
 - 状态配置位于 `src/main/resources/state/`。每个 `.yml` 文件可定义多个状态，节点名即状态 ID。
 - 执行 `planners reload` 时会重新载入配置，并通过 `Registries.STATE` 暴露于运行时。
-- 非静态状态会在实体元数据 `pl.state.<id>` 下维护 `TargetStateHolder`，记录层数与剩余时间；静态状态 (`static: true`) 视为常驻，不会被系统移除。
+- 状态会在实体元数据 `__pl.state.<id>` 下维护 `TargetStateHolder`，记录层数与剩余时间。
 - 状态支持叠层，可通过 `max-layer` 限制上限；超过上限时仅根据 `refreshDuration` 决定是否刷新时间。
 
 ## Kether 指令
@@ -60,7 +60,6 @@ state0:
   priority: 0
   max-layer: 3
   name: "眩晕"
-  static: false
   trigger:
     "state-attach":
       listen: state attach
@@ -88,7 +87,6 @@ state0:
 |-------------|--------|----------|----------------------------------------|
 | `priority`  | double | `0.0`    | 状态优先级，数值越大越先执行。         |
 | `max-layer` | int    | `无上限` | 可叠加的最大层数，至少为 `1`。         |
-| `static`    | bool   | `false`  | 静态状态不会被系统自动移除。           |
 | `name`      | string | `id`     | 展示名称，用于界面或日志。             |
 | `trigger`   | section| —        | 触发器集合，键为自定义触发器 ID。     |
 

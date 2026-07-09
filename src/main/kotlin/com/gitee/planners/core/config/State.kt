@@ -21,11 +21,6 @@ interface State {
      */
     val maxLayer: Int
 
-    /**
-     * 是否为静态状态，静态状态不会被系统自动移除。
-     */
-    val isStatic: Boolean
-
     val name: String
 
     /**

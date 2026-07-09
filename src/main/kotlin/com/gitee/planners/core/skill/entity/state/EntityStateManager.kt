@@ -14,9 +14,6 @@ import taboolib.common.platform.function.warning
 object EntityStateManager {
 
     fun has(target: ProxyTarget.Entity<*>, state: State): Boolean {
-        if (state.isStatic) {
-            return true
-        }
         val container = target as? ProxyTarget.Containerization ?: return false
         val holder = TargetStateHolder.parse(container.getMetadata(state.path()))
         if (holder != null && holder.isValid && holder.layer > 0) {
@@ -82,10 +79,6 @@ object EntityStateManager {
     }
 
     fun detach(target: ProxyTarget.Entity<*>, state: State, layer: Int) {
-        if (state.isStatic) {
-            return
-        }
-
         val container = target as? ProxyTarget.Containerization ?: return
         val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
 
@@ -118,10 +111,6 @@ object EntityStateManager {
     }
 
     fun remove(target: ProxyTarget.Entity<*>, state: State) {
-        if (state.isStatic) {
-            return
-        }
-
         val container = target as? ProxyTarget.Containerization ?: return
         val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
 
