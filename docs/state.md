@@ -1,125 +1,199 @@
 # Planners V2 状态系统说明
 
-本说明涵盖状态（State）在 Planners V2 中的配置、脚本指令、事件回调以及层数管理等最新行为。
+状态系统用于给实体附加可叠层、可计时的 buff/debuff。当前版本统一使用 SE（ScriptEngine）执行标准 JavaScript 脚本，不再使用 Kether 指令。
 
 ## 系统概览
 
-- 状态配置位于 `src/main/resources/state/`。每个 `.yml` 文件可定义多个状态，节点名即状态 ID。
-- 执行 `planners reload` 时会重新载入配置，并通过 `Registries.STATE` 暴露于运行时。
-- 状态会在实体元数据 `__pl.state.<id>` 下维护 `TargetStateHolder`，记录层数与剩余时间。
-- 状态支持叠层，可通过 `max-layer` 限制上限；超过上限时仅根据 `refreshDuration` 决定是否刷新时间。
+- 状态配置位于 `plugins/Planners/state/`，内置示例来自 `state/example.yml`。
+- 每个 `.yml` 文件可以定义多个状态，节点名就是状态 ID。
+- 执行 `/planners reload` 后会重新加载状态配置。
+- 状态挂载在实体元数据 `__pl.state.<状态ID>` 下，记录层数、持续时间和到期时间。
+- 状态没有 `static` 模式。所有状态都必须通过 `stateAPI.attach` 挂载，并可通过 `stateAPI.detach` 或 `stateAPI.remove` 移除。
 
-## Kether 指令
-
-所有 `state` 指令均注册在 `planners-common` 命名空间，脚本中可直接调用。
-
-### `state attach`
-
-```kether
-state attach <stateId> [duration <-1>] [refresh <true>] [at <目标容器>]
-```
-
-- `stateId`：必须存在于 `Registries.STATE`。
-- `duration`：持续时间（tick）；-1 代表由调用方或配置提供默认值。
-- `refresh`：当状态已存在时是否刷新剩余时间，默认 `true`。
-- `at`：可选目标容器，未指定时默认使用脚本 `sender`。
-- 实际调用 `CapableState.attachState`，首次挂载会触发 `EntityStateEvent.Mount` 与 `Attach`，后续叠层只触发 `Attach`。
-
-### `state detach`
-
-```kether
-state detach <stateId|~> [layer <1>] [at <目标容器>]
-```
-
-- `stateId` 或 `~`：`~` 会优先读取脚本变量 `state`，否则解析文本。
-- `layer`：要移除的层数，默认 `1`；传入 `999` 表示一次性清空。
-- 执行 `CapableState.detachState`，触发 `EntityStateEvent.Detach`，当层数归零时额外触发 `EntityStateEvent.Close`。
-
-### `state close`
-
-```kether
-state close <stateId|~> [at <目标容器>]
-```
-
-- 强制移除指定状态，直接触发 `CapableState.removeState`。
-- 会依次广播 `EntityStateEvent.Detach` 与 `EntityStateEvent.Close`。
-
-### `state has` / `state contains`
-
-```kether
-state has <stateId|~> [at <目标容器>]
-```
-
-- 判断目标是否拥有指定状态（忽略层数与剩余时间）。
-- `state contains` 为同义指令。
-
-## 配置示例
+## 配置格式
 
 ```yaml
 state0:
   priority: 0
   max-layer: 3
   name: "眩晕"
-  trigger:
-    "state-attach":
-      listen: state attach
-      action: |-
-        tell "眩晕层数增加"
-    "state-detach":
-      listen: state detach
-      action: |-
-        tell "眩晕层数减少"
-    "state-mount":
-      listen: state mount
-      action: |-
-        tell "首次获得眩晕"
-    "state-close":
-      listen: state close
-      action: |-
-        tell "完全解除眩晕"
-    "state-end":
-      listen: state end
-      action: |-
-        tell "眩晕自然结束"
+  action: |
+    function main() {
+      // 状态配置加载或重载时执行一次
+    }
+
+    function onStateAttach() {
+      tell("眩晕层数增加")
+    }
+
+    function onStateDetach() {
+      tell("眩晕层数减少")
+    }
+
+    function onStateMount() {
+      tell("首次获得眩晕")
+    }
+
+    function onStateClose() {
+      tell("完全解除眩晕")
+    }
+
+    function onStateEnd() {
+      tell("眩晕自然结束")
+    }
 ```
 
-| 字段        | 类型   | 默认值   | 说明                                   |
-|-------------|--------|----------|----------------------------------------|
-| `priority`  | double | `0.0`    | 状态优先级，数值越大越先执行。         |
-| `max-layer` | int    | `无上限` | 可叠加的最大层数，至少为 `1`。         |
-| `name`      | string | `id`     | 展示名称，用于界面或日志。             |
-| `trigger`   | section| —        | 触发器集合，键为自定义触发器 ID。     |
+| 字段 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `priority` | number | `0.0` | 状态优先级字段。当前内置挂载、移除流程不会按该字段排序。 |
+| `max-layer` | int | 无上限 | 最大叠加层数。小于等于 `0` 表示无上限。 |
+| `name` | string | 状态 ID | 状态显示名。 |
+| `action` | string | 空 | SE JavaScript 脚本，可定义状态生命周期函数。 |
 
-## 事件与脚本绑定
+## SE 脚本入口
 
-| 事件类                         | 触发时机                                 | 备注                       |
-|--------------------------------|------------------------------------------|----------------------------|
-| `EntityStateEvent.Attach`      | 每次成功执行 `attachState` 后            | 兼容旧行为。               |
-| `EntityStateEvent.Detach`      | 调用 `detachState` 或 `removeState` 后   | 永远会在层数减少时触发。   |
-| `EntityStateEvent.Mount`       | 状态层数由 0 → 1 时                      | 监听首次挂载。             |
-| `EntityStateEvent.Close`       | 状态层数从正数降为 0 时                  | 监听完全移除。             |
-| `EntityStateEvent.End`         | 计时器到期且未被取消时                   | 结束流程仍会走 `removeState`。 |
+状态 `action` 使用标准 JavaScript。脚本中可以直接调用 Planners 注册的全局函数和 API 对象，例如 `tell`、`potion`、`fire`、`freeze`、`finder`、`stateAPI.attach`、`stateAPI.detach` 等。
 
-脚本事件注册位于 `com.gitee.planners.core.skill.script.state.ScriptEntityState`，提供 `state attach/detach/mount/close/end` 等监听名称。
+生命周期函数为可选函数。未定义某个函数时，该阶段不会执行额外脚本。
 
-## 运行时行为要点
+| 函数 | 调用时机 | 可用变量 |
+| --- | --- | --- |
+| `main()` | 状态配置加载或重载时执行一次 | 全局函数 |
+| `onStateAttach()` | 状态成功附加后执行；首次附加和后续叠层都会触发 | `sender`、`event`、`state` |
+| `onStateMount()` | 状态从无到有时执行 | `sender`、`event`、`state` |
+| `onStateDetach()` | 状态开始减少层数时执行 | `sender`、`event`、`state` |
+| `onStateClose()` | 状态即将完全移除时执行 | `sender`、`event`、`state` |
+| `onStateEnd()` | 状态计时到期事件触发时执行 | `sender`、`event`、`state` |
 
-- `attachState`：首次挂载会创建 `TargetStateHolder`，注册到期任务；到期后由回调调用 `removeState`。
-- 达到 `max-layer` 后再次调用 `attachState` 时，仅在 `refreshDuration=true` 时刷新剩余时间。
-- `detachState`：按层数递减；当层数降为 0 时触发 `Detach` 与 `Close`，并清理元数据。
-- `removeState`：无视层数直接移除，用于过期或强制清理。
-- `States.tick` 会在实体过期时调用 `removeState`，确保层数归零并触发事件。
+常见顺序：
+
+| 场景 | 顺序 |
+| --- | --- |
+| 首次附加 | `onStateAttach()` -> `onStateMount()` |
+| 后续叠层 | `onStateAttach()` |
+| 手动移除部分层数 | `onStateDetach()` |
+| 手动移除到 0 层 | `onStateDetach()` -> `onStateClose()` |
+| 计时到期 | `onStateEnd()` -> `onStateDetach()` -> `onStateClose()` |
+
+## 状态函数
+
+### `stateAPI.attach`
+
+```javascript
+stateAPI.attach(id, duration)
+stateAPI.attach(id, duration, refresh)
+stateAPI.attach(id, duration, refresh, targets)
+```
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `id` | string | 必填 | 状态 ID。 |
+| `duration` | long | 必填 | 持续时间，单位为 tick，必须大于 `0`。 |
+| `refresh` | boolean | `true` | 目标已有该状态时，是否刷新剩余时间。 |
+| `targets` | target container | `sender` | 目标集合。 |
+
+行为：
+
+- 目标没有该状态时，创建 1 层状态并启动计时。
+- 目标已有该状态时，尝试增加 1 层。
+- 达到 `max-layer` 后不会继续加层。
+- 达到层数上限时，如果 `refresh` 为 `true`，仍会刷新剩余时间。
+
+### `stateAPI.detach`
+
+```javascript
+stateAPI.detach(id)
+stateAPI.detach(id, layer)
+stateAPI.detach(id, layer, targets)
+```
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `id` | string | 必填 | 状态 ID。 |
+| `layer` | int | `1` | 移除层数。传入 `999` 表示清空全部层数。 |
+| `targets` | target container | `sender` | 目标集合。 |
+
+### `stateAPI.remove`
+
+```javascript
+stateAPI.remove(id)
+stateAPI.remove(id, targets)
+```
+
+完整移除目标身上的指定状态，效果等同于清空全部层数。
+
+### `stateAPI.has`
+
+```javascript
+stateAPI.has(id)
+stateAPI.has(id, targets)
+```
+
+返回 `true` 或 `false`。当传入多个目标时，返回第一个可处理实体的检查结果。
+
+## 技能中附加状态
+
+```yaml
+frost_bolt:
+  __option__:
+    name: "寒冰箭"
+    variables:
+      damage: 30 * level + 50
+
+  action: |
+    function main() {
+      var targets = finder().range(10).limit(1).sort("DISTANCE").build()
+      healthTake(30 * level + 50, targets)
+      stateAPI.attach("frozen", 60, true, targets)
+      freeze(60, targets)
+      sound("ENTITY_PLAYER_HURT_FREEZE", 1.0, 1.0, targets)
+    }
+```
+
+## 状态示例
+
+```yaml
+frozen:
+  priority: 0
+  max-layer: 3
+  name: "冰冻"
+  action: |
+    function onStateMount() {
+      tell("&b你被冻结了")
+      potion("SLOW", 2, 60)
+      freeze(60)
+    }
+
+    function onStateAttach() {
+      tell("&b冰冻层数增加")
+    }
+
+    function onStateClose() {
+      tell("&a冰冻解除")
+      potionRemove("SLOW")
+      freeze(0)
+    }
+```
+
+## 命令
+
+| 命令 | 权限 | 执行者 | 说明 |
+| --- | --- | --- | --- |
+| `/planners test <状态ID> <持续tick>` | `planners.command` | 玩家 | 给自己附加指定状态，主要用于测试。 |
+| `/planners state trigger <玩家> <名称>` | `planners.command` | 管理员、控制台 | 广播自定义脚本触发事件，供扩展监听使用。该命令不会自动调用状态 `action` 中的生命周期函数。 |
 
 ## MythicMobs 兼容
 
-| Mechanic 名称                       | 功能说明           | 主要参数                                   |
-|------------------------------------|--------------------|--------------------------------------------|
-| `plstateattach` / `pl-state-attach` | 等价 `state attach` | `state`/`id`、`duration`/`time`、`refresh` |
-| `plstatedetach` / `pl-state-detach` | 层数卸载/全清      | `state`/`id`、`layer`（默认 999，即全清）  |
-| `plstatecustomtrigger`             | 触发自定义脚本事件 | `name`/`trigger`                            |
+| Mechanic | 参数 | 说明 |
+| --- | --- | --- |
+| `plstateattach` / `pl-state-attach` | `state`/`id`、`duration`/`time`/`t`、`refresh`/`cover` | 给目标附加状态。 |
+| `plstatedetach` / `pl-state-detach` | `state`/`id`、`layer` | 移除目标状态层数；`layer >= 999` 时完整移除。 |
+| `plstatecustomtrigger` / `pl-state-customtrigger` | `name`/`trigger`/`id` | 广播自定义脚本触发事件，供扩展监听使用。 |
 
-## 调试建议
+## 注意事项
 
-1. 使用 `planners test <stateId> <duration>` 快速挂载状态，配合 `state detach/close` 验证层数变化。
-2. 在脚本中结合 `state has` 做前置判断，避免达到上限后重复调用。
-3. 监听 `state mount` 与 `state close` 事件，记录首次挂载与完全移除的关键节点。*** End Patch
+- `duration` 必须大于 `0`。传入 `0` 或负数时不会挂载状态。
+- `action` 是 SE JavaScript，不支持 Kether 的 `state attach`、`tell "文本"`、`listen: state attach` 等写法。
+- `trigger:` 配置节点已经废弃。请把逻辑写进 `action` 的生命周期函数。
+- `stateAPI.remove` 会直接清空所有层数；只想减少层数时使用 `stateAPI.detach`。
+- 状态函数只会处理实体目标。控制台、纯位置目标不能携带状态。

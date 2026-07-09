@@ -4,11 +4,12 @@
 
 | 项目 | 要求 |
 |------|------|
-| Java | 8 或更高版本 |
+| Java | 17 或更高版本 |
 | 服务端 | Bukkit / Spigot / Paper（1.12.2+） |
 | TabooLib | 6.2.4（插件内置，无需额外安装） |
+| ScriptEngine | 必需前置 |
 
-> **注意**：如果你使用 Java 17+，插件会自动下载 GraalJS 引擎依赖（首次启动需要联网）。Java 8~14 使用内置的 Nashorn 引擎，无需额外依赖。
+> **注意**：当前版本统一使用 SE（ScriptEngine）的 GraalJS 实现执行 JavaScript 脚本，不再使用 Nashorn 或 Kether 脚本引擎。
 
 ## 安装步骤
 

@@ -24,7 +24,6 @@ public final class ScriptFunctionRegistry {
         MetadataFunctions.register();
         CooldownFunctions.register();
         HealthFunctions.register();
-        StateFunctions.register();
         SkillCommandFunctions.register();
         EffectFunctions.register();
         EntityFunctions.register();

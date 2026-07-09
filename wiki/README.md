@@ -1,7 +1,7 @@
 # Planners 文档
 
-Planners 是一个基于 TabooLib 的 Minecraft 职业与技能系统插件。  
-脚本引擎使用标准 JavaScript（Java 8~14 使用 Nashorn，Java 17+ 使用 GraalJS）。
+Planners 是一个基于 TabooLib 的 Minecraft 职业与技能系统插件。
+脚本系统统一使用 SE（ScriptEngine）执行标准 JavaScript，当前运行实现为 GraalJS。
 
 ---
 
@@ -23,7 +23,7 @@ Planners 是一个基于 TabooLib 的 Minecraft 职业与技能系统插件。
 
 ## 脚本系统
 
-- [脚本引擎概述](scripting/overview.md) — JS 引擎选择、执行流程、基本语法
+- [脚本引擎概述](scripting/overview.md) — SE 引擎、执行流程、基本语法
 - [上下文变量](scripting/context-variables.md) — sender、profile、level、ctx、skill
 - [目标查找器](scripting/target-finder.md) — finder() 链式 API 完整参考
 - [通用函数](scripting/functions-common.md) — tell
@@ -31,7 +31,7 @@ Planners 是一个基于 TabooLib 的 Minecraft 职业与技能系统插件。
 - [实体函数](scripting/functions-entity.md) — spawn、remove、teleport、AI、重力等
 - [命令函数](scripting/functions-command.md) — command、commandOp、commandConsole
 - [冷却函数](scripting/functions-cooldown.md) — getCooldown、setCooldown、resetCooldown
-- [状态函数](scripting/functions-state.md) — stateAttach、stateDetach、stateRemove、stateHas
+- [状态 API](scripting/functions-state.md) — stateAPI.attach、stateAPI.detach、stateAPI.remove、stateAPI.has
 - [声音函数](scripting/functions-sound.md) — sound、soundResource
 - [投射物函数](scripting/functions-projectile.md) — projectile、projectileAt、projectileToward
 - [元数据函数](scripting/functions-metadata.md) — getMeta、setMeta、hasMeta、removeMeta

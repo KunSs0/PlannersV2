@@ -5,6 +5,7 @@ import com.gitee.scriptengine.api.ScriptResult;
 import com.gitee.scriptengine.core.GraalJsEngine;
 import com.gitee.scriptengine.core.JsEngine;
 import com.gitee.scriptengine.core.ValueConverter;
+import com.gitee.planners.module.script.api.StateAPI;
 import org.graalvm.polyglot.proxy.ProxyObject;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 
@@ -53,7 +54,7 @@ public final class ScriptManager {
     public static Object eval(String source, ScriptOptions options) {
         ensureInit();
         Map<String, Object> previous = ScriptContext.getCurrent();
-        Map<String, Object> variables = options.getVariables();
+        Map<String, Object> variables = createScriptVariables(options.getVariables());
         ScriptContext.setCurrent(variables);
         try {
             return engine.eval(source, variables);
@@ -95,7 +96,7 @@ public final class ScriptManager {
     public static boolean invokeActionFunction(String source, String functionName, ScriptOptions options, Object... args) {
         ensureInit();
         Map<String, Object> previous = ScriptContext.getCurrent();
-        Map<String, Object> variables = options.getVariables();
+        Map<String, Object> variables = createScriptVariables(options.getVariables());
         ScriptContext.setCurrent(variables);
         ScriptSession session = null;
         try {
@@ -144,14 +145,20 @@ public final class ScriptManager {
         }
     }
 
+    private static Map<String, Object> createScriptVariables(Map<String, Object> variables) {
+        Map<String, Object> scriptVariables = new LinkedHashMap<>();
+        scriptVariables.put("stateAPI", StateAPI.INSTANCE);
+        scriptVariables.putAll(variables);
+        return scriptVariables;
+    }
+
     private static Map<String, Object> createSessionVariables(Map<String, Object> variables) {
-        Map<String, Object> sessionVariables = new LinkedHashMap<>();
+        Map<String, Object> sessionVariables = createScriptVariables(variables);
         GlobalFunctions.getAll().forEach((name, fn) ->
             sessionVariables.put(name, (ProxyExecutable) values ->
                 fn.apply(ValueConverter.INSTANCE.unwrapArray(values))
             )
         );
-        sessionVariables.putAll(variables);
         return sessionVariables;
     }
 
