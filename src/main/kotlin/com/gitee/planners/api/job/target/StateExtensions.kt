@@ -11,6 +11,15 @@ fun ProxyTarget.Entity<*>.hasState(state: State): Boolean {
 }
 
 /**
+ * 获取目标指定状态的当前层数
+ *
+ * @return 状态不存在或已失效时返回 0
+ */
+fun ProxyTarget.Entity<*>.getStateLayer(state: State): Int {
+    return EntityStateManager.getLayer(this, state)
+}
+
+/**
  * 检查目标上的状态是否已经过期
  */
 fun ProxyTarget.Entity<*>.isExpired(state: State): Boolean {
@@ -23,9 +32,10 @@ fun ProxyTarget.Entity<*>.isExpired(state: State): Boolean {
  * @param state 状态定义
  * @param duration 持续时间（tick），必须为正数
  * @param refreshDuration 若状态已存在时是否刷新剩余时间
+ * @return 是否成功挂载、叠层或刷新状态
  */
-fun ProxyTarget.Entity<*>.attachState(state: State, duration: Long, refreshDuration: Boolean = false) {
-    EntityStateManager.attach(this, state, duration, refreshDuration)
+fun ProxyTarget.Entity<*>.attachState(state: State, duration: Long, refreshDuration: Boolean = false): Boolean {
+    return EntityStateManager.attach(this, state, duration, refreshDuration)
 }
 
 /**
@@ -33,9 +43,10 @@ fun ProxyTarget.Entity<*>.attachState(state: State, duration: Long, refreshDurat
  *
  * @param state 状态定义
  * @param layer 要移除的层数，传入 999 表示直接清空
+ * @return 是否成功移除至少一个状态层
  */
-fun ProxyTarget.Entity<*>.detachState(state: State, layer: Int = 1) {
-    EntityStateManager.detach(this, state, layer)
+fun ProxyTarget.Entity<*>.detachState(state: State, layer: Int = 1): Boolean {
+    return EntityStateManager.detach(this, state, layer)
 }
 
 /**

@@ -14,7 +14,10 @@ import taboolib.common.platform.function.warning
 object EntityStateManager {
 
     fun has(target: ProxyTarget.Entity<*>, state: State): Boolean {
-        val container = target as? ProxyTarget.Containerization ?: return false
+        val container = target as? ProxyTarget.Containerization
+        if (container == null) {
+            return false
+        }
         val holder = TargetStateHolder.parse(container.getMetadata(state.path()))
         if (holder != null && holder.isValid && holder.layer > 0) {
             return true
@@ -22,20 +25,41 @@ object EntityStateManager {
         return false
     }
 
+    fun getLayer(target: ProxyTarget.Entity<*>, state: State): Int {
+        val container = target as? ProxyTarget.Containerization
+        if (container == null) {
+            return 0
+        }
+        val holder = TargetStateHolder.parse(container.getMetadata(state.path()))
+        if (holder == null || !holder.isValid || holder.layer <= 0) {
+            return 0
+        }
+        return holder.layer
+    }
+
     fun isExpired(target: ProxyTarget.Entity<*>, state: State): Boolean {
-        val container = target as? ProxyTarget.Containerization ?: return true
+        val container = target as? ProxyTarget.Containerization
+        if (container == null) {
+            return true
+        }
         val holder = TargetStateHolder.parse(container.getMetadata(state.path()))
         return holder?.isExpired ?: true
     }
 
-    fun attach(target: ProxyTarget.Entity<*>, state: State, duration: Long, refresh: Boolean) {
+    fun attach(target: ProxyTarget.Entity<*>, state: State, duration: Long, refresh: Boolean): Boolean {
         if (duration <= 0) {
             warning("状态 ${state.id} 的持续时间必须大于 0")
-            return
+            return false
         }
 
-        val container = target as? ProxyTarget.Containerization ?: return
-        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
+        val container = target as? ProxyTarget.Containerization
+        if (container == null) {
+            return false
+        }
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity
+        if (bukkitTarget == null) {
+            return false
+        }
 
         val key = state.path()
         val holder = TargetStateHolder.parse(container.getMetadata(key))
@@ -43,15 +67,15 @@ object EntityStateManager {
 
         val maxLayer = state.maxLayer.coerceAtLeast(1)
         if (hasValidHolder && holder!!.layer >= maxLayer && !refresh) {
-            return
+            return false
         }
 
         val isFirstLayer = !hasValidHolder
         if (isFirstLayer && !EntityStateEvent.Mount.Pre(bukkitTarget, state).call()) {
-            return
+            return false
         }
         if (!EntityStateEvent.Attach.Pre(bukkitTarget, state).call()) {
-            return
+            return false
         }
 
         if (isFirstLayer) {
@@ -63,59 +87,75 @@ object EntityStateManager {
             container.setMetadata(key, metadataValue(newHolder))
             EntityStateEvent.Attach.Post(bukkitTarget, state).call()
             EntityStateEvent.Mount.Post(bukkitTarget, state).call()
-            return
+            return true
         }
 
-        val existingHolder = holder!!
+        val existingHolder = holder
         val incremented = existingHolder.incrementLayer(maxLayer)
         if (refresh) {
             existingHolder.refresh(duration)
         }
         EntityStateEvent.Attach.Post(bukkitTarget, state).call()
-
-        if (!incremented && !refresh && existingHolder.layer >= maxLayer) {
-            return
-        }
+        return incremented || refresh
     }
 
-    fun detach(target: ProxyTarget.Entity<*>, state: State, layer: Int) {
-        val container = target as? ProxyTarget.Containerization ?: return
-        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
+    fun detach(target: ProxyTarget.Entity<*>, state: State, layer: Int): Boolean {
+        val container = target as? ProxyTarget.Containerization
+        if (container == null) {
+            return false
+        }
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity
+        if (bukkitTarget == null) {
+            return false
+        }
 
         val key = state.path()
-        val holder = TargetStateHolder.parse(container.getMetadata(key)) ?: return
+        val holder = TargetStateHolder.parse(container.getMetadata(key))
+        if (holder == null) {
+            return false
+        }
 
         if (holder.layer <= 0) {
             container.setMetadata(key, metadataValue(null))
-            return
+            return false
         }
 
         val removal = if (layer >= 999) holder.layer.coerceAtLeast(1) else layer.coerceAtLeast(1)
         val finalRemoval = removal >= holder.layer
 
         if (!EntityStateEvent.Detach.Pre(bukkitTarget, state).call()) {
-            return
+            return false
         }
 
         if (!finalRemoval) {
             holder.decrementLayer(removal)
             EntityStateEvent.Detach.Post(bukkitTarget, state).call()
-            return
+            return true
         }
 
         if (!performFullRemoval(bukkitTarget, state, holder, key, container)) {
-            return
+            return false
         }
         EntityStateEvent.Detach.Post(bukkitTarget, state).call()
         EntityStateEvent.Close.Post(bukkitTarget, state).call()
+        return true
     }
 
     fun remove(target: ProxyTarget.Entity<*>, state: State) {
-        val container = target as? ProxyTarget.Containerization ?: return
-        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
+        val container = target as? ProxyTarget.Containerization
+        if (container == null) {
+            return
+        }
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity
+        if (bukkitTarget == null) {
+            return
+        }
 
         val key = state.path()
-        val holder = TargetStateHolder.parse(container.getMetadata(key)) ?: return
+        val holder = TargetStateHolder.parse(container.getMetadata(key))
+        if (holder == null) {
+            return
+        }
 
         if (holder.layer <= 0) {
             container.setMetadata(key, metadataValue(null))
@@ -134,7 +174,10 @@ object EntityStateManager {
 
     private fun endState(target: ProxyTarget.Entity<*>, state: State) {
         info("State ${state.id} timer task ended")
-        val bukkitTarget = target as? ProxyTarget.BukkitEntity ?: return
+        val bukkitTarget = target as? ProxyTarget.BukkitEntity
+        if (bukkitTarget == null) {
+            return
+        }
         if (EntityStateEvent.End(bukkitTarget, state).call()) {
             remove(target, state)
         }

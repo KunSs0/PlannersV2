@@ -124,7 +124,9 @@ frost_bolt:
     function main() {
       var targets = finder().range(10).limit(1).sort("DISTANCE").build()
       healthTake(30 * level + 50, targets)
-      stateAPI.attach("frozen", 60, true, targets)
+      for (const target of targets) {
+        stateAPI.attach(target, "frozen", 60, true)
+      }
       freeze(60, targets)
       sound("ENTITY_PLAYER_HURT_FREEZE", 1.0, 1.0, targets)
     }

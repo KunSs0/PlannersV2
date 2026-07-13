@@ -99,17 +99,16 @@ berserk:
 ### `stateAPI.attach`
 
 ```javascript
-stateAPI.attach(id, duration)
-stateAPI.attach(id, duration, refresh)
-stateAPI.attach(id, duration, refresh, targets)
+stateAPI.attach(target, id, duration)
+stateAPI.attach(target, id, duration, refresh)
 ```
 
 | 参数 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
+| `target` | ProxyTarget.Entity | 必填 | 要附加状态的单个实体目标。 |
 | `id` | string | 必填 | 状态 ID。 |
 | `duration` | long | 必填 | 持续时间，单位为 tick，必须大于 `0`。 |
 | `refresh` | boolean | `true` | 目标已有该状态时，是否刷新剩余时间。 |
-| `targets` | target container | `sender` | 目标集合。 |
 
 行为：
 
@@ -117,26 +116,27 @@ stateAPI.attach(id, duration, refresh, targets)
 - 目标已有该状态时，尝试增加 1 层。
 - 达到 `max-layer` 后不会继续加层。
 - 达到层数上限时，如果 `refresh` 为 `true`，仍会刷新剩余时间。
+- 返回 `true` 表示状态已挂载、叠层或刷新；其他情况返回 `false`。
 
 ### `stateAPI.detach`
 
 ```javascript
-stateAPI.detach(id)
-stateAPI.detach(id, layer)
-stateAPI.detach(id, layer, targets)
+stateAPI.detach(target, id)
+stateAPI.detach(target, id, layer)
 ```
 
 | 参数 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
+| `target` | ProxyTarget.Entity | 必填 | 要卸载状态的单个实体目标。 |
 | `id` | string | 必填 | 状态 ID。 |
 | `layer` | int | `1` | 移除层数。传入 `999` 表示清空全部层数。 |
-| `targets` | target container | `sender` | 目标集合。 |
+
+返回 `true` 表示至少移除了一个状态层；状态不存在、目标不支持或状态被事件取消时返回 `false`。
 
 ### `stateAPI.remove`
 
 ```javascript
-stateAPI.remove(id)
-stateAPI.remove(id, targets)
+stateAPI.remove(target, id)
 ```
 
 完整移除目标身上的指定状态，效果等同于清空全部层数。
@@ -144,11 +144,20 @@ stateAPI.remove(id, targets)
 ### `stateAPI.has`
 
 ```javascript
-stateAPI.has(id)
-stateAPI.has(id, targets)
+stateAPI.has(target, id)
 ```
 
-返回 `true` 或 `false`。当传入多个目标时，返回第一个可处理实体的检查结果。
+返回 `true` 或 `false`。
+
+### `stateAPI.getLayer`
+
+```javascript
+stateAPI.getLayer(target, id)
+```
+
+返回目标指定状态的当前有效层数；状态不存在、已失效或目标不支持时返回 `0`。
+
+`stateAPI` 不解析目标集合，也不会隐式回退到 `sender`。多个目标需要由脚本逐个遍历并调用 API。
 
 ## 技能中附加状态
 
@@ -163,7 +172,9 @@ frost_bolt:
     function main() {
       var targets = finder().range(10).limit(1).sort("DISTANCE").build()
       healthTake(30 * level + 50, targets)
-      stateAPI.attach("frozen", 60, true, targets)
+      for (const target of targets) {
+        stateAPI.attach(target, "frozen", 60, true)
+      }
       freeze(60, targets)
       sound("ENTITY_PLAYER_HURT_FREEZE", 1.0, 1.0, targets)
     }

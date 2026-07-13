@@ -31,7 +31,7 @@ Planners 是一个基于 TabooLib 的 Minecraft 职业与技能系统插件。
 - [实体函数](scripting/functions-entity.md) — spawn、remove、teleport、AI、重力等
 - [命令函数](scripting/functions-command.md) — command、commandOp、commandConsole
 - [冷却函数](scripting/functions-cooldown.md) — getCooldown、setCooldown、resetCooldown
-- [状态 API](scripting/functions-state.md) — stateAPI.attach、stateAPI.detach、stateAPI.remove、stateAPI.has
+- [状态 API](scripting/functions-state.md) — stateAPI.attach、stateAPI.detach、stateAPI.remove、stateAPI.has、stateAPI.getLayer
 - [声音函数](scripting/functions-sound.md) — sound、soundResource
 - [投射物函数](scripting/functions-projectile.md) — projectile、projectileAt、projectileToward
 - [元数据函数](scripting/functions-metadata.md) — getMeta、setMeta、hasMeta、removeMeta
