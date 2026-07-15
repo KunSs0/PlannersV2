@@ -41,9 +41,6 @@ repositories {
     mavenLocal()
     maven("https://repo.tabooproject.org/repository/releases")
 }
-tasks.withType<Jar> {
-    destinationDirectory.set(file("F:\\minecraft\\haider\\server\\server-main\\plugins"))
-}
 dependencies {
 
     compileOnly("ink.ptms:nms-all:1.0.0")
