@@ -27,6 +27,7 @@ taboolib {
     description {
         dependencies {
             name("MythicMobs").optional(true)
+            name("PlaceholderAPI").optional(true)
             name("ScriptEngine")
         }
     }

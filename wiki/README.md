@@ -36,6 +36,7 @@ Planners 是一个基于 TabooLib 的 Minecraft 职业与技能系统插件。
 - [投射物函数](scripting/functions-projectile.md) — projectile、projectileAt、projectileToward
 - [元数据函数](scripting/functions-metadata.md) — getMeta、setMeta、hasMeta、removeMeta
 - [经济函数](scripting/functions-economy.md) — getBalance、takeMoney、giveMoney
+- [PlaceholderAPI 函数](scripting/functions-placeholder.md) — papi
 - [兼容插件函数](scripting/functions-compat.md) — DragonCore、GermPlugin、MythicMobs、AttributePlus
 
 ## 开发者指南
