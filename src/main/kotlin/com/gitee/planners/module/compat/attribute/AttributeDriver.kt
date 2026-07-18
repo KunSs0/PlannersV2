@@ -3,16 +3,33 @@ package com.gitee.planners.module.compat.attribute
 import com.gitee.planners.api.job.target.ProxyTarget
 import org.bukkit.entity.Entity
 import taboolib.common.LifeCycle
-import taboolib.common.inject.ClassVisitor
 import taboolib.common.platform.Awake
 import taboolib.common.platform.function.info
-import taboolib.library.reflex.ReflexClass
 
 interface AttributeDriver {
 
     companion object {
 
-        private val INSTANCES = mutableListOf<AttributeDriver>()
+        lateinit var INSTANCE: AttributeDriver
+
+        @JvmStatic
+        @Awake(LifeCycle.ENABLE)
+        fun init() {
+            if (::INSTANCE.isInitialized) {
+                return
+            }
+            if (AttributePlus3Driver.checkEnable()) {
+                INSTANCE = AttributePlus3Driver
+                info("AttributeDriver load driver: AttributePlus3Driver")
+            }
+        }
+
+        private fun current(): AttributeDriver? {
+            if (!::INSTANCE.isInitialized) {
+                return null
+            }
+            return INSTANCE
+        }
 
         /**
          * 设置目标属性
@@ -23,7 +40,10 @@ interface AttributeDriver {
          * @param timeout 超时时间
          */
         fun set(target: ProxyTarget<*>, id: String, source: List<String>, timeout: Int) {
-            INSTANCES.forEach { it.set(target, id, source, timeout) }
+            val driver = current()
+            if (driver != null) {
+                driver.set(target, id, source, timeout)
+            }
         }
 
         /**
@@ -35,7 +55,10 @@ interface AttributeDriver {
          * @param timeout 超时时间
          */
         fun set(entity: Entity, id: String, source: List<String>, timeout: Int) {
-            INSTANCES.forEach { it.set(entity, id, source, timeout) }
+            val driver = current()
+            if (driver != null) {
+                driver.set(entity, id, source, timeout)
+            }
         }
 
         /**
@@ -45,7 +68,10 @@ interface AttributeDriver {
          * @param id 属性id
          */
         fun remove(target: ProxyTarget<*>, id: String) {
-            INSTANCES.forEach { it.remove(target, id) }
+            val driver = current()
+            if (driver != null) {
+                driver.remove(target, id)
+            }
         }
 
         /**
@@ -56,8 +82,11 @@ interface AttributeDriver {
          * @return 属性值数组，不存在返回空列表
          */
         fun get(entity: Entity, attrName: String): List<Double> {
-            INSTANCES.forEach { return it.get(entity, attrName) }
-            return emptyList()
+            val driver = current()
+            if (driver == null) {
+                return emptyList()
+            }
+            return driver.get(entity, attrName)
         }
 
     }
@@ -105,26 +134,5 @@ interface AttributeDriver {
      * @return 属性值数组，不存在返回空列表
      */
     fun get(entity: Entity, attrName: String): List<Double>
-
-    @Awake
-    class Visitor : ClassVisitor(0) {
-
-        override fun getLifeCycle(): LifeCycle {
-            return LifeCycle.ACTIVE
-        }
-
-        @Suppress("NAME_SHADOWING")
-        override fun visitEnd(clazz: ReflexClass) {
-
-            if (AttributeDriver::class.java.isAssignableFrom(clazz.toClass())) {
-                val instance = clazz.getInstance() ?: return
-                if ((instance as AttributeDriver).checkEnable()) {
-                    INSTANCES.add(instance)
-                    info("AttributeDriver load driver: ${clazz.simpleName}")
-                }
-            }
-        }
-
-    }
 
 }
