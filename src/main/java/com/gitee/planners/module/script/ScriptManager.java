@@ -1,13 +1,16 @@
 package com.gitee.planners.module.script;
 
-import com.gitee.scriptengine.api.ScriptSession;
+import com.gitee.scriptengine.api.ScriptFunction;
+import com.gitee.scriptengine.api.ContextPreset;
+import com.gitee.scriptengine.api.HostAccessMode;
 import com.gitee.scriptengine.api.ScriptResult;
-import com.gitee.scriptengine.core.GraalJsEngine;
-import com.gitee.scriptengine.core.JsEngine;
-import com.gitee.scriptengine.core.ValueConverter;
+import com.gitee.scriptengine.api.ScriptSession;
+import com.gitee.scriptengine.api.ScriptValue;
+import com.gitee.scriptengine.api.ScriptWorkspace;
+import com.gitee.scriptengine.api.WorkspaceConfig;
+import com.gitee.scriptengine.core.ScriptSessionImpl;
+import com.gitee.scriptengine.core.ScriptWorkspaceImpl;
 import com.gitee.planners.module.script.api.StateAPI;
-import org.graalvm.polyglot.proxy.ProxyObject;
-import org.graalvm.polyglot.proxy.ProxyExecutable;
 
 import java.io.File;
 import java.util.LinkedHashMap;
@@ -22,7 +25,7 @@ import java.util.logging.Logger;
 public final class ScriptManager {
 
     private static final Logger LOGGER = Logger.getLogger("Script");
-    private static JsEngine engine;
+    private static ScriptWorkspace workspace;
 
     private ScriptManager() {}
 
@@ -30,20 +33,27 @@ public final class ScriptManager {
      * 初始化引擎（插件启动时调用）。
      */
     public static void init() {
-        if (engine != null) {
+        if (workspace != null) {
             return;
         }
         // 注册所有全局函数到本地注册表
         ScriptFunctionRegistry.registerAll();
 
         File scriptDir = new File("plugins/Planners/scripts");
-        engine = new GraalJsEngine(scriptDir, java.util.Collections.emptyList());
-
-        // 将本地注册的全局函数注入引擎
-        GlobalFunctions.getAll().forEach((name, fn) ->
-            engine.registerFunction(name, args -> fn.apply(args))
-        );
-        LOGGER.info("[Script] 引擎初始化完成: " + engine.name());
+        workspace = new ScriptWorkspaceImpl(scriptDir, new WorkspaceConfig(
+            ContextPreset.DEFAULT,
+            HostAccessMode.ALL,
+            name -> true,
+            false,
+            java.util.Collections.emptyList(),
+            java.util.Collections.emptyList(),
+            java.util.Collections.emptyMap(),
+            ScriptManager.class.getClassLoader(),
+            false,
+            java.util.Collections.emptyMap(),
+            java.util.Collections.emptyList()
+        ));
+        LOGGER.info("[Script] 引擎初始化完成: ScriptEngine");
     }
 
     /**
@@ -57,7 +67,15 @@ public final class ScriptManager {
         Map<String, Object> variables = createScriptVariables(options.getVariables());
         ScriptContext.setCurrent(variables);
         try {
-            return engine.eval(source, variables);
+            com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(variables);
+            installGlobalFunctions(context);
+            try {
+                ScriptResult result = context.eval(source);
+                checkResult("执行脚本失败", result);
+                return result.getValue();
+            } finally {
+                context.close();
+            }
         } finally {
             if (previous != null) {
                 ScriptContext.setCurrent(previous);
@@ -79,7 +97,9 @@ public final class ScriptManager {
      */
     public static ScriptSession openSession(ScriptOptions options) {
         ensureInit();
-        return engine.openSession(createSessionVariables(options.getVariables()));
+        com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(createSessionVariables(options.getVariables()));
+        installGlobalFunctions(context);
+        return new ScriptSessionImpl(context);
     }
 
     /**
@@ -100,7 +120,9 @@ public final class ScriptManager {
         ScriptContext.setCurrent(variables);
         ScriptSession session = null;
         try {
-            session = engine.openSession(createSessionVariables(variables));
+            com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(createSessionVariables(variables));
+            installGlobalFunctions(context);
+            session = new ScriptSessionImpl(context);
             ScriptResult evalResult = session.eval(source);
             checkResult("载入 action 脚本失败", evalResult);
             if (!session.hasFunction(functionName)) {
@@ -124,23 +146,23 @@ public final class ScriptManager {
     /**
      * 获取当前引擎。
      */
-    public static JsEngine getEngine() {
+    public static ScriptWorkspace getWorkspace() {
         ensureInit();
-        return engine;
+        return workspace;
     }
 
     /**
      * 关闭引擎（插件卸载时调用）。
      */
     public static void shutdown() {
-        if (engine != null) {
-            engine.close();
-            engine = null;
+        if (workspace != null) {
+            workspace.close();
+            workspace = null;
         }
     }
 
     private static void ensureInit() {
-        if (engine == null) {
+        if (workspace == null) {
             init();
         }
     }
@@ -154,12 +176,17 @@ public final class ScriptManager {
 
     private static Map<String, Object> createSessionVariables(Map<String, Object> variables) {
         Map<String, Object> sessionVariables = createScriptVariables(variables);
-        GlobalFunctions.getAll().forEach((name, fn) ->
-            sessionVariables.put(name, (ProxyExecutable) values ->
-                fn.apply(ValueConverter.INSTANCE.unwrapArray(values))
-            )
-        );
         return sessionVariables;
+    }
+
+    private static void installGlobalFunctions(com.gitee.scriptengine.api.ScriptContext context) {
+        for (Map.Entry<String, java.util.function.Function<Object[], Object>> entry : GlobalFunctions.getAll().entrySet()) {
+            java.util.function.Function<Object[], Object> function = entry.getValue();
+            context.getBindings().putMember(entry.getKey(), (ScriptFunction) values -> {
+                Object[] arguments = unwrapArguments(values);
+                return function.apply(arguments);
+            });
+        }
     }
 
     private static void checkResult(String message, ScriptResult result) {
@@ -181,11 +208,58 @@ public final class ScriptManager {
         return adapted;
     }
 
-    @SuppressWarnings("unchecked")
     private static Object adaptArgument(Object arg) {
-        if (arg instanceof Map) {
-            return ProxyObject.fromMap((Map<String, Object>) arg);
-        }
         return arg;
+    }
+
+    private static Object[] unwrapArguments(ScriptValue[] values) {
+        Object[] arguments = new Object[values.length];
+        for (int index = 0; index < values.length; index++) {
+            arguments[index] = unwrapValue(values[index]);
+        }
+        return arguments;
+    }
+
+    private static Object unwrapValue(ScriptValue value) {
+        if (value.isNull()) {
+            return null;
+        }
+        if (value.isBoolean()) {
+            return value.asBoolean();
+        }
+        if (value.isString()) {
+            return value.asString();
+        }
+        if (value.isNumber()) {
+            if (value.fitsInInt()) {
+                return value.asInt();
+            }
+            if (value.fitsInLong()) {
+                return value.asLong();
+            }
+            return value.asDouble();
+        }
+        if (value.isHostObject()) {
+            return value.asHostObject();
+        }
+        if (value.hasArrayElements()) {
+            int size = Math.toIntExact(value.getArraySize());
+            Object[] array = new Object[size];
+            for (int index = 0; index < size; index++) {
+                array[index] = unwrapValue(value.getArrayElement(index));
+            }
+            return array;
+        }
+        if (value.hasMembers()) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            for (String key : value.getMemberKeys()) {
+                ScriptValue member = value.getMember(key);
+                if (member != null) {
+                    map.put(key, unwrapValue(member));
+                }
+            }
+            return map;
+        }
+        return value;
     }
 }
