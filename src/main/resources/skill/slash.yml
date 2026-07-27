@@ -1,5 +1,6 @@
 __option__:
   name: "斩击"
+  category: [active]
   display:
     icon:
       material: IRON_SWORD

@@ -1,5 +1,6 @@
 __option__:
   name: "裂地"
+  category: [active]
   display:
     icon:
       material: STONE_PICKAXE

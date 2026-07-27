@@ -4,6 +4,7 @@ import com.gitee.planners.api.BackpackAPI
 import com.gitee.planners.api.KeyBindingAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
+import com.gitee.planners.core.config.SkillCategories
 import com.gitee.planners.core.skill.binding.MinecraftInteraction
 import org.bukkit.entity.Player
 import taboolib.library.configuration.ConfigurationSection
@@ -58,7 +59,7 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
                     if (skill != null) {
                         renderEquippedSkill(player, template, skill, slotConfig.key, invSlot)
                     } else {
-                        renderEmptySlot(player, template, slotConfig.key, invSlot, currentPageId, slotId)
+                        renderEmptySlot(player, template, slotConfig.key, invSlot, currentPageId, slotId, slotConfig.categories)
                     }
                 }
             }
@@ -96,7 +97,7 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
             setIcon(infoCfg, infoIcon) {}
 
             setIcon(skillListCfg.get()) {
-                BackpackSkillSelectUI.choice(player) { }
+                BackpackSkillSelectUI.choice(player, setOf(SkillCategories.WILDCARD)) { }
             }
         }
     }
@@ -107,7 +108,8 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
         keyId: String,
         invSlot: Int,
         currentPageId: String,
-        slotId: String
+        slotId: String,
+        allowedCategories: Set<String>
     ) {
         val keybinding = Registries.KEYBINDING.getOrNull(keyId)
         val name = keybinding?.name
@@ -125,7 +127,7 @@ object BackpackUI : AutomationBaseUI("backpack.yml") {
             icon.itemMeta = meta
         }
         set(invSlot, icon) {
-            BackpackSkillSelectUI.choice(player) { selectedSkill ->
+            BackpackSkillSelectUI.choice(player, allowedCategories) { selectedSkill ->
                 BackpackAPI.equipSkill(template, selectedSkill, currentPageId, slotId)
                 MinecraftInteraction.updateInventory(template)
                 BackpackUI.openTo(player)

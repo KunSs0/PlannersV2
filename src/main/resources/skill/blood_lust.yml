@@ -1,5 +1,6 @@
 __option__:
   name: "嗜血"
+  category: [active]
   display:
     icon:
       material: RED_DYE

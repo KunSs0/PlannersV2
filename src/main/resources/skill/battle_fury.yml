@@ -1,5 +1,6 @@
 __option__:
   name: "战斗狂热"
+  category: [active]
   display:
     icon:
       material: BLAZE_POWDER

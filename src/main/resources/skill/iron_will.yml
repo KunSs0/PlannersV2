@@ -1,5 +1,6 @@
 __option__:
   name: "钢铁意志"
+  category: [active]
   display:
     icon:
       material: NETHERITE_SCRAP

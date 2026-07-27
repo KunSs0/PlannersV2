@@ -30,6 +30,10 @@ object BackpackAPI {
 
     /** 装备技能到指定页面的槽位 */
     fun equipSkill(template: PlayerTemplate, skill: PlayerSkill, page: String, slot: String) {
+        if (!canEquipSkill(template, skill, page, slot)) {
+            return
+        }
+
         val event = BackpackEquipEvent.Equip(template, skill, page, slot)
         if (!event.call()) return
 
@@ -48,6 +52,27 @@ object BackpackAPI {
         skill.backpackSlot = slot
         template.route?.updateEquippedIndex(skill)
         submitAsync { Database.INSTANCE.updateSkill(skill) }
+    }
+
+    /**
+     * 检查技能是否可以装备到指定页面槽位。
+     *
+     * @param template 玩家档案。
+     * @param skill 待装备技能。
+     * @param page 页面 ID。
+     * @param slot 槽位 ID。
+     * @return 页面、槽位存在且分类匹配时返回 true。
+     */
+    fun canEquipSkill(template: PlayerTemplate, skill: PlayerSkill, page: String, slot: String): Boolean {
+        val pageConfig = Registries.BACKPACK.getPage(page)
+        if (pageConfig == null) {
+            return false
+        }
+        val slotConfig = pageConfig.slots[slot]
+        if (slotConfig == null) {
+            return false
+        }
+        return slotConfig.accepts(skill)
     }
 
     /** 卸下技能 */

@@ -1,5 +1,6 @@
 __option__:
   name: "怒火"
+  category: [passive]
   display:
     icon:
       material: BLAZE_ROD

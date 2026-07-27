@@ -1,5 +1,6 @@
 __option__:
   name: "x1"
+  category: [active]
   display:
     icon:
       material: DIAMOND_SWORD

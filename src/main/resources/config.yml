@@ -62,6 +62,14 @@ settings:
         count: 1
       hint: "物品条件未实现"
 
+  # 技能分类规格
+  skill:
+    categories:
+      active:
+        name: "主动技能"
+      passive:
+        name: "被动技能"
+
   # 技能点配置
   skill-points:
     # 每级获得点数，JS 表达式，变量: level
@@ -231,23 +239,31 @@ settings:
           slots:
             slot0:
               key: key0
+              category: [active]
             slot1:
               key: key1
+              category: [active]
             slot2:
               key: key2
+              category: [active]
             slot3:
               key: key3
+              category: [active]
         "1":
           name: "辅助页"
           slots:
             slot0:
               key: key0
+              category: [active, passive]
             slot1:
               key: key4
+              category: [active, passive]
             slot2:
               key: key5
+              category: [active, passive]
             slot3:
               key: key6
+              category: [active, passive]
   bukkit-launch:
     unimpeded-types:
       - AIR

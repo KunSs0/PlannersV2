@@ -6,6 +6,7 @@ import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionConfig
 import com.gitee.planners.core.config.BackpackConfig
+import com.gitee.planners.core.config.SkillCategorySpec
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
@@ -91,9 +92,19 @@ object Planners : Plugin() {
         Pair(key.toInt(), value as String)
     }
 
+    @ConfigNode("settings.skill.categories")
+    val skillCategorySpecs = configNodeToMap { key, value ->
+        val cfg = value as ConfigurationSection
+        val name = cfg.getString("name")
+        if (name == null || name.isBlank()) {
+            throw IllegalArgumentException("技能分类 '$key' 缺少有效的 name 配置")
+        }
+        SkillCategorySpec(key, name)
+    }
+
     @ConfigNode("settings.keybinding.backpack")
     val backpackConfig = ConfigNodeTransfer<ConfigurationSection, BackpackConfig> {
-        BackpackConfig(this)
+        BackpackConfig(this, skillCategorySpecs.get())
     }
 
     @ConfigNode("settings.condition")

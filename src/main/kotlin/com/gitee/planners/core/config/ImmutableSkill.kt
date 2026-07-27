@@ -1,5 +1,6 @@
 package com.gitee.planners.core.config
 
+import com.gitee.planners.Planners
 import com.gitee.planners.api.common.Unique
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
@@ -10,7 +11,6 @@ import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.common.platform.function.warning
-import taboolib.common.util.asList
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
@@ -31,7 +31,12 @@ class ImmutableSkill(config: Configuration) : Unique {
     val icon = option.getConfigurationSection("display")?.getItemStack("icon")
 
     /** 技能分类 */
-    val categories = option["category", "*"]!!.asList()
+    val categories: Set<String>
+    init {
+        val categoryValue = option["category"]
+        categories = SkillCategories.parse(categoryValue, "技能 '$id'")
+        SkillCategories.validate(categories, Planners.skillCategorySpecs.get(), "技能 '$id'")
+    }
 
     /** 技能是否异步运行 */
     val async = option.getBoolean("async", true)

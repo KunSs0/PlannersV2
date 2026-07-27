@@ -1,5 +1,6 @@
 __option__:
   name: "裂地斩"
+  category: [active]
 
   display:
     icon:

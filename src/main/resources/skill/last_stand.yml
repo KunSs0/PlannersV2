@@ -1,5 +1,6 @@
 __option__:
   name: "绝境求生"
+  category: [active]
   display:
     icon:
       material: TOTEM_OF_UNDYING

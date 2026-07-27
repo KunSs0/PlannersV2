@@ -1,5 +1,6 @@
 __option__:
   name: "批量操作测试"
+  category: [active]
 
 action: |
   function main() {
