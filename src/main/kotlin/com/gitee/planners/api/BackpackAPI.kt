@@ -51,6 +51,7 @@ object BackpackAPI {
         skill.backpackPage = page
         skill.backpackSlot = slot
         template.route?.updateEquippedIndex(skill)
+        BackpackEquipEvent.Post(template, skill, page, slot).call()
         submitAsync { Database.INSTANCE.updateSkill(skill) }
     }
 

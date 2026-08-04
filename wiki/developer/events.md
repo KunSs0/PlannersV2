@@ -59,6 +59,34 @@ fun onSkillBindingChange(e: PlayerSkillEvent.BindingChange) {
     val skill = e.skill
     val binding = e.binding     // 新绑定的按键（null = 解绑）
 }
+
+// 首次学习技能成功
+@EventHandler
+fun onSkillLearn(e: PlayerSkillEvent.Learn) {
+    val player = e.player
+    val skill = e.skill
+    player.sendMessage("已学习技能：${skill.id}")
+}
+```
+
+### BackpackEquipEvent — 技能装配
+
+```kotlin
+// 装配前（可取消）
+@EventHandler
+fun onBackpackEquip(e: BackpackEquipEvent.Equip) {
+    val player = e.player
+    val skill = e.skill
+}
+
+// 装配成功后
+@EventHandler
+fun onBackpackEquipPost(e: BackpackEquipEvent.Post) {
+    val player = e.player
+    val skill = e.skill
+    val page = e.page
+    val slot = e.slot
+}
 ```
 
 ---

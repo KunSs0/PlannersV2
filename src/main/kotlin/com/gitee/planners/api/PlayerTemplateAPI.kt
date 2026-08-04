@@ -239,8 +239,12 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
      * @param to 目标等级
      */
     fun setSkillLevel(template: PlayerTemplate, skill: PlayerSkill, to: Int) {
-        if (PlayerSkillEvent.LevelChange(template, skill, skill.level, to).call()) {
+        val from = skill.level
+        if (PlayerSkillEvent.LevelChange(template, skill, from, to).call()) {
             skill.level = to
+            if (from == 0 && to > 0) {
+                PlayerSkillEvent.Learn(template, skill).call()
+            }
         }
     }
 
