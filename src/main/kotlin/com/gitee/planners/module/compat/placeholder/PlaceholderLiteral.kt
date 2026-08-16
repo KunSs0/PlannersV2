@@ -7,6 +7,7 @@ import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.config.State.Companion.path
+import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
@@ -144,21 +145,33 @@ object PlaceholderLiteral {
     }
 
     /**
+     * 获取玩家当前选择的完整转职线。
+     *
+     * PlayerRouter 聚合当前 Job 阶段、父阶段链、全线技能与共享 SP；未选择职业时为空。
+     *
+     * @param template 玩家档案。
+     * @return 玩家转职线；尚未选择职业时为 null。
+     */
+    private fun getPlayerRouterOrNull(template: PlayerTemplate): PlayerRouter? {
+        return template.playerRouter
+    }
+
+    /**
      * 解析当前路由 ID。
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 当前路由 ID；未选择路线或参数无效时为空字符串。
+     * @return 当前转职线 ID；未选择职业或参数无效时为空字符串。
      */
     private fun parseRouterId(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
-        return route.id
+        return playerRouter.routerId
     }
 
     /**
@@ -166,17 +179,17 @@ object PlaceholderLiteral {
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 当前路由显示名称；未选择路线或参数无效时为空字符串。
+     * @return 当前转职线显示名称；未选择职业或参数无效时为空字符串。
      */
     private fun parseRouterName(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
-        return route.router.name
+        return playerRouter.router.name
     }
 
     /**
@@ -184,17 +197,17 @@ object PlaceholderLiteral {
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 当前职业 ID；未选择路线或参数无效时为空字符串。
+     * @return 当前职业 ID；未选择职业或参数无效时为空字符串。
      */
     private fun parseJobId(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
-        return route.getJob().id
+        return playerRouter.currentRoute.jobId
     }
 
     /**
@@ -202,17 +215,17 @@ object PlaceholderLiteral {
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 当前职业名称；未选择路线或参数无效时为空字符串。
+     * @return 当前职业名称；未选择职业或参数无效时为空字符串。
      */
     private fun parseJobName(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
-        return route.name
+        return playerRouter.currentRoute.name
     }
 
     /**
@@ -220,17 +233,17 @@ object PlaceholderLiteral {
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 当前可用技能点；未选择路线或参数无效时为空字符串。
+     * @return 当前转职线可用共享 SP；未选择职业或参数无效时为空字符串。
      */
     private fun parseSkillPoints(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
-        return route.skillPointsCurrent.toString()
+        return playerRouter.skillPointsCurrent.toString()
     }
 
     /**
@@ -238,17 +251,17 @@ object PlaceholderLiteral {
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 已消耗技能点；未选择路线或参数无效时为空字符串。
+     * @return 当前转职线已消耗共享 SP；未选择职业或参数无效时为空字符串。
      */
     private fun parseSkillPointsUsed(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
-        return route.skillPointsUsed.toString()
+        return playerRouter.skillPointsUsed.toString()
     }
 
     /**
@@ -256,17 +269,17 @@ object PlaceholderLiteral {
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 当前和已消耗技能点之和；未选择路线或参数无效时为空字符串。
+     * @return 当前转职线可用与已消耗共享 SP 之和；未选择职业或参数无效时为空字符串。
      */
     private fun parseSkillPointsTotal(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
-        return (route.skillPointsCurrent + route.skillPointsUsed).toString()
+        return (playerRouter.skillPointsCurrent + playerRouter.skillPointsUsed).toString()
     }
 
     /**
@@ -274,18 +287,18 @@ object PlaceholderLiteral {
      *
      * @param request 已解析的请求。
      * @param template 玩家档案。
-     * @return 等级大于零的技能数量；未选择路线或参数无效时为空字符串。
+     * @return 全转职线中等级大于零的技能数量；未选择职业或参数无效时为空字符串。
      */
     private fun parseSkillCount(request: Request, template: PlayerTemplate): String {
         if (request.arguments.isNotEmpty()) {
             return ""
         }
-        val route = template.route
-        if (route == null) {
+        val playerRouter = getPlayerRouterOrNull(template)
+        if (playerRouter == null) {
             return ""
         }
         var count = 0
-        for (skill in route.getRegisteredSkill().values) {
+        for (skill in playerRouter.effectiveSkills.values) {
             if (skill.level > 0) {
                 count++
             }
