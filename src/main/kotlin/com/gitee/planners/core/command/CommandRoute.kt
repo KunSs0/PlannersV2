@@ -30,7 +30,7 @@ object CommandRoute {
     @CommandBody
     val transfer = with { player ->
         val plannersTemplate = player.plannersTemplate
-        if (plannersTemplate.route == null) {
+        if (plannersTemplate.playerRouter == null) {
             player.sendLang("player-route-invalid")
             return@with
         }
@@ -39,7 +39,7 @@ object CommandRoute {
 
     @CommandBody
     val clear = with { player ->
-        player.plannersTemplate.route = null
+        player.plannersTemplate.clearPlayerRouter()
         player.sendLang("player-route-clear")
     }
 

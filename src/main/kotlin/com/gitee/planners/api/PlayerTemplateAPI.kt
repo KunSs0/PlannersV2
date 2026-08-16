@@ -45,9 +45,7 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         val template = player.plannersTemplate
         if (PlayerSetRouteEvent.Pre(template, route).call()) {
             return PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, route).thenApply {
-                template.route = it
                 PlayerSetRouteEvent.Post(template, it).call()
-
                 it
             }
         }

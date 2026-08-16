@@ -8,6 +8,7 @@ import com.gitee.planners.module.script.ScriptArgs;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import taboolib.common.util.SyncExecutorKt;
 
 /**
  * 命令执行扩展函数
@@ -29,11 +30,13 @@ public final class CommandFunctions {
             String cmd = ScriptArgs.getString(args, 0);
             if (cmd == null) return null;
             ProxyTargetContainer targets = ScriptArgs.getTargets(args, 1, LeastType.SENDER);
-            for (ProxyTarget<?> t : targets) {
-                if (t instanceof ProxyTarget.CommandSender) {
-                    ((ProxyTarget.CommandSender<?>) t).dispatchCommand(cmd);
+            runSync(() -> {
+                for (ProxyTarget<?> t : targets) {
+                    if (t instanceof ProxyTarget.CommandSender) {
+                        ((ProxyTarget.CommandSender<?>) t).dispatchCommand(cmd);
+                    }
                 }
-            }
+            });
             return null;
         });
 
@@ -50,26 +53,37 @@ public final class CommandFunctions {
         GlobalFunctions.register("commandConsole", args -> {
             String cmd = ScriptArgs.getString(args, 0);
             if (cmd == null) return null;
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+            runSync(() -> {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+            });
             return null;
         });
     }
 
     private static void executeAsOp(String cmd, ProxyTargetContainer targets) {
-        for (ProxyTarget<?> t : targets) {
-            if (t instanceof ProxyTarget.BukkitEntity) {
-                Object instance = ((ProxyTarget.BukkitEntity) t).getInstance();
-                if (instance instanceof Player) {
-                    Player player = (Player) instance;
-                    boolean wasOp = player.isOp();
-                    try {
-                        player.setOp(true);
-                        Bukkit.dispatchCommand(player, cmd);
-                    } finally {
-                        player.setOp(wasOp);
+        runSync(() -> {
+            for (ProxyTarget<?> t : targets) {
+                if (t instanceof ProxyTarget.BukkitEntity) {
+                    Object instance = ((ProxyTarget.BukkitEntity) t).getInstance();
+                    if (instance instanceof Player) {
+                        Player player = (Player) instance;
+                        boolean wasOp = player.isOp();
+                        try {
+                            player.setOp(true);
+                            Bukkit.dispatchCommand(player, cmd);
+                        } finally {
+                            player.setOp(wasOp);
+                        }
                     }
                 }
             }
-        }
+        });
+    }
+
+    private static void runSync(Runnable action) {
+        SyncExecutorKt.runSync(() -> {
+            action.run();
+            return null;
+        });
     }
 }

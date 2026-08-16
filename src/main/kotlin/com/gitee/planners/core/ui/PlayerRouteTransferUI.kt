@@ -13,16 +13,20 @@ import taboolib.platform.util.sendLang
 object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer.yml") {
 
     override fun getElements(player: Player): Collection<ImmutableRoute> {
-        return player.plannersTemplate.route!!.getBranches()
+        val playerRouter = player.plannersTemplate.playerRouter
+        if (playerRouter == null) {
+            return emptyList()
+        }
+        return playerRouter.getNextRoutes()
     }
 
     override fun onClick(event: ClickEvent, element: ImmutableRoute) {
         val player = event.clicker
         // 转职条件校验由后续 ConditionEvaluator 接管
-        val template = player.plannersTemplate
-        PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, element).thenAccept { newRoute ->
-            template.route = newRoute
-            player.sendLang("player-transfer-success", element.getJob().name)
+        PlayerTemplateAPI.setPlayerRoute(player, element).thenAccept { newRoute ->
+            if (newRoute != null) {
+                player.sendLang("player-transfer-success", element.getJob().name)
+            }
         }
     }
 

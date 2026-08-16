@@ -40,9 +40,6 @@ interface Database {
      */
     fun getPlayerProfile(player: Player): PlayerTemplate
 
-    /** 更新玩家当前激活的 route */
-    fun updateRoute(template: PlayerTemplate)
-
     /** 写入或删除一条 metadata */
     fun updateMetadata(template: PlayerTemplate, id: String, metadata: Metadata)
 
@@ -52,20 +49,14 @@ interface Database {
     /** 更新技能等级、装备状态、背包位置 */
     fun updateSkill(skill: PlayerSkill)
 
-    /** 持久化技能点变动（sp_current / sp_used） */
-    fun updateSkillPoints(route: PlayerRoute)
-
     /** 为玩家创建一条新技能记录，返回持久化后的 PlayerSkill */
-    fun createPlayerSkill(template: PlayerTemplate, skill: ImmutableSkill): CompletableFuture<PlayerSkill>
+    fun createPlayerSkill(template: PlayerTemplate, route: PlayerRoute, skill: ImmutableSkill): CompletableFuture<PlayerSkill>
 
     /**
      * 创建子路线（转职）
      * @param parentId 父路线在数据库中的 id
      */
-    fun createPlayerJob(template: PlayerTemplate, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute>
-
-    /** 创建初始路线（无父路线） */
-    fun createPlayerJob(template: PlayerTemplate, route: ImmutableRoute): CompletableFuture<PlayerRoute>
+    fun createPlayerRoute(router: PlayerRouter, parentId: Long, route: ImmutableRoute): CompletableFuture<PlayerRoute>
 
     /**
      * 查询玩家在指定 router 下的等级数据
@@ -78,5 +69,8 @@ interface Database {
 
     /** 更新玩家在 router 下的等级和经验值 */
     fun updatePlayerRouter(router: PlayerRouter)
+
+    /** 删除玩家当前选择的 Router 及其转职线数据。 */
+    fun deletePlayerRouter(router: PlayerRouter)
 
 }

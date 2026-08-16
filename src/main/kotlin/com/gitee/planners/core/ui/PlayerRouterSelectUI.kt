@@ -24,8 +24,9 @@ object PlayerRouterSelectUI : SingletonChoiceUI<ImmutableRouter>("router-select.
     override fun onClick(event: ClickEvent, element: ImmutableRouter) {
         val player = event.clicker
         val template = player.plannersTemplate
-        if (template.route != null) {
-            player.sendLang("player-route-exists", template.route!!.name)
+        val playerRouter = template.playerRouter
+        if (playerRouter != null) {
+            player.sendLang("player-route-exists", playerRouter.currentRoute.name)
             return
         }
         event.clicker.closeInventory()

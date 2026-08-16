@@ -11,7 +11,6 @@ import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.getDataFolder
 import taboolib.common.util.unsafeLazy
-import taboolib.common5.clong
 import taboolib.module.database.*
 import java.io.File
 import java.sql.ResultSet
@@ -31,7 +30,6 @@ class DatabaseLocal : Database {
     val tableUser = Table("planners_user", host) {
         add { id() }
         add("user") { type(ColumnTypeSQLite.TEXT) }
-        add("route") { type(ColumnTypeSQLite.INTEGER) }
     }
 
     val tableRoute = Table("planners_route", host) {
@@ -40,8 +38,6 @@ class DatabaseLocal : Database {
         add("router") { type(ColumnTypeSQLite.TEXT) }
         add("parent") { type(ColumnTypeSQLite.INTEGER) }
         add("route") { type(ColumnTypeSQLite.TEXT) }
-        add("sp_current") { type(ColumnTypeSQLite.INTEGER) }
-        add("sp_used") { type(ColumnTypeSQLite.INTEGER) }
     }
 
     val tableMetadata = Table("planners_metadata", host) {
@@ -70,6 +66,9 @@ class DatabaseLocal : Database {
         add("router") { type(ColumnTypeSQLite.TEXT) }
         add("level") { type(ColumnTypeSQLite.INTEGER) }
         add("experience") { type(ColumnTypeSQLite.INTEGER) }
+        add("current_route") { type(ColumnTypeSQLite.INTEGER) }
+        add("sp_current") { type(ColumnTypeSQLite.INTEGER) }
+        add("sp_used") { type(ColumnTypeSQLite.INTEGER) }
     }
 
     init {
@@ -81,17 +80,9 @@ class DatabaseLocal : Database {
     }
 
     override fun getPlayerProfile(player: Player): PlayerTemplate {
-        val route = getRoute(player)
+        val playerRouter = getPlayerRouter(player)
         val metadataMap = getMetadataMap(player)
-        return PlayerTemplate(getUserId(player).id, player, route, metadataMap)
-    }
-
-    override fun updateRoute(template: PlayerTemplate) {
-        val userId = getUserId(template.onlinePlayer).id
-        tableUser.update(dataSource) {
-            where { "id" eq userId }
-            set("route", template.route?.bindingId)
-        }
+        return PlayerTemplate(getUserId(player).id, player, playerRouter, metadataMap)
     }
 
     private fun getMetadataMap(player: Player): Map<String, Metadata> {
@@ -139,19 +130,25 @@ class DatabaseLocal : Database {
         return future
     }
 
-    private fun getRoute(player: Player): PlayerRoute? {
+    private fun getPlayerRouter(player: Player): PlayerRouter? {
         val userId = getUserId(player)
         if (userId.created) {
             return null
         }
 
-        return tableUser.select(dataSource) {
-            where { "id" eq userId.id }
-            rows("route")
-        }.firstOrNull {
-            val id = getObject("route")?.clong ?: return@firstOrNull null
-            getRouteById(id)
+        val routerIds = tableRouter.select(dataSource) {
+            where { "user" eq userId.id }
+            rows("router")
+        }.map {
+            getString("router")
         }
+        if (routerIds.isEmpty()) {
+            return null
+        }
+        if (routerIds.size > 1) {
+            error("玩家 '${player.uniqueId}' 存在多个 PlayerRouter")
+        }
+        return loadPlayerRouter(userId.id, routerIds[0])
     }
 
     private fun getPlayerSkills(route: Long): List<PlayerSkill> {
@@ -166,18 +163,21 @@ class DatabaseLocal : Database {
         }
     }
 
-    private fun getRouteById(id: Long): PlayerRoute {
+    private fun getPlayerRoutes(userId: Long, routerId: String): List<PlayerRoute> {
         return tableRoute.select(dataSource) {
-            where { "id" eq id }
-            rows("id", "router", "parent", "route", "sp_current", "sp_used")
-        }.first {
+            where {
+                "user" eq userId
+                "router" eq routerId
+            }
+            rows("id", "router", "parent", "route")
+        }.map {
+            val routeId = getLong("id")
             PlayerRoute(
-                getLong("id"),
+                routeId,
                 getString("router"),
-                PlayerRoute.Node(getLong("parent"), getString("route")),
-                getPlayerSkills(id),
-                getInt("sp_current"),
-                getInt("sp_used")
+                getLong("parent"),
+                getString("route"),
+                getPlayerSkills(routeId)
             )
         }
     }
@@ -210,11 +210,14 @@ class DatabaseLocal : Database {
         }
     }
 
-    override fun createPlayerSkill(template: PlayerTemplate, skill: ImmutableSkill): CompletableFuture<PlayerSkill> {
+    override fun createPlayerSkill(
+        template: PlayerTemplate,
+        route: PlayerRoute,
+        skill: ImmutableSkill
+    ): CompletableFuture<PlayerSkill> {
         val future = CompletableFuture<PlayerSkill>()
-        val route = template.route?.bindingId ?: error("Player ${template.onlinePlayer.name} not find route")
         tableSkill.insert(dataSource, "route", "node", "level") {
-            value(route, skill.id, skill.startedLevel)
+            value(route.bindingId, skill.id, skill.startedLevel)
             onFinally {
                 val id = getId(generatedKeys)
                 future.complete(PlayerSkill(id, skill.id, skill.startedLevel))
@@ -239,32 +242,19 @@ class DatabaseLocal : Database {
         }
     }
 
-    override fun updateSkillPoints(route: PlayerRoute) {
-        tableRoute.update(dataSource) {
-            where { "id" eq route.bindingId }
-            set("sp_current", route.skillPointsCurrent)
-            set("sp_used", route.skillPointsUsed)
-        }
-    }
-
-    override fun createPlayerJob(
-        template: PlayerTemplate,
+    override fun createPlayerRoute(
+        router: PlayerRouter,
         parentId: Long,
         route: ImmutableRoute
     ): CompletableFuture<PlayerRoute> {
         val future = CompletableFuture<PlayerRoute>()
-        val node = PlayerRoute.Node(parentId, route.id)
-        tableRoute.insert(dataSource, "user", "router", "parent", "route", "sp_current", "sp_used") {
-            value(template.id, route.routerId, node.parentId, node.route, 0, 0)
+        tableRoute.insert(dataSource, "user", "router", "parent", "route") {
+            value(router.userId, route.routerId, parentId, route.id)
             onFinally {
-                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, node, emptyList(), 0, 0))
+                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, parentId, route.id, emptyList()))
             }
         }
         return future
-    }
-
-    override fun createPlayerJob(template: PlayerTemplate, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
-        return createPlayerJob(template, template.route?.bindingId ?: -1L, route)
     }
 
     override fun loadPlayerRouter(userId: Long, routerId: String): PlayerRouter? {
@@ -273,19 +263,38 @@ class DatabaseLocal : Database {
                 "user" eq userId
                 "router" eq routerId
             }
-            rows("id", "level", "experience")
+            rows("id", "level", "experience", "current_route", "sp_current", "sp_used")
         }.firstOrNull {
-            PlayerRouter(getLong("id"), routerId, getInt("level"), getInt("experience"))
+            PlayerRouter(
+                getLong("id"),
+                userId,
+                routerId,
+                getInt("level"),
+                getInt("experience"),
+                getLong("current_route"),
+                getInt("sp_current"),
+                getInt("sp_used"),
+                getPlayerRoutes(userId, routerId)
+            )
         }
     }
 
     override fun createPlayerRouter(userId: Long, routerId: String, initialLevel: Int): PlayerRouter {
         val future = CompletableFuture<PlayerRouter>()
-        tableRouter.insert(dataSource, "user", "router", "level", "experience") {
-            value(userId, routerId, initialLevel, 0)
+        tableRouter.insert(
+            dataSource,
+            "user",
+            "router",
+            "level",
+            "experience",
+            "current_route",
+            "sp_current",
+            "sp_used"
+        ) {
+            value(userId, routerId, initialLevel, 0, -1L, 0, 0)
             onFinally {
                 val id = getId(generatedKeys)
-                future.complete(PlayerRouter(id, routerId, initialLevel, 0))
+                future.complete(PlayerRouter(id, userId, routerId, initialLevel, 0, -1L, 0, 0, emptyList()))
             }
         }
         return future.get()
@@ -296,6 +305,28 @@ class DatabaseLocal : Database {
             where { "id" eq router.bindingId }
             set("level", router.level)
             set("experience", router.experience)
+            set("current_route", router.currentRouteId)
+            set("sp_current", router.skillPointsCurrent)
+            set("sp_used", router.skillPointsUsed)
+        }
+    }
+
+    override fun deletePlayerRouter(router: PlayerRouter) {
+        val routes = getPlayerRoutes(router.userId, router.routerId)
+        val routeIds = routes.map { it.bindingId }
+        if (routeIds.isNotEmpty()) {
+            tableSkill.delete(dataSource) {
+                where { "route" inside routeIds.toTypedArray() }
+            }
+        }
+        tableRoute.delete(dataSource) {
+            where {
+                "user" eq router.userId
+                "router" eq router.routerId
+            }
+        }
+        tableRouter.delete(dataSource) {
+            where { "id" eq router.bindingId }
         }
     }
 

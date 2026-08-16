@@ -10,73 +10,32 @@ import org.bukkit.entity.Player
 import taboolib.common.platform.function.submitAsync
 import java.util.concurrent.CompletableFuture
 
-class PlayerTemplate(val id: Long, val onlinePlayer: Player, initialRoute: PlayerRoute?, map: Map<String, Metadata>) :
-    MetadataContainer(map), Leveling {
+class PlayerTemplate(
+    val id: Long,
+    val onlinePlayer: Player,
+    initialPlayerRouter: PlayerRouter?,
+    map: Map<String, Metadata>
+) : MetadataContainer(map), Leveling {
 
-    var route = initialRoute
-        set(value) {
-            if (value == null && field != null) {
-                val skills = field!!.getImmutableSkillValues().mapNotNull { field!!.getSkillOrNull(it) }
-                if (skills.isNotEmpty()) {
-                    submitAsync {
-                        Database.INSTANCE.deleteSkill(*skills.toTypedArray())
-                    }
-                }
-            }
-            field = value
-            refreshPlayerRouterByRoute(value)
-            submitAsync {
-                Database.INSTANCE.updateRoute(this@PlayerTemplate)
-            }
-        }
+    var playerRouter = initialPlayerRouter
 
-    var playerRouter: PlayerRouter? = null
-        private set
-
-    init {
-        refreshPlayerRouterByRoute(route)
-    }
-
-    /**
-     * 根据当前路线反查或创建玩家的路由等级数据。
-     *
-     * @param route 当前路线。
-     */
-    private fun refreshPlayerRouterByRoute(route: PlayerRoute?) {
-        if (route == null) {
-            playerRouter = null
+    fun clearPlayerRouter() {
+        val router = playerRouter
+        if (router == null) {
             return
         }
-
-        val routerId = route.routerId
-        val currentPlayerRouter = playerRouter
-        if (currentPlayerRouter != null && currentPlayerRouter.routerId == routerId) {
-            return
+        playerRouter = null
+        submitAsync {
+            Database.INSTANCE.deletePlayerRouter(router)
         }
-
-        var loadedPlayerRouter = Database.INSTANCE.loadPlayerRouter(id, routerId)
-        if (loadedPlayerRouter == null) {
-            var initialLevel = 1
-            val algorithmLevel = route.router.algorithmLevel
-            if (algorithmLevel != null) {
-                initialLevel = algorithmLevel.minLevel
-            } else {
-                val defaultAlgorithmLevel = AlgorithmLevel.default
-                if (defaultAlgorithmLevel != null) {
-                    initialLevel = defaultAlgorithmLevel.minLevel
-                }
-            }
-            loadedPlayerRouter = Database.INSTANCE.createPlayerRouter(id, routerId, initialLevel)
-        }
-        playerRouter = loadedPlayerRouter
     }
 
     val level: Int
         @JvmName("level0")
         get() {
-            val pr = playerRouter
-            if (pr != null) {
-                return maxOf(pr.level, pr.minLevel)
+            val router = playerRouter
+            if (router != null) {
+                return maxOf(router.level, router.minLevel)
             }
             val default = AlgorithmLevel.default
             if (default != null) {
@@ -87,113 +46,141 @@ class PlayerTemplate(val id: Long, val onlinePlayer: Player, initialRoute: Playe
 
     val experience: Int
         @JvmName("experience0")
-        get() = playerRouter?.experience ?: 0
+        get() {
+            val router = playerRouter
+            if (router == null) {
+                return 0
+            }
+            return router.experience
+        }
 
     val experienceMax: Int
         get() {
-            val pr = playerRouter
-            if (pr != null) {
-                return pr.getExperienceMax(onlinePlayer)
+            val router = playerRouter
+            if (router != null) {
+                return router.getExperienceMax(onlinePlayer)
             }
             return Int.MAX_VALUE
         }
 
-    override fun getLevel(): Int = level
+    override fun getLevel(): Int {
+        return level
+    }
 
-    override fun getExperience(): Int = experience
+    override fun getExperience(): Int {
+        return experience
+    }
 
     override fun setLevel(level: Int) {
-        val pr = playerRouter
-        if (pr != null) {
-            pr.setLevel(level, onlinePlayer)
+        val router = playerRouter
+        if (router != null) {
+            router.setLevel(level, onlinePlayer)
         }
     }
 
     override fun addLevel(value: Int) {
-        val pr = playerRouter
-        if (pr != null) {
-            pr.addLevel(value, onlinePlayer)
+        val router = playerRouter
+        if (router != null) {
+            router.addLevel(value, onlinePlayer)
         }
     }
 
     override fun setExperience(experience: Int) {
-        val pr = playerRouter
-        if (pr != null) {
-            pr.experience = experience
+        val router = playerRouter
+        if (router != null) {
+            router.experience = experience
         }
     }
 
     override fun addExperience(value: Int): CompletableFuture<Void> {
-        val pr = playerRouter
-        if (pr != null) {
-            return pr.addExperience(value, onlinePlayer)
+        val router = playerRouter
+        if (router == null) {
+            return CompletableFuture.completedFuture(null)
         }
-        return CompletableFuture.completedFuture(null)
+        return router.addExperience(value, onlinePlayer)
     }
 
     override fun takeExperience(value: Int): CompletableFuture<Void> {
-        val pr = playerRouter
-        if (pr != null) {
-            return pr.takeExperience(value, onlinePlayer)
+        val router = playerRouter
+        if (router == null) {
+            return CompletableFuture.completedFuture(null)
         }
-        return CompletableFuture.completedFuture(null)
+        return router.takeExperience(value, onlinePlayer)
     }
 
     fun getSkill(immutable: ImmutableSkill): CompletableFuture<PlayerSkill> {
         return getSkill(immutable.id)
     }
 
-    /**
-     * 获取一个技能 没有技能将创建技能实例
-     */
     fun getSkill(id: String): CompletableFuture<PlayerSkill> {
+        val router = playerRouter
+        if (router == null) {
+            error("You must specify a player router")
+        }
+        val route = router.getRouteForSkill(id)
         if (route == null) {
-            error("You must specify a route")
+            error("The skill $id does not exist in router ${router.routerId}")
         }
-        if (!route!!.hasImmutableSkill(id)) {
-            error("The skill $id does not exist in the route ${route!!.id}")
+        val existing = router.getSkillOrNull(id)
+        if (existing != null) {
+            return CompletableFuture.completedFuture(existing)
         }
-        if (!route!!.hasSkill(id)) {
-            return Database.INSTANCE.createPlayerSkill(this, route!!.getImmutableSkill(id)!!).thenApply {
-                route!!.registerSkill(it)
-                it
-            }
+        val immutableSkill = route.getImmutableSkill(id)
+        if (immutableSkill == null) {
+            error("The skill $id does not exist in route ${route.jobId}")
         }
-        return CompletableFuture.completedFuture(route!!.getSkillOrNull(id)!!)
+        return Database.INSTANCE.createPlayerSkill(this, route, immutableSkill).thenApply { playerSkill ->
+            route.registerSkill(playerSkill)
+            router.updateEquippedIndex(playerSkill)
+            playerSkill
+        }
     }
 
     fun getRegisteredSkillOrNull(id: String): PlayerSkill? {
-        return route?.getSkillOrNull(id)
+        val router = playerRouter
+        if (router == null) {
+            return null
+        }
+        return router.getSkillOrNull(id)
     }
 
     fun getEquippedSkillByBackpackSlot(page: String, slot: String): PlayerSkill? {
-        return route?.getEquippedSkill(page, slot)
+        val router = playerRouter
+        if (router == null) {
+            return null
+        }
+        return router.getEquippedSkill(page, slot)
     }
 
     fun getEquippedSkillsForPage(page: String): Map<String, PlayerSkill?> {
-        val pageConfig = com.gitee.planners.api.Registries.BACKPACK.getPage(page) ?: return emptyMap()
+        val pageConfig = com.gitee.planners.api.Registries.BACKPACK.getPage(page)
+        if (pageConfig == null) {
+            return emptyMap()
+        }
         val result = mutableMapOf<String, PlayerSkill?>()
-        pageConfig.slots.keys.forEach { slotId ->
-            result[slotId] = route?.getEquippedSkill(page, slotId)
+        for (slotId in pageConfig.slots.keys) {
+            result[slotId] = getEquippedSkillByBackpackSlot(page, slotId)
         }
         return result
     }
 
     fun executeUpdatedDefaultSkill(): CompletableFuture<Void> {
-        if (route != null) {
-            return CompletableFuture.allOf(*route!!.getImmutableSkillValues().map { this.getSkill(it) }.toTypedArray())
+        val router = playerRouter
+        if (router == null) {
+            return CompletableFuture.completedFuture(null)
         }
-        return CompletableFuture.completedFuture(null)
+        val futures = mutableListOf<CompletableFuture<PlayerSkill>>()
+        for (skill in router.getImmutableSkillValues()) {
+            futures.add(getSkill(skill))
+        }
+        return CompletableFuture.allOf(*futures.toTypedArray())
     }
 
-    /**
-     * 获取已经注册的技能
-     */
     fun getRegisteredSkill(): Map<String, PlayerSkill> {
-        if (route == null) {
-            error("You must specify a route")
+        val router = playerRouter
+        if (router == null) {
+            error("You must specify a player router")
         }
-        return route!!.getRegisteredSkill()
+        return router.effectiveSkills
     }
-
 }

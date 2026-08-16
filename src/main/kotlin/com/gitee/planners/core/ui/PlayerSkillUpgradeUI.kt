@@ -36,18 +36,22 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
 
     fun open(player: Player, skill: ImmutableSkill) {
         val template = player.plannersTemplate
-        if (template.route == null) {
+        val playerRouter = template.playerRouter
+        if (playerRouter == null) {
             warning("Player ${player.name} route not found")
             return
         }
 
-        if (!template.route!!.hasImmutableSkill(skill.id)) {
-            warning("Skill ${skill.id} not found in route ${template.route!!.name}")
+        if (!playerRouter.hasImmutableSkill(skill.id)) {
+            warning("Skill ${skill.id} not found in router ${playerRouter.routerId}")
             return
         }
         submitAsync {
             template.getSkill(skill).thenAccept {
-                open(player, template.route!!, it)
+                val owner = playerRouter.getRouteForSkill(it.id)
+                if (owner != null) {
+                    open(player, owner, it)
+                }
             }.exceptionally {
                 it.printStackTrace()
                 null
@@ -56,7 +60,15 @@ object PlayerSkillUpgradeUI : AutomationBaseUI("skill-upgrade.yml") {
     }
 
     fun open(player: Player, skill: PlayerSkill) {
-        open(player, player.plannersTemplate.route!!, skill)
+        val playerRouter = player.plannersTemplate.playerRouter
+        if (playerRouter == null) {
+            return
+        }
+        val route = playerRouter.getRouteForSkill(skill.id)
+        if (route == null) {
+            return
+        }
+        open(player, route, skill)
     }
 
     fun open(player: Player, route: PlayerRoute, skill: PlayerSkill) {

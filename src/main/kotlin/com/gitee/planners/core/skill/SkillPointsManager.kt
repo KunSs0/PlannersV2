@@ -3,7 +3,7 @@ package com.gitee.planners.core.skill
 import com.gitee.planners.Planners
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.player.PlayerLevelChangeEvent
-import com.gitee.planners.core.player.PlayerRoute
+import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
 import taboolib.common.platform.event.SubscribeEvent
@@ -14,13 +14,13 @@ object SkillPointsManager {
 
     @SubscribeEvent
     fun e(e: PlayerLevelChangeEvent) {
-        val route = e.template.route
-        if (route == null) {
+        val router = e.template.playerRouter
+        if (router == null) {
             return
         }
         val delta = calcAccumulated(e.to) - calcAccumulated(e.form)
         if (delta != 0) {
-            route.addSkillPoints(delta)
+            router.addSkillPoints(delta)
         }
     }
 
@@ -30,12 +30,12 @@ object SkillPointsManager {
         accumulatedCache.clear()
     }
 
-    fun getAvailable(route: PlayerRoute): Int {
-        return route.skillPointsCurrent
+    fun getAvailable(router: PlayerRouter): Int {
+        return router.skillPointsCurrent
     }
 
-    fun takePoints(route: PlayerRoute, amount: Int): Boolean {
-        return route.takeSkillPoints(amount)
+    fun takePoints(router: PlayerRouter, amount: Int): Boolean {
+        return router.takeSkillPoints(amount)
     }
 
     fun calcAccumulated(level: Int): Int {

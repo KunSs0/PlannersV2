@@ -50,7 +50,10 @@ object BackpackAPI {
         skill.equipped = true
         skill.backpackPage = page
         skill.backpackSlot = slot
-        template.route?.updateEquippedIndex(skill)
+        val playerRouter = template.playerRouter
+        if (playerRouter != null) {
+            playerRouter.updateEquippedIndex(skill)
+        }
         BackpackEquipEvent.Post(template, skill, page, slot).call()
         submitAsync { Database.INSTANCE.updateSkill(skill) }
     }
@@ -85,7 +88,10 @@ object BackpackAPI {
         skill.equipped = false
         skill.backpackPage = null
         skill.backpackSlot = null
-        template.route?.updateEquippedIndex(skill)
+        val playerRouter = template.playerRouter
+        if (playerRouter != null) {
+            playerRouter.updateEquippedIndex(skill)
+        }
         submitAsync { Database.INSTANCE.updateSkill(skill) }
     }
 

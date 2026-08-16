@@ -24,29 +24,27 @@ class HookAttributeSource : AttributeSource {
             return emptyMap()
         }
         val template = entity.plannersTemplate
-        val route = template.route
-        if (route == null) {
+        val playerRouter = template.playerRouter
+        if (playerRouter == null) {
             return emptyMap()
         }
         val result = mutableMapOf<String, Double>()
 
         // Job hook.attributes
-        val job = route.getJob() as? ImmutableJob
-        if (job != null) {
-            val options = ScriptOptions.common(entity)
-            for ((key, expr) in job.attributes) {
-                val value = eval(expr, options)
-                if (value != null) {
-                    result[key] = value
-                }
+        val job = playerRouter.getCurrentJob()
+        val options = ScriptOptions.common(entity)
+        for ((key, expr) in job.attributes) {
+            val value = eval(expr, options)
+            if (value != null) {
+                result[key] = value
             }
         }
 
         // Skill hook.attributes（已学习技能）
-        for (skill in route.getImmutableSkillValues()) {
-            val options = PlannersAPI.newOptions(entity, skill)
-            for ((key, expr) in skill.attributes) {
-                val value = eval(expr, options)
+        for (skill in playerRouter.effectiveSkills.values) {
+            val skillOptions = PlannersAPI.newOptions(entity, skill)
+            for ((key, expr) in skill.immutable.attributes) {
+                val value = eval(expr, skillOptions)
                 if (value != null) {
                     val current = result[key]
                     if (current == null) {

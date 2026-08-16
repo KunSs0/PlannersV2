@@ -3,6 +3,7 @@ package com.gitee.planners.core.ui
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.core.player.PlayerRoute
+import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.skill.formatter.DynamicSkillIcon
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -79,11 +80,14 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
 
     fun open(player: Player) {
         val template = player.plannersTemplate
-        val route = template.route ?: run {
+        val playerRouter = template.playerRouter
+        if (playerRouter == null) {
             player.sendLang("skill-tree-no-route")
             return
         }
-        val tree = route.skillTree ?: run {
+        val route = playerRouter.currentRoute
+        val tree = route.skillTree
+        if (tree == null) {
             player.sendLang("skill-tree-no-tree")
             return
         }
@@ -151,7 +155,10 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
                     }
                 }
                 // SP
-                buildSPDisplay(route, iconSpDisplayCfg.get())
+                val playerRouter = player.plannersTemplate.playerRouter
+                if (playerRouter != null) {
+                    buildSPDisplay(playerRouter, iconSpDisplayCfg.get())
+                }
                 // 左翻
                 setIcon(iconScrollLeftCfg.get(), buildScrollIcon(levelOffset > 0, iconScrollLeftCfg, iconScrollLeftEndCfg)) {
                     if (levelOffset > 0) {
@@ -319,10 +326,10 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
 
     // === SP display ===
 
-    private fun BaseUI.Chest.buildSPDisplay(route: PlayerRoute, cfg: Icon) {
+    private fun BaseUI.Chest.buildSPDisplay(router: PlayerRouter, cfg: Icon) {
         val icon = buildIconFromConfig(cfg, mapOf(
-            "{spCurrent}" to route.skillPointsCurrent.toString(),
-            "{spUsed}" to route.skillPointsUsed.toString()
+            "{spCurrent}" to router.skillPointsCurrent.toString(),
+            "{spUsed}" to router.skillPointsUsed.toString()
         ))
         setIcon(cfg, icon) {}
     }

@@ -15,7 +15,13 @@ object LevelCallbackExecutor {
         if (e.to <= e.form) {
             return
         }
-        val algorithm = e.template.playerRouter?.algorithm ?: AlgorithmLevel.default ?: return
+        var algorithm = e.template.playerRouter?.algorithm
+        if (algorithm == null) {
+            algorithm = AlgorithmLevel.default
+        }
+        if (algorithm == null) {
+            return
+        }
         for (level in (e.form + 1)..e.to) {
             val callbacks = algorithm.getCallbacks(level)
             if (callbacks.isEmpty()) {
@@ -32,16 +38,23 @@ object LevelCallbackExecutor {
     private fun runCallbacks(e: PlayerLevelChangeEvent, level: Int) {
         val player = e.player
         val options = ScriptOptions.common(player)
-            .set("level", level)
-            .set("from", e.form)
-            .set("to", e.to)
-            .set("player", player)
-            .set("playerName", player.name)
-            .set("name", player.name)
-            .set("uuid", player.uniqueId.toString())
-            .set("route", e.template.route)
+        options.set("level", level)
+        options.set("from", e.form)
+        options.set("to", e.to)
+        options.set("player", player)
+        options.set("playerName", player.name)
+        options.set("name", player.name)
+        options.set("uuid", player.uniqueId.toString())
+        options.set("router", e.template.playerRouter)
+        options.set("route", e.template.playerRouter?.currentRoute)
 
-        val algorithm = e.template.playerRouter?.algorithm ?: AlgorithmLevel.default ?: return
+        var algorithm = e.template.playerRouter?.algorithm
+        if (algorithm == null) {
+            algorithm = AlgorithmLevel.default
+        }
+        if (algorithm == null) {
+            return
+        }
         for (callback in algorithm.getCallbacks(level)) {
             try {
                 val script = callback.script

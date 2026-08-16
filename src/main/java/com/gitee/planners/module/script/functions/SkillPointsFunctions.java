@@ -1,7 +1,7 @@
 package com.gitee.planners.module.script.functions;
 
 import com.gitee.planners.api.PlayerTemplateAPI;
-import com.gitee.planners.core.player.PlayerRoute;
+import com.gitee.planners.core.player.PlayerRouter;
 import com.gitee.planners.core.player.PlayerTemplate;
 import com.gitee.planners.core.skill.SkillPointsManager;
 import com.gitee.planners.module.script.GlobalFunctions;
@@ -25,8 +25,8 @@ public final class SkillPointsFunctions {
             Player player = ScriptArgs.getPlayer(args, 0);
             if (player == null) return 0;
             PlayerTemplate template = PlayerTemplateAPI.INSTANCE.getPlannersTemplate(player);
-            PlayerRoute route = template.getRoute();
-            return route != null ? SkillPointsManager.INSTANCE.getAvailable(route) : 0;
+            PlayerRouter router = template.getPlayerRouter();
+            return router != null ? SkillPointsManager.INSTANCE.getAvailable(router) : 0;
         });
 
         // takePoints(amount) 或 takePoints(amount, player)
@@ -35,8 +35,8 @@ public final class SkillPointsFunctions {
             Player player = ScriptArgs.getPlayer(args, 1);
             if (player == null) return false;
             PlayerTemplate template = PlayerTemplateAPI.INSTANCE.getPlannersTemplate(player);
-            PlayerRoute route = template.getRoute();
-            return route != null && SkillPointsManager.INSTANCE.takePoints(route, amount);
+            PlayerRouter router = template.getPlayerRouter();
+            return router != null && SkillPointsManager.INSTANCE.takePoints(router, amount);
         });
     }
 }

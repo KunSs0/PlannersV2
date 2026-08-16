@@ -18,7 +18,20 @@ class ImmutableJob(private val config: Configuration) {
         ImmutableVariable.parse(id, value)
     }
 
-    private val immutableSkillKeys = option.getStringList("skill")
+    val skillIds = option.getStringList("skill")
+
+    init {
+        val seenSkills = mutableSetOf<String>()
+        val duplicateSkills = mutableSetOf<String>()
+        for (skillId in skillIds) {
+            if (!seenSkills.add(skillId)) {
+                duplicateSkills.add(skillId)
+            }
+        }
+        if (duplicateSkills.isNotEmpty()) {
+            error("Job '$id' 包含重复技能: ${duplicateSkills.joinToString(", ")}")
+        }
+    }
 
     /**
      * 职业提供的属性。
@@ -35,14 +48,17 @@ class ImmutableJob(private val config: Configuration) {
         }
 
     fun hasSkill(id: String): Boolean {
-        return this.immutableSkillKeys.contains(id)
+        return skillIds.contains(id)
     }
 
     fun getImmutableSkillValues(): List<ImmutableSkill> {
-        return Registries.SKILL.values().filter { it.id in immutableSkillKeys }
+        return Registries.SKILL.values().filter { it.id in skillIds }
     }
 
     fun getSkillOrNull(id: String): ImmutableSkill? {
+        if (!hasSkill(id)) {
+            return null
+        }
         return Registries.SKILL.getOrNull(id)
     }
 

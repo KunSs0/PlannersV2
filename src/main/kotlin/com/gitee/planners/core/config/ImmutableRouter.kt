@@ -17,7 +17,7 @@ class ImmutableRouter(private val config: Configuration) : Unique {
 
     val icon = config.getItemStack("__option__.icon")
 
-    private val routes = config.mapSectionNotNull {
+    val routes = config.mapSectionNotNull {
         if (it.name == "__option__") return@mapSectionNotNull null
         ImmutableRoute(this, it)
     }
@@ -28,12 +28,86 @@ class ImmutableRouter(private val config: Configuration) : Unique {
         routes.values.firstOrNull()
     }
 
+    init {
+        validateRouteGraph()
+    }
+
     fun getRouteOrNull(id: String): ImmutableRoute? {
         return routes[id]
     }
 
     fun getRouteByJob(job: ImmutableJob): ImmutableRoute? {
         return routes[job.id]
+    }
+
+    private fun validateRouteGraph() {
+        val root = originate
+        if (root == null) {
+            error("Router '$id' 未定义起始 Job")
+        }
+
+        val parentByRoute = mutableMapOf<String, String>()
+        for (route in routes.values) {
+            for (childId in route.branchIds) {
+                val child = getRouteOrNull(childId)
+                if (child == null) {
+                    error("Router '$id' 的 Job '${route.id}' 引用了不存在的子 Job '$childId'")
+                }
+                val previousParent = parentByRoute.putIfAbsent(childId, route.id)
+                if (previousParent != null && previousParent != route.id) {
+                    error("Router '$id' 的 Job '$childId' 存在多个父 Job: '$previousParent', '${route.id}'")
+                }
+            }
+        }
+
+        val visited = mutableSetOf<String>()
+        validateRoute(root, emptySet(), visited, mutableSetOf())
+        if (visited.size != routes.size) {
+            val unreachable = routes.keys.filter { !visited.contains(it) }
+            error("Router '$id' 存在不可达 Job: ${unreachable.joinToString(", ")}")
+        }
+    }
+
+    private fun validateRoute(
+        route: ImmutableRoute,
+        ancestorSkills: Set<String>,
+        visited: MutableSet<String>,
+        stack: MutableSet<String>
+    ) {
+        if (!stack.add(route.id)) {
+            error("Router '$id' 的 Job 转职图存在循环: ${stack.joinToString(" -> ")} -> ${route.id}")
+        }
+
+        val job = route.getJob()
+        val duplicateSkills = job.skillIds.filter { ancestorSkills.contains(it) }.toSet()
+        if (duplicateSkills.isNotEmpty()) {
+            error(
+                "Router '$id' 的子 Job '${route.id}' 与父 Job 技能冲突: " +
+                    duplicateSkills.joinToString(", ")
+            )
+        }
+
+        val skillTreeId = route.skillTree
+        if (skillTreeId != null) {
+            val skillTree = com.gitee.planners.api.Registries.SKILL_TREE.getOrNull(skillTreeId)
+            if (skillTree == null) {
+                error("Router '$id' 的 Job '${route.id}' 绑定了不存在的技能树 '$skillTreeId'")
+            }
+            val invalidSkillIds = skillTree.nodes.keys.filter { !job.hasSkill(it) }
+            if (invalidSkillIds.isNotEmpty()) {
+                error(
+                    "Router '$id' 的 Job '${route.id}' 技能树 '$skillTreeId' 包含非本阶段技能: " +
+                        invalidSkillIds.joinToString(", ")
+                )
+            }
+        }
+
+        visited.add(route.id)
+        val nextAncestorSkills = ancestorSkills + job.skillIds
+        for (child in route.getBranches()) {
+            validateRoute(child, nextAncestorSkills, visited, stack)
+        }
+        stack.remove(route.id)
     }
 
 }

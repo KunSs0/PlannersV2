@@ -5,6 +5,7 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.core.player.PlayerRoute
+import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
 import org.bukkit.entity.Player
 
@@ -36,7 +37,8 @@ class ConditionEvaluator {
         contextVars: Map<String, Any> = emptyMap()
     ): VerifyResult {
         val profile = player.plannersTemplate
-        val route = profile.route
+        val router = profile.playerRouter
+        val route = if (router != null) router.currentRoute else null
         val hints = mutableListOf<String>()
 
         for ((key, overrideProps) in conditions) {
@@ -44,10 +46,10 @@ class ConditionEvaluator {
             if (cfg == null) {
                 error("Unknown condition key: $key")
             }
-            val props = resolveProps(cfg.props, overrideProps, player, profile, route, contextVars)
+            val props = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
 
-            val options = createOptions(player, profile, route)
-                .set("props", props)
+            val options = createOptions(player, profile, router, route)
+            options.set("props", props)
 
             val passed = try {
                 ScriptManager.eval(cfg.exper, options) == true
@@ -76,7 +78,8 @@ class ConditionEvaluator {
         contextVars: Map<String, Any> = emptyMap()
     ) {
         val profile = player.plannersTemplate
-        val route = profile.route
+        val router = profile.playerRouter
+        val route = if (router != null) router.currentRoute else null
 
         for ((key, overrideProps) in conditions) {
             val cfg = Planners.conditions.get()[key]
@@ -87,10 +90,10 @@ class ConditionEvaluator {
                 continue
             }
 
-            val props = resolveProps(cfg.props, overrideProps, player, profile, route, contextVars)
+            val props = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
 
-            val options = createOptions(player, profile, route)
-                .set("props", props)
+            val options = createOptions(player, profile, router, route)
+            options.set("props", props)
 
             try {
                 ScriptManager.eval(cfg.consume, options)
@@ -111,6 +114,7 @@ class ConditionEvaluator {
         overrideProps: Map<String, Any>,
         player: Player,
         profile: PlayerTemplate,
+        router: PlayerRouter?,
         route: PlayerRoute?,
         contextVars: Map<String, Any>
     ): Map<String, Any> {
@@ -120,7 +124,7 @@ class ConditionEvaluator {
         val resolved = LinkedHashMap<String, Any>()
         for ((k, v) in merged) {
             resolved[k] = when (v) {
-                is String -> evalValue(v, player, profile, route, contextVars)
+                is String -> evalValue(v, player, profile, router, route, contextVars)
                 else -> v
             }
         }
@@ -137,6 +141,7 @@ class ConditionEvaluator {
         expr: String,
         player: Player,
         profile: PlayerTemplate,
+        router: PlayerRouter?,
         route: PlayerRoute?,
         contextVars: Map<String, Any>
     ): Any {
@@ -151,7 +156,7 @@ class ConditionEvaluator {
         }
         // JS 公式
         return try {
-            val options = createOptions(player, profile, route)
+            val options = createOptions(player, profile, router, route)
             contextVars.forEach { (k, v) -> options.set(k, v) }
             ScriptManager.eval(expr, options) ?: expr
         } catch (e: Exception) {
@@ -173,11 +178,15 @@ class ConditionEvaluator {
     private fun createOptions(
         player: Player,
         profile: PlayerTemplate,
+        router: PlayerRouter?,
         route: PlayerRoute?
     ): ScriptOptions {
         val options = ScriptOptions.of()
-            .set("player", player)
-            .set("profile", profile)
+        options.set("player", player)
+        options.set("profile", profile)
+        if (router != null) {
+            options.set("router", router)
+        }
         if (route != null) {
             options.set("route", route)
         }

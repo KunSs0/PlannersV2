@@ -18,14 +18,14 @@ class ImmutableRoute(private val parent: ImmutableRouter, private val config: Co
     /** 绑定的技能树 ID，null 表示无技能树 */
     val skillTree: String? = config.getString("skill.tree")
 
-    private val branches = if (config.isString("branch")) {
+    val branchIds = if (config.isString("branch")) {
         listOf(config.getString("branch")!!)
     } else {
         config.getStringList("branch")
     }
 
     fun getBranches(): List<ImmutableRoute> {
-        return branches.mapNotNull { parent.getRouteOrNull(it) }
+        return branchIds.mapNotNull { parent.getRouteOrNull(it) }
     }
 
     fun getIcon(): ItemStack? {
