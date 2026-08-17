@@ -13,6 +13,7 @@ import taboolib.common.platform.function.getDataFolder
 import taboolib.common.util.unsafeLazy
 import taboolib.module.database.*
 import java.io.File
+import java.sql.Connection
 import java.sql.ResultSet
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -72,11 +73,157 @@ class DatabaseLocal : Database {
     }
 
     init {
+        migrateLegacyRouterSchema()
         tableUser.createTable(dataSource)
         tableRoute.createTable(dataSource)
         tableMetadata.createTable(dataSource)
         tableSkill.createTable(dataSource)
         tableRouter.createTable(dataSource)
+    }
+
+    /**
+     * 将职业线重构前的本地数据迁移至 PlayerRouter 聚合模型。
+     *
+     * 旧模型以 planners_user.route 保存当前路线，并将 SP 保存在路线记录中；
+     * 新模型将这些状态统一保存至 planners_router。仅接受每个玩家一条且与当前路线一致的
+     * Router 记录，避免在迁移时静默删除旧模型中不可判定的历史职业数据。
+     */
+    private fun migrateLegacyRouterSchema() {
+        val connection = dataSource.connection
+        try {
+            val routerColumns = getTableColumns(connection, "planners_router")
+            if (routerColumns.isEmpty()) {
+                return
+            }
+            val hasCurrentRoute = routerColumns.contains("current_route")
+            val hasSkillPointsCurrent = routerColumns.contains("sp_current")
+            val hasSkillPointsUsed = routerColumns.contains("sp_used")
+            if (hasCurrentRoute && hasSkillPointsCurrent && hasSkillPointsUsed) {
+                return
+            }
+
+            val userColumns = getTableColumns(connection, "planners_user")
+            val routeColumns = getTableColumns(connection, "planners_route")
+            if (!userColumns.contains("route") || !routeColumns.contains("sp_current") || !routeColumns.contains("sp_used")) {
+                error("无法迁移 Planners 本地职业数据：旧表缺少当前路线或技能点字段")
+            }
+
+            validateLegacyRouterData(connection)
+            val originalAutoCommit = connection.autoCommit
+            connection.autoCommit = false
+            try {
+                val statement = connection.createStatement()
+                try {
+                    if (!hasCurrentRoute) {
+                        statement.executeUpdate("ALTER TABLE planners_router ADD COLUMN current_route INTEGER NOT NULL DEFAULT -1")
+                    }
+                    if (!hasSkillPointsCurrent) {
+                        statement.executeUpdate("ALTER TABLE planners_router ADD COLUMN sp_current INTEGER NOT NULL DEFAULT 0")
+                    }
+                    if (!hasSkillPointsUsed) {
+                        statement.executeUpdate("ALTER TABLE planners_router ADD COLUMN sp_used INTEGER NOT NULL DEFAULT 0")
+                    }
+                    statement.executeUpdate(
+                        """
+                        UPDATE planners_router
+                        SET current_route = (
+                            SELECT planners_user.route
+                            FROM planners_user
+                            WHERE planners_user.id = planners_router.user
+                        ),
+                        sp_current = COALESCE((
+                            SELECT planners_route.sp_current
+                            FROM planners_route
+                            WHERE planners_route.id = (
+                                SELECT planners_user.route
+                                FROM planners_user
+                                WHERE planners_user.id = planners_router.user
+                            )
+                        ), 0),
+                        sp_used = COALESCE((
+                            SELECT planners_route.sp_used
+                            FROM planners_route
+                            WHERE planners_route.id = (
+                                SELECT planners_user.route
+                                FROM planners_user
+                                WHERE planners_user.id = planners_router.user
+                            )
+                        ), 0)
+                        """.trimIndent()
+                    )
+                    connection.commit()
+                } finally {
+                    statement.close()
+                }
+            } catch (exception: Throwable) {
+                connection.rollback()
+                throw exception
+            } finally {
+                connection.autoCommit = originalAutoCommit
+            }
+        } finally {
+            connection.close()
+        }
+    }
+
+    /** 验证旧模型的数据可以无歧义地迁移为一个 PlayerRouter。 */
+    private fun validateLegacyRouterData(connection: Connection) {
+        val statement = connection.createStatement()
+        try {
+            val invalidRouter = statement.executeQuery(
+                """
+                SELECT planners_router.id AS router_id
+                FROM planners_router
+                LEFT JOIN planners_user ON planners_user.id = planners_router.user
+                LEFT JOIN planners_route ON planners_route.id = planners_user.route
+                WHERE planners_user.route IS NULL
+                   OR planners_route.id IS NULL
+                   OR planners_route.user != planners_router.user
+                   OR planners_route.router != planners_router.router
+                """.trimIndent()
+            )
+            try {
+                if (invalidRouter.next()) {
+                    val routerId = invalidRouter.getLong("router_id")
+                    error("无法迁移 Planners 本地职业数据：Router $routerId 不对应唯一的当前职业路线")
+                }
+            } finally {
+                invalidRouter.close()
+            }
+
+            val duplicatedRouter = statement.executeQuery(
+                """
+                SELECT user, COUNT(*) AS router_count
+                FROM planners_router
+                GROUP BY user
+                HAVING COUNT(*) > 1
+                """.trimIndent()
+            )
+            try {
+                if (duplicatedRouter.next()) {
+                    val userId = duplicatedRouter.getLong("user")
+                    error("无法迁移 Planners 本地职业数据：玩家 $userId 存在多个 Router 记录")
+                }
+            } finally {
+                duplicatedRouter.close()
+            }
+        } finally {
+            statement.close()
+        }
+    }
+
+    /** 返回指定 SQLite 表已存在的列名。 */
+    private fun getTableColumns(connection: Connection, tableName: String): Set<String> {
+        val columns = mutableSetOf<String>()
+        val resultSet = connection.metaData.getColumns(null, null, tableName, null)
+        try {
+            while (resultSet.next()) {
+                columns.add(resultSet.getString("COLUMN_NAME").lowercase())
+            }
+        } finally {
+            resultSet.close()
+        }
+        return columns
     }
 
     override fun getPlayerProfile(player: Player): PlayerTemplate {
