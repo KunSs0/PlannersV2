@@ -79,7 +79,7 @@ object PlannersAPI {
      */
     fun getVariableValue(player: Player, skill: ImmutableSkill, variable: Variable): CompletableFuture<Any?> {
         val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
-        val options = ScriptOptions.forSkill(player, level)
+        val options = ScriptOptions.forSkill(player, level, skill)
         return variable.run(options)
     }
 
@@ -102,21 +102,21 @@ object PlannersAPI {
      */
     fun newOptions(player: Player, skill: ImmutableSkill): ScriptOptions {
         val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
-        return ScriptOptions.forSkill(player, level)
+        return ScriptOptions.forSkill(player, level, skill)
     }
 
     /**
      * 创建技能选项
      */
     fun newOptions(player: Player, skill: PlayerSkill): ScriptOptions {
-        return ScriptOptions.forSkill(player, skill.level)
+        return ScriptOptions.forSkill(player, skill.level, skill.immutable)
     }
 
     /**
      * 创建技能选项
      */
     fun newOptions(player: Player, skill: ImmutableSkill, level: Int): ScriptOptions {
-        return ScriptOptions.forSkill(player, level)
+        return ScriptOptions.forSkill(player, level, skill)
     }
 
     /**

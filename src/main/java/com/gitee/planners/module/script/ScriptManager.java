@@ -10,11 +10,19 @@ import com.gitee.scriptengine.api.ScriptWorkspace;
 import com.gitee.scriptengine.api.WorkspaceConfig;
 import com.gitee.scriptengine.core.ScriptSessionImpl;
 import com.gitee.scriptengine.core.ScriptWorkspaceImpl;
+import com.gitee.scriptengine.loader.PreludeInjector;
+import com.gitee.scriptengine.loader.WorkspaceConfigLoader;
 import com.gitee.planners.module.script.api.StateAPI;
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitTask;
+import taboolib.platform.BukkitPlugin;
 
 import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 /**
@@ -25,6 +33,7 @@ import java.util.logging.Logger;
 public final class ScriptManager {
 
     private static final Logger LOGGER = Logger.getLogger("Script");
+    private static final Set<ManagedSession> ACTIVE_SESSIONS = ConcurrentHashMap.newKeySet();
     private static ScriptWorkspace workspace;
 
     private ScriptManager() {}
@@ -45,7 +54,7 @@ public final class ScriptManager {
             HostAccessMode.ALL,
             name -> true,
             false,
-            java.util.Collections.emptyList(),
+            WorkspaceConfigLoader.INSTANCE.loadPreludeScripts(scriptDir),
             java.util.Collections.emptyList(),
             java.util.Collections.emptyMap(),
             ScriptManager.class.getClassLoader(),
@@ -66,17 +75,13 @@ public final class ScriptManager {
         Map<String, Object> previous = ScriptContext.getCurrent();
         Map<String, Object> variables = createScriptVariables(options.getVariables());
         ScriptContext.setCurrent(variables);
+        ManagedSession session = createSession(variables, options.getPreludeScripts());
         try {
-            com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(variables);
-            installGlobalFunctions(context);
-            try {
-                ScriptResult result = context.eval(source);
-                checkResult("执行脚本失败", result);
-                return result.getValue();
-            } finally {
-                context.close();
-            }
+            ScriptResult result = session.eval(source);
+            checkResult("执行脚本失败", result);
+            return result.getValue();
         } finally {
+            session.close();
             if (previous != null) {
                 ScriptContext.setCurrent(previous);
             } else {
@@ -97,9 +102,7 @@ public final class ScriptManager {
      */
     public static ScriptSession openSession(ScriptOptions options) {
         ensureInit();
-        com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(createSessionVariables(options.getVariables()));
-        installGlobalFunctions(context);
-        return new ScriptSessionImpl(context);
+        return createSession(createSessionVariables(options.getVariables()), options.getPreludeScripts());
     }
 
     /**
@@ -118,11 +121,9 @@ public final class ScriptManager {
         Map<String, Object> previous = ScriptContext.getCurrent();
         Map<String, Object> variables = createScriptVariables(options.getVariables());
         ScriptContext.setCurrent(variables);
-        ScriptSession session = null;
+        ManagedSession session = null;
         try {
-            com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(createSessionVariables(variables));
-            installGlobalFunctions(context);
-            session = new ScriptSessionImpl(context);
+            session = createSession(createSessionVariables(variables), options.getPreludeScripts());
             ScriptResult evalResult = session.eval(source);
             checkResult("载入 action 脚本失败", evalResult);
             if (!session.hasFunction(functionName)) {
@@ -155,6 +156,9 @@ public final class ScriptManager {
      * 关闭引擎（插件卸载时调用）。
      */
     public static void shutdown() {
+        for (ManagedSession session : ACTIVE_SESSIONS) {
+            session.forceClose();
+        }
         if (workspace != null) {
             workspace.close();
             workspace = null;
@@ -179,6 +183,16 @@ public final class ScriptManager {
         return sessionVariables;
     }
 
+    private static ManagedSession createSession(Map<String, Object> variables, java.util.List<String> preludeScripts) {
+        com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(variables);
+        PreludeInjector.INSTANCE.inject(context, workspace.getFolder(), preludeScripts);
+        ManagedSession session = new ManagedSession(context, variables);
+        ACTIVE_SESSIONS.add(session);
+        installGlobalFunctions(context);
+        installTimerFunctions(context, session);
+        return session;
+    }
+
     private static void installGlobalFunctions(com.gitee.scriptengine.api.ScriptContext context) {
         for (Map.Entry<String, java.util.function.Function<Object[], Object>> entry : GlobalFunctions.getAll().entrySet()) {
             java.util.function.Function<Object[], Object> function = entry.getValue();
@@ -187,6 +201,12 @@ public final class ScriptManager {
                 return function.apply(arguments);
             });
         }
+    }
+
+    private static void installTimerFunctions(com.gitee.scriptengine.api.ScriptContext context, ManagedSession session) {
+        context.getBindings().putMember("setTimeout", (ScriptFunction) values -> session.schedule(values, false));
+        context.getBindings().putMember("setInterval", (ScriptFunction) values -> session.schedule(values, true));
+        context.getBindings().putMember("clearTimer", (ScriptFunction) values -> session.cancel(values));
     }
 
     private static void checkResult(String message, ScriptResult result) {
@@ -261,5 +281,188 @@ public final class ScriptManager {
             return map;
         }
         return value;
+    }
+
+    private static final class ManagedSession implements ScriptSession {
+
+        private final ScriptSession delegate;
+        private final Map<String, Object> variables;
+        private final Map<Integer, ScheduledTask> tasks = new ConcurrentHashMap<>();
+        private final AtomicInteger nextTaskId = new AtomicInteger(1);
+        private boolean closeRequested;
+        private boolean closed;
+
+        private ManagedSession(com.gitee.scriptengine.api.ScriptContext context, Map<String, Object> variables) {
+            this.delegate = new ScriptSessionImpl(context);
+            this.variables = variables;
+        }
+
+        @Override
+        public ScriptResult eval(String source) {
+            return delegate.eval(source);
+        }
+
+        @Override
+        public ScriptResult invoke(String name, Object... args) {
+            return delegate.invoke(name, args);
+        }
+
+        @Override
+        public boolean hasFunction(String name) {
+            return delegate.hasFunction(name);
+        }
+
+        @Override
+        public void close() {
+            synchronized (this) {
+                if (closed) {
+                    return;
+                }
+                closeRequested = true;
+                if (!tasks.isEmpty()) {
+                    return;
+                }
+                closeNow();
+            }
+        }
+
+        private int schedule(ScriptValue[] values, boolean repeating) {
+            if (values.length < 2) {
+                throw new IllegalArgumentException("setTimeout requires callback and delay");
+            }
+            ScriptValue callback = values[0];
+            ScriptValue delayValue = values[1];
+            if (!callback.canExecute()) {
+                throw new IllegalArgumentException("timer callback must be callable");
+            }
+            long delay = readNumber(delayValue, "delay");
+            if (delay < 0) {
+                delay = 0;
+            }
+            long period = readNumber(delayValue, "period");
+            if (repeating && period <= 0) {
+                period = 1;
+            }
+            int taskId = nextTaskId.getAndIncrement();
+            ScheduledTask scheduledTask = new ScheduledTask();
+            tasks.put(taskId, scheduledTask);
+            Runnable action = () -> runTask(taskId, callback, repeating);
+            try {
+                BukkitTask task;
+                if (repeating) {
+                    task = Bukkit.getScheduler().runTaskTimer(BukkitPlugin.getInstance(), action, delay, period);
+                } else {
+                    task = Bukkit.getScheduler().runTaskLater(BukkitPlugin.getInstance(), action, delay);
+                }
+                scheduledTask.task = task;
+            } catch (RuntimeException throwable) {
+                tasks.remove(taskId);
+                closeIfIdle();
+                throw throwable;
+            } catch (Error error) {
+                tasks.remove(taskId);
+                closeIfIdle();
+                throw error;
+            }
+            return taskId;
+        }
+
+        private boolean cancel(ScriptValue[] values) {
+            if (values.length == 0) {
+                return false;
+            }
+            int taskId = values[0].asInt();
+            ScheduledTask task = tasks.remove(taskId);
+            if (task == null) {
+                return false;
+            }
+            task.cancel();
+            closeIfIdle();
+            return true;
+        }
+
+        private void runTask(int taskId, ScriptValue callback, boolean repeating) {
+            synchronized (this) {
+                if (closed) {
+                    return;
+                }
+            }
+            Map<String, Object> previous = ScriptContext.getCurrent();
+            ScriptContext.setCurrent(variables);
+            try {
+                callback.executeVoid();
+            } catch (Throwable throwable) {
+                LOGGER.warning("[Script] 定时脚本执行失败: " + throwable.getMessage());
+            } finally {
+                if (!repeating) {
+                    tasks.remove(taskId);
+                }
+                if (previous != null) {
+                    ScriptContext.setCurrent(previous);
+                } else {
+                    ScriptContext.clear();
+                }
+                closeIfIdle();
+            }
+        }
+
+        private void closeIfIdle() {
+            synchronized (this) {
+                if (closeRequested && tasks.isEmpty() && !closed) {
+                    closeNow();
+                }
+            }
+        }
+
+        private void forceClose() {
+            synchronized (this) {
+                if (closed) {
+                    return;
+                }
+                for (ScheduledTask task : tasks.values()) {
+                    task.cancel();
+                }
+                tasks.clear();
+                closeNow();
+            }
+        }
+
+        private void closeNow() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            ACTIVE_SESSIONS.remove(this);
+            delegate.close();
+        }
+
+        private static long readNumber(ScriptValue value, String key) {
+            if (value == null) {
+                return 0L;
+            }
+            if (value.isNumber()) {
+                return value.asLong();
+            }
+            if (!value.hasMember(key)) {
+                return 0L;
+            }
+            ScriptValue member = value.getMember(key);
+            if (member == null || member.isNull()) {
+                return 0L;
+            }
+            return member.asLong();
+        }
+
+        private static final class ScheduledTask {
+
+            private volatile BukkitTask task;
+
+            private void cancel() {
+                BukkitTask currentTask = task;
+                if (currentTask != null) {
+                    currentTask.cancel();
+                }
+            }
+        }
     }
 }

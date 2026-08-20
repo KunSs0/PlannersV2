@@ -16,7 +16,7 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         if (player != null) {
             PlannersAPI.newOptions(player, skill, level)
         } else {
-            com.gitee.planners.module.script.ScriptOptions.forSkill(sender.instance ?: sender, level)
+            com.gitee.planners.module.script.ScriptOptions.forSkill(sender.instance ?: sender, level, skill)
         }
     }
 

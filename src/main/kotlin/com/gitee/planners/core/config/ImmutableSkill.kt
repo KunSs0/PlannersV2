@@ -44,6 +44,19 @@ class ImmutableSkill(config: Configuration) : Unique {
     /** 脚本源代码 */
     val action = config.getString("action", config.getString("run", ""))!!
 
+    /** 技能级 PRELUDE 脚本路径，会在该技能脚本 Context 中额外注入。 */
+    val preludeScripts: List<String>
+    init {
+        val configuredPrelude = option.getStringList("prelude")
+        val paths = ArrayList<String>()
+        for (path in configuredPrelude) {
+            if (path.isNotBlank()) {
+                paths.add(path.trim())
+            }
+        }
+        preludeScripts = paths
+    }
+
     /**
      * 技能提供的属性。
      * key = 属性键（在 registry 中为逻辑属性，否则为物理直通）
@@ -123,6 +136,7 @@ class ImmutableSkill(config: Configuration) : Unique {
         options.set("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
         options.set("level", level)
         options.set("skill", this@ImmutableSkill)
+        options.setPreludeScripts(preludeScripts)
         for ((k, v) in variables) {
             options.set(k, v)
         }
