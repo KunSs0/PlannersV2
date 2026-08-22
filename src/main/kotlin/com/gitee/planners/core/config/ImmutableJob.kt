@@ -4,6 +4,8 @@ import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
+import org.bukkit.inventory.ItemStack
+import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 
 class ImmutableJob(private val config: Configuration) {
@@ -13,6 +15,16 @@ class ImmutableJob(private val config: Configuration) {
     private val option = config.getOption()
 
     val name = option.getString("name", id)!!
+
+    /** 职业显示图标；未配置时为空。 */
+    val icon: ItemStack?
+        get() {
+            val display = option.getConfigurationSection("display")
+            if (display == null) {
+                return null
+            }
+            return display.getItemStack("icon")
+        }
 
     val immutableVariables = option.mapValueWithId("variables") { id: String, value: Any ->
         ImmutableVariable.parse(id, value)

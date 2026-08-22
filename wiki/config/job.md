@@ -9,6 +9,13 @@
 ```yaml
 __option__:
   name: 战士
+  display:
+    icon:
+      material: IRON_SWORD
+      name: "战士"
+      lore:
+        - "近战职业"
+        - "可使用剑术技能"
   skill:
     - warrior_slash_strike
     - warrior_shield_bash
@@ -31,6 +38,7 @@ __option__:
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | `name` | String | 是 | 文件名 | 职业的显示名称，玩家在 UI 中看到的名字 |
+| `display.icon` | ItemStack | 否 | 空 | 职业显示图标；其名称和 Lore 可被外部 UI 读取 |
 | `skill` | List\<String\> | 是 | 空列表 | 该职业拥有的技能 ID 列表 |
 
 ### 关于 `skill` 列表
