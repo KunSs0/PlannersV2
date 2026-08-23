@@ -7,6 +7,7 @@ import com.gitee.planners.api.event.player.BackpackPageSwitchEvent
 import com.gitee.planners.core.database.Database
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.player.PlayerTemplate
+import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submitAsync
 
@@ -68,6 +69,9 @@ object BackpackAPI {
      * @return 页面、槽位存在且分类匹配时返回 true。
      */
     fun canEquipSkill(template: PlayerTemplate, skill: PlayerSkill, page: String, slot: String): Boolean {
+        if (SkillTreeNodeEffectService.getSkillLevel(template, skill.id) <= 0) {
+            return false
+        }
         val pageConfig = Registries.BACKPACK.getPage(page)
         if (pageConfig == null) {
             return false

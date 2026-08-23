@@ -14,6 +14,7 @@ import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.core.skill.precondition.DefaultCastPreConditionFeedback
 import com.gitee.planners.core.skill.precondition.builtin.CooldownPreCondition
 import com.gitee.planners.core.skill.precondition.builtin.MagicPointPreCondition
+import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
@@ -78,7 +79,7 @@ object PlannersAPI {
      * @return 变量值
      */
     fun getVariableValue(player: Player, skill: ImmutableSkill, variable: Variable): CompletableFuture<Any?> {
-        val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
+        val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
         val options = ScriptOptions.forSkill(player, level, skill)
         return variable.run(options)
     }
@@ -101,7 +102,7 @@ object PlannersAPI {
      * 创建技能选项
      */
     fun newOptions(player: Player, skill: ImmutableSkill): ScriptOptions {
-        val level = player.plannersTemplate.getRegisteredSkillOrNull(skill.id)?.level ?: 1
+        val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
         return ScriptOptions.forSkill(player, level, skill)
     }
 
@@ -109,7 +110,8 @@ object PlannersAPI {
      * 创建技能选项
      */
     fun newOptions(player: Player, skill: PlayerSkill): ScriptOptions {
-        return ScriptOptions.forSkill(player, skill.level, skill.immutable)
+        val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
+        return ScriptOptions.forSkill(player, level, skill.immutable)
     }
 
     /**
@@ -132,7 +134,8 @@ object PlannersAPI {
     fun executeSkillCallback(player: Player, skill: PlayerSkill, method: String, variables: Map<String, Any>, payload: Map<String, Any>): Boolean {
         val extraVariables = LinkedHashMap<String, Any>()
         extraVariables.putAll(variables)
-        val options = ScriptOptions.forSkill(player, skill.level, skill.immutable, extraVariables)
+        val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
+        val options = ScriptOptions.forSkill(player, level, skill.immutable, extraVariables)
         return ScriptManager.invokeActionFunction(skill.immutable.action, method, options, payload)
     }
 
@@ -200,7 +203,8 @@ object PlannersAPI {
             condition.consume(player, skill, options)
         }
 
-        skill.immutable.execute(ProxyTarget.BukkitEntity(player), skill.level)
+        val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
+        skill.immutable.execute(ProxyTarget.BukkitEntity(player), level)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()
     }

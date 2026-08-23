@@ -15,8 +15,18 @@ class ImmutableRoute(private val parent: ImmutableRouter, private val config: Co
         @JvmName("icon0")
         get
 
-    /** 绑定的技能树 ID，null 表示无技能树 */
-    val skillTree: String? = config.getString("skill.tree")
+    /** 绑定的技能树 ID；一个职业阶段可绑定多个树。 */
+    val skillTreeIds: List<String>
+        get() {
+            val values = config.getStringList("skill.trees")
+            val result = ArrayList<String>()
+            for (value in values) {
+                if (value.isNotBlank()) {
+                    result.add(value)
+                }
+            }
+            return result
+        }
 
     val branchIds = if (config.isString("branch")) {
         listOf(config.getString("branch")!!)

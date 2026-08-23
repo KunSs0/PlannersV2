@@ -15,6 +15,7 @@ import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPo
 import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.core.skill.entity.state.EntityStateManager
 import com.gitee.planners.core.skill.entity.state.TargetStateHolder
+import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
 import org.bukkit.entity.Player
 import kotlin.math.roundToLong
 
@@ -299,7 +300,7 @@ object PlaceholderLiteral {
         }
         var count = 0
         for (skill in playerRouter.effectiveSkills.values) {
-            if (skill.level > 0) {
+            if (SkillTreeNodeEffectService.getSkillLevel(template, skill.id) > 0) {
                 count++
             }
         }
@@ -369,11 +370,7 @@ object PlaceholderLiteral {
         if (skillId == null || Registries.SKILL.getOrNull(skillId) == null) {
             return ""
         }
-        val skill = template.getRegisteredSkillOrNull(skillId)
-        if (skill == null) {
-            return "0"
-        }
-        return skill.level.toString()
+        return SkillTreeNodeEffectService.getSkillLevel(template, skillId).toString()
     }
 
     /**
@@ -406,8 +403,7 @@ object PlaceholderLiteral {
         if (skillId == null || Registries.SKILL.getOrNull(skillId) == null) {
             return ""
         }
-        val skill = template.getRegisteredSkillOrNull(skillId)
-        return (skill != null && skill.level > 0).toString()
+        return (SkillTreeNodeEffectService.getSkillLevel(template, skillId) > 0).toString()
     }
 
     /**
@@ -537,7 +533,7 @@ object PlaceholderLiteral {
         if (skill == null) {
             return ""
         }
-        return skill.level.toString()
+        return SkillTreeNodeEffectService.getSkillLevel(template, skill.id).toString()
     }
 
     /**

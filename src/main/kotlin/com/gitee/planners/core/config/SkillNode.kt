@@ -1,51 +1,41 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.Planners
-import taboolib.common.platform.function.warning
 import taboolib.library.configuration.ConfigurationSection
 
-class SkillNode(
-    val maxLevel: Int,
-    val levels: Map<Int, Map<String, Map<String, Any>>>
-) {
-    companion object {
-        fun parse(config: ConfigurationSection): SkillNode {
-            val maxLevel = config.getInt("maxLevel", 1)
-            val levelsSection = config.getConfigurationSection("levels") ?: config
-            val levels = mutableMapOf<Int, Map<String, Map<String, Any>>>()
+object SkillNode {
 
-            for (key in levelsSection.getKeys(false)) {
-                val lv = key.toIntOrNull()
-                if (lv == null) {
-                    continue
-                }
-                val condSection = levelsSection.getConfigurationSection(key)
-                if (condSection == null) {
-                    continue
-                }
-                val conditions = mutableMapOf<String, Map<String, Any>>()
-                for (condKey in condSection.getKeys(false)) {
-                    val propsSection = condSection.getConfigurationSection(condKey)
-                    val props: Map<String, Any>
-                    if (propsSection != null) {
-                        props = propsSection.getValues(false).mapValues { it.value ?: "" }
-                    } else {
-                        props = emptyMap()
-                    }
-                    conditions[condKey] = props
-                }
-                levels[lv] = conditions
-            }
-
-            for ((lv, conds) in levels) {
-                for (key in conds.keys) {
-                    if (!Planners.conditions.get().containsKey(key)) {
-                        warning("SkillNode: 未知的 condition key '$key' (level $lv)，将在运行时校验")
-                    }
-                }
-            }
-
-            return SkillNode(maxLevel, levels)
+    fun parseLevels(config: ConfigurationSection): Map<Int, Map<String, Map<String, Any>>> {
+        val levelsSection = config.getConfigurationSection("levels")
+        if (levelsSection == null) {
+            error("技能树节点 '${config.name}' 缺少 levels")
         }
+        val levels = LinkedHashMap<Int, Map<String, Map<String, Any>>>()
+        for (key in levelsSection.getKeys(false)) {
+            val level = key.toIntOrNull()
+            if (level == null || level <= 0) {
+                error("技能树节点 '${config.name}' 存在无效等级 '$key'")
+            }
+            val levelSection = levelsSection.getConfigurationSection(key)
+            if (levelSection == null) {
+                error("技能树节点 '${config.name}' 的等级 $level 不是配置节")
+            }
+            val conditions = LinkedHashMap<String, Map<String, Any>>()
+            for (conditionId in levelSection.getKeys(false)) {
+                val conditionSection = levelSection.getConfigurationSection(conditionId)
+                if (conditionSection == null) {
+                    conditions[conditionId] = emptyMap()
+                } else {
+                    val values = LinkedHashMap<String, Any>()
+                    for ((propertyId, propertyValue) in conditionSection.getValues(false)) {
+                        if (propertyValue != null) {
+                            values[propertyId] = propertyValue
+                        }
+                    }
+                    conditions[conditionId] = values
+                }
+            }
+            levels[level] = conditions
+        }
+        return levels
     }
 }

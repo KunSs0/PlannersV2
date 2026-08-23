@@ -1,11 +1,13 @@
 package com.gitee.planners.core.skill.formatter
 
 import com.gitee.planners.api.PlannersAPI
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
 import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
+import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
 import org.bukkit.entity.Player
 
 class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int = 1) :
@@ -29,7 +31,10 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
 
     companion object {
 
-        fun build(player: Player, skill: PlayerSkill) = build(player, skill.immutable, skill.level)
+        fun build(player: Player, skill: PlayerSkill): org.bukkit.inventory.ItemStack {
+            val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
+            return build(player, skill.immutable, level)
+        }
 
         fun build(player: Player, skill: ImmutableSkill, level: Int = 1) =
             DynamicSkillIcon(player.asTarget(), skill, level).build()

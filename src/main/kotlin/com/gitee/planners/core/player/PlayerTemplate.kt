@@ -165,15 +165,7 @@ class PlayerTemplate(
     }
 
     fun executeUpdatedDefaultSkill(): CompletableFuture<Void> {
-        val router = playerRouter
-        if (router == null) {
-            return CompletableFuture.completedFuture(null)
-        }
-        val futures = mutableListOf<CompletableFuture<PlayerSkill>>()
-        for (skill in router.getImmutableSkillValues()) {
-            futures.add(getSkill(skill))
-        }
-        return CompletableFuture.allOf(*futures.toTypedArray())
+        return CompletableFuture.completedFuture(null)
     }
 
     fun getRegisteredSkill(): Map<String, PlayerSkill> {

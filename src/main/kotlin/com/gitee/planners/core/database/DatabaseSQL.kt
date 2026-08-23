@@ -8,6 +8,7 @@ import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerSkill
+import com.gitee.planners.core.player.PlayerSkillTreeNodeState
 import org.bukkit.entity.Player
 import taboolib.common.util.unsafeLazy
 import taboolib.module.database.*
@@ -61,6 +62,14 @@ class DatabaseSQL : Database {
         add("backpack_slot") { type(ColumnTypeSQL.VARCHAR, 60) }
     }
 
+    val tableSkillTreeNode = Table("${prefix}_skill_tree_node", host) {
+        add { id() }
+        add("route") { type(ColumnTypeSQL.INT) }
+        add("tree") { type(ColumnTypeSQL.VARCHAR, 60) }
+        add("node") { type(ColumnTypeSQL.VARCHAR, 60) }
+        add("level") { type(ColumnTypeSQL.INT) }
+    }
+
     val tableRouter = Table("${prefix}_router", host) {
         add { id() }
         add("user") { type(ColumnTypeSQL.INT) }
@@ -77,6 +86,7 @@ class DatabaseSQL : Database {
         tableRoute.createTable(dataSource)
         tableMetadata.createTable(dataSource)
         tableSkill.createTable(dataSource)
+        tableSkillTreeNode.createTable(dataSource)
         tableRouter.createTable(dataSource)
     }
 
@@ -168,6 +178,20 @@ class DatabaseSQL : Database {
         }
     }
 
+    private fun getSkillTreeNodeStates(route: Long): List<PlayerSkillTreeNodeState> {
+        return tableSkillTreeNode.select(dataSource) {
+            where { "route" eq route }
+            rows("id", "tree", "node", "level")
+        }.map {
+            PlayerSkillTreeNodeState(
+                getLong("id"),
+                getString("tree"),
+                getString("node"),
+                getInt("level")
+            )
+        }
+    }
+
     private fun getPlayerRoutes(userId: Long, routerId: String): List<PlayerRoute> {
         return tableRoute.select(dataSource) {
             where {
@@ -182,7 +206,8 @@ class DatabaseSQL : Database {
                 getString("router"),
                 getLong("parent"),
                 getString("route"),
-                getPlayerSkills(routeId)
+                getPlayerSkills(routeId),
+                getSkillTreeNodeStates(routeId)
             )
         }
     }
@@ -253,6 +278,30 @@ class DatabaseSQL : Database {
         }
     }
 
+    override fun createSkillTreeNodeState(
+        route: PlayerRoute,
+        treeId: String,
+        nodeId: String,
+        level: Int
+    ): CompletableFuture<PlayerSkillTreeNodeState> {
+        val future = CompletableFuture<PlayerSkillTreeNodeState>()
+        tableSkillTreeNode.insert(dataSource, "route", "tree", "node", "level") {
+            value(route.bindingId, treeId, nodeId, level)
+            onFinally {
+                val index = getId(generatedKeys)
+                future.complete(PlayerSkillTreeNodeState(index, treeId, nodeId, level))
+            }
+        }
+        return future
+    }
+
+    override fun updateSkillTreeNodeState(state: PlayerSkillTreeNodeState) {
+        tableSkillTreeNode.update(dataSource) {
+            where { "id" eq state.index }
+            set("level", state.level)
+        }
+    }
+
     override fun createPlayerRoute(
         router: PlayerRouter,
         parentId: Long,
@@ -262,7 +311,7 @@ class DatabaseSQL : Database {
         tableRoute.insert(dataSource, "user", "router", "parent", "route") {
             value(router.userId, route.routerId, parentId, route.id)
             onFinally {
-                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, parentId, route.id, emptyList()))
+                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, parentId, route.id, emptyList(), emptyList()))
             }
         }
         return future
@@ -327,6 +376,9 @@ class DatabaseSQL : Database {
         val routeIds = routes.map { it.bindingId }
         if (routeIds.isNotEmpty()) {
             tableSkill.delete(dataSource) {
+                where { "route" inside routeIds.toTypedArray() }
+            }
+            tableSkillTreeNode.delete(dataSource) {
                 where { "route" inside routeIds.toTypedArray() }
             }
         }

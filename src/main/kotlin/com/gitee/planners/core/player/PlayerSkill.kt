@@ -28,7 +28,9 @@ class PlayerSkill(
     var level = level
         set(value) {
             field = value
-            submitAsync { Database.INSTANCE.updateSkill(this@PlayerSkill) }
+            submitAsync {
+                Database.INSTANCE.updateSkill(this@PlayerSkill)
+            }
         }
 
     override val id: String

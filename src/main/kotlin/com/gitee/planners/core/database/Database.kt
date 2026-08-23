@@ -8,6 +8,7 @@ import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerSkill
+import com.gitee.planners.core.player.PlayerSkillTreeNodeState
 import com.gitee.planners.util.configNodeTo
 import org.bukkit.entity.Player
 import taboolib.module.configuration.ConfigNode
@@ -49,7 +50,16 @@ interface Database {
     /** 更新技能等级、装备状态、背包位置 */
     fun updateSkill(skill: PlayerSkill)
 
-    /** 为玩家创建一条新技能记录，返回持久化后的 PlayerSkill */
+    fun createSkillTreeNodeState(
+        route: PlayerRoute,
+        treeId: String,
+        nodeId: String,
+        level: Int
+    ): CompletableFuture<PlayerSkillTreeNodeState>
+
+    fun updateSkillTreeNodeState(state: PlayerSkillTreeNodeState)
+
+    /** 为已激活的技能节点创建运行时技能记录。 */
     fun createPlayerSkill(template: PlayerTemplate, route: PlayerRoute, skill: ImmutableSkill): CompletableFuture<PlayerSkill>
 
     /**

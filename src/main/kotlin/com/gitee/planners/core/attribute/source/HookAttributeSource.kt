@@ -7,6 +7,7 @@ import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
+import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 
@@ -42,6 +43,10 @@ class HookAttributeSource : AttributeSource {
 
         // Skill hook.attributes（已学习技能）
         for (skill in playerRouter.effectiveSkills.values) {
+            val skillLevel = SkillTreeNodeEffectService.getSkillLevel(template, skill.id)
+            if (skillLevel <= 0) {
+                continue
+            }
             val skillOptions = PlannersAPI.newOptions(entity, skill)
             for ((key, expr) in skill.immutable.attributes) {
                 val value = eval(expr, skillOptions)
@@ -53,6 +58,15 @@ class HookAttributeSource : AttributeSource {
                         result[key] = current + value
                     }
                 }
+            }
+        }
+        val nodeAttributes = SkillTreeNodeEffectService.getAttributes(template)
+        for ((key, value) in nodeAttributes) {
+            val current = result[key]
+            if (current == null) {
+                result[key] = value
+            } else {
+                result[key] = current + value
             }
         }
         return result
