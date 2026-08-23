@@ -87,7 +87,6 @@ class ImmutableRouter(private val config: Configuration) : Unique {
             )
         }
 
-        val boundSkillIds = mutableSetOf<String>()
         for (skillTreeId in route.skillTreeIds) {
             val skillTree = com.gitee.planners.api.Registries.SKILL_TREE.getOrNull(skillTreeId)
             if (skillTree == null) {
@@ -101,9 +100,6 @@ class ImmutableRouter(private val config: Configuration) : Unique {
                             "Router '$id' 的 Job '${route.id}' 技能树 '$skillTreeId' 包含非本阶段技能: " +
                                 node.skillId
                         )
-                    }
-                    if (!boundSkillIds.add(node.skillId)) {
-                        error("Router '$id' 的 Job '${route.id}' 在多个技能树重复绑定技能 '${node.skillId}'")
                     }
                     if (node.maxLevel > skill.maxLevel) {
                         error("Router '$id' 的技能节点 '${node.id}' 上限超过技能 '${node.skillId}' 的最高等级")
