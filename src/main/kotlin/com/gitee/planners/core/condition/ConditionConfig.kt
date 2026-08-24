@@ -18,20 +18,40 @@ class ConditionConfig(
 ) {
 
     private val functionName = createFunctionName(key)
+    private val batchFunctionName = functionName + "_batch"
 
     /**
      * 将此条件表达式装载为当前会话内的固定函数。
      */
     fun install(session: ScriptSession) {
-        val source = "function $functionName() { return ($exper); }"
+        val source = "function $functionName(__plannersProps) { var props = __plannersProps; return ($exper); }" +
+            " function $batchFunctionName(__plannersPropsList) {" +
+            " var result = '';" +
+            " for (var i = 0; i < __plannersPropsList.size(); i++) {" +
+            " result += $functionName(__plannersPropsList.get(i)) ? '1' : '0';" +
+            " }" +
+            " return result;" +
+            " }"
         ScriptManager.eval(session, source)
     }
 
     /**
      * 使用当前会话已绑定的 player、route、props 等动态上下文执行条件。
      */
-    fun evaluate(session: ScriptSession): Boolean {
-        return ScriptManager.invoke(session, functionName) == true
+    fun evaluate(session: ScriptSession, conditionProps: Map<String, Any>): Boolean {
+        return ScriptManager.invoke(session, functionName, conditionProps) == true
+    }
+
+    fun getFunctionName(): String {
+        return functionName
+    }
+
+    fun evaluateBatch(session: ScriptSession, conditionProps: List<Map<String, Any>>): String {
+        val result = ScriptManager.invoke(session, batchFunctionName, conditionProps)
+        if (result == null) {
+            return ""
+        }
+        return result.toString()
     }
 
     private fun createFunctionName(conditionKey: String): String {

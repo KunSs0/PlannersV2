@@ -53,8 +53,8 @@ class ConditionEvaluator {
     /**
      * 在同一脚本会话中批量校验多个条件组。
      *
-     * 每个请求保持与 [verify] 一致的条件顺序和失败短路语义，
-     * 仅复用 GraalJS Context 以避免节点数量线性放大会话创建开销。
+     * 每个请求保持与 [verify] 一致的条件顺序和失败短路结果，
+     * 脚本计算按条件定义分组批量执行，避免节点数量线性增加 GraalJS 调用次数。
      *
      * @param requests 待校验请求列表。
      * @param player 当前玩家。
@@ -78,17 +78,75 @@ class ConditionEvaluator {
             }
             ScriptContext.setCurrent(options.variables)
             ScriptManager.rebindReusableSession(session, options, setOf("props"))
-            for (request in requests) {
-                result[request.id] = verifyWithBoundSession(
-                    request.conditions,
-                    player,
-                    profile,
-                    router,
-                    route,
-                    request.contextVars,
-                    options,
-                    session
-                )
+            val preparedRequests = ArrayList<MutableList<PreparedCondition>>()
+            val groupedConditions = LinkedHashMap<String, MutableList<PreparedCondition>>()
+            for (requestIndex in requests.indices) {
+                val request = requests[requestIndex]
+                val prepared = ArrayList<PreparedCondition>()
+                preparedRequests.add(prepared)
+                for ((key, overrideProps) in request.conditions) {
+                    val config = Planners.conditions.get()[key]
+                    if (config == null) {
+                        error("Unknown condition key: $key")
+                    }
+                    val resolvedProps = resolveProps(
+                        config.props,
+                        overrideProps,
+                        player,
+                        profile,
+                        router,
+                        route,
+                        request.contextVars,
+                        session
+                    )
+                    if (resolvedProps.reboundSession) {
+                        ScriptManager.rebindReusableSession(session, options, setOf("props"))
+                    }
+                    val preparedCondition = PreparedCondition(key, config, resolvedProps.values)
+                    prepared.add(preparedCondition)
+                    var group = groupedConditions[key]
+                    if (group == null) {
+                        group = ArrayList()
+                        groupedConditions[key] = group
+                    }
+                    group.add(preparedCondition)
+                }
+            }
+            for ((_, group) in groupedConditions) {
+                val config = group[0].config
+                val propsList = ArrayList<Map<String, Any>>()
+                for (preparedCondition in group) {
+                    propsList.add(preparedCondition.props)
+                }
+                val encoded = try {
+                    config.evaluateBatch(session, propsList)
+                } catch (exception: Exception) {
+                    ""
+                }
+                if (encoded.length != group.size) {
+                    for (preparedCondition in group) {
+                        preparedCondition.passed = false
+                    }
+                } else {
+                    for (index in group.indices) {
+                        group[index].passed = encoded[index] == '1'
+                    }
+                }
+            }
+            for (requestIndex in requests.indices) {
+                val request = requests[requestIndex]
+                val prepared = preparedRequests[requestIndex]
+                var verification = VerifyResult.PASSED
+                for (preparedCondition in prepared) {
+                    if (!preparedCondition.passed) {
+                        verification = VerifyResult(
+                            false,
+                            listOf(interpolate(preparedCondition.config.hint, preparedCondition.props))
+                        )
+                        break
+                    }
+                }
+                result[request.id] = verification
             }
         } finally {
             if (previousContext == null) {
@@ -146,56 +204,6 @@ class ConditionEvaluator {
                 } else {
                     ScriptContext.setCurrent(previousContext)
                 }
-            }
-        }
-        return VerifyResult.PASSED
-    }
-
-    /**
-     * 执行已绑定批量会话中的一个节点条件组。
-     *
-     * player、profile、router、route 在当前职业阶段内不变，批次开始时已经写入会话；
-     * 每个节点只更新 props。只有 props 自身包含 JS 公式时，才为了注入其局部上下文重绑一次。
-     */
-    private fun verifyWithBoundSession(
-        conditions: Map<String, Map<String, Any>>,
-        player: Player,
-        profile: PlayerTemplate,
-        router: PlayerRouter?,
-        route: PlayerRoute?,
-        contextVars: Map<String, Any>,
-        options: ScriptOptions,
-        session: ScriptSession
-    ): VerifyResult {
-        val hints = ArrayList<String>()
-        for ((key, overrideProps) in conditions) {
-            val config = Planners.conditions.get()[key]
-            if (config == null) {
-                error("Unknown condition key: $key")
-            }
-            val resolvedProps = resolveProps(
-                config.props,
-                overrideProps,
-                player,
-                profile,
-                router,
-                route,
-                contextVars,
-                session
-            )
-            if (resolvedProps.reboundSession) {
-                ScriptManager.rebindReusableSession(session, options, setOf("props"))
-            }
-            val props = resolvedProps.values
-            options.set("props", props)
-            val passed = try {
-                evalCondition(config, options, session, props)
-            } catch (exception: Exception) {
-                false
-            }
-            if (!passed) {
-                hints.add(interpolate(config.hint, props))
-                return VerifyResult(false, hints)
             }
         }
         return VerifyResult.PASSED
@@ -376,8 +384,7 @@ class ConditionEvaluator {
         if (session == null) {
             return ScriptManager.eval(config.exper, options) == true
         }
-        ScriptManager.setReusableSessionBinding(session, "props", props)
-        return config.evaluate(session)
+        return config.evaluate(session, props)
     }
 
     /**
@@ -403,5 +410,13 @@ class ConditionEvaluator {
         val values: Map<String, Any>,
         val reboundSession: Boolean
     )
+
+    private class PreparedCondition(
+        val key: String,
+        val config: ConditionConfig,
+        val props: Map<String, Any>
+    ) {
+        var passed: Boolean = false
+    }
 
 }

@@ -131,6 +131,16 @@ class PlayerRoute(
         return state.level
     }
 
+    fun getNodeLevels(treeId: String): Map<String, Int> {
+        val result = LinkedHashMap<String, Int>()
+        for (state in nodeStatesByKey.values) {
+            if (state.treeId == treeId) {
+                result[state.nodeId] = state.level
+            }
+        }
+        return result
+    }
+
     fun getNodeStates(): Collection<PlayerSkillTreeNodeState> {
         return nodeStatesByKey.values
     }

@@ -8,10 +8,8 @@ import com.gitee.scriptengine.api.ScriptSession;
 import com.gitee.scriptengine.api.ScriptValue;
 import com.gitee.scriptengine.api.ScriptWorkspace;
 import com.gitee.scriptengine.api.WorkspaceConfig;
-import com.gitee.scriptengine.core.ScriptSessionImpl;
-import com.gitee.scriptengine.core.ScriptWorkspaceImpl;
-import com.gitee.scriptengine.loader.PreludeInjector;
 import com.gitee.scriptengine.loader.WorkspaceConfigLoader;
+import com.gitee.scriptengine.runtime.ScriptWorkspaces;
 import com.gitee.planners.module.script.api.StateAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
@@ -20,6 +18,7 @@ import taboolib.platform.BukkitPlugin;
 import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,7 +48,7 @@ public final class ScriptManager {
         ScriptFunctionRegistry.registerAll();
 
         File scriptDir = new File("plugins/Planners/scripts");
-        workspace = new ScriptWorkspaceImpl(scriptDir, new WorkspaceConfig(
+        workspace = ScriptWorkspaces.create(scriptDir, new WorkspaceConfig(
             ContextPreset.DEFAULT,
             HostAccessMode.ALL,
             name -> true,
@@ -266,8 +265,7 @@ public final class ScriptManager {
     }
 
     private static ManagedSession createSession(Map<String, Object> variables, java.util.List<String> preludeScripts, Set<String> transientBindings) {
-        com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(variables);
-        PreludeInjector.INSTANCE.inject(context, workspace.getFolder(), preludeScripts);
+        com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(variables, preludeScripts);
         ManagedSession session = new ManagedSession(context, variables, transientBindings);
         ACTIVE_SESSIONS.add(session);
         installGlobalFunctions(context);
@@ -377,7 +375,7 @@ public final class ScriptManager {
         private boolean closed;
 
         private ManagedSession(com.gitee.scriptengine.api.ScriptContext context, Map<String, Object> variables, Set<String> transientBindings) {
-            this.delegate = new ScriptSessionImpl(context);
+            this.delegate = new ContextSession(context);
             this.context = context;
             this.variables = variables;
             bindingKeys.addAll(variables.keySet());
@@ -578,6 +576,64 @@ public final class ScriptManager {
                 BukkitTask currentTask = task;
                 if (currentTask != null) {
                     currentTask.cancel();
+                }
+            }
+        }
+
+        private static final class ContextSession implements ScriptSession {
+
+            private final com.gitee.scriptengine.api.ScriptContext context;
+            private boolean closed;
+
+            private ContextSession(com.gitee.scriptengine.api.ScriptContext context) {
+                this.context = context;
+            }
+
+            @Override
+            public ScriptResult eval(String source) {
+                checkClosed();
+                return context.eval(source);
+            }
+
+            @Override
+            public ScriptResult invoke(String name, Object... arguments) {
+                checkClosed();
+                ScriptValue function = context.getBindings().getMember(name);
+                if (function == null) {
+                    return new ScriptResult(null, false, new NoSuchElementException("function '" + name + "' not found"));
+                }
+                if (!function.canExecute()) {
+                    return new ScriptResult(null, false, new IllegalStateException("'" + name + "' is not callable"));
+                }
+                try {
+                    return new ScriptResult(unwrapValue(function.execute(arguments)), true, null);
+                } catch (Exception exception) {
+                    return new ScriptResult(null, false, exception);
+                }
+            }
+
+            @Override
+            public boolean hasFunction(String name) {
+                checkClosed();
+                ScriptValue function = context.getBindings().getMember(name);
+                if (function == null) {
+                    return false;
+                }
+                return function.canExecute();
+            }
+
+            @Override
+            public void close() {
+                if (closed) {
+                    return;
+                }
+                closed = true;
+                context.close();
+            }
+
+            private void checkClosed() {
+                if (closed) {
+                    throw new IllegalStateException("Session 已关闭");
                 }
             }
         }

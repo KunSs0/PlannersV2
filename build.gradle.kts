@@ -71,8 +71,8 @@ dependencies {
     compileOnly(fileTree("libs") {
         exclude("ScriptEngine-*.jar")
     })
-    compileOnly("com.gitee.scriptengine:scriptengine-common:2.0.0")
-    compileOnly("com.gitee.scriptengine:scriptengine-runtime:2.0.0")
+    compileOnly("com.gitee.scriptengine:scriptengine-common:2.1.0")
+    compileOnly("com.gitee.scriptengine:scriptengine-runtime:2.1.0")
     testImplementation("org.graalvm.polyglot:polyglot:24.1.1")
     testImplementation("org.graalvm.js:js-language:24.1.1")
 }
