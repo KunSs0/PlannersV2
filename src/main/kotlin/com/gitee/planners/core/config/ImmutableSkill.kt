@@ -2,6 +2,11 @@ package com.gitee.planners.core.config
 
 import com.gitee.planners.Planners
 import com.gitee.planners.api.common.Unique
+import com.gitee.planners.api.directing.DirectingDefinition
+import com.gitee.planners.api.directing.DirectingResult
+import com.gitee.planners.api.directing.DirectingProviderRegistry
+import com.gitee.planners.core.skill.context.SkillContext
+import com.gitee.planners.core.skill.directing.DirectingConfigSection
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.scriptengine.api.ScriptResult
@@ -26,6 +31,35 @@ class ImmutableSkill(config: Configuration) : Unique {
     val name: String = config.getString("__option__.name", id)!!
 
     private val option = config.getOption()
+
+    /**
+     * 指向性技能定义。
+     *
+     * 该字段在技能加载阶段按 `__option__.directing.type` 找到对应 provider 后完成解析，
+     * 普通技能没有该配置时保持 null。
+     */
+    val directing: DirectingDefinition?
+    init {
+        val directingSection = option.getConfigurationSection("directing")
+        if (directingSection == null) {
+            directing = null
+        } else {
+            val type = directingSection.getString("type")
+            if (type == null || type.isBlank()) {
+                throw IllegalArgumentException("技能 '$id' 的 directing 缺少 type")
+            }
+            val provider = DirectingProviderRegistry.getOrNull(type)
+            if (provider == null) {
+                throw IllegalArgumentException("技能 '$id' 的 directing.type 未注册: $type")
+            }
+            val config = DirectingConfigSection(directingSection)
+            val decoded = provider.decode(config)
+            if (decoded.type != type) {
+                throw IllegalArgumentException("技能 '$id' 的 directing provider 返回了不匹配的 type: ${decoded.type}")
+            }
+            directing = decoded
+        }
+    }
 
     /** 技能图标 */
     val icon = option.getConfigurationSection("display")?.getItemStack("icon")
@@ -131,12 +165,15 @@ class ImmutableSkill(config: Configuration) : Unique {
             return CompletableFuture.completedFuture(null)
         }
 
-        val options = ScriptOptions.of()
-        options.set("sender", sender)
+        val options = ScriptOptions.forSkill(sender, level, this@ImmutableSkill)
         options.set("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
-        options.set("level", level)
-        options.set("skill", this@ImmutableSkill)
-        options.setPreludeScripts(preludeScripts)
+        val directing = variables["directing"]
+        if (directing is DirectingResult) {
+            val context = options.variables["ctx"]
+            if (context is SkillContext) {
+                context.directing = directing
+            }
+        }
         for ((k, v) in variables) {
             options.set(k, v)
         }

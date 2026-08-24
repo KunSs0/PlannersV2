@@ -22,10 +22,11 @@ interface AutoReloadable {
     class Visitor : ClassVisitor(0) {
 
         override fun getLifeCycle(): LifeCycle {
-            return LifeCycle.ENABLE
+            // ACTIVE 阶段晚于各插件 ENABLE，确保可选 compat provider 已完成注册。
+            return LifeCycle.ACTIVE
         }
 
-        /** 在 LOAD 阶段 唤醒 */
+        /** 在 ACTIVE 阶段唤醒并加载所有可重载 registry。 */
         override fun visitEnd(clazz: ReflexClass) {
             if (Builtin::class.java.isAssignableFrom(clazz.toClass()) && clazz.hasAnnotation(Load::class.java)) {
                 val registry = clazz.getInstance() ?: return

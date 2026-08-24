@@ -34,6 +34,24 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
         get() = getOrNull(this.uniqueId) ?: error("Player $name unloaded.")
 
     /**
+     * 获取玩家当前职业 ID。
+     *
+     * @param player 待查询的玩家。
+     * @return 当前职业 ID；档案或职业路由不存在时返回 null。
+     */
+    fun getCurrentJobId(player: Player): String? {
+        val template = getOrNull(player.uniqueId)
+        if (template == null) {
+            return null
+        }
+        val router = template.playerRouter
+        if (router == null) {
+            return null
+        }
+        return router.currentRoute.jobId
+    }
+
+    /**
      * 设置玩家角色
      *
      * @param player 玩家

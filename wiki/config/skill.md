@@ -197,6 +197,52 @@ hook:
 |------|------|------|
 | `attributes` | List\<String\> | 属性列表，传递给 AttributePlus 等属性插件 |
 
+### directing — 指向性输入
+
+指向性技能会在按键按下后进入选择会话，松开按键并由动作引擎确认选择结果后才实际释放。该配置必须由已安装的动作引擎提供对应的 `type`。
+
+```yaml
+directing:
+  type: fc.position
+  max-duration-ticks: 60
+  range: 12
+  placement: block-surface
+  require-line-of-sight: true
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `type` | String | 指向 provider 类型，例如 FightCore 的 `fc.entity`、`fc.position`、`fc.direction`。必须已注册。 |
+| `max-duration-ticks` | Int | 本次指向会话最长保持时间，必须大于 0。 |
+
+除上述字段外，其余字段全部由 `type` 对应的 provider 解释。Planners 不会将指向结果写入 `target`；技能脚本在确认后通过 `ctx.directing` 获取 provider 提供的结果对象。
+
+FightCore 当前支持：
+
+```yaml
+# 选择实体
+directing:
+  type: fc.entity
+  max-duration-ticks: 40
+  range: 16
+  max-angle-degrees: 18
+  require-line-of-sight: true
+
+# 选择位置
+directing:
+  type: fc.position
+  max-duration-ticks: 60
+  range: 12
+  placement: block-surface
+  require-line-of-sight: true
+
+# 选择方向
+directing:
+  type: fc.direction
+  max-duration-ticks: 30
+  max-pitch-degrees: 75
+```
+
 `${表达式}` 中的 `level` 是技能等级。技能学习后，属性自动生效。
 
 ### started-level — 初始等级
