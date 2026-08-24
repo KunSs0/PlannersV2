@@ -1,6 +1,7 @@
 package com.gitee.planners.api
 
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
+import com.gitee.planners.api.directing.DirectingResult
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent.Check
 import com.gitee.planners.api.job.Variable
@@ -8,6 +9,7 @@ import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
+import com.gitee.planners.core.skill.directing.DirectingSessionManager
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionFeedback
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
@@ -149,14 +151,22 @@ object PlannersAPI {
      * @return 释放结果
      */
     fun cast(player: Player, skill: PlayerSkill): ExecutableResult {
-        // ① Check 事件：外部插件检查条件（如被眩晕）
+        return cast(player, skill, "")
+    }
+
+    /**
+     * 以物理按键来源释放玩家技能。
+     *
+     * @param player 当前施法者。
+     * @param skill 当前玩家技能。
+     * @param sourceKey 触发本次释放的物理按键标识；非按键调用传入空字符串。
+     * @return 当前释放结果。
+     */
+    fun cast(player: Player, skill: PlayerSkill, sourceKey: String): ExecutableResult {
         if (!Check(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
-
         val options = newOptions(player, skill)
-
-        // ② 释放前条件校验（按 priority 升序）
         val sortedConditions = castPreConditions.sortedBy { it.priority }
         for (condition in sortedConditions) {
             val result = condition.verify(player, skill, options)
@@ -165,32 +175,69 @@ object PlannersAPI {
                 return ExecutableResult.preConditionFailed(result)
             }
         }
-
-        // ③ Pre 事件：最后确认
+        val directing = skill.immutable.directing
+        if (directing != null) {
+            if (sourceKey.isEmpty()) {
+                return ExecutableResult.cancelledWithEvent()
+            }
+            val started = DirectingSessionManager.start(player, skill, sourceKey) { result ->
+                continueAfterDirecting(player, skill, options, sortedConditions, result)
+            }
+            if (!started) {
+                return ExecutableResult.cancelledWithEvent()
+            }
+            return ExecutableResult.intercepted("directing:${directing.type}")
+        }
         if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
-
-        // ④ 全局 SkillInputExecHook
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
-            val ctx = SkillInputExec.Context(player, skill) {
-                continueCast(player, skill, options, sortedConditions)
+            val context = SkillInputExec.Context(player, skill) { _ ->
+                continueCast(player, skill, options, sortedConditions, null)
             }
-            interceptor.intercept(ctx)
+            interceptor.intercept(context)
             return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
         }
-
-        // ⑤ 最终校验 + 消耗资源 + execute + Post
-        return continueCast(player, skill, options, sortedConditions)
+        return continueCast(player, skill, options, sortedConditions, null)
     }
 
-    private fun continueCast(
-        player: Player,
-        skill: PlayerSkill,
-        options: ScriptOptions,
-        sortedConditions: List<CastPreCondition>
-    ): ExecutableResult {
+    /**
+     * 指向确认后进入常规释放后半段。
+     *
+     * @param player 当前施法者。
+     * @param skill 当前玩家技能。
+     * @param options 已在按下时计算的技能选项。
+     * @param sortedConditions 已排序的释放前条件。
+     * @param directing 已确认的指向性结果。
+     * @return 最终释放结果。
+     */
+    private fun continueAfterDirecting(player: Player, skill: PlayerSkill, options: ScriptOptions, sortedConditions: List<CastPreCondition>, directing: DirectingResult): ExecutableResult {
+        if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
+            return ExecutableResult.cancelledWithEvent()
+        }
+        val interceptor = skillInputExecHooks.firstOrNull()
+        if (interceptor != null) {
+            val context = SkillInputExec.Context(player, skill) { _ ->
+                continueCast(player, skill, options, sortedConditions, directing)
+            }
+            interceptor.intercept(context)
+            return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
+        }
+        return continueCast(player, skill, options, sortedConditions, directing)
+    }
+
+    /**
+     * 执行最终校验、资源消耗和技能脚本。
+     *
+     * @param player 当前施法者。
+     * @param skill 当前玩家技能。
+     * @param options 技能选项。
+     * @param sortedConditions 已排序的释放前条件。
+     * @param directing 已确认的指向性结果；普通技能为 null。
+     * @return 最终释放结果。
+     */
+    private fun continueCast(player: Player, skill: PlayerSkill, options: ScriptOptions, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
         for (condition in sortedConditions) {
             val result = condition.verify(player, skill, options)
             if (result is CastPreConditionResult.Failure) {
@@ -198,13 +245,15 @@ object PlannersAPI {
                 return ExecutableResult.preConditionFailed(result)
             }
         }
-
         for (condition in sortedConditions) {
             condition.consume(player, skill, options)
         }
-
         val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
-        skill.immutable.execute(ProxyTarget.BukkitEntity(player), level)
+        val variables = LinkedHashMap<String, Any?>()
+        if (directing != null) {
+            variables["directing"] = directing
+        }
+        skill.immutable.execute(ProxyTarget.BukkitEntity(player), level, variables)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()
     }

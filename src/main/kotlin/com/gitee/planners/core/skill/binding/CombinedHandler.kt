@@ -70,7 +70,8 @@ object CombinedHandler {
         if (combined is KeyBinding) {
             val skill = BackpackAPI.getSkillByKey(e.player.plannersTemplate, combined.id)
             if (skill != null) {
-                PlannersAPI.cast(e.player, skill)
+                val sourceKey = combined.mapping.first()
+                PlannersAPI.cast(e.player, skill, sourceKey)
             }
         }
     }
