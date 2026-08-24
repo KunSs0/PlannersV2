@@ -7,7 +7,7 @@ __option__:
       name: "&e斩击"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7伤害 &c{{20 * level + 50}}"
+        - "&7伤害 &c{{damage}}"
   variables:
     cooldown: 60
     damage: 20 * level + 50

@@ -21,6 +21,7 @@ import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.regex.Pattern
 
 class ImmutableSkill(config: Configuration) : Unique {
 
@@ -63,6 +64,12 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     /** 技能图标 */
     val icon = option.getConfigurationSection("display")?.getItemStack("icon")
+
+    /** 技能图标显示名称原文，用于不创建 ItemStack 的文本渲染。 */
+    val displayIconName: String? = option.getString("display.icon.name")
+
+    /** 技能图标 Lore 原文，用于不创建 ItemStack 的文本渲染。 */
+    val displayIconLore: List<String> = option.getStringList("display.icon.lore")
 
     /** 技能分类 */
     val categories: Set<String>
@@ -115,6 +122,13 @@ class ImmutableSkill(config: Configuration) : Unique {
         ImmutableVariable.parse(id, value)
     }
 
+    init {
+        validateDisplayTemplate("display.icon.name", displayIconName)
+        for (index in displayIconLore.indices) {
+            validateDisplayTemplate("display.icon.lore[$index]", displayIconLore[index])
+        }
+    }
+
     /** 外部插件实现的 Hook 标记接口 */
     interface Hook
 
@@ -147,6 +161,8 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     companion object {
         private val decoders = ConcurrentHashMap<String, Decoder>()
+        val displayTemplatePattern: Pattern = Pattern.compile("\\{\\{(.+?)}}")
+        private val displayTemplateKeyPattern = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
 
         fun registerHook(namespace: String, decoder: Decoder) {
             decoders[namespace] = decoder
@@ -235,6 +251,22 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     fun getVariables(): Map<String, Variable> {
         return immutableVariables
+    }
+
+    private fun validateDisplayTemplate(path: String, text: String?) {
+        if (text == null) {
+            return
+        }
+        val matcher = displayTemplatePattern.matcher(text)
+        while (matcher.find()) {
+            val key = matcher.group(1)
+            if (!displayTemplateKeyPattern.matches(key)) {
+                throw IllegalArgumentException("技能 '$id' 的 $path 占位符必须为 {{变量名}}，不支持内联表达式: {{$key}}")
+            }
+            if (key != "level" && !immutableVariables.containsKey(key)) {
+                throw IllegalArgumentException("技能 '$id' 的 $path 引用了未声明变量: {{$key}}")
+            }
+        }
     }
 
     override fun toString(): String = "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"

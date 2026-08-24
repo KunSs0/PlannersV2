@@ -7,7 +7,7 @@ __option__:
       name: "&c重斩"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7伤害 &c{{35 * level + 80}}"
+        - "&7伤害 &c{{damage}}"
   variables:
     cooldown: 100
     damage: 35 * level + 80

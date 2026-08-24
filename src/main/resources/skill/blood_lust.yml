@@ -7,8 +7,8 @@ __option__:
       name: "&4嗜血"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7吸血 &4{{15 * level + 25}}%"
-        - "&7持续 &4{{5 * level}}&7秒"
+        - "&7吸血 &4{{lifesteal}}%"
+        - "&7持续 &4{{duration}}&7秒"
   variables:
     cooldown: 180
     lifesteal: 15 * level + 25

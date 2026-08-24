@@ -91,6 +91,35 @@ public final class ScriptManager {
     }
 
     /**
+     * 在已打开的会话中执行脚本。
+     *
+     * <p>调用方负责设置 {@link ScriptContext}、管理会话生命周期，并在执行完成后恢复上下文。</p>
+     *
+     * @param session 已打开的脚本会话。
+     * @param source 要执行的脚本源码。
+     * @return 脚本返回值。
+     */
+    public static Object eval(ScriptSession session, String source) {
+        ScriptResult result = session.eval(source);
+        checkResult("执行脚本失败", result);
+        return result.getValue();
+    }
+
+    /**
+     * 调用已装载脚本会话中的函数。
+     *
+     * @param session 已打开的脚本会话。
+     * @param functionName 已定义的函数名。
+     * @param args 函数参数。
+     * @return 函数返回值。
+     */
+    public static Object invoke(ScriptSession session, String functionName, Object... args) {
+        ScriptResult result = session.invoke(functionName, adaptArguments(args));
+        checkResult("执行脚本函数失败: " + functionName, result);
+        return result.getValue();
+    }
+
+    /**
      * 执行脚本（无上下文变量）。
      */
     public static Object eval(String source) {
@@ -103,6 +132,55 @@ public final class ScriptManager {
     public static ScriptSession openSession(ScriptOptions options) {
         ensureInit();
         return createSession(createSessionVariables(options.getVariables()), options.getPreludeScripts());
+    }
+
+    /**
+     * 打开一个可在当前请求内反复重绑定的脚本会话。
+     *
+     * <p>会话不得跨玩家、跨请求或跨线程保存。每次重绑定都会清理上一次声明的临时变量，
+     * 调用方仍必须调用 {@link ScriptSession#close()}。</p>
+     *
+     * @param options 首次执行使用的选项。
+     * @param transientBindings 会话执行期间可能写入全局作用域的临时变量名。
+     * @return 可重绑定的脚本会话。
+     */
+    public static ScriptSession openReusableSession(ScriptOptions options, Set<String> transientBindings) {
+        ensureInit();
+        return createSession(createSessionVariables(options.getVariables()), options.getPreludeScripts(), transientBindings);
+    }
+
+    /**
+     * 将可重绑定会话切换到新的脚本执行选项。
+     *
+     * @param session 由 {@link #openReusableSession(ScriptOptions, Set)} 创建的会话。
+     * @param options 本次执行使用的选项。
+     * @param transientBindings 本次执行可能写入全局作用域的临时变量名。
+     */
+    public static void rebindReusableSession(ScriptSession session, ScriptOptions options, Set<String> transientBindings) {
+        if (!(session instanceof ManagedSession)) {
+            throw new IllegalArgumentException("Session is not managed by ScriptManager");
+        }
+        Map<String, Object> variables = createSessionVariables(options.getVariables());
+        ManagedSession managedSession = (ManagedSession) session;
+        managedSession.rebind(variables, transientBindings);
+    }
+
+    /**
+     * 在可重绑定会话中替换一个临时全局变量。
+     *
+     * <p>调用方必须已通过 {@link #rebindReusableSession(ScriptSession, ScriptOptions, Set)}
+     * 绑定当前执行上下文。该变量会在下一次重绑定时清理。</p>
+     *
+     * @param session 由 {@link #openReusableSession(ScriptOptions, Set)} 创建的会话。
+     * @param key 变量名。
+     * @param value 变量值。
+     */
+    public static void setReusableSessionBinding(ScriptSession session, String key, Object value) {
+        if (!(session instanceof ManagedSession)) {
+            throw new IllegalArgumentException("Session is not managed by ScriptManager");
+        }
+        ManagedSession managedSession = (ManagedSession) session;
+        managedSession.bind(key, value);
     }
 
     /**
@@ -184,9 +262,13 @@ public final class ScriptManager {
     }
 
     private static ManagedSession createSession(Map<String, Object> variables, java.util.List<String> preludeScripts) {
+        return createSession(variables, preludeScripts, java.util.Collections.emptySet());
+    }
+
+    private static ManagedSession createSession(Map<String, Object> variables, java.util.List<String> preludeScripts, Set<String> transientBindings) {
         com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(variables);
         PreludeInjector.INSTANCE.inject(context, workspace.getFolder(), preludeScripts);
-        ManagedSession session = new ManagedSession(context, variables);
+        ManagedSession session = new ManagedSession(context, variables, transientBindings);
         ACTIVE_SESSIONS.add(session);
         installGlobalFunctions(context);
         installTimerFunctions(context, session);
@@ -286,15 +368,20 @@ public final class ScriptManager {
     private static final class ManagedSession implements ScriptSession {
 
         private final ScriptSession delegate;
+        private final com.gitee.scriptengine.api.ScriptContext context;
         private final Map<String, Object> variables;
+        private final Set<String> bindingKeys = new java.util.LinkedHashSet<>();
         private final Map<Integer, ScheduledTask> tasks = new ConcurrentHashMap<>();
         private final AtomicInteger nextTaskId = new AtomicInteger(1);
         private boolean closeRequested;
         private boolean closed;
 
-        private ManagedSession(com.gitee.scriptengine.api.ScriptContext context, Map<String, Object> variables) {
+        private ManagedSession(com.gitee.scriptengine.api.ScriptContext context, Map<String, Object> variables, Set<String> transientBindings) {
             this.delegate = new ScriptSessionImpl(context);
+            this.context = context;
             this.variables = variables;
+            bindingKeys.addAll(variables.keySet());
+            bindingKeys.addAll(transientBindings);
         }
 
         @Override
@@ -310,6 +397,36 @@ public final class ScriptManager {
         @Override
         public boolean hasFunction(String name) {
             return delegate.hasFunction(name);
+        }
+
+        private void rebind(Map<String, Object> nextVariables, Set<String> transientBindings) {
+            synchronized (this) {
+                if (closed || closeRequested) {
+                    throw new IllegalStateException("Session 已关闭或正在关闭，不能重新绑定");
+                }
+                for (String key : bindingKeys) {
+                    context.getBindings().removeMember(key);
+                }
+                variables.clear();
+                variables.putAll(nextVariables);
+                bindingKeys.clear();
+                bindingKeys.addAll(nextVariables.keySet());
+                bindingKeys.addAll(transientBindings);
+                for (Map.Entry<String, Object> entry : nextVariables.entrySet()) {
+                    context.getBindings().putMember(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        private void bind(String key, Object value) {
+            synchronized (this) {
+                if (closed || closeRequested) {
+                    throw new IllegalStateException("Session 已关闭或正在关闭，不能绑定变量");
+                }
+                variables.put(key, value);
+                bindingKeys.add(key);
+                context.getBindings().putMember(key, value);
+            }
         }
 
         @Override

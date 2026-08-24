@@ -7,7 +7,7 @@ __option__:
       name: "&e冲锋"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7速度 &b{{15 * level + 80}}%"
+        - "&7速度 &b{{speed}}%"
   variables:
     cooldown: 80
     speed: 15 * level + 80

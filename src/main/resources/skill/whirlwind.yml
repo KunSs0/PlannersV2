@@ -7,8 +7,8 @@ __option__:
       name: "&a旋风斩"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7范围 &a{{level + 2}}&7格"
-        - "&7伤害 &a{{18 * level + 40}}"
+        - "&7范围 &a{{range}}&7格"
+        - "&7伤害 &a{{damage}}"
   variables:
     cooldown: 90
     range: level + 2

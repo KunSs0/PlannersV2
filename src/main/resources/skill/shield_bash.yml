@@ -7,8 +7,8 @@ __option__:
       name: "&e盾击"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7眩晕 &c{{1 + level}}&7秒"
-        - "&7伤害 &c{{10 * level + 30}}"
+        - "&7眩晕 &c{{stun}}&7秒"
+        - "&7伤害 &c{{damage}}"
   variables:
     cooldown: 100
     stun: 1 + level

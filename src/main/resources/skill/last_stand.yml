@@ -8,7 +8,7 @@ __option__:
       lore:
         - "&7等级 &fLv{{level}}"
         - "&7血量低于&c30%&7时触发"
-        - "&7恢复 &c{{50 * level + 100}} &7生命"
+        - "&7恢复 &c{{heal}} &7生命"
   variables:
     cooldown: 600
     heal: 50 * level + 100

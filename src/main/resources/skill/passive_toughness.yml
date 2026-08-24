@@ -7,8 +7,9 @@ __option__:
       name: "&7坚韧"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7防御 &7+{{4 * level + 5}}"
+        - "&7防御 &7+{{defense}}"
         - "&7被动"
-  variables: {}
+  variables:
+    defense: 4 * level + 5
   max-level: 6
 action: ""

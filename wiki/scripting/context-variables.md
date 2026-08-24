@@ -90,11 +90,30 @@ function main() {
 }
 ```
 
+### ctx.directing
+
+只有指向性技能在服务端确认成功后才会填充 `ctx.directing`。它不替代既有 `target` 语义；取消、超时和服务端校验失败均不会执行技能脚本。
+
+当前 `fc.entity` 返回 `FightCoreEntityDirectingResult`，可通过 Java Bean getter 读取以下字段：
+
+| getter | 类型 | 说明 |
+|------|------|------|
+| `getTargetUuid()` | UUID | 服务端确认的目标 UUID |
+| `getTargetEntityId()` | Int | 确认时的目标实体 ID |
+| `getWorldName()` | String | 确认时目标所在世界名称 |
+
+```javascript
+function main() {
+  var result = ctx.directing
+  tell("目标: " + result.getTargetUuid())
+}
+```
+
 ---
 
-## 变量表达式中的变量
+## 变量表达式与图标占位符
 
-在技能的 `variables` 和图标 `{{}}` 表达式中，可用的变量：
+技能 `variables` 中可以使用 JavaScript 表达式。图标 `display.icon.name` 与 `display.icon.lore` 的 `{{}}` 不是表达式执行器，只能直接引用变量 key。
 
 | 变量名 | 说明 |
 |--------|------|
@@ -104,7 +123,16 @@ function main() {
 variables:
   damage: 32 * level + 100      # level 是技能等级
   cooldown: 200 - level * 10
+  cooldownSeconds: cooldown / 20
+
+display:
+  icon:
+    lore:
+      - "伤害 {{damage}}"
+      - "冷却 {{cooldownSeconds}} 秒"
 ```
+
+`{{level}}` 是唯一内建占位符。`{{damage * 2}}`、`{{cooldown / 20}}` 等写法无效，必须新增变量后引用。
 
 ---
 

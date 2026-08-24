@@ -7,8 +7,8 @@ __option__:
       name: "&e战吼"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7攻击加成 &c{{5 * level + 10}}%"
-        - "&7持续 &b{{3 * level}}&7秒"
+        - "&7攻击加成 &c{{attack_buff}}%"
+        - "&7持续 &b{{duration}}&7秒"
   variables:
     cooldown: 120
     attack_buff: 5 * level + 10

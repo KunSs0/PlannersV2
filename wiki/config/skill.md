@@ -19,7 +19,7 @@ __option__:
     name: "裂地斩"
     lore:
       - "技能等级 {{level}}"
-      - "技能伤害 {{32 * level + 100}}"
+      - "技能伤害 {{damage}}"
   variables:
     cooldown: 100
     damage: 32 * level + 100
@@ -76,19 +76,26 @@ icon-formatter:
 | `name` | String | 否 | 物品显示名称，支持颜色代码（`&6金色`） |
 | `lore` | List\<String\> | 否 | 物品描述列表，支持颜色代码 |
 
-**`{{表达式}}` 语法**：在 `name` 和 `lore` 中可以使用双花括号包裹 JS 表达式，会被自动计算。
+**`{{变量名}}` 语法**：在 `name` 和 `lore` 中只能使用双花括号引用已计算的变量值，不执行任何 JavaScript。
 
 可用变量：
-- `level` — 技能当前等级
+- `level` — 技能当前等级（唯一内建占位符）
 - 技能 `variables` 中定义的所有变量名
 
 **示例**：
 ```yaml
+variables:
+  damage: 32 * level + 100
+  cooldown: 200 - level * 10
+  cooldownSeconds: cooldown / 20
+
 lore:
   - "等级: {{level}}/10"
-  - "伤害: {{32 * level + 100}}"
-  - "冷却: {{Math.max(200 - level * 10, 50)}} tick"
+  - "伤害: {{damage}}"
+  - "冷却: {{cooldownSeconds}} 秒"
 ```
+
+占位符必须严格写为 `{{key}}`，其中 `key` 是合法变量名。`{{cooldown / 20}}`、`{{level * 10}}`、`{{Math.max(...)}}` 等内联表达式会在技能加载时被拒绝；请先将公式定义到 `variables`，再在文本中引用其 key。这样每个变量在一次图标渲染中只计算一次，避免 Lore 的每处占位符重复创建脚本会话。
 
 ### variables — 技能变量
 
@@ -227,6 +234,9 @@ directing:
   range: 16
   max-angle-degrees: 18
   require-line-of-sight: true
+  visual:
+    effect: entity_target_marker
+    height-offset: 0.2
 
 # 选择位置
 directing:
@@ -242,6 +252,8 @@ directing:
   max-duration-ticks: 30
   max-pitch-degrees: 75
 ```
+
+`fc.entity.visual` 为必填项。`effect` 必须引用 FightCore 服务端已注册的 `model` 类型特效；`height-offset` 是目标实体高度之外的有限高度偏移。瞄准期间，目标环只单播给施法者；候选变化时才更新实体锚点。确认时服务端会重新校验实体状态、世界、距离、相机方向夹角和可选视线，不信任客户端候选结果。
 
 `${表达式}` 中的 `level` 是技能等级。技能学习后，属性自动生效。
 

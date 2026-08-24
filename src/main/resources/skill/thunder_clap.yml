@@ -7,8 +7,8 @@ __option__:
       name: "&e雷霆一击"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7伤害 &e{{25 * level + 50}}"
-        - "&7麻痹 &e{{1 + level / 3}}&7秒"
+        - "&7伤害 &e{{damage}}"
+        - "&7麻痹 &e{{stun_duration}}&7秒"
   variables:
     cooldown: 120
     damage: 25 * level + 50

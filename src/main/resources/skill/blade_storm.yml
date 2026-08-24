@@ -7,8 +7,8 @@ __option__:
       name: "&b剑刃风暴"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7段数 &b{{2 * level + 5}}"
-        - "&7每段伤害 &b{{15 * level + 60}}"
+        - "&7段数 &b{{hits}}"
+        - "&7每段伤害 &b{{damage_per_hit}}"
   variables:
     cooldown: 300
     hits: 2 * level + 5

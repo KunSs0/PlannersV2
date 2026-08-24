@@ -7,8 +7,8 @@ __option__:
       name: "&8裂地"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7伤害 &8{{40 * level + 100}}"
-        - "&7击退 &8{{2 * level}}&7格"
+        - "&7伤害 &8{{damage}}"
+        - "&7击退 &8{{knockback}}&7格"
   variables:
     cooldown: 150
     damage: 40 * level + 100

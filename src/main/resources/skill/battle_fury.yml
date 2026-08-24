@@ -7,8 +7,8 @@ __option__:
       name: "&e战斗狂热"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7攻击速度 &c{{10 * level + 50}}%"
-        - "&7持续 &b{{2 * level + 5}}&7秒"
+        - "&7攻击速度 &c{{attack_speed}}%"
+        - "&7持续 &b{{duration}}&7秒"
   variables:
     cooldown: 150
     attack_speed: 10 * level + 50

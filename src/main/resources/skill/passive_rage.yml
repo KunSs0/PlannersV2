@@ -7,8 +7,9 @@ __option__:
       name: "&6怒火"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7攻击 &6+{{3 * level + 2}}"
+        - "&7攻击 &6+{{power}}"
         - "&7被动"
-  variables: {}
+  variables:
+    power: 3 * level + 2
   max-level: 5
 action: ""

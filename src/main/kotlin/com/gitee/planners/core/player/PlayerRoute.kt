@@ -160,6 +160,78 @@ class PlayerRoute(
         return evaluator.verify(conditions, player, createConditionContext(treeId, nodeId, targetLevel))
     }
 
+    /**
+     * 一次性校验当前职业阶段的全部技能树节点。
+     *
+     * 静态图关系在配置解码时已经验证；此处只检查玩家当前节点等级、前置节点状态和
+     * 动态条件。所有树的动态条件请求合并到同一个 GraalJS 会话中执行。
+     *
+     * @param player 当前玩家。
+     * @return 技能树 ID 到节点校验结果的映射。
+     */
+    fun getSkillTreeCheckResults(player: Player): Map<String, Map<String, ConditionEvaluator.VerifyResult>> {
+        val results = LinkedHashMap<String, LinkedHashMap<String, ConditionEvaluator.VerifyResult>>()
+        val requests = ArrayList<ConditionEvaluator.VerifyRequest>()
+        val requestTargets = LinkedHashMap<String, SkillTreeCheckTarget>()
+        for (tree in skillTrees) {
+            val treeId = tree.id
+            val treeResults = LinkedHashMap<String, ConditionEvaluator.VerifyResult>()
+            results[treeId] = treeResults
+            for ((nodeId, node) in tree.nodes) {
+                val currentLevel = getNodeLevel(treeId, nodeId)
+                if (currentLevel >= node.maxLevel) {
+                    treeResults[nodeId] = ConditionEvaluator.VerifyResult(false, listOf("节点已满级"))
+                    continue
+                }
+                val requirements = tree.graph[nodeId] ?: emptyList()
+                var requirementHint: String? = null
+                for (requirement in requirements) {
+                    val actualLevel = getNodeLevel(treeId, requirement.nodeId)
+                    if (actualLevel < requirement.minLevel) {
+                        requirementHint = "前置节点 ${requirement.nodeId} 需要 Lv${requirement.minLevel}"
+                        break
+                    }
+                }
+                if (requirementHint != null) {
+                    treeResults[nodeId] = ConditionEvaluator.VerifyResult(false, listOf(requirementHint))
+                    continue
+                }
+                val targetLevel = currentLevel + 1
+                val conditions = node.levels[targetLevel]
+                if (conditions == null) {
+                    treeResults[nodeId] = ConditionEvaluator.VerifyResult(false, listOf("节点未定义 Lv$targetLevel 条件"))
+                    continue
+                }
+                val requestId = createCheckRequestId(treeId, nodeId)
+                requests.add(
+                    ConditionEvaluator.VerifyRequest(
+                        requestId,
+                        conditions,
+                        createConditionContext(treeId, nodeId, targetLevel)
+                    )
+                )
+                requestTargets[requestId] = SkillTreeCheckTarget(treeId, nodeId)
+            }
+        }
+        val evaluated = evaluator.verifyAll(requests, player)
+        for ((requestId, verification) in evaluated) {
+            val target = requestTargets[requestId]
+            if (target == null) {
+                error("技能树节点校验结果缺少目标: $requestId")
+            }
+            val treeResults = results[target.treeId]
+            if (treeResults == null) {
+                error("技能树节点校验结果缺少技能树: ${target.treeId}")
+            }
+            treeResults[target.nodeId] = verification
+        }
+        val exposedResults = LinkedHashMap<String, Map<String, ConditionEvaluator.VerifyResult>>()
+        for ((treeId, treeResults) in results) {
+            exposedResults[treeId] = treeResults
+        }
+        return exposedResults
+    }
+
     fun advanceNode(player: Player, treeId: String, nodeId: String): CompletableFuture<Void> {
         val tree = getTree(treeId)
         val node = getNode(tree, nodeId)
@@ -248,4 +320,10 @@ class PlayerRoute(
     private fun nodeStateKey(treeId: String, nodeId: String): String {
         return "$treeId:$nodeId"
     }
+
+    private fun createCheckRequestId(treeId: String, nodeId: String): String {
+        return "$treeId\u0000$nodeId"
+    }
+
+    private class SkillTreeCheckTarget(val treeId: String, val nodeId: String)
 }

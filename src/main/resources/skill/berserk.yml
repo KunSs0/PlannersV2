@@ -7,8 +7,8 @@ __option__:
       name: "&4狂暴"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7伤害加成 &4{{6 * level + 20}}%"
-        - "&7受伤增加 &8{{3 * level + 10}}%"
+        - "&7伤害加成 &4{{damage_buff}}%"
+        - "&7受伤增加 &8{{damage_taken}}%"
   variables:
     cooldown: 200
     damage_buff: 6 * level + 20

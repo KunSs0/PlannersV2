@@ -7,7 +7,7 @@ __option__:
       name: "&e反击"
       lore:
         - "&7等级 &fLv{{level}}"
-        - "&7反伤 &c{{20 * level + 40}}%"
+        - "&7反伤 &c{{reflect}}%"
   variables:
     cooldown: 80
     reflect: 20 * level + 40
