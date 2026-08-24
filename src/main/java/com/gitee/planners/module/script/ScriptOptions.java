@@ -139,6 +139,7 @@ public class ScriptOptions {
         options.set("level", level);
         options.set("ctx", new SkillContext(proxyTarget, immutableSkill, level));
         if (immutableSkill != null) {
+            options.set("skill", immutableSkill);
             options.setPreludeScripts(immutableSkill.getPreludeScripts());
         }
         if (player != null) {
