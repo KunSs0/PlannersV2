@@ -227,11 +227,17 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
      * @param scenario 测试场景。
      */
     private fun installProductionSnapshot(context: Context, scenario: Scenario) {
-        val scriptPath = Path.of(
-            "F:\\minecraft\\haider\\server\\server-main\\plugins\\ZeusPlugin\\script\\scripts\\zeus.planners.js"
-        )
-        assertTrue(Files.isRegularFile(scriptPath), "未找到生产 Zeus 快照脚本: $scriptPath")
-        val source = Files.readString(scriptPath)
+        val resource = javaClass.getResourceAsStream("/zeus-script/zeus.planners.js")
+        if (resource == null) {
+            error("缺少测试资源: /zeus-script/zeus.planners.js")
+        }
+        val reader = resource.bufferedReader(Charsets.UTF_8)
+        val source: String
+        try {
+            source = reader.readText()
+        } finally {
+            reader.close()
+        }
         val rewritten = source
             .replace(
                 "var DynamicSkillIcon = Java.type(\"com.gitee.planners.core.skill.formatter.DynamicSkillIcon\").Companion;",
@@ -295,6 +301,7 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
     private fun formatMs(nanos: Long): String {
         return String.format(java.util.Locale.ROOT, "%.2f", nanos / 1_000_000.0)
     }
+
 
     /**
      * 技能树访问场景入口对象。
@@ -419,6 +426,10 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
             return skillTreeIds
         }
 
+        fun getIconItemId(): String {
+            return "minecraft:iron_sword"
+        }
+
         fun getIcon(): MockItemStack {
             return MockItemStack("minecraft:iron_sword", id + " 图标", listOf("职业线路图标"))
         }
@@ -449,6 +460,14 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
          */
         fun getImmutableSkillValues(): List<MockSkill> {
             return skills
+        }
+
+        fun getDisplayIconName(): String {
+            return name
+        }
+
+        fun getDisplayIconLore(): List<String> {
+            return listOf("职业说明")
         }
 
         fun getIcon(): MockItemStack {
@@ -510,6 +529,10 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
          */
         fun getCategories(): List<String> {
             return categories
+        }
+
+        fun getIconItemId(): String {
+            return "minecraft:iron_sword"
         }
 
         fun getIcon(): MockItemStack {

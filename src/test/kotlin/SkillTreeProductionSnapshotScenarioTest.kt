@@ -34,6 +34,7 @@ import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.function.Predicate
@@ -115,8 +116,9 @@ class SkillTreeProductionSnapshotScenarioTest {
             emptyMap(),
             SkillTreeProductionSnapshotScenarioTest::class.java.classLoader
         )
+        val scriptRoot = createBundledScriptRoot()
         val workspace = ScriptWorkspaces.create(
-            File("F:/minecraft/haider/server/server-main/plugins/ZeusPlugin/script"),
+            scriptRoot.toFile(),
             config
         )
         val session = workspace.createSession()
@@ -126,6 +128,7 @@ class SkillTreeProductionSnapshotScenarioTest {
         } finally {
             session.close()
             workspace.close()
+            deleteRecursively(scriptRoot)
         }
     }
 
@@ -396,15 +399,13 @@ class SkillTreeProductionSnapshotScenarioTest {
      * @return 生产对象测试场景。
      */
     private fun createScenario(): Scenario {
-        val plannersDirectory = File("F:/minecraft/haider/server/server-main/plugins/Planners")
+        val plannersDirectory = File(requiredTestPath("planners.test.plannersRoot"))
         assertTrue(plannersDirectory.isDirectory, "未找到服务端 Planners 配置目录: $plannersDirectory")
         val server = MockBukkit.mock()
         installPlatformIo(plannersDirectory)
         clearRegistries()
         ScriptManager.shutdown()
-        GraalJsDependencyInstaller.install(
-            Path.of("F:/minecraft/haider/server/server-main/plugins/ScriptEngine/libs/graaljs")
-        )
+        GraalJsDependencyInstaller.install(Path.of(requiredTestPath("planners.test.graalJsRoot")))
         ScriptManager.init()
 
         val config = Configuration.loadFromFile(File(plannersDirectory, "config.yml"))
@@ -784,18 +785,12 @@ class SkillTreeProductionSnapshotScenarioTest {
      * @param session ScriptEngine 生产 GraalJS 会话。
      */
     private fun installProductionSnapshot(session: ScriptSession) {
-        val zeusScript = Path.of("F:/minecraft/haider/server/server-main/plugins/ZeusPlugin/script/scripts/zeus.planners.js")
-        val utilsScript = Path.of("F:/minecraft/haider/server/server-main/plugins/ScriptEngine/libs/api.utils.js")
-        val plannersApiScript = Path.of("F:/minecraft/haider/server/server-main/plugins/ScriptEngine/libs/planners.api.js")
-        assertTrue(Files.isRegularFile(zeusScript), "未找到生产 Zeus 快照脚本")
-        assertTrue(Files.isRegularFile(utilsScript), "未找到生产 ScriptEngine 转换脚本")
-        assertTrue(Files.isRegularFile(plannersApiScript), "未找到生产 Planners JavaScript API")
-        val source = Files.readString(zeusScript)
+        val source = readBundledScript("zeus.planners.js")
         val rewritten = source.replace(
             "var Bukkit = Java.type(\"org.bukkit.Bukkit\");",
             "var Bukkit = { getCurrentTick: function () { return 1; } };"
         )
-        checkScriptResult(session.eval(Files.readString(utilsScript)), "加载生产 ScriptEngine 转换脚本")
+        checkScriptResult(session.eval(readBundledScript("api.utils.js")), "加载生产 ScriptEngine 转换脚本")
         checkScriptResult(
             session.eval(
             """
@@ -804,7 +799,7 @@ class SkillTreeProductionSnapshotScenarioTest {
             ),
             "初始化 Zeus 快照测试 API"
         )
-        checkScriptResult(session.eval(Files.readString(plannersApiScript)), "加载生产 Planners JavaScript API")
+        checkScriptResult(session.eval(readBundledScript("planners.api.js")), "加载生产 Planners JavaScript API")
         checkScriptResult(session.eval(rewritten), "加载生产 Zeus 快照脚本")
         checkScriptResult(
             session.eval(
@@ -1078,6 +1073,72 @@ class SkillTreeProductionSnapshotScenarioTest {
      */
     private fun formatMilliseconds(value: Double): String {
         return String.format(java.util.Locale.ROOT, "%.2f", value)
+    }
+
+    /** 从测试资源读取随仓库提交的生产脚本。 */
+    private fun readBundledScript(name: String): String {
+        val resource = javaClass.getResourceAsStream("/zeus-script/$name")
+        if (resource == null) {
+            error("缺少测试资源: /zeus-script/$name")
+        }
+        val reader = resource.bufferedReader(Charsets.UTF_8)
+        try {
+            return reader.readText()
+        } finally {
+            reader.close()
+        }
+    }
+
+    /** 将测试资源写入临时脚本工作区，供 Zeus DEFAULT workspace 测试使用。 */
+    private fun createBundledScriptRoot(): Path {
+        val root = Files.createTempDirectory("planners-zeus-script-")
+        val scripts = root.resolve("scripts")
+        Files.createDirectories(scripts)
+        val names = arrayOf("zeus.planners.js", "api.utils.js", "planners.api.js")
+        for (name in names) {
+            Files.writeString(
+                scripts.resolve(name),
+                readBundledScript(name),
+                Charsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING
+            )
+        }
+        return root
+    }
+
+    /** 删除本次 workspace 测试创建的临时脚本目录。 */
+    private fun deleteRecursively(root: Path) {
+        if (!Files.exists(root)) {
+            return
+        }
+        val stream = Files.walk(root)
+        try {
+            val paths = ArrayList<Path>()
+            val iterator = stream.iterator()
+            while (iterator.hasNext()) {
+                paths.add(iterator.next())
+            }
+            paths.sortWith(Comparator.reverseOrder())
+            for (path in paths) {
+                Files.deleteIfExists(path)
+            }
+        } finally {
+            stream.close()
+        }
+    }
+
+    /**
+     * 读取性能测试所需的外部 Planners 数据和 GraalJS 运行时目录。
+     *
+     * 这些是测试输入而非代码依赖，由执行测试的环境通过 JVM 参数显式提供。
+     */
+    private fun requiredTestPath(propertyName: String): String {
+        val value = System.getProperty(propertyName)
+        if (value == null || value.isBlank()) {
+            error("缺少性能测试路径参数 -D$propertyName=<path>")
+        }
+        return value
     }
 
     /**
