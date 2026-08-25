@@ -155,19 +155,17 @@ object Planners : Plugin() {
     override fun onEnable() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
+        ScriptManager.init()
+        val configuredConditions = conditions.get()
+        for (condition in configuredConditions.values) {
+            condition.installPersistent()
+        }
         Registries.init()
         AttributeProxy.register(HookAttributeSource())
 
-        // 脚本引擎自检
-        try {
-            ScriptManager.init()
-            val function = ScriptManager.compileExpression("engine-health", "'Planners JS 引擎就绪 — 引擎: GraalJS'")
-            val result = ScriptManager.invokeCompiled(function, ScriptOptions.of())
-            info("[Planners 脚本自检] ${result}")
-        } catch (e: Exception) {
-            warning("[Planners 脚本自检] 失败: ${e.message}")
-            e.printStackTrace()
-        }
+        val function = ScriptManager.compileExpression("engine-health", "'Planners JS 引擎就绪 — 引擎: GraalJS'")
+        val result = ScriptManager.invokeCompiled(function, ScriptOptions.of())
+        info("[Planners 脚本自检] ${result}")
     }
 
 }

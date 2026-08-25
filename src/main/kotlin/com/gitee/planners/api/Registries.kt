@@ -4,6 +4,7 @@ import com.gitee.planners.Planners
 import com.gitee.planners.core.config.*
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
+import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.util.builtin.AutoReloadable
 import com.gitee.planners.util.builtin.createConfigSectionBuiltin
 import com.gitee.planners.util.builtin.createDeepMultiBuiltin
@@ -76,7 +77,9 @@ object Registries {
         get() = Planners.backpackConfig.get()
 
     fun handleReload() {
+        ScriptManager.resetPersistentSession()
         AutoReloadable.onReload()
+        ScriptManager.warmPersistentSession()
     }
 
     fun init() {

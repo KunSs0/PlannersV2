@@ -4,6 +4,9 @@ import com.gitee.scriptengine.api.ScriptFunction;
 import com.gitee.scriptengine.api.CompiledScript;
 import com.gitee.scriptengine.api.ContextPreset;
 import com.gitee.scriptengine.api.HostAccessMode;
+import com.gitee.scriptengine.api.PersistentScriptSession;
+import com.gitee.scriptengine.api.PersistentScriptInvocation;
+import com.gitee.scriptengine.api.ReusableScriptSession;
 import com.gitee.scriptengine.api.ScriptResult;
 import com.gitee.scriptengine.api.ScriptSession;
 import com.gitee.scriptengine.api.ScriptSource;
@@ -20,7 +23,6 @@ import taboolib.platform.BukkitPlugin;
 import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,6 +38,7 @@ public final class ScriptManager {
     private static final Logger LOGGER = Logger.getLogger("Script");
     private static final Set<ManagedSession> ACTIVE_SESSIONS = ConcurrentHashMap.newKeySet();
     private static ScriptWorkspace workspace;
+    private static PersistentScriptSession persistentSession;
 
     private ScriptManager() {}
 
@@ -51,10 +54,10 @@ public final class ScriptManager {
 
         File scriptDir = new File("plugins/Planners/scripts");
         workspace = ScriptWorkspaces.create(scriptDir, new WorkspaceConfig(
-            ContextPreset.DEFAULT,
+            ContextPreset.SHARED_ENGINE,
             HostAccessMode.ALL,
             name -> true,
-            false,
+            true,
             WorkspaceConfigLoader.INSTANCE.loadPreludeScripts(scriptDir),
             java.util.Collections.emptyList(),
             java.util.Collections.emptyMap(),
@@ -63,6 +66,7 @@ public final class ScriptManager {
             java.util.Collections.emptyMap(),
             java.util.Collections.emptyList()
         ));
+        getPersistentSession();
         LOGGER.info("[Script] 引擎初始化完成: ScriptEngine");
     }
 
@@ -94,6 +98,11 @@ public final class ScriptManager {
         return CompiledScript.Companion.expression(id, expression);
     }
 
+    /** 将表达式编译为仅依赖函数参数的长期工作区函数。 */
+    public static CompiledScript compileExpression(String id, java.util.List<String> parameters, String expression) {
+        return CompiledScript.Companion.expression(id, parameters, expression);
+    }
+
     /**
      * 将 JavaScript 语句块编译成零参数函数。
      *
@@ -103,6 +112,168 @@ public final class ScriptManager {
      */
     public static CompiledScript compileAction(String id, String action) {
         return CompiledScript.Companion.action(id, action);
+    }
+
+    /** 将语句块编译为仅依赖函数参数的长期工作区函数。 */
+    public static CompiledScript compileAction(String id, java.util.List<String> parameters, String action) {
+        return CompiledScript.Companion.action(id, parameters, action);
+    }
+
+    /**
+     * 在工作区唯一的长期 Context 内执行参数化预编译函数。
+     *
+     * 调用参数不会写入 JavaScript 全局作用域；仅当前函数调用栈可见。
+     */
+    public static Object invokePersistent(CompiledScript function, ScriptOptions options, Object... args) {
+        ensureInit();
+        PersistentScriptSession session = getPersistentSession();
+        Map<String, Object> variables = createScriptVariables(options.getVariables());
+        Map<String, Object> previous = ScriptContext.getCurrent();
+        ScriptContext.setCurrent(variables);
+        try {
+            ScriptResult result = session.invoke(function, adaptArguments(args));
+            checkResult("执行长期预编译脚本函数失败: " + function.getFunctionName(), result);
+            return result.getValue();
+        } finally {
+            if (previous != null) {
+                ScriptContext.setCurrent(previous);
+            } else {
+                ScriptContext.clear();
+            }
+        }
+    }
+
+    /**
+     * 在长期工作区 Context 内执行参数化预编译函数，并返回完整的分段计时结果。
+     *
+     * <p>该入口仅用于业务侧显式性能采样。普通调用继续使用
+     * {@link #invokePersistent(CompiledScript, ScriptOptions, Object...)}，避免创建统计对象。</p>
+     *
+     * @param function 已预编译的函数。
+     * @param options 当前脚本选项。
+     * @param args 函数参数。
+     * @return 包含返回值和各执行阶段纳秒耗时的调用结果。
+     */
+    public static PersistentInvocation invokePersistentProfiled(CompiledScript function, ScriptOptions options, Object... args) {
+        ensureInit();
+        PersistentScriptSession session = getPersistentSession();
+        long variablesStart = System.nanoTime();
+        Map<String, Object> variables = createScriptVariables(options.getVariables());
+        long variablesCopyNanos = System.nanoTime() - variablesStart;
+        long contextStart = System.nanoTime();
+        Map<String, Object> previous = ScriptContext.getCurrent();
+        ScriptContext.setCurrent(variables);
+        long contextSetNanos = System.nanoTime() - contextStart;
+        long argumentsStart = System.nanoTime();
+        Object[] adaptedArguments = adaptArguments(args);
+        long argumentAdaptNanos = System.nanoTime() - argumentsStart;
+        PersistentScriptInvocation invocation;
+        long contextRestoreNanos;
+        try {
+            invocation = session.invokeProfiled(function, adaptedArguments);
+            checkResult("执行长期预编译脚本函数失败: " + function.getFunctionName(), invocation.getResult());
+        } finally {
+            long restoreStart = System.nanoTime();
+            if (previous != null) {
+                ScriptContext.setCurrent(previous);
+            } else {
+                ScriptContext.clear();
+            }
+            contextRestoreNanos = System.nanoTime() - restoreStart;
+        }
+        return new PersistentInvocation(
+            invocation.getResult().getValue(),
+            variablesCopyNanos,
+            contextSetNanos,
+            argumentAdaptNanos,
+            contextRestoreNanos,
+            invocation
+        );
+    }
+
+    /**
+     * 长期脚本调用的宿主侧和运行时侧分段计时。
+     *
+     * 所有耗时均为纳秒，调用方可按一次完整请求汇总后再转换为微秒输出。
+     */
+    public static final class PersistentInvocation {
+
+        private final Object value;
+        private final long variablesCopyNanos;
+        private final long contextSetNanos;
+        private final long argumentAdaptNanos;
+        private final long contextRestoreNanos;
+        private final PersistentScriptInvocation scriptInvocation;
+
+        private PersistentInvocation(
+            Object value,
+            long variablesCopyNanos,
+            long contextSetNanos,
+            long argumentAdaptNanos,
+            long contextRestoreNanos,
+            PersistentScriptInvocation scriptInvocation
+        ) {
+            this.value = value;
+            this.variablesCopyNanos = variablesCopyNanos;
+            this.contextSetNanos = contextSetNanos;
+            this.argumentAdaptNanos = argumentAdaptNanos;
+            this.contextRestoreNanos = contextRestoreNanos;
+            this.scriptInvocation = scriptInvocation;
+        }
+
+        public Object getValue() {
+            return value;
+        }
+
+        public long getVariablesCopyNanos() {
+            return variablesCopyNanos;
+        }
+
+        public long getContextSetNanos() {
+            return contextSetNanos;
+        }
+
+        public long getArgumentAdaptNanos() {
+            return argumentAdaptNanos;
+        }
+
+        public long getContextRestoreNanos() {
+            return contextRestoreNanos;
+        }
+
+        public long getLockWaitNanos() {
+            return scriptInvocation.getLockWaitNanos();
+        }
+
+        public long getInstallNanos() {
+            return scriptInvocation.getInstallNanos();
+        }
+
+        public long getFunctionLookupNanos() {
+            return scriptInvocation.getFunctionLookupNanos();
+        }
+
+        public long getFunctionExecuteNanos() {
+            return scriptInvocation.getFunctionExecuteNanos();
+        }
+
+        public long getResultUnwrapNanos() {
+            return scriptInvocation.getResultUnwrapNanos();
+        }
+    }
+
+    /**
+     * 将无状态预编译函数预安装到工作区唯一的长期 Context。
+     *
+     * <p>配置解码阶段调用本方法，将函数声明的首次执行成本移出玩家请求路径。</p>
+     *
+     * @param function 仅依赖函数参数的预编译函数。
+     */
+    public static void installPersistent(CompiledScript function) {
+        ensureInit();
+        PersistentScriptSession session = getPersistentSession();
+        ScriptResult result = session.install(function);
+        checkResult("预安装长期预编译脚本函数失败: " + function.getFunctionName(), result);
     }
 
     /**
@@ -189,12 +360,12 @@ public final class ScriptManager {
      * @param transientBindings 本次执行可能写入全局作用域的临时变量名。
      */
     public static void rebindReusableSession(ScriptSession session, ScriptOptions options, Set<String> transientBindings) {
-        if (!(session instanceof ManagedSession)) {
-            throw new IllegalArgumentException("Session is not managed by ScriptManager");
+        if (!(session instanceof ReusableScriptSession)) {
+            throw new IllegalArgumentException("Session does not support reusable bindings");
         }
         Map<String, Object> variables = createSessionVariables(options.getVariables());
-        ManagedSession managedSession = (ManagedSession) session;
-        managedSession.rebind(variables, transientBindings);
+        ReusableScriptSession reusableSession = (ReusableScriptSession) session;
+        reusableSession.rebind(variables, transientBindings);
     }
 
     /**
@@ -208,11 +379,11 @@ public final class ScriptManager {
      * @param value 变量值。
      */
     public static void setReusableSessionBinding(ScriptSession session, String key, Object value) {
-        if (!(session instanceof ManagedSession)) {
-            throw new IllegalArgumentException("Session is not managed by ScriptManager");
+        if (!(session instanceof ReusableScriptSession)) {
+            throw new IllegalArgumentException("Session does not support reusable bindings");
         }
-        ManagedSession managedSession = (ManagedSession) session;
-        managedSession.bind(key, value);
+        ReusableScriptSession reusableSession = (ReusableScriptSession) session;
+        reusableSession.bind(key, value);
     }
 
     /**
@@ -273,12 +444,51 @@ public final class ScriptManager {
             workspace.close();
             workspace = null;
         }
+        persistentSession = null;
+    }
+
+    /** 在配置重载前销毁长期函数 Context，避免保留旧配置的函数定义。 */
+    public static synchronized void resetPersistentSession() {
+        PersistentScriptSession current = persistentSession;
+        if (current == null) {
+            return;
+        }
+        workspace.resetPersistentSession();
+        persistentSession = null;
+    }
+
+    /**
+     * 预热工作区唯一的长期 Context。
+     *
+     * <p>在插件启动或配置重载完成后调用，将 Context 创建成本从玩家请求路径移出。</p>
+     */
+    public static void warmPersistentSession() {
+        ensureInit();
+        getPersistentSession();
     }
 
     private static void ensureInit() {
         if (workspace == null) {
             init();
         }
+    }
+
+    private static synchronized PersistentScriptSession getPersistentSession() {
+        PersistentScriptSession existing = persistentSession;
+        if (existing != null) {
+            return existing;
+        }
+        PersistentScriptSession created = workspace.persistentSession();
+        created.bindWorkspaceValue("stateAPI", StateAPI.INSTANCE);
+        for (Map.Entry<String, java.util.function.Function<Object[], Object>> entry : GlobalFunctions.getAll().entrySet()) {
+            java.util.function.Function<Object[], Object> function = entry.getValue();
+            created.bindWorkspaceValue(entry.getKey(), (ScriptFunction) values -> {
+                Object[] arguments = unwrapArguments(values);
+                return function.apply(arguments);
+            });
+        }
+        persistentSession = created;
+        return created;
     }
 
     private static Map<String, Object> createScriptVariables(Map<String, Object> variables) {
@@ -298,28 +508,28 @@ public final class ScriptManager {
     }
 
     private static ManagedSession createSession(Map<String, Object> variables, java.util.List<String> preludeScripts, Set<String> transientBindings) {
-        com.gitee.scriptengine.api.ScriptContext context = workspace.createContext(variables, preludeScripts);
-        ManagedSession session = new ManagedSession(context, variables, transientBindings);
+        ReusableScriptSession delegate = workspace.createReusableSession(variables, preludeScripts, transientBindings);
+        ManagedSession session = new ManagedSession(delegate, variables);
         ACTIVE_SESSIONS.add(session);
-        installGlobalFunctions(context);
-        installTimerFunctions(context, session);
+        installGlobalFunctions(session);
+        installTimerFunctions(session);
         return session;
     }
 
-    private static void installGlobalFunctions(com.gitee.scriptengine.api.ScriptContext context) {
+    private static void installGlobalFunctions(ReusableScriptSession session) {
         for (Map.Entry<String, java.util.function.Function<Object[], Object>> entry : GlobalFunctions.getAll().entrySet()) {
             java.util.function.Function<Object[], Object> function = entry.getValue();
-            context.getBindings().putMember(entry.getKey(), (ScriptFunction) values -> {
+            session.bindPersistent(entry.getKey(), (ScriptFunction) values -> {
                 Object[] arguments = unwrapArguments(values);
                 return function.apply(arguments);
             });
         }
     }
 
-    private static void installTimerFunctions(com.gitee.scriptengine.api.ScriptContext context, ManagedSession session) {
-        context.getBindings().putMember("setTimeout", (ScriptFunction) values -> session.schedule(values, false));
-        context.getBindings().putMember("setInterval", (ScriptFunction) values -> session.schedule(values, true));
-        context.getBindings().putMember("clearTimer", (ScriptFunction) values -> session.cancel(values));
+    private static void installTimerFunctions(ManagedSession session) {
+        session.bindPersistent("setTimeout", (ScriptFunction) values -> session.schedule(values, false));
+        session.bindPersistent("setInterval", (ScriptFunction) values -> session.schedule(values, true));
+        session.bindPersistent("clearTimer", (ScriptFunction) values -> session.cancel(values));
     }
 
     private static void checkResult(String message, ScriptResult result) {
@@ -396,23 +606,18 @@ public final class ScriptManager {
         return value;
     }
 
-    private static final class ManagedSession implements ScriptSession {
+    private static final class ManagedSession implements ReusableScriptSession {
 
-        private final ScriptSession delegate;
-        private final com.gitee.scriptengine.api.ScriptContext context;
+        private final ReusableScriptSession delegate;
         private final Map<String, Object> variables;
-        private final Set<String> bindingKeys = new java.util.LinkedHashSet<>();
         private final Map<Integer, ScheduledTask> tasks = new ConcurrentHashMap<>();
         private final AtomicInteger nextTaskId = new AtomicInteger(1);
         private boolean closeRequested;
         private boolean closed;
 
-        private ManagedSession(com.gitee.scriptengine.api.ScriptContext context, Map<String, Object> variables, Set<String> transientBindings) {
-            this.delegate = new ContextSession(context);
-            this.context = context;
+        private ManagedSession(ReusableScriptSession delegate, Map<String, Object> variables) {
+            this.delegate = delegate;
             this.variables = variables;
-            bindingKeys.addAll(variables.keySet());
-            bindingKeys.addAll(transientBindings);
         }
 
         @Override
@@ -445,33 +650,36 @@ public final class ScriptManager {
             return delegate.hasFunction(name);
         }
 
-        private void rebind(Map<String, Object> nextVariables, Set<String> transientBindings) {
+        @Override
+        public void rebind(Map<String, ? extends Object> nextVariables, Set<String> transientBindings) {
             synchronized (this) {
                 if (closed || closeRequested) {
                     throw new IllegalStateException("Session 已关闭或正在关闭，不能重新绑定");
                 }
-                for (String key : bindingKeys) {
-                    context.getBindings().removeMember(key);
-                }
                 variables.clear();
                 variables.putAll(nextVariables);
-                bindingKeys.clear();
-                bindingKeys.addAll(nextVariables.keySet());
-                bindingKeys.addAll(transientBindings);
-                for (Map.Entry<String, Object> entry : nextVariables.entrySet()) {
-                    context.getBindings().putMember(entry.getKey(), entry.getValue());
-                }
+                delegate.rebind(nextVariables, transientBindings);
             }
         }
 
-        private void bind(String key, Object value) {
+        @Override
+        public void bind(String key, Object value) {
             synchronized (this) {
                 if (closed || closeRequested) {
                     throw new IllegalStateException("Session 已关闭或正在关闭，不能绑定变量");
                 }
                 variables.put(key, value);
-                bindingKeys.add(key);
-                context.getBindings().putMember(key, value);
+                delegate.bind(key, value);
+            }
+        }
+
+        @Override
+        public void bindPersistent(String key, Object value) {
+            synchronized (this) {
+                if (closed || closeRequested) {
+                    throw new IllegalStateException("Session 已关闭或正在关闭，不能绑定基础变量");
+                }
+                delegate.bindPersistent(key, value);
             }
         }
 
@@ -628,92 +836,5 @@ public final class ScriptManager {
             }
         }
 
-        private static final class ContextSession implements ScriptSession {
-
-            private final com.gitee.scriptengine.api.ScriptContext context;
-            private final Set<String> installedScripts = new java.util.LinkedHashSet<>();
-            private boolean closed;
-
-            private ContextSession(com.gitee.scriptengine.api.ScriptContext context) {
-                this.context = context;
-            }
-
-            @Override
-            public ScriptResult eval(String source) {
-                checkClosed();
-                return context.eval(source);
-            }
-
-            @Override
-            public ScriptResult eval(ScriptSource source) {
-                checkClosed();
-                return context.eval(source);
-            }
-
-            @Override
-            public ScriptResult install(CompiledScript script) {
-                checkClosed();
-                if (installedScripts.contains(script.getFunctionName())) {
-                    return new ScriptResult(null, true, null);
-                }
-                ScriptResult result = eval(script.getSource());
-                if (result.getSuccess()) {
-                    installedScripts.add(script.getFunctionName());
-                }
-                return result;
-            }
-
-            @Override
-            public ScriptResult invoke(String name, Object... arguments) {
-                checkClosed();
-                ScriptValue function = context.getBindings().getMember(name);
-                if (function == null) {
-                    return new ScriptResult(null, false, new NoSuchElementException("function '" + name + "' not found"));
-                }
-                if (!function.canExecute()) {
-                    return new ScriptResult(null, false, new IllegalStateException("'" + name + "' is not callable"));
-                }
-                try {
-                    return new ScriptResult(unwrapValue(function.execute(arguments)), true, null);
-                } catch (Exception exception) {
-                    return new ScriptResult(null, false, exception);
-                }
-            }
-
-            @Override
-            public ScriptResult invoke(CompiledScript script, Object... arguments) {
-                ScriptResult installResult = install(script);
-                if (!installResult.getSuccess()) {
-                    return installResult;
-                }
-                return invoke(script.getFunctionName(), arguments);
-            }
-
-            @Override
-            public boolean hasFunction(String name) {
-                checkClosed();
-                ScriptValue function = context.getBindings().getMember(name);
-                if (function == null) {
-                    return false;
-                }
-                return function.canExecute();
-            }
-
-            @Override
-            public void close() {
-                if (closed) {
-                    return;
-                }
-                closed = true;
-                installedScripts.clear();
-                context.close();
-            }
-
-            private void checkClosed() {
-                if (closed) {
-                    throw new IllegalStateException("Session 已关闭");
-                }
-            }
-        }
     }
 }

@@ -7,6 +7,7 @@ import com.gitee.planners.util.mapValueWithId
 import org.bukkit.inventory.ItemStack
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
+import java.util.Locale
 
 class ImmutableJob(private val config: Configuration) {
 
@@ -16,7 +17,20 @@ class ImmutableJob(private val config: Configuration) {
 
     val name = option.getString("name", id)!!
 
-    /** 职业显示图标；未配置时为空。 */
+    /** 职业显示图标的 namespaced ID；未配置时为空。 */
+    val iconItemId: String? = toItemId(option.getString("display.icon.material"))
+
+    /** 职业显示图标名称原文。 */
+    val displayIconName: String? = option.getString("display.icon.name")
+
+    /** 职业显示图标 Lore 原文。 */
+    val displayIconLore: List<String> = option.getStringList("display.icon.lore")
+
+    /**
+     * 职业 Bukkit 显示图标；未配置时为空。
+     *
+     * 仅在传统 Bukkit GUI 读取时解码为 ItemStack。
+     */
     val icon: ItemStack?
         get() {
             val display = option.getConfigurationSection("display")
@@ -80,5 +94,25 @@ class ImmutableJob(private val config: Configuration) {
 
     fun getVariables(): Map<String, Variable> {
         return immutableVariables
+    }
+
+    /**
+     * 将职业图标材质文本转换为 Minecraft namespaced ID。
+     *
+     * @param material 配置中的 Bukkit Material 名称。
+     * @return 小写 namespaced ID；未配置时返回 null。
+     */
+    private fun toItemId(material: String?): String? {
+        if (material == null) {
+            return null
+        }
+        val normalized = material.trim()
+        if (normalized.isEmpty()) {
+            return null
+        }
+        if (normalized.contains(':')) {
+            return normalized.lowercase(Locale.ROOT)
+        }
+        return "minecraft:" + normalized.lowercase(Locale.ROOT)
     }
 }

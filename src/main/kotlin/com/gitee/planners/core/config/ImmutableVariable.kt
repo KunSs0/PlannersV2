@@ -20,6 +20,9 @@ interface ImmutableVariable : Variable {
      */
     fun evaluate(session: ScriptSession): Any?
 
+    /** 向技能显示变量批处理函数写入局部计算语句。 */
+    fun appendDisplayEvaluation(builder: StringBuilder)
+
     companion object {
 
         private val identifierPattern = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
@@ -60,6 +63,14 @@ interface ImmutableVariable : Variable {
          */
         override fun evaluate(session: ScriptSession): Any? {
             return evaluateFor(session, id)
+        }
+
+        override fun appendDisplayEvaluation(builder: StringBuilder) {
+            builder.append("var ")
+            builder.append(id)
+            builder.append(" = (")
+            builder.append(action)
+            builder.append(");\n")
         }
 
         /**
@@ -132,6 +143,30 @@ interface ImmutableVariable : Variable {
                 }
             }
             return false
+        }
+
+        override fun appendDisplayEvaluation(builder: StringBuilder) {
+            builder.append("var ")
+            builder.append(id)
+            builder.append(" = false;\n")
+            builder.append("var __plannersMatched_")
+            builder.append(id)
+            builder.append(" = false;\n")
+            for (case in cases) {
+                builder.append("if (!__plannersMatched_")
+                builder.append(id)
+                builder.append(" && (")
+                builder.append(case.condition.action)
+                builder.append(")) {\n")
+                builder.append(id)
+                builder.append(" = (")
+                builder.append(case.action)
+                builder.append(");\n")
+                builder.append("__plannersMatched_")
+                builder.append(id)
+                builder.append(" = true;\n")
+                builder.append("}\n")
+            }
         }
 
     }

@@ -15,7 +15,13 @@ class ImmutableRouter(private val config: Configuration) : Unique {
     val algorithmLevel =
         Algorithm.parse(config.getConfigurationSection("__option__.algorithm.level"))
 
-    val icon = config.getItemStack("__option__.icon")
+    /**
+     * 职业系 Bukkit 图标。
+     *
+     * 该对象仅由传统 Bukkit GUI 按需读取，加载配置时不创建 ItemStack。
+     */
+    val icon
+        get() = config.getItemStack("__option__.icon")
 
     val routes = config.mapSectionNotNull {
         if (it.name == "__option__") return@mapSectionNotNull null

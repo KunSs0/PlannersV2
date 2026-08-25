@@ -10,6 +10,7 @@ import com.gitee.planners.core.skill.directing.DirectingConfigSection
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.scriptengine.api.ScriptResult
+import com.gitee.scriptengine.api.CompiledScript
 import com.gitee.planners.module.script.ScriptContext
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
@@ -21,6 +22,7 @@ import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.Locale
 import java.util.regex.Pattern
 
 class ImmutableSkill(config: Configuration) : Unique {
@@ -62,8 +64,20 @@ class ImmutableSkill(config: Configuration) : Unique {
         }
     }
 
-    /** 技能图标 */
-    val icon = option.getConfigurationSection("display")?.getItemStack("icon")
+    /**
+     * 技能图标材质的 namespaced ID。
+     *
+     * 该字段从配置文本直接投影，供 Zeus 等不需要 Bukkit ItemStack 的调用方使用。
+     */
+    val iconItemId: String? = toItemId(option.getString("display.icon.material"))
+
+    /**
+     * 技能 Bukkit 图标。
+     *
+     * 仅在传统 Bukkit GUI 实际需要物品对象时解码，避免配置加载和纯数据快照创建 ItemStack。
+     */
+    val icon
+        get() = option.getConfigurationSection("display")?.getItemStack("icon")
 
     /** 技能图标显示名称原文，用于不创建 ItemStack 的文本渲染。 */
     val displayIconName: String? = option.getString("display.icon.name")
@@ -122,11 +136,19 @@ class ImmutableSkill(config: Configuration) : Unique {
         ImmutableVariable.parse(id, value)
     }
 
+    /**
+     * 图标显示变量的单次批处理函数。
+     *
+     * 所有值在函数局部作用域按 YAML 声明顺序计算，避免向长期 Context 写入玩家变量。
+     */
+    private val displayVariablesFunction: CompiledScript = createDisplayVariablesFunction()
+
     init {
         validateDisplayTemplate("display.icon.name", displayIconName)
         for (index in displayIconLore.indices) {
             validateDisplayTemplate("display.icon.lore[$index]", displayIconLore[index])
         }
+        ScriptManager.installPersistent(displayVariablesFunction)
     }
 
     /** 外部插件实现的 Hook 标记接口 */
@@ -253,6 +275,31 @@ class ImmutableSkill(config: Configuration) : Unique {
         return immutableVariables
     }
 
+    fun evaluateDisplayVariables(options: ScriptOptions): Map<String, Any?> {
+        val values = ScriptManager.invokePersistent(
+            displayVariablesFunction,
+            options,
+            options.variables["sender"],
+            options.variables["level"],
+            options.variables["ctx"],
+            options.variables["skill"],
+            options.variables["profile"]
+        )
+        if (values !is List<*>) {
+            throw IllegalStateException("技能 '$id' 显示变量批处理返回类型错误")
+        }
+        if (values.size != immutableVariables.size) {
+            throw IllegalStateException("技能 '$id' 显示变量批处理返回数量错误")
+        }
+        val result = LinkedHashMap<String, Any?>()
+        var index = 0
+        for ((variableId, _) in immutableVariables) {
+            result[variableId] = values[index]
+            index += 1
+        }
+        return result
+    }
+
     private fun validateDisplayTemplate(path: String, text: String?) {
         if (text == null) {
             return
@@ -267,6 +314,48 @@ class ImmutableSkill(config: Configuration) : Unique {
                 throw IllegalArgumentException("技能 '$id' 的 $path 引用了未声明变量: {{$key}}")
             }
         }
+    }
+
+    private fun createDisplayVariablesFunction(): CompiledScript {
+        val body = StringBuilder()
+        for ((_, variable) in immutableVariables) {
+            variable.appendDisplayEvaluation(body)
+        }
+        body.append("return [")
+        var first = true
+        for ((variableId, _) in immutableVariables) {
+            if (!first) {
+                body.append(',')
+            }
+            body.append(variableId)
+            first = false
+        }
+        body.append("];\n")
+        return ScriptManager.compileAction(
+            "skill:$id:display-variables",
+            listOf("sender", "level", "ctx", "skill", "profile"),
+            body.toString()
+        )
+    }
+
+    /**
+     * 将技能图标材质文本转换为 Minecraft namespaced ID。
+     *
+     * @param material 配置中的 Bukkit Material 名称。
+     * @return 小写 namespaced ID；未配置时返回 null。
+     */
+    private fun toItemId(material: String?): String? {
+        if (material == null) {
+            return null
+        }
+        val normalized = material.trim()
+        if (normalized.isEmpty()) {
+            return null
+        }
+        if (normalized.contains(':')) {
+            return normalized.lowercase(Locale.ROOT)
+        }
+        return "minecraft:" + normalized.lowercase(Locale.ROOT)
     }
 
     override fun toString(): String = "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"

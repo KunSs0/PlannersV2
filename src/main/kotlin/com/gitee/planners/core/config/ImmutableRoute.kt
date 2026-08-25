@@ -4,6 +4,7 @@ import com.gitee.planners.api.Registries
 import org.bukkit.inventory.ItemStack
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
+import java.util.Locale
 
 class ImmutableRoute(private val parent: ImmutableRouter, private val config: ConfigurationSection) {
 
@@ -11,9 +12,19 @@ class ImmutableRoute(private val parent: ImmutableRouter, private val config: Co
 
     val id = config.name
 
-    val icon = config.getItemStack("icon")
-        @JvmName("icon0")
-        get
+    /** 职业阶段图标的 namespaced ID。 */
+    val iconItemId: String? = toItemId(config.getString("icon.material"))
+
+    /**
+     * 职业阶段 Bukkit 图标。
+     *
+     * 仅由传统 Bukkit GUI 按需创建，快照数据路径不需要 ItemStack。
+     */
+    val icon: ItemStack?
+        @JvmName("getIconValue")
+        get() {
+            return config.getItemStack("icon")
+        }
 
     /** 绑定的技能树 ID；一个职业阶段可绑定多个树。 */
     val skillTreeIds: List<String>
@@ -44,6 +55,26 @@ class ImmutableRoute(private val parent: ImmutableRouter, private val config: Co
 
     fun getJob(): ImmutableJob {
         return Registries.JOB.getOrNull(id) ?: error("Couldn't find job with id $id")
+    }
+
+    /**
+     * 将职业阶段图标材质文本转换为 Minecraft namespaced ID。
+     *
+     * @param material 配置中的 Bukkit Material 名称。
+     * @return 小写 namespaced ID；未配置时返回 null。
+     */
+    private fun toItemId(material: String?): String? {
+        if (material == null) {
+            return null
+        }
+        val normalized = material.trim()
+        if (normalized.isEmpty()) {
+            return null
+        }
+        if (normalized.contains(':')) {
+            return normalized.lowercase(Locale.ROOT)
+        }
+        return "minecraft:" + normalized.lowercase(Locale.ROOT)
     }
 
 }

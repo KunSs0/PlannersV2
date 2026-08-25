@@ -1,3 +1,4 @@
+import com.gitee.planners.core.player.SkillTreeRuntimeProjection
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -5,6 +6,62 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SkillTreeSnapshotScenarioTest {
+
+    /**
+     * 模拟职业技能树完整热路径。
+     *
+     * 该场景使用生产中的批量运行时投影，覆盖条件批校验、动态图标变量、节点合并与
+     * RPC 负载 JSON 序列化；函数定义仅在预安装阶段执行一次。
+     */
+    @Test
+    fun measurePrecompiledFullSnapshotFlow() {
+        val context = createContext()
+        try {
+            val profile = ConditionProfile(30, mapOf("knight_warder_straight_hit" to ConditionSkill(1)))
+            val route = ConditionRoute(25, mapOf("knight_warder:knight_warder_straight_hit_lv1" to 1))
+            val projection = createRuntimeProjection()
+            val playerLevelProps = createConditionProps("min", 42)
+            val skillPointProps = createConditionProps("amount", 42)
+            val foundationProps = createFoundationProps()
+            val preloadStart = System.nanoTime()
+            context.eval("js", createFullSnapshotFunctions())
+            val preloadNanos = System.nanoTime() - preloadStart
+            val function = context.getBindings("js").getMember("__buildFullSkillTreeSnapshot")
+
+            var warmupIndex = 0
+            while (warmupIndex < 250) {
+                function.execute(profile, route, projection, playerLevelProps, skillPointProps, foundationProps)
+                warmupIndex += 1
+            }
+
+            val iterationCount = 1_000
+            var payload = ""
+            val start = System.nanoTime()
+            var iterationIndex = 0
+            while (iterationIndex < iterationCount) {
+                val result = function.execute(profile, route, projection, playerLevelProps, skillPointProps, foundationProps)
+                payload = result.asString()
+                iterationIndex += 1
+            }
+            val elapsedNanos = System.nanoTime() - start
+            val averageNanos = elapsedNanos / iterationCount
+            println(
+                "[SkillTreeFullSnapshotScenario] " +
+                    "preloadMs=" + formatMs(preloadNanos) +
+                    " totalMs=" + formatMs(elapsedNanos) +
+                    " averageUs=" + String.format(java.util.Locale.ROOT, "%.2f", averageNanos / 1_000.0) +
+                    " iterations=" + iterationCount +
+                    " payloadChars=" + payload.length +
+                    " displayFunctions=13" +
+                    " conditionFunctions=3" +
+                    " nodes=42"
+            )
+            assertTrue(payload.isNotEmpty())
+            assertTrue(payload.contains("knight_warder"))
+        } finally {
+            context.close()
+        }
+    }
 
     @Test
     fun buildSkillTreeLoadScenario() {
@@ -61,6 +118,110 @@ class SkillTreeSnapshotScenarioTest {
         val routeTwo = Route("knight", emptyList())
         val routeThree = Route("paladin", emptyList())
         return Scenario(listOf(selectedRoute, routeTwo, routeThree), selectedRoute)
+    }
+
+    /**
+     * 创建生产投影格式的技能树节点运行时数据。
+     *
+     * @return 两棵树、共四十二个节点的运行时投影。
+     */
+    private fun createRuntimeProjection(): SkillTreeRuntimeProjection {
+        val trees = ArrayList<SkillTreeRuntimeProjection.Tree>()
+        trees.add(createRuntimeTree(30, 13))
+        trees.add(createRuntimeTree(12, 0))
+        return SkillTreeRuntimeProjection(trees, SkillTreeRuntimeProjection.Profiling())
+    }
+
+    /**
+     * 创建单棵树的批量运行时数组。
+     *
+     * @param nodeCount 节点总数。
+     * @param activatedSkillCount 已激活技能节点数量。
+     * @return 对应树的运行时数据。
+     */
+    private fun createRuntimeTree(nodeCount: Int, activatedSkillCount: Int): SkillTreeRuntimeProjection.Tree {
+        val levels = IntArray(nodeCount)
+        val canAdvanceStates = BooleanArray(nodeCount)
+        val hints = ArrayList<List<String>>()
+        var index = 0
+        while (index < nodeCount) {
+            if (index < activatedSkillCount) {
+                levels[index] = 1
+                canAdvanceStates[index] = true
+                hints.add(emptyList())
+            } else {
+                levels[index] = 0
+                canAdvanceStates[index] = false
+                hints.add(listOf("需要前置节点"))
+            }
+            index += 1
+        }
+        return SkillTreeRuntimeProjection.Tree(levels, canAdvanceStates, hints)
+    }
+
+    /**
+     * 创建批量条件属性。
+     *
+     * @param key 条件属性键。
+     * @param count 属性数量。
+     * @return 按条件数量排列的属性列表。
+     */
+    private fun createConditionProps(key: String, count: Int): List<Map<String, Any>> {
+        val result = ArrayList<Map<String, Any>>()
+        var index = 0
+        while (index < count) {
+            val props = LinkedHashMap<String, Any>()
+            props[key] = 1 + index % 30
+            result.add(props)
+            index += 1
+        }
+        return result
+    }
+
+    /**
+     * 创建不携带属性的前置条件列表。
+     *
+     * @return 三条前置条件属性。
+     */
+    private fun createFoundationProps(): List<Map<String, Any>> {
+        val result = ArrayList<Map<String, Any>>()
+        var index = 0
+        while (index < 3) {
+            result.add(LinkedHashMap())
+            index += 1
+        }
+        return result
+    }
+
+    /**
+     * 创建预安装到长期 Context 的完整快照函数集合。
+     *
+     * @return JavaScript 函数源码。
+     */
+    private fun createFullSnapshotFunctions(): String {
+        val source = StringBuilder()
+        source.append("function __fullToArray(values) { var result = []; var iterator = values.iterator(); while (iterator.hasNext()) { result.push(iterator.next()); } return result; }\n")
+        source.append("function __fullLevelCondition(profile, values) { var result = ''; for (var i = 0; i < values.size(); i++) { result += profile.getLevel() >= values.get(i).get('min') ? '1' : '0'; } return result; }\n")
+        source.append("function __fullPointCondition(route, values) { var result = ''; for (var i = 0; i < values.size(); i++) { result += route.getSkillPointsCurrent() >= values.get(i).get('amount') ? '1' : '0'; } return result; }\n")
+        source.append("function __fullFoundationCondition(route, values) { var result = ''; for (var i = 0; i < values.size(); i++) { result += route.getNodeLevel('knight_warder', 'knight_warder_straight_hit_lv1') >= 1 ? '1' : '0'; } return result; }\n")
+        var skillIndex = 0
+        while (skillIndex < 13) {
+            val id = skillIndex + 1
+            source.append("function __fullDisplay")
+            source.append(id)
+            source.append("(level) { var power = level * ")
+            source.append(id)
+            source.append("; var cooldown = 3 + level; var stamina = 10 + level; return ['技能")
+            source.append(id)
+            source.append(" ' + power, '冷却 ' + cooldown, '耐力 ' + stamina]; }\n")
+            skillIndex += 1
+        }
+        source.append("function __buildFullSkillTreeSnapshot(profile, route, projection, levelProps, pointProps, foundationProps) { ")
+        source.append("var levelChecks = __fullLevelCondition(profile, levelProps); var pointChecks = __fullPointCondition(route, pointProps); var foundationChecks = __fullFoundationCondition(route, foundationProps); ")
+        source.append("var skillData = {}; for (var skillIndex = 0; skillIndex < 13; skillIndex++) { var display = globalThis['__fullDisplay' + (skillIndex + 1)](1); skillData['skill_' + (skillIndex + 1)] = { id: 'skill_' + (skillIndex + 1), displayIconName: display[0], displayIconLore: [display[1], display[2]] }; } ")
+        source.append("var runtimeTrees = __fullToArray(projection.getTrees()); var trees = []; for (var treeIndex = 0; treeIndex < runtimeTrees.length; treeIndex++) { var runtimeTree = runtimeTrees[treeIndex]; var levels = runtimeTree.getLevels(); var states = runtimeTree.getCanAdvanceStates(); var treeHints = __fullToArray(runtimeTree.getHints()); var nodes = []; for (var nodeIndex = 0; nodeIndex < levels.length; nodeIndex++) { var hints = __fullToArray(treeHints[nodeIndex]); var node = { id: 'node_' + treeIndex + '_' + nodeIndex, level: Number(levels[nodeIndex]), canAdvance: states[nodeIndex], hints: hints }; if (treeIndex === 0 && nodeIndex < 13) { node.skill = skillData['skill_' + (nodeIndex + 1)]; } nodes.push(node); } trees.push({ id: treeIndex === 0 ? 'knight_warder' : 'knight_warder_passive', nodes: nodes }); } ")
+        source.append("return JSON.stringify({ immutable: { jobs: [{ id: 'warder', skills: Object.keys(skillData) }] }, player: { jobs: [{ id: 'warder', trees: trees }], backpack: [{ id: 'main', slots: [{ id: 'slot0' }, { id: 'slot1' }, { id: 'slot2' }]}] }, checks: [levelChecks, pointChecks, foundationChecks] }); }")
+        return source.toString()
     }
 
     private fun createNodes(treeId: String, count: Int, skillCount: Int): List<Node> {

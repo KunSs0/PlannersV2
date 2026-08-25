@@ -180,28 +180,44 @@ class PlayerRoute(
      * @return 技能树 ID 到节点校验结果的映射。
      */
     fun getSkillTreeCheckResults(player: Player): Map<String, Map<String, ConditionEvaluator.VerifyResult>> {
+        return getSkillTreeCheckProjection(player).results
+    }
+
+    /**
+     * 生成全部节点校验结果与本次校验的分段统计。
+     *
+     * 动态条件仍然只在一次批处理调用中执行；本方法只记录各段实际耗时，不改变校验语义。
+     */
+    private fun getSkillTreeCheckProjection(player: Player): SkillTreeCheckProjection {
         val results = LinkedHashMap<String, LinkedHashMap<String, ConditionEvaluator.VerifyResult>>()
         val requests = ArrayList<ConditionEvaluator.VerifyRequest>()
         val requestTargets = LinkedHashMap<String, SkillTreeCheckTarget>()
+        val profiling = SkillTreeRuntimeProjection.Profiling()
         for (tree in skillTrees) {
             val treeId = tree.id
             val treeResults = LinkedHashMap<String, ConditionEvaluator.VerifyResult>()
             results[treeId] = treeResults
             for ((nodeId, node) in tree.nodes) {
+                val stateReadStart = System.nanoTime()
                 val currentLevel = getNodeLevel(treeId, nodeId)
+                profiling.nodeStateReadNanos += System.nanoTime() - stateReadStart
                 if (currentLevel >= node.maxLevel) {
                     treeResults[nodeId] = ConditionEvaluator.VerifyResult(false, listOf("节点已满级"))
                     continue
                 }
+                val graphCheckStart = System.nanoTime()
                 val requirements = tree.graph[nodeId] ?: emptyList()
                 var requirementHint: String? = null
                 for (requirement in requirements) {
+                    val requirementStateReadStart = System.nanoTime()
                     val actualLevel = getNodeLevel(treeId, requirement.nodeId)
+                    profiling.nodeStateReadNanos += System.nanoTime() - requirementStateReadStart
                     if (actualLevel < requirement.minLevel) {
                         requirementHint = "前置节点 ${requirement.nodeId} 需要 Lv${requirement.minLevel}"
                         break
                     }
                 }
+                profiling.graphCheckNanos += System.nanoTime() - graphCheckStart
                 if (requirementHint != null) {
                     treeResults[nodeId] = ConditionEvaluator.VerifyResult(false, listOf(requirementHint))
                     continue
@@ -212,6 +228,7 @@ class PlayerRoute(
                     treeResults[nodeId] = ConditionEvaluator.VerifyResult(false, listOf("节点未定义 Lv$targetLevel 条件"))
                     continue
                 }
+                val requestBuildStart = System.nanoTime()
                 val requestId = createCheckRequestId(treeId, nodeId)
                 requests.add(
                     ConditionEvaluator.VerifyRequest(
@@ -221,10 +238,15 @@ class PlayerRoute(
                     )
                 )
                 requestTargets[requestId] = SkillTreeCheckTarget(treeId, nodeId)
+                profiling.requestBuildNanos += System.nanoTime() - requestBuildStart
             }
         }
-        val evaluated = evaluator.verifyAll(requests, player)
-        for ((requestId, verification) in evaluated) {
+        val conditionVerifyStart = System.nanoTime()
+        val batchVerification = evaluator.verifyAllProfiled(requests, player)
+        profiling.conditionVerifyNanos += System.nanoTime() - conditionVerifyStart
+        profiling.conditionProfiling = batchVerification.profiling
+        val resultApplyStart = System.nanoTime()
+        for ((requestId, verification) in batchVerification.results) {
             val target = requestTargets[requestId]
             if (target == null) {
                 error("技能树节点校验结果缺少目标: $requestId")
@@ -235,11 +257,56 @@ class PlayerRoute(
             }
             treeResults[target.nodeId] = verification
         }
+        profiling.resultApplyNanos += System.nanoTime() - resultApplyStart
         val exposedResults = LinkedHashMap<String, Map<String, ConditionEvaluator.VerifyResult>>()
         for ((treeId, treeResults) in results) {
             exposedResults[treeId] = treeResults
         }
-        return exposedResults
+        return SkillTreeCheckProjection(exposedResults, profiling)
+    }
+
+    /**
+     * 一次性生成当前职业阶段的技能树运行时投影。
+     *
+     * 此方法在 Java/Kotlin 侧合并节点等级与校验结果，避免脚本侧按节点重复跨语言读取
+     * 节点状态、校验 Map 和 VerifyResult。
+     *
+     * @param player 当前玩家。
+     * @return 按技能树及节点配置顺序组织的运行时投影。
+     */
+    fun getSkillTreeRuntimeProjection(player: Player): SkillTreeRuntimeProjection {
+        val totalStart = System.nanoTime()
+        val checkProjection = getSkillTreeCheckProjection(player)
+        val checkResults = checkProjection.results
+        val profiling = checkProjection.profiling
+        val trees = ArrayList<SkillTreeRuntimeProjection.Tree>()
+        for (tree in skillTrees) {
+            val treeBuildStart = System.nanoTime()
+            val treeId = tree.id
+            val treeChecks = checkResults[treeId]
+            if (treeChecks == null) {
+                error("技能树运行时投影缺少校验结果: $treeId")
+            }
+            val levels = IntArray(tree.nodes.size)
+            val canAdvanceStates = BooleanArray(tree.nodes.size)
+            val hints = ArrayList<List<String>>()
+            var nodeIndex = 0
+            for ((nodeId, _) in tree.nodes) {
+                val check = treeChecks[nodeId]
+                if (check == null) {
+                    error("技能树运行时投影缺少节点校验结果: $treeId/$nodeId")
+                }
+                val level = getNodeLevel(treeId, nodeId)
+                levels[nodeIndex] = level
+                canAdvanceStates[nodeIndex] = check.passed
+                hints.add(check.hints)
+                nodeIndex += 1
+            }
+            trees.add(SkillTreeRuntimeProjection.Tree(levels, canAdvanceStates, hints))
+            profiling.treeBuildNanos += System.nanoTime() - treeBuildStart
+        }
+        profiling.totalNanos = System.nanoTime() - totalStart
+        return SkillTreeRuntimeProjection(trees, profiling)
     }
 
     fun advanceNode(player: Player, treeId: String, nodeId: String): CompletableFuture<Void> {
@@ -336,4 +403,10 @@ class PlayerRoute(
     }
 
     private class SkillTreeCheckTarget(val treeId: String, val nodeId: String)
+
+    private class SkillTreeCheckProjection(
+        val results: Map<String, Map<String, ConditionEvaluator.VerifyResult>>,
+        val profiling: SkillTreeRuntimeProjection.Profiling
+    ) {
+    }
 }

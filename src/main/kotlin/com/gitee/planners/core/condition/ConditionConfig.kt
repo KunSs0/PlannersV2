@@ -1,6 +1,7 @@
 package com.gitee.planners.core.condition
 
 import com.gitee.planners.module.script.ScriptManager
+import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.scriptengine.api.ScriptSession
 
 /**
@@ -24,10 +25,14 @@ class ConditionConfig(
 
     private val batchFunction = ScriptManager.compileAction(
         "condition:$key:batch",
-        "var values = __plannersConditionProps;" +
-            "var result = '';" +
-            "for (var i = 0; i < values.size(); i++) {" +
-            "var props = values.get(i);" +
+        listOf("player", "profile", "router", "route", "values"),
+        "var result = '';" +
+            "for (var i = 0; i < values.length; i++) {" +
+            "var input = values[i];" +
+            "var props = input.props;" +
+            "var treeId = input.treeId;" +
+            "var nodeId = input.nodeId;" +
+            "var nodeLevel = input.nodeLevel;" +
             "result += ($exper) ? '1' : '0';" +
             "}" +
             "return result;"
@@ -42,10 +47,26 @@ class ConditionConfig(
         )
     }
 
+    private var persistentInstalled = false
+
+    /**
+     * 将条件批量函数安装到长期 ScriptEngine 会话。
+     *
+     * 配置节点会在 Bukkit 插件启用前解码，因此不能在构造阶段创建 Graal Context。
+     * 插件启用时主动调用本方法；配置热重载产生的新条件由首次批量校验兜底安装。
+     */
+    @Synchronized
+    fun installPersistent() {
+        if (persistentInstalled) {
+            return
+        }
+        ScriptManager.installPersistent(batchFunction)
+        persistentInstalled = true
+    }
+
     /** 将条件函数安装到当前会话。 */
     fun install(session: ScriptSession) {
         ScriptManager.installCompiledFunction(session, expressionFunction)
-        ScriptManager.installCompiledFunction(session, batchFunction)
         val consumeFunction = this.consumeFunction
         if (consumeFunction != null) {
             ScriptManager.installCompiledFunction(session, consumeFunction)
@@ -58,14 +79,42 @@ class ConditionConfig(
         return ScriptManager.invokeCompiled(session, expressionFunction) == true
     }
 
-    /** 在同一上下文中批量执行同一条件。 */
-    fun evaluateBatch(session: ScriptSession, conditionProps: List<Map<String, Any>>): String {
-        ScriptManager.setReusableSessionBinding(session, "__plannersConditionProps", conditionProps)
-        val result = ScriptManager.invokeCompiled(session, batchFunction)
+    /**
+     * 在长期工作区 Context 内批量执行条件。
+     *
+     * 参数均为函数局部变量，不写入 JavaScript 全局作用域。
+     */
+    fun evaluateBatchPersistent(
+        options: ScriptOptions,
+        conditionInputs: List<Map<String, Any>>
+    ): BatchEvaluation {
+        installPersistent()
+        val invocation = ScriptManager.invokePersistentProfiled(
+            batchFunction,
+            options,
+            options.variables["player"],
+            options.variables["profile"],
+            options.variables["router"],
+            options.variables["route"],
+            conditionInputs
+        )
+        val result = invocation.value
         if (result == null) {
-            return ""
+            return BatchEvaluation("", invocation)
         }
-        return result.toString()
+        return BatchEvaluation(result.toString(), invocation)
+    }
+
+    /**
+     * 条件批处理执行结果。
+     *
+     * @property encoded 每个输入对应一个字符的通过结果。
+     * @property invocation 脚本长期会话的分段计时。
+     */
+    class BatchEvaluation(
+        val encoded: String,
+        val invocation: ScriptManager.PersistentInvocation
+    ) {
     }
 
     /** 执行已经验证通过的条件消耗。 */
