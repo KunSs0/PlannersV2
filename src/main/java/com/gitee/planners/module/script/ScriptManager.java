@@ -4,9 +4,6 @@ import com.gitee.scriptengine.api.ScriptFunction;
 import com.gitee.scriptengine.api.CompiledScript;
 import com.gitee.scriptengine.api.ContextPreset;
 import com.gitee.scriptengine.api.HostAccessMode;
-import com.gitee.scriptengine.api.PersistentScriptSession;
-import com.gitee.scriptengine.api.PersistentScriptInvocation;
-import com.gitee.scriptengine.api.ReusableScriptSession;
 import com.gitee.scriptengine.api.ScriptResult;
 import com.gitee.scriptengine.api.ScriptSession;
 import com.gitee.scriptengine.api.ScriptSource;
@@ -32,13 +29,31 @@ import java.util.logging.Logger;
  * 脚本管理器（静态门面）。
  *
  * 内部通过 ScriptEngine 的 GraalJS 实现执行 JavaScript。
+ *
+ * <p>长期会话与可重绑定会话均基于 ScriptEngine 公开的 {@link ScriptSession} API 实现：
+ * 全局函数和上下文变量在会话创建时注入；运行期变更通过会话内的载体数组 +
+ * {@code eval} 写入 JS 全局作用域；带参预编译函数在编译期生成从载体解构参数的语句。</p>
  */
 public final class ScriptManager {
 
     private static final Logger LOGGER = Logger.getLogger("Script");
     private static final Set<ManagedSession> ACTIVE_SESSIONS = ConcurrentHashMap.newKeySet();
     private static ScriptWorkspace workspace;
-    private static PersistentScriptSession persistentSession;
+
+    /** 会话内全局注入的参数/绑定载体数组长度上限。 */
+    private static final int CARRIER_SIZE = 64;
+
+    /** 长期会话中用于函数参数传递的载体全局名。 */
+    private static final String ARGS_GLOBAL = "__plannersArgs";
+
+    /** 普通会话中用于运行期全局绑定写入的载体全局名。 */
+    private static final String CARRIER_GLOBAL = "__plannersCarrier";
+
+    private static volatile ScriptSession persistentSession;
+    private static volatile Object[] persistentArguments;
+
+    /** 定时器 ID 分配器（全工作区唯一）。 */
+    private static final AtomicInteger TIMER_ID = new AtomicInteger(1);
 
     private ScriptManager() {}
 
@@ -66,7 +81,7 @@ public final class ScriptManager {
             java.util.Collections.emptyMap(),
             java.util.Collections.emptyList()
         ));
-        getPersistentSession();
+        warmPersistentSession();
         LOGGER.info("[Script] 引擎初始化完成: ScriptEngine");
     }
 
@@ -98,9 +113,16 @@ public final class ScriptManager {
         return CompiledScript.Companion.expression(id, expression);
     }
 
-    /** 将表达式编译为仅依赖函数参数的长期工作区函数。 */
+    /**
+     * 将表达式编译为仅依赖函数参数的长期工作区函数。
+     *
+     * <p>当前 ScriptEngine 公开 API 只提供零参数预编译函数；本方法在函数体前生成
+     * 从载体数组解构参数的语句，调用前由 {@link #invokePersistent(CompiledScript, ScriptOptions, Object...)}
+     * 把实参写入载体，保证调用参数不会写入 JavaScript 全局作用域。</p>
+     */
     public static CompiledScript compileExpression(String id, java.util.List<String> parameters, String expression) {
-        return CompiledScript.Companion.expression(id, parameters, expression);
+        String body = destructureParameters(parameters) + "return (" + expression + ");";
+        return CompiledScript.Companion.action(id, body);
     }
 
     /**
@@ -114,9 +136,25 @@ public final class ScriptManager {
         return CompiledScript.Companion.action(id, action);
     }
 
-    /** 将语句块编译为仅依赖函数参数的长期工作区函数。 */
+    /** 将语句块编译为仅依赖函数参数的长期工作区函数。语义同 {@link #compileExpression(String, java.util.List, String)}。 */
     public static CompiledScript compileAction(String id, java.util.List<String> parameters, String action) {
-        return CompiledScript.Companion.action(id, parameters, action);
+        return CompiledScript.Companion.action(id, destructureParameters(parameters) + action);
+    }
+
+    /** 生成从载体数组解构命名参数的语句序列。 */
+    private static String destructureParameters(java.util.List<String> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return "";
+        }
+        if (parameters.size() > CARRIER_SIZE) {
+            throw new IllegalArgumentException("脚本函数参数数量超出限制: " + parameters.size());
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < parameters.size(); index++) {
+            builder.append("var ").append(parameters.get(index)).append(" = ")
+                .append(ARGS_GLOBAL).append('[').append(index).append("];\n");
+        }
+        return builder.toString();
     }
 
     /**
@@ -126,28 +164,35 @@ public final class ScriptManager {
      */
     public static Object invokePersistent(CompiledScript function, ScriptOptions options, Object... args) {
         ensureInit();
-        PersistentScriptSession session = getPersistentSession();
+        ScriptSession session = getPersistentSession();
         Map<String, Object> variables = createScriptVariables(options.getVariables());
-        Map<String, Object> previous = ScriptContext.getCurrent();
-        ScriptContext.setCurrent(variables);
-        try {
-            ScriptResult result = session.invoke(function, adaptArguments(args));
-            checkResult("执行长期预编译脚本函数失败: " + function.getFunctionName(), result);
-            return result.getValue();
-        } finally {
-            if (previous != null) {
-                ScriptContext.setCurrent(previous);
-            } else {
-                ScriptContext.clear();
+        Object[] adapted = adaptArguments(args);
+        synchronized (session) {
+            Map<String, Object> previous = ScriptContext.getCurrent();
+            ScriptContext.setCurrent(variables);
+            try {
+                System.arraycopy(adapted, 0, persistentArguments, 0, adapted.length);
+                ScriptResult result = session.invoke(function);
+                checkResult("执行长期预编译脚本函数失败: " + function.getFunctionName(), result);
+                return result.getValue();
+            } finally {
+                if (previous != null) {
+                    ScriptContext.setCurrent(previous);
+                } else {
+                    ScriptContext.clear();
+                }
             }
         }
     }
 
     /**
-     * 在长期工作区 Context 内执行参数化预编译函数，并返回完整的分段计时结果。
+     * 在长期工作区 Context 内执行参数化预编译函数，并返回分段计时结果。
      *
      * <p>该入口仅用于业务侧显式性能采样。普通调用继续使用
      * {@link #invokePersistent(CompiledScript, ScriptOptions, Object...)}，避免创建统计对象。</p>
+     *
+     * <p>当前 ScriptEngine 公开 API 不再提供运行时内部分段计时，
+     * 仅宿主侧阶段与整体执行耗时可测，其余分段记为 0。</p>
      *
      * @param function 已预编译的函数。
      * @param options 当前脚本选项。
@@ -156,7 +201,7 @@ public final class ScriptManager {
      */
     public static PersistentInvocation invokePersistentProfiled(CompiledScript function, ScriptOptions options, Object... args) {
         ensureInit();
-        PersistentScriptSession session = getPersistentSession();
+        ScriptSession session = getPersistentSession();
         long variablesStart = System.nanoTime();
         Map<String, Object> variables = createScriptVariables(options.getVariables());
         long variablesCopyNanos = System.nanoTime() - variablesStart;
@@ -165,30 +210,40 @@ public final class ScriptManager {
         ScriptContext.setCurrent(variables);
         long contextSetNanos = System.nanoTime() - contextStart;
         long argumentsStart = System.nanoTime();
-        Object[] adaptedArguments = adaptArguments(args);
+        Object[] adapted = adaptArguments(args);
         long argumentAdaptNanos = System.nanoTime() - argumentsStart;
-        PersistentScriptInvocation invocation;
+        long functionExecuteNanos;
         long contextRestoreNanos;
-        try {
-            invocation = session.invokeProfiled(function, adaptedArguments);
-            checkResult("执行长期预编译脚本函数失败: " + function.getFunctionName(), invocation.getResult());
-        } finally {
-            long restoreStart = System.nanoTime();
-            if (previous != null) {
-                ScriptContext.setCurrent(previous);
-            } else {
-                ScriptContext.clear();
+        synchronized (session) {
+            try {
+                long executeStart = System.nanoTime();
+                System.arraycopy(adapted, 0, persistentArguments, 0, adapted.length);
+                ScriptResult result = session.invoke(function);
+                functionExecuteNanos = System.nanoTime() - executeStart;
+                checkResult("执行长期预编译脚本函数失败: " + function.getFunctionName(), result);
+                PersistentInvocation invocation = new PersistentInvocation(
+                    result.getValue(),
+                    variablesCopyNanos,
+                    contextSetNanos,
+                    argumentAdaptNanos,
+                    0L,
+                    0L,
+                    0L,
+                    0L,
+                    functionExecuteNanos,
+                    0L
+                );
+                return invocation;
+            } finally {
+                long restoreStart = System.nanoTime();
+                if (previous != null) {
+                    ScriptContext.setCurrent(previous);
+                } else {
+                    ScriptContext.clear();
+                }
+                contextRestoreNanos = System.nanoTime() - restoreStart;
             }
-            contextRestoreNanos = System.nanoTime() - restoreStart;
         }
-        return new PersistentInvocation(
-            invocation.getResult().getValue(),
-            variablesCopyNanos,
-            contextSetNanos,
-            argumentAdaptNanos,
-            contextRestoreNanos,
-            invocation
-        );
     }
 
     /**
@@ -203,7 +258,11 @@ public final class ScriptManager {
         private final long contextSetNanos;
         private final long argumentAdaptNanos;
         private final long contextRestoreNanos;
-        private final PersistentScriptInvocation scriptInvocation;
+        private final long lockWaitNanos;
+        private final long installNanos;
+        private final long functionLookupNanos;
+        private final long functionExecuteNanos;
+        private final long resultUnwrapNanos;
 
         private PersistentInvocation(
             Object value,
@@ -211,14 +270,22 @@ public final class ScriptManager {
             long contextSetNanos,
             long argumentAdaptNanos,
             long contextRestoreNanos,
-            PersistentScriptInvocation scriptInvocation
+            long lockWaitNanos,
+            long installNanos,
+            long functionLookupNanos,
+            long functionExecuteNanos,
+            long resultUnwrapNanos
         ) {
             this.value = value;
             this.variablesCopyNanos = variablesCopyNanos;
             this.contextSetNanos = contextSetNanos;
             this.argumentAdaptNanos = argumentAdaptNanos;
             this.contextRestoreNanos = contextRestoreNanos;
-            this.scriptInvocation = scriptInvocation;
+            this.lockWaitNanos = lockWaitNanos;
+            this.installNanos = installNanos;
+            this.functionLookupNanos = functionLookupNanos;
+            this.functionExecuteNanos = functionExecuteNanos;
+            this.resultUnwrapNanos = resultUnwrapNanos;
         }
 
         public Object getValue() {
@@ -233,32 +300,32 @@ public final class ScriptManager {
             return contextSetNanos;
         }
 
-        public long getArgumentAdaptNanos() {
-            return argumentAdaptNanos;
-        }
-
         public long getContextRestoreNanos() {
             return contextRestoreNanos;
         }
 
+        public long getArgumentAdaptNanos() {
+            return argumentAdaptNanos;
+        }
+
         public long getLockWaitNanos() {
-            return scriptInvocation.getLockWaitNanos();
+            return lockWaitNanos;
         }
 
         public long getInstallNanos() {
-            return scriptInvocation.getInstallNanos();
+            return installNanos;
         }
 
         public long getFunctionLookupNanos() {
-            return scriptInvocation.getFunctionLookupNanos();
+            return functionLookupNanos;
         }
 
         public long getFunctionExecuteNanos() {
-            return scriptInvocation.getFunctionExecuteNanos();
+            return functionExecuteNanos;
         }
 
         public long getResultUnwrapNanos() {
-            return scriptInvocation.getResultUnwrapNanos();
+            return resultUnwrapNanos;
         }
     }
 
@@ -271,9 +338,11 @@ public final class ScriptManager {
      */
     public static void installPersistent(CompiledScript function) {
         ensureInit();
-        PersistentScriptSession session = getPersistentSession();
-        ScriptResult result = session.install(function);
-        checkResult("预安装长期预编译脚本函数失败: " + function.getFunctionName(), result);
+        ScriptSession session = getPersistentSession();
+        synchronized (session) {
+            ScriptResult result = session.install(function);
+            checkResult("预安装长期预编译脚本函数失败: " + function.getFunctionName(), result);
+        }
     }
 
     /**
@@ -291,7 +360,7 @@ public final class ScriptManager {
         ScriptContext.setCurrent(variables);
         ManagedSession session = createSession(variables, options.getPreludeScripts());
         try {
-            return invokeCompiled(session, function, args);
+            return invokeCompiled((ScriptSession) session, function, args);
         } finally {
             session.close();
             if (previous != null) {
@@ -360,12 +429,12 @@ public final class ScriptManager {
      * @param transientBindings 本次执行可能写入全局作用域的临时变量名。
      */
     public static void rebindReusableSession(ScriptSession session, ScriptOptions options, Set<String> transientBindings) {
-        if (!(session instanceof ReusableScriptSession)) {
-            throw new IllegalArgumentException("Session does not support reusable bindings");
-        }
         Map<String, Object> variables = createSessionVariables(options.getVariables());
-        ReusableScriptSession reusableSession = (ReusableScriptSession) session;
-        reusableSession.rebind(variables, transientBindings);
+        if (session instanceof ManagedSession) {
+            ((ManagedSession) session).rebind(variables, transientBindings);
+        } else {
+            injectGlobals(session, variables);
+        }
     }
 
     /**
@@ -379,11 +448,11 @@ public final class ScriptManager {
      * @param value 变量值。
      */
     public static void setReusableSessionBinding(ScriptSession session, String key, Object value) {
-        if (!(session instanceof ReusableScriptSession)) {
-            throw new IllegalArgumentException("Session does not support reusable bindings");
+        if (session instanceof ManagedSession) {
+            ((ManagedSession) session).bind(key, value);
+        } else {
+            injectGlobal(session, key, value);
         }
-        ReusableScriptSession reusableSession = (ReusableScriptSession) session;
-        reusableSession.bind(key, value);
     }
 
     /**
@@ -445,16 +514,22 @@ public final class ScriptManager {
             workspace = null;
         }
         persistentSession = null;
+        persistentArguments = null;
     }
 
     /** 在配置重载前销毁长期函数 Context，避免保留旧配置的函数定义。 */
     public static synchronized void resetPersistentSession() {
-        PersistentScriptSession current = persistentSession;
+        ScriptSession current = persistentSession;
         if (current == null) {
             return;
         }
-        workspace.resetPersistentSession();
+        try {
+            current.close();
+        } catch (Throwable throwable) {
+            LOGGER.warning("[Script] 关闭长期脚本会话失败: " + throwable.getMessage());
+        }
         persistentSession = null;
+        persistentArguments = null;
     }
 
     /**
@@ -473,21 +548,25 @@ public final class ScriptManager {
         }
     }
 
-    private static synchronized PersistentScriptSession getPersistentSession() {
-        PersistentScriptSession existing = persistentSession;
+    private static synchronized ScriptSession getPersistentSession() {
+        ScriptSession existing = persistentSession;
         if (existing != null) {
             return existing;
         }
-        PersistentScriptSession created = workspace.persistentSession();
-        created.bindWorkspaceValue("stateAPI", StateAPI.INSTANCE);
+        Map<String, Object> bindings = new LinkedHashMap<>();
+        bindings.put("stateAPI", StateAPI.INSTANCE);
         for (Map.Entry<String, java.util.function.Function<Object[], Object>> entry : GlobalFunctions.getAll().entrySet()) {
             java.util.function.Function<Object[], Object> function = entry.getValue();
-            created.bindWorkspaceValue(entry.getKey(), (ScriptFunction) values -> {
+            bindings.put(entry.getKey(), (ScriptFunction) values -> {
                 Object[] arguments = unwrapArguments(values);
                 return function.apply(arguments);
             });
         }
+        Object[] arguments = new Object[CARRIER_SIZE];
+        bindings.put(ARGS_GLOBAL, arguments);
+        ScriptSession created = workspace.createSession(bindings, java.util.Collections.emptyList());
         persistentSession = created;
+        persistentArguments = arguments;
         return created;
     }
 
@@ -499,8 +578,7 @@ public final class ScriptManager {
     }
 
     private static Map<String, Object> createSessionVariables(Map<String, Object> variables) {
-        Map<String, Object> sessionVariables = createScriptVariables(variables);
-        return sessionVariables;
+        return createScriptVariables(variables);
     }
 
     private static ManagedSession createSession(Map<String, Object> variables, java.util.List<String> preludeScripts) {
@@ -508,28 +586,87 @@ public final class ScriptManager {
     }
 
     private static ManagedSession createSession(Map<String, Object> variables, java.util.List<String> preludeScripts, Set<String> transientBindings) {
-        ReusableScriptSession delegate = workspace.createReusableSession(variables, preludeScripts, transientBindings);
-        ManagedSession session = new ManagedSession(delegate, variables);
-        ACTIVE_SESSIONS.add(session);
-        installGlobalFunctions(session);
-        installTimerFunctions(session);
-        return session;
-    }
-
-    private static void installGlobalFunctions(ReusableScriptSession session) {
+        Map<String, Object> bindings = new LinkedHashMap<>(variables);
+        Object[] carrier = new Object[CARRIER_SIZE];
+        bindings.put(CARRIER_GLOBAL, carrier);
         for (Map.Entry<String, java.util.function.Function<Object[], Object>> entry : GlobalFunctions.getAll().entrySet()) {
             java.util.function.Function<Object[], Object> function = entry.getValue();
-            session.bindPersistent(entry.getKey(), (ScriptFunction) values -> {
+            bindings.put(entry.getKey(), (ScriptFunction) values -> {
                 Object[] arguments = unwrapArguments(values);
                 return function.apply(arguments);
             });
         }
+        SessionTimerHost timerHost = new SessionTimerHost();
+        bindings.put("__plannersTimerHost", timerHost);
+        ScriptSession delegate = workspace.createSession(bindings, preludeScripts);
+        ManagedSession session = new ManagedSession(delegate, variables, carrier, timerHost);
+        timerHost.attach(session);
+        ACTIVE_SESSIONS.add(session);
+        session.installTimerFunctions();
+        return session;
     }
 
-    private static void installTimerFunctions(ManagedSession session) {
-        session.bindPersistent("setTimeout", (ScriptFunction) values -> session.schedule(values, false));
-        session.bindPersistent("setInterval", (ScriptFunction) values -> session.schedule(values, true));
-        session.bindPersistent("clearTimer", (ScriptFunction) values -> session.cancel(values));
+    /** 将单个键值写入任意会话的 JS 全局作用域。 */
+    private static void injectGlobal(ScriptSession session, String key, Object value) {
+        injectGlobals(session, java.util.Collections.singletonMap(key, value));
+    }
+
+    /**
+     * 通过载体数组将一组键值批量写入任意会话的 JS 全局作用域。
+     *
+     * 载体数组在会话创建时以宿主对象注入，JS 与宿主共享同一引用；
+     * 宿主写入元素后用一条 eval 把载体槽位赋给全局变量。
+     */
+    private static void injectGlobals(ScriptSession session, Map<String, Object> values) {
+        if (values.isEmpty()) {
+            return;
+        }
+        Object[] carrier;
+        if (session instanceof ManagedSession) {
+            carrier = ((ManagedSession) session).carrier();
+        } else {
+            throw new IllegalArgumentException("会话不支持运行期全局绑定: " + session.getClass().getName());
+        }
+        synchronized (session) {
+            StringBuilder source = new StringBuilder();
+            int index = 0;
+            for (Map.Entry<String, Object> entry : values.entrySet()) {
+                if (index >= CARRIER_SIZE) {
+                    throw new IllegalStateException("会话全局绑定数量超出限制: " + values.size());
+                }
+                carrier[index] = entry.getValue();
+                source.append("globalThis[\"").append(escapeJs(entry.getKey())).append("\"] = ")
+                    .append(CARRIER_GLOBAL).append('[').append(index).append("];\n");
+                index++;
+            }
+            ScriptResult result = session.eval(source.toString());
+            checkResult("写入会话全局绑定失败", result);
+        }
+    }
+
+    private static String escapeJs(String value) {
+        StringBuilder builder = new StringBuilder(value.length());
+        for (int index = 0; index < value.length(); index++) {
+            char ch = value.charAt(index);
+            switch (ch) {
+                case '\\':
+                case '"':
+                    builder.append('\\').append(ch);
+                    break;
+                case '\n':
+                    builder.append("\\n");
+                    break;
+                case '\r':
+                    builder.append("\\r");
+                    break;
+                case '\t':
+                    builder.append("\\t");
+                    break;
+                default:
+                    builder.append(ch);
+            }
+        }
+        return builder.toString();
     }
 
     private static void checkResult(String message, ScriptResult result) {
@@ -606,18 +743,86 @@ public final class ScriptManager {
         return value;
     }
 
-    private static final class ManagedSession implements ReusableScriptSession {
+    /**
+     * 会话级定时器宿主：负责向 Bukkit 调度器注册任务，并在触发时回到会话执行 JS 回调。
+     *
+     * JS 回调本体保存在会话内的 JS 定时器表中，宿主只持有数字任务 ID，
+     * 因此不依赖任何非公开的引擎绑定能力。
+     */
+    private static final class SessionTimerHost {
 
-        private final ReusableScriptSession delegate;
+        private volatile ManagedSession session;
+
+        void attach(ManagedSession owner) {
+            this.session = owner;
+        }
+
+        public int allocId() {
+            return TIMER_ID.getAndIncrement();
+        }
+
+        public void schedule(int taskId, long delay, boolean repeating) {
+            ManagedSession owner = session;
+            if (owner == null) {
+                throw new IllegalStateException("Timer host 未绑定会话");
+            }
+            owner.schedule(taskId, delay, repeating);
+        }
+
+        public void cancel(int taskId) {
+            ManagedSession owner = session;
+            if (owner != null) {
+                owner.cancelById(taskId);
+            }
+        }
+    }
+
+    private static final class ManagedSession implements ScriptSession {
+
+        private static final String TIMER_GLUE =
+            "globalThis.__plannersTimers = {};\n" +
+            "globalThis.setTimeout = function(fn, delay) {\n" +
+            "    var id = __plannersTimerHost.allocId();\n" +
+            "    __plannersTimers[id] = fn;\n" +
+            "    __plannersTimerHost.schedule(id, delay == null ? 0 : delay, false);\n" +
+            "    return id;\n" +
+            "};\n" +
+            "globalThis.setInterval = function(fn, period) {\n" +
+            "    var id = __plannersTimerHost.allocId();\n" +
+            "    __plannersTimers[id] = fn;\n" +
+            "    __plannersTimerHost.schedule(id, period == null ? 1 : period, true);\n" +
+            "    return id;\n" +
+            "};\n" +
+            "globalThis.clearTimer = function(id) {\n" +
+            "    delete __plannersTimers[id];\n" +
+            "    __plannersTimerHost.cancel(id);\n" +
+            "};\n" +
+            "globalThis.__plannersTick = function(id, repeating) {\n" +
+            "    var fn = __plannersTimers[id];\n" +
+            "    if (fn == null) {\n" +
+            "        return;\n" +
+            "    }\n" +
+            "    if (!repeating) {\n" +
+            "        delete __plannersTimers[id];\n" +
+            "    }\n" +
+            "    fn();\n" +
+            "};\n";
+
+        private final ScriptSession delegate;
         private final Map<String, Object> variables;
+        private final Object[] carrier;
         private final Map<Integer, ScheduledTask> tasks = new ConcurrentHashMap<>();
-        private final AtomicInteger nextTaskId = new AtomicInteger(1);
         private boolean closeRequested;
         private boolean closed;
 
-        private ManagedSession(ReusableScriptSession delegate, Map<String, Object> variables) {
+        private ManagedSession(ScriptSession delegate, Map<String, Object> variables, Object[] carrier, SessionTimerHost timerHost) {
             this.delegate = delegate;
             this.variables = variables;
+            this.carrier = carrier;
+        }
+
+        Object[] carrier() {
+            return carrier;
         }
 
         @Override
@@ -650,36 +855,103 @@ public final class ScriptManager {
             return delegate.hasFunction(name);
         }
 
-        @Override
-        public void rebind(Map<String, ? extends Object> nextVariables, Set<String> transientBindings) {
+        /** 重绑定会话全局变量并清理上一次声明的临时变量。 */
+        private void rebind(Map<String, ? extends Object> nextVariables, Set<String> transientBindings) {
             synchronized (this) {
                 if (closed || closeRequested) {
                     throw new IllegalStateException("Session 已关闭或正在关闭，不能重新绑定");
                 }
                 variables.clear();
+                variables.put("stateAPI", StateAPI.INSTANCE);
                 variables.putAll(nextVariables);
-                delegate.rebind(nextVariables, transientBindings);
             }
+            Map<String, Object> merged = new LinkedHashMap<>(variables);
+            injectGlobals(delegate, merged);
         }
 
-        @Override
-        public void bind(String key, Object value) {
+        /** 替换一个临时全局变量。 */
+        private void bind(String key, Object value) {
             synchronized (this) {
                 if (closed || closeRequested) {
                     throw new IllegalStateException("Session 已关闭或正在关闭，不能绑定变量");
                 }
                 variables.put(key, value);
-                delegate.bind(key, value);
+            }
+            injectGlobal(delegate, key, value);
+        }
+
+        private void installTimerFunctions() {
+            synchronized (this) {
+                if (closed || closeRequested) {
+                    throw new IllegalStateException("Session 已关闭或正在关闭，不能安装定时器");
+                }
+                ScriptResult result = delegate.eval(TIMER_GLUE);
+                checkResult("安装定时器函数失败", result);
             }
         }
 
-        @Override
-        public void bindPersistent(String key, Object value) {
+        private void schedule(int taskId, long delay, boolean repeating) {
             synchronized (this) {
                 if (closed || closeRequested) {
-                    throw new IllegalStateException("Session 已关闭或正在关闭，不能绑定基础变量");
+                    throw new IllegalStateException("Session 已关闭或正在关闭，不能创建定时任务");
                 }
-                delegate.bindPersistent(key, value);
+            }
+            long ticks = Math.max(delay, 0);
+            long period = repeating ? Math.max(delay, 1) : -1;
+            ScheduledTask scheduledTask = new ScheduledTask();
+            tasks.put(taskId, scheduledTask);
+            Runnable action = () -> runTask(taskId, repeating);
+            try {
+                BukkitTask task;
+                if (repeating) {
+                    task = Bukkit.getScheduler().runTaskTimer(BukkitPlugin.getInstance(), action, ticks, period);
+                } else {
+                    task = Bukkit.getScheduler().runTaskLater(BukkitPlugin.getInstance(), action, ticks);
+                }
+                scheduledTask.task = task;
+            } catch (RuntimeException throwable) {
+                tasks.remove(taskId);
+                closeIfIdle();
+                throw throwable;
+            } catch (Error error) {
+                tasks.remove(taskId);
+                closeIfIdle();
+                throw error;
+            }
+        }
+
+        private void cancelById(int taskId) {
+            ScheduledTask task = tasks.remove(taskId);
+            if (task == null) {
+                return;
+            }
+            task.cancel();
+            closeIfIdle();
+        }
+
+        private void runTask(int taskId, boolean repeating) {
+            synchronized (this) {
+                if (closed) {
+                    return;
+                }
+            }
+            Map<String, Object> previous = ScriptContext.getCurrent();
+            ScriptContext.setCurrent(variables);
+            try {
+                ScriptResult result = delegate.invoke("__plannersTick", taskId, repeating);
+                checkResult("定时脚本执行失败", result);
+            } catch (Throwable throwable) {
+                LOGGER.warning("[Script] 定时脚本执行失败: " + throwable.getMessage());
+            } finally {
+                if (!repeating) {
+                    tasks.remove(taskId);
+                }
+                if (previous != null) {
+                    ScriptContext.setCurrent(previous);
+                } else {
+                    ScriptContext.clear();
+                }
+                closeIfIdle();
             }
         }
 
@@ -694,86 +966,6 @@ public final class ScriptManager {
                     return;
                 }
                 closeNow();
-            }
-        }
-
-        private int schedule(ScriptValue[] values, boolean repeating) {
-            if (values.length < 2) {
-                throw new IllegalArgumentException("setTimeout requires callback and delay");
-            }
-            ScriptValue callback = values[0];
-            ScriptValue delayValue = values[1];
-            if (!callback.canExecute()) {
-                throw new IllegalArgumentException("timer callback must be callable");
-            }
-            long delay = readNumber(delayValue, "delay");
-            if (delay < 0) {
-                delay = 0;
-            }
-            long period = readNumber(delayValue, "period");
-            if (repeating && period <= 0) {
-                period = 1;
-            }
-            int taskId = nextTaskId.getAndIncrement();
-            ScheduledTask scheduledTask = new ScheduledTask();
-            tasks.put(taskId, scheduledTask);
-            Runnable action = () -> runTask(taskId, callback, repeating);
-            try {
-                BukkitTask task;
-                if (repeating) {
-                    task = Bukkit.getScheduler().runTaskTimer(BukkitPlugin.getInstance(), action, delay, period);
-                } else {
-                    task = Bukkit.getScheduler().runTaskLater(BukkitPlugin.getInstance(), action, delay);
-                }
-                scheduledTask.task = task;
-            } catch (RuntimeException throwable) {
-                tasks.remove(taskId);
-                closeIfIdle();
-                throw throwable;
-            } catch (Error error) {
-                tasks.remove(taskId);
-                closeIfIdle();
-                throw error;
-            }
-            return taskId;
-        }
-
-        private boolean cancel(ScriptValue[] values) {
-            if (values.length == 0) {
-                return false;
-            }
-            int taskId = values[0].asInt();
-            ScheduledTask task = tasks.remove(taskId);
-            if (task == null) {
-                return false;
-            }
-            task.cancel();
-            closeIfIdle();
-            return true;
-        }
-
-        private void runTask(int taskId, ScriptValue callback, boolean repeating) {
-            synchronized (this) {
-                if (closed) {
-                    return;
-                }
-            }
-            Map<String, Object> previous = ScriptContext.getCurrent();
-            ScriptContext.setCurrent(variables);
-            try {
-                callback.executeVoid();
-            } catch (Throwable throwable) {
-                LOGGER.warning("[Script] 定时脚本执行失败: " + throwable.getMessage());
-            } finally {
-                if (!repeating) {
-                    tasks.remove(taskId);
-                }
-                if (previous != null) {
-                    ScriptContext.setCurrent(previous);
-                } else {
-                    ScriptContext.clear();
-                }
-                closeIfIdle();
             }
         }
 
@@ -805,23 +997,6 @@ public final class ScriptManager {
             closed = true;
             ACTIVE_SESSIONS.remove(this);
             delegate.close();
-        }
-
-        private static long readNumber(ScriptValue value, String key) {
-            if (value == null) {
-                return 0L;
-            }
-            if (value.isNumber()) {
-                return value.asLong();
-            }
-            if (!value.hasMember(key)) {
-                return 0L;
-            }
-            ScriptValue member = value.getMember(key);
-            if (member == null || member.isNull()) {
-                return 0L;
-            }
-            return member.asLong();
         }
 
         private static final class ScheduledTask {

@@ -1,6 +1,10 @@
-import com.gitee.planners.core.player.SkillTreeRuntimeProjection
+import com.gitee.planners.core.player.PlayerRoutePolyglotView
+import com.gitee.planners.core.player.RealLookupTarget
+import com.gitee.planners.core.player.RealLookupTreeDefinition
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess
+import org.graalvm.polyglot.proxy.ProxyArray
+import org.graalvm.polyglot.proxy.ProxyExecutable
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -42,7 +46,7 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
             val elapsedNanos = System.nanoTime() - start
             val averageNanos = elapsedNanos / iterationCount
             println(
-                "[SkillTreeBukkitPlannersAccessScenario] " +
+                "[SkillTreeBukkitAccessRealLookup] " +
                     "totalMs=" + formatMs(elapsedNanos) +
                     " averageUs=" + String.format(java.util.Locale.ROOT, "%.2f", averageNanos / 1_000.0) +
                     " iterations=" + iterationCount +
@@ -54,6 +58,122 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
             )
             assertTrue(payload.isNotEmpty())
             assertTrue(payload.contains("knight_warder"))
+        } finally {
+            context.close()
+        }
+    }
+
+    /**
+     * 生产快照管线分段计时：从冷启动第 1 轮起逐轮输出各阶段耗时。
+     *
+     * 阶段：背包收集 → immutable 数据（含技能图标渲染）→ 玩家职业/树/节点组装 →
+     * JSON 序列化；另测纯节点反查环，隔离穿越成本与对象组装成本。
+     */
+    @Test
+    fun breakdownSnapshotStages() {
+        val scenario = createScenario()
+        val context = createContext()
+        try {
+            installProductionSnapshot(context, scenario)
+            val b = context.getBindings("js")
+            context.eval(
+                "js",
+                "function __stageBackpack(player, template, playerRouter) { return ZeusJs.planners.__bench.collectPlayerBackpackData(template); }" +
+                    "function __newCtx() { return { skillDataCache: {}, skillDataById: {} }; }" +
+                    "function __stageImmutable(ctx, player, template, playerRouter, backpackData) { return ZeusJs.planners.__bench.toImmutableRouterData(playerRouter.getRouter(), player, template, ctx, null); }" +
+                    "function __stagePlayerJobs(ctx, player, template, playerRouter, backpackData) { return ZeusJs.planners.__bench.toSkillTreePlayerData(player, template, playerRouter, ctx, backpackData); }" +
+                    "function __stageNodeLoop(player, template, playerRouter) { var view = playerRouter.getCurrentRoute().getSkillTreeRuntimeProjectionView(player); var sink = 0; for (var t = 0; t < view.getTreeCount(); t++) { var treeId = view.getTreeId(t); var count = view.getNodeCount(treeId); for (var i = 0; i < count; i++) { var nodeId = view.getNodeIdAt(treeId, i); sink += view.getNodeLevelById(treeId, nodeId); if (view.isNodeCanAdvance(treeId, nodeId)) { sink += 1; } sink += view.getNodeHints(treeId, nodeId).length; } } return sink; }"
+            )
+
+            // 每轮模拟完整管线顺序：backpack → immutable(填充技能数据缓存) → playerJobs → 纯节点反查环
+            val iterations = 30
+            for (iteration in 1..iterations) {
+                val builder = StringBuilder("[StageBreakdown] iter=").append(iteration)
+
+                fun runStage(fnName: String, args: Array<Any?>): Double {
+                    val start = System.nanoTime()
+                    b.getMember(fnName).execute(*args)
+                    return (System.nanoTime() - start) / 1_000.0
+                }
+
+                val backpackUs = runStage("__stageBackpack", arrayOf(scenario.player, scenario.template, scenario.router))
+                var backpackData = b.getMember("__stageBackpack").execute(scenario.player, scenario.template, scenario.router)
+                // immutable 与 playerJobs 共享同一个 ctx（skillData 缓存由 immutable 填充）
+                val ctx = b.getMember("__newCtx").execute()
+                val immutableUs = runStage("__stageImmutable", arrayOf(ctx, scenario.player, scenario.template, scenario.router, backpackData))
+                val playerJobsUs = runStage("__stagePlayerJobs", arrayOf(ctx, scenario.player, scenario.template, scenario.router, backpackData))
+                val nodeLoopUs = runStage("__stageNodeLoop", arrayOf(scenario.player, scenario.template, scenario.router))
+                val fullUs = runStage("__testSkillTreeSnapshot", arrayOf(scenario.player, scenario.template, scenario.router))
+
+                builder.append(" backpackUs=").append(String.format(java.util.Locale.ROOT, "%.2f", backpackUs))
+                builder.append(" immutableUs=").append(String.format(java.util.Locale.ROOT, "%.2f", immutableUs))
+                builder.append(" playerJobsUs=").append(String.format(java.util.Locale.ROOT, "%.2f", playerJobsUs))
+                builder.append(" nodeLoopUs=").append(String.format(java.util.Locale.ROOT, "%.2f", nodeLoopUs))
+                builder.append(" fullUs=").append(String.format(java.util.Locale.ROOT, "%.2f", fullUs))
+                println(builder.toString())
+            }
+        } finally {
+            context.close()
+        }
+    }
+
+    /**
+     * toTreeNodeData 内部分段计时：反查 / 静态字段拼装 / 动态字段拼装 / skill 挂载。
+     */
+    @Test
+    fun breakdownTreeNodeData() {
+        val scenario = createScenario()
+        val context = createContext()
+        try {
+            installProductionSnapshot(context, scenario)
+            val b = context.getBindings("js")
+            context.eval(
+                "js",
+                "function __nodeBench(player, template, playerRouter, repeats) { " +
+                    "var route = playerRouter.getCurrentRoute(); " +
+                    "var view = route.getSkillTreeRuntimeProjectionView(player); " +
+                    "var treeId = view.getTreeId(0); " +
+                    "var tree = null; var treeValues = PlannersJs.convert.toArray(route.getSkillTrees()); for (var i = 0; i < treeValues.length; i++) { if (String(treeValues[i].getId()) === treeId) { tree = treeValues[i]; } } " +
+                    "var structure = ZeusJs.planners.__bench.getTreeStructure(tree); " +
+                    "var ctx = { skillDataCache: {}, skillDataById: {} }; " +
+                    "var immutable = ZeusJs.planners.__bench.toImmutableRouterData(playerRouter.getRouter(), player, template, ctx, null); " +
+                    // 预取全部输入，只测节点组装本身
+                    "var defs = structure.nodes; var levels = []; var advances = []; var hintsArr = []; var nodeIds = []; " +
+                    "for (var i = 0; i < defs.length; i++) { var nodeId = view.getNodeIdAt(treeId, i); nodeIds.push(nodeId); levels.push(view.getNodeLevelById(treeId, nodeId)); advances.push(view.isNodeCanAdvance(treeId, nodeId)); hintsArr.push(view.getNodeHints(treeId, nodeId)); } " +
+                    "var result = { lookup: [], staticBuild: [], dynamicBuild: [], skillMount: [], full: [] }; " +
+                    "for (var r = 0; r < repeats; r++) { " +
+                    "  var t0 = performanceNow();" +
+                    "  for (var i = 0; i < defs.length; i++) { sink += view.getNodeLevelById(treeId, nodeIds[i]); if (view.isNodeCanAdvance(treeId, nodeIds[i])) { sink += 1; } sink += view.getNodeHints(treeId, nodeIds[i]).length; } " +
+                    "  result.lookup.push(performanceNow() - t0); " +
+                    "  t0 = performanceNow();" +
+                    "  for (var i = 0; i < defs.length; i++) { var d = defs[i]; var obj = { id: d.id, type: d.type, position: { x: d.x, y: d.y }, maxLevel: d.maxLevel, requirements: d.requirements }; } " +
+                    "  result.staticBuild.push(performanceNow() - t0); " +
+                    "  t0 = performanceNow();" +
+                    "  for (var i = 0; i < defs.length; i++) { var obj2 = { level: levels[i], canAdvance: advances[i], hints: hintsArr[i] }; } " +
+                    "  result.dynamicBuild.push(performanceNow() - t0); " +
+                    "  t0 = performanceNow();" +
+                    "  for (var i = 0; i < defs.length; i++) { var sd = ctx.skillDataById[defs[i].skillId]; sink += (sd == null ? 0 : 1); } " +
+                    "  result.skillMount.push(performanceNow() - t0); " +
+                    "  t0 = performanceNow();" +
+                    "  for (var i = 0; i < defs.length; i++) { ZeusJs.planners.__bench.toTreeNodeData(treeId, defs[i], levels[i], advances[i], hintsArr[i], ctx); } " +
+                    "  result.full.push(performanceNow() - t0); " +
+                    "} " +
+                    "return JSON.stringify(result); " +
+                    "}"
+            )
+            // performanceNow 注入：宿主纳秒时钟，避免 JS Date 精度问题
+            b.putMember("performanceNow", ProxyExecutable { arguments -> System.nanoTime() / 1_000.0 })
+            var sink = 0
+            b.putMember("sink", sink)
+
+            val iterations = 30
+            for (iteration in 1..iterations) {
+                val start = System.nanoTime()
+                val result = b.getMember("__nodeBench")
+                    .execute(scenario.player, scenario.template, scenario.router, 10)
+                val elapsedMs = (System.nanoTime() - start) / 1_000_000.0
+                println("[NodeDataBreakdown] iter=$iteration totalMs=" + String.format(java.util.Locale.ROOT, "%.2f", elapsedMs) + " " + result.asString())
+            }
         } finally {
             context.close()
         }
@@ -80,7 +200,6 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
         routeDefinitions[knightDefinition.getId()] = knightDefinition
         routeDefinitions[paladinDefinition.getId()] = paladinDefinition
         val immutableRouter = MockImmutableRouter("knight", "骑士", routeDefinitions)
-        val projection = createRuntimeProjection()
         val registeredSkills = LinkedHashMap<String, MockPlayerSkill>()
         for (skill in skills) {
             registeredSkills[skill.getId()] = MockPlayerSkill(skill.getId(), 0)
@@ -88,8 +207,7 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
         val playerRoute = MockPlayerRoute(
             "warder",
             registeredSkills,
-            listOf(activeTree, passiveTree),
-            projection
+            listOf(activeTree, passiveTree)
         )
         val playerRouter = MockPlayerRouter(immutableRouter, listOf(playerRoute))
         val template = MockTemplate(playerRouter, registeredSkills)
@@ -146,43 +264,6 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
             index += 1
         }
         return MockTree(id, id, "base", nodes)
-    }
-
-    /**
-     * 创建生产投影格式的批量运行时数据。
-     *
-     * @return 两棵树、共四十二个节点的运行时投影。
-     */
-    private fun createRuntimeProjection(): SkillTreeRuntimeProjection {
-        val trees = ArrayList<SkillTreeRuntimeProjection.Tree>()
-        trees.add(createRuntimeTree(30, 13))
-        trees.add(createRuntimeTree(12, 0))
-        return SkillTreeRuntimeProjection(trees, SkillTreeRuntimeProjection.Profiling())
-    }
-
-    /**
-     * 创建单棵树的运行时批量数组。
-     *
-     * @param nodeCount 节点总数。
-     * @param activeNodeCount 已激活技能节点数量。
-     * @return 对应树的运行时投影。
-     */
-    private fun createRuntimeTree(nodeCount: Int, activeNodeCount: Int): SkillTreeRuntimeProjection.Tree {
-        val levels = IntArray(nodeCount)
-        val states = BooleanArray(nodeCount)
-        val hints = ArrayList<List<String>>()
-        var index = 0
-        while (index < nodeCount) {
-            if (index < activeNodeCount) {
-                levels[index] = 1
-                states[index] = true
-                hints.add(emptyList())
-            } else {
-                hints.add(listOf("需要前置节点"))
-            }
-            index += 1
-        }
-        return SkillTreeRuntimeProjection.Tree(levels, states, hints)
     }
 
     /**
@@ -253,6 +334,17 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
             )
         assertTrue(!rewritten.contains("Java.type(\"com.gitee.planners.core.skill.formatter.DynamicSkillIcon\")"))
         assertTrue(!rewritten.contains("Java.type(\"com.gitee.planners.core.skilltree.SkillTreeNodeEffectService\")"))
+        // 在 IIFE 闭包内部暴露管线函数供分段计时
+        val injectIndex = rewritten.lastIndexOf("})();")
+        val benchExport = "globalThis.__zeusBench = {" +
+            "collectPlayerBackpackData: collectPlayerBackpackData," +
+            "toImmutableRouterData: toImmutableRouterData," +
+            "toSkillTreePlayerData: toSkillTreePlayerData," +
+            "toPlayerJobData: toPlayerJobData," +
+            "getTreeStructure: getTreeStructure," +
+            "toTreeNodeData: toTreeNodeData" +
+            "};"
+        val rewrittenWithBench = rewritten.substring(0, injectIndex) + benchExport + rewritten.substring(injectIndex)
 
         val bindings = context.getBindings("js")
         bindings.putMember("MockDynamicSkillIcon", scenario.renderer)
@@ -277,7 +369,8 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
                     },
                     registry: {
                         get: function (type, id) { return MockRegistry.get(type, id); },
-                        backpack: function () { return MockRegistry.getBackpack(); }
+                        backpack: function () { return MockRegistry.getBackpack(); },
+                        cached: function (namespace, key, builder) { return MockRegistry.cached(namespace, key, builder); }
                     },
                     backpack: {
                         currentPage: function (template) { return MockBackpack.currentPage(template); }
@@ -285,10 +378,11 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
                 };
             """
         )
-        context.eval("js", rewritten)
+        context.eval("js", rewrittenWithBench)
         context.eval(
             "js",
-            "function __testSkillTreeSnapshot(player, template, playerRouter) { return JSON.stringify(ZeusJs.planners.skillTreeSnapshot(player, template, playerRouter)); }"
+            "ZeusJs.planners.__bench = globalThis.__zeusBench;" +
+                "function __testSkillTreeSnapshot(player, template, playerRouter) { return JSON.stringify(ZeusJs.planners.skillTreeSnapshot(player, template, playerRouter)); }"
         )
     }
 
@@ -707,17 +801,49 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
     /**
      * 模拟玩家职业阶段。
      *
-     * @property jobId 职业阶段 ID。
-     * @property registeredSkills 已注册技能。
-     * @property trees 技能树定义。
-     * @property projection 批量运行时投影。
+     * 节点运行时状态按业务粒度逐节点存储，通过生产代理层
+     * [PlayerRoutePolyglotView] 暴露给脚本逐个反查。
      */
     class MockPlayerRoute(
         private val jobId: String,
         private val registeredSkills: Map<String, MockPlayerSkill>,
-        private val trees: List<MockTree>,
-        private val projection: SkillTreeRuntimeProjection
-    ) {
+        private val trees: List<MockTree>
+    ) : RealLookupTarget {
+
+        private val levelsByNodeId = LinkedHashMap<String, LinkedHashMap<String, Int>>()
+        private val canAdvanceByNodeId = LinkedHashMap<String, LinkedHashMap<String, Boolean>>()
+        private val hintsByNodeId = LinkedHashMap<String, LinkedHashMap<String, List<String>>>()
+        private val treeDefinitions = trees.map { MockTreeDefinition(it) }
+
+        init {
+            for (tree in trees) {
+                val nodeIds = tree.getNodes().keys.toList()
+                levelsByNodeId[tree.getId()] = LinkedHashMap()
+                canAdvanceByNodeId[tree.getId()] = LinkedHashMap()
+                hintsByNodeId[tree.getId()] = LinkedHashMap()
+                for ((index, nodeId) in nodeIds.withIndex()) {
+                    val activated = index < 13 && tree.getId() == "knight_warder"
+                    levelsByNodeId[tree.getId()]!![nodeId] = if (activated) 1 else 0
+                    canAdvanceByNodeId[tree.getId()]!![nodeId] = activated
+                    hintsByNodeId[tree.getId()]!![nodeId] = if (activated) emptyList() else listOf("需要前置节点")
+                }
+            }
+        }
+
+        override val lookupSkillTrees: List<RealLookupTreeDefinition>
+            get() = treeDefinitions
+
+        override fun getNodeLevel(treeId: String, nodeId: String): Int {
+            return levelsByNodeId[treeId]?.get(nodeId) ?: 0
+        }
+
+        override fun isNodeCanAdvance(treeId: String, nodeId: String): Boolean {
+            return canAdvanceByNodeId[treeId]?.get(nodeId) ?: false
+        }
+
+        override fun getNodeHints(treeId: String, nodeId: String): List<String> {
+            return hintsByNodeId[treeId]?.get(nodeId) ?: emptyList()
+        }
 
         /**
          * 返回职业阶段 ID。
@@ -755,14 +881,22 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
         }
 
         /**
-         * 返回批量运行时投影。
+         * 返回逐节点反查的 polyglot 业务代理视图。
          *
          * @param player 当前玩家。
-         * @return 运行时投影。
+         * @return 生产代理层视图。
          */
-        fun getSkillTreeRuntimeProjection(player: MockPlayer): SkillTreeRuntimeProjection {
-            return projection
+        fun getSkillTreeRuntimeProjectionView(player: MockPlayer): Any {
+            return PlayerRoutePolyglotView(this)
         }
+    }
+
+    /** Mock 技能树定义的最小视图。 */
+    private class MockTreeDefinition(tree: MockTree) : RealLookupTreeDefinition {
+
+        override val id: String = tree.getId()
+
+        override val nodeIds: List<String> = tree.getNodes().keys.toList()
     }
 
     /**
@@ -1088,10 +1222,23 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
 
         private val skillById = LinkedHashMap<String, MockSkill>()
 
+        /** 配置级缓存：namespace → key → value，脚本上下文内永续（reload 即重建）。 */
+        private val cacheNamespaces = HashMap<String, HashMap<String, Any?>>()
+
         init {
             for (skill in skills) {
                 skillById[skill.getId()] = skill
             }
+        }
+
+        fun cached(namespace: String, key: String, builder: org.graalvm.polyglot.Value): Any? {
+            val store = cacheNamespaces.getOrPut(namespace) { HashMap() }
+            if (store.containsKey(key)) {
+                return store[key]
+            }
+            val built = builder.execute()
+            store[key] = built
+            return built
         }
 
         fun get(type: String, id: String): Any? {
@@ -1114,6 +1261,14 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
             }
             if (values is Collection<*>) {
                 return ArrayList(values)
+            }
+            if (values is ProxyArray) {
+                val result = ArrayList<Any?>()
+                for (index in 0 until values.getSize()) {
+                    @Suppress("UNCHECKED_CAST")
+                    result.add(values.get(index.toLong()) as Any?)
+                }
+                return result
             }
             if (values is IntArray) {
                 val result = ArrayList<Any?>()

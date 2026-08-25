@@ -24,7 +24,7 @@ class PlayerRoute(
     val jobId: String,
     skills: List<PlayerSkill>,
     nodeStates: List<PlayerSkillTreeNodeState>
-) {
+) : RealLookupTarget {
 
     val router: ImmutableRouter
         get() = Registries.ROUTER.getOrNull(routerId) ?: error("Could not find router with id '$routerId'")
@@ -40,6 +40,19 @@ class PlayerRoute(
     private val nodeStatesByKey = LinkedHashMap<String, PlayerSkillTreeNodeState>()
     private val pendingNodeAdvancements = ConcurrentHashMap.newKeySet<String>()
     private val evaluator = ConditionEvaluator()
+
+    /** 当前线程绑定的玩家（脚本请求入口通过 [bindCurrentPlayer] 绑定）。 */
+    private val currentPlayer = ThreadLocal<Player>()
+
+    /** 在当前线程绑定玩家上下文，供逐节点反查的节点校验使用。 */
+    fun bindCurrentPlayer(player: Player) {
+        currentPlayer.set(player)
+    }
+
+    /** 清除当前线程的玩家上下文。 */
+    fun unbindCurrentPlayer() {
+        currentPlayer.remove()
+    }
 
     init {
         for (skill in skills) {
@@ -69,6 +82,14 @@ class PlayerRoute(
             }
             return result
         }
+
+    override val lookupSkillTrees: List<RealLookupTreeDefinition>
+        get() = skillTrees.map { TreeDefinitionView(it) }
+
+    /** 生成脚本侧逐节点反查的 polyglot 业务代理视图。 */
+    fun getSkillTreeRuntimeProjectionView(player: Player): Any {
+        return PlayerRoutePolyglotView(this)
+    }
 
     fun getSkillTreeOrNull(treeId: String): ImmutableSkillTree? {
         for (tree in skillTrees) {
@@ -123,12 +144,26 @@ class PlayerRoute(
         return nodeStatesByKey[nodeStateKey(treeId, nodeId)]
     }
 
-    fun getNodeLevel(treeId: String, nodeId: String): Int {
-        val state = getNodeStateOrNull(treeId, nodeId)
+    override fun getNodeLevel(treeId: String, nodeId: String): Int {
+        val state = nodeStatesByKey[nodeStateKey(treeId, nodeId)]
         if (state == null) {
             return 0
         }
         return state.level
+    }
+
+    override fun isNodeCanAdvance(treeId: String, nodeId: String): Boolean {
+        return canAdvanceNode(requireCurrentPlayer(), treeId, nodeId).passed
+    }
+
+    override fun getNodeHints(treeId: String, nodeId: String): List<String> {
+        return canAdvanceNode(requireCurrentPlayer(), treeId, nodeId).hints
+    }
+
+    /** 当前线程绑定的玩家（由脚本请求入口绑定）。 */
+    private fun requireCurrentPlayer(): Player {
+        return currentPlayer.get()
+            ?: error("当前线程未绑定玩家上下文，无法执行节点校验")
     }
 
     fun getNodeLevels(treeId: String): Map<String, Int> {
@@ -192,7 +227,7 @@ class PlayerRoute(
         val results = LinkedHashMap<String, LinkedHashMap<String, ConditionEvaluator.VerifyResult>>()
         val requests = ArrayList<ConditionEvaluator.VerifyRequest>()
         val requestTargets = LinkedHashMap<String, SkillTreeCheckTarget>()
-        val profiling = SkillTreeRuntimeProjection.Profiling()
+        val profiling = SkillTreeCheckProfiling()
         for (tree in skillTrees) {
             val treeId = tree.id
             val treeResults = LinkedHashMap<String, ConditionEvaluator.VerifyResult>()
@@ -263,50 +298,6 @@ class PlayerRoute(
             exposedResults[treeId] = treeResults
         }
         return SkillTreeCheckProjection(exposedResults, profiling)
-    }
-
-    /**
-     * 一次性生成当前职业阶段的技能树运行时投影。
-     *
-     * 此方法在 Java/Kotlin 侧合并节点等级与校验结果，避免脚本侧按节点重复跨语言读取
-     * 节点状态、校验 Map 和 VerifyResult。
-     *
-     * @param player 当前玩家。
-     * @return 按技能树及节点配置顺序组织的运行时投影。
-     */
-    fun getSkillTreeRuntimeProjection(player: Player): SkillTreeRuntimeProjection {
-        val totalStart = System.nanoTime()
-        val checkProjection = getSkillTreeCheckProjection(player)
-        val checkResults = checkProjection.results
-        val profiling = checkProjection.profiling
-        val trees = ArrayList<SkillTreeRuntimeProjection.Tree>()
-        for (tree in skillTrees) {
-            val treeBuildStart = System.nanoTime()
-            val treeId = tree.id
-            val treeChecks = checkResults[treeId]
-            if (treeChecks == null) {
-                error("技能树运行时投影缺少校验结果: $treeId")
-            }
-            val levels = IntArray(tree.nodes.size)
-            val canAdvanceStates = BooleanArray(tree.nodes.size)
-            val hints = ArrayList<List<String>>()
-            var nodeIndex = 0
-            for ((nodeId, _) in tree.nodes) {
-                val check = treeChecks[nodeId]
-                if (check == null) {
-                    error("技能树运行时投影缺少节点校验结果: $treeId/$nodeId")
-                }
-                val level = getNodeLevel(treeId, nodeId)
-                levels[nodeIndex] = level
-                canAdvanceStates[nodeIndex] = check.passed
-                hints.add(check.hints)
-                nodeIndex += 1
-            }
-            trees.add(SkillTreeRuntimeProjection.Tree(levels, canAdvanceStates, hints))
-            profiling.treeBuildNanos += System.nanoTime() - treeBuildStart
-        }
-        profiling.totalNanos = System.nanoTime() - totalStart
-        return SkillTreeRuntimeProjection(trees, profiling)
     }
 
     fun advanceNode(player: Player, treeId: String, nodeId: String): CompletableFuture<Void> {
@@ -404,9 +395,49 @@ class PlayerRoute(
 
     private class SkillTreeCheckTarget(val treeId: String, val nodeId: String)
 
+    /** 节点校验批处理的分段统计（纳秒累加）。 */
+    class SkillTreeCheckProfiling {
+
+        var nodeStateReadNanos: Long = 0
+        var graphCheckNanos: Long = 0
+        var requestBuildNanos: Long = 0
+        var conditionVerifyNanos: Long = 0
+        var resultApplyNanos: Long = 0
+        var totalNanos: Long = 0
+        var conditionProfiling: ConditionEvaluator.BatchProfiling? = null
+
+        /** 将统计压缩为服务器日志中的一段文本。 */
+        fun toLogText(): String {
+            val text = StringBuilder()
+            text.append("skillTreeUs={total=")
+            text.append(formatMicros(totalNanos))
+            text.append(",nodeState=")
+            text.append(formatMicros(nodeStateReadNanos))
+            text.append(",graph=")
+            text.append(formatMicros(graphCheckNanos))
+            text.append(",request=")
+            text.append(formatMicros(requestBuildNanos))
+            text.append(",condition=")
+            text.append(formatMicros(conditionVerifyNanos))
+            text.append(",apply=")
+            text.append(formatMicros(resultApplyNanos))
+            text.append("}")
+            val profiling = conditionProfiling
+            if (profiling != null) {
+                text.append(" ")
+                text.append(profiling.toLogText())
+            }
+            return text.toString()
+        }
+
+        private fun formatMicros(nanos: Long): String {
+            return (nanos / 1_000L).toString()
+        }
+    }
+
     private class SkillTreeCheckProjection(
         val results: Map<String, Map<String, ConditionEvaluator.VerifyResult>>,
-        val profiling: SkillTreeRuntimeProjection.Profiling
+        val profiling: SkillTreeCheckProfiling
     ) {
     }
 }

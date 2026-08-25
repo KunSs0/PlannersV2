@@ -13,35 +13,30 @@ if (typeof ZeusJs !== "object" || ZeusJs == null) {
 var DynamicSkillIcon = Java.type("com.gitee.planners.core.skill.formatter.DynamicSkillIcon").Companion;
 var SkillTreeNodeEffectService = Java.type("com.gitee.planners.core.skilltree.SkillTreeNodeEffectService").INSTANCE;
 var Bukkit = Java.type("org.bukkit.Bukkit");
-var ROUTER_STRUCTURE_CACHE = {};
-var TREE_STRUCTURE_CACHE = {};
-var BACKPACK_STRUCTURE_CACHE = null;
 var SNAPSHOT_TICK_CACHE = {};
 
 function toImmutableSkillData(skill, player, template, context) {
     var level = SkillTreeNodeEffectService.getSkillLevel(template, String(skill.getId()));
-    var cacheKey = String(skill.getId()) + ":" + String(level);
-    var cached = context.skillDataCache[cacheKey];
-    if (cached != null) {
-        return cached;
-    }
-    var renderedIcon = DynamicSkillIcon.render(player, skill, Number(level));
-    var displayIcon = {
-        name: renderedIcon.getName(),
-        lore: PlannersJs.convert.toArray(renderedIcon.getLore())
-    };
-    var data = {
-        id: String(skill.getId()),
-        name: String(skill.getName()),
-        startedLevel: Number(skill.getStartedLevel()),
-        maxLevel: Number(skill.getMaxLevel()),
-        categories: PlannersJs.convert.toArray(skill.getCategories()),
-        iconItemId: skill.getIconItemId(),
-        displayIconName: displayIcon.name,
-        displayIconLore: displayIcon.lore
-    };
-    context.skillDataCache[cacheKey] = data;
-    context.skillDataById[String(skill.getId())] = data;
+    var skillId = String(skill.getId());
+    // 技能展示数据只随配置与等级变化，走注册表配置缓存；请求内索引仍写入 context 供节点组装引用
+    var data = PlannersJs.registry.cached(
+        "skillDisplay",
+        skillId + ":" + String(level),
+        function () {
+            var renderedIcon = DynamicSkillIcon.render(player, skill, Number(level));
+            return {
+                id: skillId,
+                name: String(skill.getName()),
+                startedLevel: Number(skill.getStartedLevel()),
+                maxLevel: Number(skill.getMaxLevel()),
+                categories: PlannersJs.convert.toArray(skill.getCategories()),
+                iconItemId: skill.getIconItemId(),
+                displayIconName: renderedIcon.getName(),
+                displayIconLore: PlannersJs.convert.toArray(renderedIcon.getLore())
+            };
+        }
+    );
+    context.skillDataById[skillId] = data;
     return data;
 }
 
@@ -53,59 +48,56 @@ function toRequirementData(requirement) {
 }
 
 function getTreeStructure(tree) {
-    var treeId = String(tree.getId());
-    var configurationVersion = String(tree.hashCode());
-    var cached = TREE_STRUCTURE_CACHE[treeId];
-    if (cached != null && cached.configurationVersion === configurationVersion) {
-        return cached;
-    }
-    var graph = tree.getGraph();
-    var nodes = [];
-    var nodeIterator = tree.getNodes().values().iterator();
-    while (nodeIterator.hasNext()) {
-        var node = nodeIterator.next();
-        var nodeId = String(node.getId());
-        var position = node.getPosition();
-        var requirements = graph.get(nodeId);
-        var requirementData = [];
-        if (requirements != null) {
-            var requirementValues = PlannersJs.convert.toArray(requirements);
-            for (var requirementIndex = 0; requirementIndex < requirementValues.length; requirementIndex++) {
-                requirementData.push(toRequirementData(requirementValues[requirementIndex]));
+    return PlannersJs.registry.cached(
+        "tree",
+        String(tree.getId()),
+        function () {
+            var graph = tree.getGraph();
+            var nodes = [];
+            var nodeIterator = tree.getNodes().values().iterator();
+            while (nodeIterator.hasNext()) {
+                var node = nodeIterator.next();
+                var nodeId = String(node.getId());
+                var position = node.getPosition();
+                var requirements = graph.get(nodeId);
+                var requirementData = [];
+                if (requirements != null) {
+                    var requirementValues = PlannersJs.convert.toArray(requirements);
+                    for (var requirementIndex = 0; requirementIndex < requirementValues.length; requirementIndex++) {
+                        requirementData.push(toRequirementData(requirementValues[requirementIndex]));
+                    }
+                }
+                var type = String(node.getType()).toLowerCase();
+                var definition = {
+                    id: nodeId,
+                    type: type,
+                    x: Number(position.getX()),
+                    y: Number(position.getY()),
+                    maxLevel: Number(node.getMaxLevel()),
+                    requirements: requirementData
+                };
+                if (type === "skill") {
+                    var immutableSkill = PlannersJs.registry.get("skill", node.getSkillId());
+                    if (immutableSkill == null) {
+                        throw new Error("Skill tree node references an unknown skill: " + String(node.getSkillId()));
+                    }
+                    definition.immutableSkill = immutableSkill;
+                    definition.skillId = String(node.getSkillId());
+                } else if (type === "attribute") {
+                    definition.provider = {
+                        id: String(node.getProviderId()),
+                        values: PlannersJs.convert.mapToObject(node.getProviderValues())
+                    };
+                } else {
+                    throw new Error("Unknown skill tree node type: " + type);
+                }
+                nodes.push(definition);
             }
-        }
-        var type = String(node.getType()).toLowerCase();
-        var definition = {
-            id: nodeId,
-            type: type,
-            x: Number(position.getX()),
-            y: Number(position.getY()),
-            maxLevel: Number(node.getMaxLevel()),
-            requirements: requirementData
-        };
-        if (type === "skill") {
-            var immutableSkill = PlannersJs.registry.get("skill", node.getSkillId());
-            if (immutableSkill == null) {
-                throw new Error("Skill tree node references an unknown skill: " + String(node.getSkillId()));
-            }
-            definition.immutableSkill = immutableSkill;
-            definition.skillId = String(node.getSkillId());
-        } else if (type === "attribute") {
-            definition.provider = {
-                id: String(node.getProviderId()),
-                values: PlannersJs.convert.mapToObject(node.getProviderValues())
+            return {
+                nodes: nodes
             };
-        } else {
-            throw new Error("Unknown skill tree node type: " + type);
         }
-        nodes.push(definition);
-    }
-    var result = {
-        configurationVersion: configurationVersion,
-        nodes: nodes
-    };
-    TREE_STRUCTURE_CACHE[treeId] = result;
-    return result;
+    );
 }
 
 function toTreeNodeData(treeId, definition, level, canAdvance, hints, context) {
@@ -137,27 +129,23 @@ function toTreeNodeData(treeId, definition, level, canAdvance, hints, context) {
     return data;
 }
 
-function toPlayerTreeData(tree, runtimeTree, context) {
+function toPlayerTreeData(route, tree, context) {
     var nodes = [];
     var structure = getTreeStructure(tree);
     var treeId = String(tree.getId());
-    var runtimeLevels = runtimeTree.getLevels();
-    var runtimeCanAdvanceStates = runtimeTree.getCanAdvanceStates();
-    var runtimeHints = PlannersJs.convert.toArray(runtimeTree.getHints());
-    if (runtimeLevels.length !== structure.nodes.length ||
-        runtimeCanAdvanceStates.length !== structure.nodes.length ||
-        runtimeHints.length !== structure.nodes.length) {
-        throw new Error("Skill tree runtime projection node count mismatch: " + treeId);
+    var nodeCount = route.getNodeCount(treeId);
+    if (nodeCount !== structure.nodes.length) {
+        throw new Error("Skill tree runtime node count mismatch: " + treeId);
     }
     for (var nodeIndex = 0; nodeIndex < structure.nodes.length; nodeIndex++) {
         var definition = structure.nodes[nodeIndex];
-        var hints = PlannersJs.convert.toArray(runtimeHints[nodeIndex]);
+        var nodeId = route.getNodeIdAt(treeId, nodeIndex);
         nodes.push(toTreeNodeData(
             treeId,
             definition,
-            Number(runtimeLevels[nodeIndex]),
-            runtimeCanAdvanceStates[nodeIndex],
-            hints,
+            Number(route.getNodeLevelById(treeId, nodeId)),
+            route.isNodeCanAdvance(treeId, nodeId),
+            route.getNodeHints(treeId, nodeId),
             context
         ));
     }
@@ -204,48 +192,45 @@ function toImmutableRouterData(router, player, template, context, includedSkillI
 }
 
 function getRouterStructure(router) {
-    var routerId = String(router.getId());
-    var configurationVersion = String(router.hashCode());
-    var cached = ROUTER_STRUCTURE_CACHE[routerId];
-    if (cached != null && cached.configurationVersion === configurationVersion) {
-        return cached;
-    }
-    var jobs = [];
-    var routeIterator = router.getRoutes().values().iterator();
-    while (routeIterator.hasNext()) {
-        var route = routeIterator.next();
-        var job = route.getJob();
-        var branchIds = [];
-        var branches = PlannersJs.convert.toArray(route.getBranches());
-        for (var branchIndex = 0; branchIndex < branches.length; branchIndex++) {
-            branchIds.push(String(branches[branchIndex].getId()));
-        }
-        jobs.push({
-            route: route,
-            id: String(route.getId()),
-            name: String(job.getName()),
-            branchIds: branchIds,
-            skillTreeIds: PlannersJs.convert.toArray(route.getSkillTreeIds()),
-            iconItemId: route.getIconItemId(),
-            display: {
-                icon: {
-                    name: job.getDisplayIconName(),
-                    lore: PlannersJs.convert.toArray(job.getDisplayIconLore())
+    return PlannersJs.registry.cached(
+        "router",
+        String(router.getId()),
+        function () {
+            var jobs = [];
+            var routeIterator = router.getRoutes().values().iterator();
+            while (routeIterator.hasNext()) {
+                var route = routeIterator.next();
+                var job = route.getJob();
+                var branchIds = [];
+                var branches = PlannersJs.convert.toArray(route.getBranches());
+                for (var branchIndex = 0; branchIndex < branches.length; branchIndex++) {
+                    branchIds.push(String(branches[branchIndex].getId()));
                 }
-            },
-            skills: PlannersJs.convert.toArray(job.getImmutableSkillValues())
-        });
-    }
-    var originate = router.getOriginate();
-    var result = {
-        configurationVersion: configurationVersion,
-        routerId: routerId,
-        name: String(router.getName()),
-        originateJobId: originate == null ? null : String(originate.getId()),
-        jobs: jobs
-    };
-    ROUTER_STRUCTURE_CACHE[routerId] = result;
-    return result;
+                jobs.push({
+                    route: route,
+                    id: String(route.getId()),
+                    name: String(job.getName()),
+                    branchIds: branchIds,
+                    skillTreeIds: PlannersJs.convert.toArray(route.getSkillTreeIds()),
+                    iconItemId: route.getIconItemId(),
+                    display: {
+                        icon: {
+                            name: job.getDisplayIconName(),
+                            lore: PlannersJs.convert.toArray(job.getDisplayIconLore())
+                        }
+                    },
+                    skills: PlannersJs.convert.toArray(job.getImmutableSkillValues())
+                });
+            }
+            var originate = router.getOriginate();
+            return {
+                routerId: String(router.getId()),
+                name: String(router.getName()),
+                originateJobId: originate == null ? null : String(originate.getId()),
+                jobs: jobs
+            };
+        }
+    );
 }
 
 function snapshotCacheKey(player, snapshotType) {
@@ -279,30 +264,35 @@ function clearPlayerSnapshotCache(player) {
 }
 
 function toPlayerJobData(route, player, template, context, includeTrees, includedSkillIds) {
-    var skills = {};
-    var skillIterator = route.getRegisteredSkill().entrySet().iterator();
-    while (skillIterator.hasNext()) {
-        var entry = skillIterator.next();
-        var skillId = String(entry.getKey());
-        if (includedSkillIds != null && includedSkillIds[skillId] !== true) {
-            continue;
+    // 注册技能表只随 bindingId 变化，走注册表缓存；reload 后上下文重建自然失效。
+    // 缓存的是全量只读表；includedSkillIds 过滤在其上按需构建。
+    var allSkills = PlannersJs.registry.cached(
+        "registeredSkills",
+        String(route.getBindingId()),
+        function () {
+            var result = {};
+            var skillIterator = route.getRegisteredSkill().entrySet().iterator();
+            while (skillIterator.hasNext()) {
+                var entry = skillIterator.next();
+                result[String(entry.getKey())] = Number(entry.getValue().getLevel());
+            }
+            return result;
         }
-        skills[skillId] = {
-            level: Number(entry.getValue().getLevel())
-        };
+    );
+    var skills = {};
+    for (var cachedSkillId in allSkills) {
+        if (includedSkillIds == null || includedSkillIds[cachedSkillId] === true) {
+            skills[cachedSkillId] = {
+                level: allSkills[cachedSkillId]
+            };
+        }
     }
     var trees = [];
     if (includeTrees) {
-        var runtimeProjection = route.getSkillTreeRuntimeProjection(player);
+        var treeView = route.getSkillTreeRuntimeProjectionView(player);
         var treeValues = PlannersJs.convert.toArray(route.getSkillTrees());
-        var runtimeTrees = PlannersJs.convert.toArray(runtimeProjection.getTrees());
-        if (treeValues.length !== runtimeTrees.length) {
-            throw new Error("Skill tree runtime projection tree count mismatch: " + String(route.getJobId()));
-        }
         for (var i = 0; i < treeValues.length; i++) {
-            var tree = treeValues[i];
-            var runtimeTree = runtimeTrees[i];
-            trees.push(toPlayerTreeData(tree, runtimeTree, context));
+            trees.push(toPlayerTreeData(treeView, treeValues[i], context));
         }
     }
     return {
@@ -324,37 +314,37 @@ function toKeyName(keyId) {
 
 function getBackpackStructure() {
     var backpack = PlannersJs.registry.backpack();
-    var configurationVersion = String(backpack.hashCode());
-    if (BACKPACK_STRUCTURE_CACHE != null && BACKPACK_STRUCTURE_CACHE.configurationVersion === configurationVersion) {
-        return BACKPACK_STRUCTURE_CACHE;
-    }
-    var pages = [];
-    var pageIterator = backpack.getPages().values().iterator();
-    while (pageIterator.hasNext()) {
-        var page = pageIterator.next();
-        var slots = [];
-        var slotIterator = page.getSlots().values().iterator();
-        while (slotIterator.hasNext()) {
-            var slot = slotIterator.next();
-            var keyId = String(slot.getKey());
-            slots.push({
-                id: String(slot.getId()),
-                key: keyId,
-                keyName: toKeyName(keyId),
-                categories: PlannersJs.convert.toArray(slot.getCategories())
-            });
+    return PlannersJs.registry.cached(
+        "backpack",
+        "default",
+        function () {
+            var pages = [];
+            var pageIterator = backpack.getPages().values().iterator();
+            while (pageIterator.hasNext()) {
+                var page = pageIterator.next();
+                var slots = [];
+                var slotIterator = page.getSlots().values().iterator();
+                while (slotIterator.hasNext()) {
+                    var slot = slotIterator.next();
+                    var keyId = String(slot.getKey());
+                    slots.push({
+                        id: String(slot.getId()),
+                        key: keyId,
+                        keyName: toKeyName(keyId),
+                        categories: PlannersJs.convert.toArray(slot.getCategories())
+                    });
+                }
+                pages.push({
+                    id: String(page.getId()),
+                    name: String(page.getName()),
+                    slots: slots
+                });
+            }
+            return {
+                pages: pages
+            };
         }
-        pages.push({
-            id: String(page.getId()),
-            name: String(page.getName()),
-            slots: slots
-        });
-    }
-    BACKPACK_STRUCTURE_CACHE = {
-        configurationVersion: configurationVersion,
-        pages: pages
-    };
-    return BACKPACK_STRUCTURE_CACHE;
+    );
 }
 
 function collectPlayerBackpackData(template) {
