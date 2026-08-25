@@ -4,6 +4,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.gitee.scriptengine.api.ScriptSession;
+import com.gitee.scriptengine.api.CompiledScript;
+
 /**
  * 单例脚本封装
  * <p>
@@ -14,9 +17,15 @@ public class SingletonScript implements Script {
     private static final Pattern NESTED_PATTERN = Pattern.compile("\\{\\{(.+?)}}");
 
     private final String action;
+    private final CompiledScript compiledFunction;
 
     public SingletonScript(String source) {
         this.action = source != null ? source : "";
+        if (action.isEmpty()) {
+            compiledFunction = null;
+        } else {
+            compiledFunction = ScriptManager.compileExpression("singleton", action);
+        }
     }
 
     public boolean isNotNull() {
@@ -36,17 +45,19 @@ public class SingletonScript implements Script {
             return CompletableFuture.completedFuture(null);
         }
         if (options.isAsync()) {
-            return CompletableFuture.supplyAsync(() -> ScriptManager.eval(action, options));
+            return CompletableFuture.supplyAsync(() -> ScriptManager.invokeCompiled(compiledFunction, options));
         }
-        return CompletableFuture.completedFuture(ScriptManager.eval(action, options));
+        return CompletableFuture.completedFuture(ScriptManager.invokeCompiled(compiledFunction, options));
     }
 
     /**
      * 同步执行
      */
     public Object eval(ScriptOptions options) {
-        if (action.isEmpty()) return null;
-        return ScriptManager.eval(action, options);
+        if (action.isEmpty()) {
+            return null;
+        }
+        return ScriptManager.invokeCompiled(compiledFunction, options);
     }
 
     /**
@@ -54,6 +65,19 @@ public class SingletonScript implements Script {
      */
     public Object eval() {
         return eval(new ScriptOptions());
+    }
+
+    /**
+     * 在已打开会话中调用预编译表达式。
+     *
+     * @param session 当前脚本会话。
+     * @return 表达式结果。
+     */
+    public Object invoke(ScriptSession session) {
+        if (action.isEmpty()) {
+            return null;
+        }
+        return ScriptManager.invokeCompiled(session, compiledFunction);
     }
 
     /**

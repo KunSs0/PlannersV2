@@ -74,7 +74,9 @@ interface ImmutableVariable : Variable {
             if (action.isEmpty()) {
                 return null
             }
-            return ScriptManager.eval(session, "$targetId = ($action); $targetId")
+            val value = invoke(session)
+            ScriptManager.setReusableSessionBinding(session, targetId, value)
+            return value
         }
     }
 
@@ -96,7 +98,7 @@ interface ImmutableVariable : Variable {
          * @return 条件成立时为 true。
          */
         fun matches(session: ScriptSession): Boolean {
-            val value = ScriptManager.eval(session, condition.action)
+            val value = condition.invoke(session)
             return value.cbool
         }
 

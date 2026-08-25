@@ -1,10 +1,12 @@
 package com.gitee.planners.module.script;
 
 import com.gitee.scriptengine.api.ScriptFunction;
+import com.gitee.scriptengine.api.CompiledScript;
 import com.gitee.scriptengine.api.ContextPreset;
 import com.gitee.scriptengine.api.HostAccessMode;
 import com.gitee.scriptengine.api.ScriptResult;
 import com.gitee.scriptengine.api.ScriptSession;
+import com.gitee.scriptengine.api.ScriptSource;
 import com.gitee.scriptengine.api.ScriptValue;
 import com.gitee.scriptengine.api.ScriptWorkspace;
 import com.gitee.scriptengine.api.WorkspaceConfig;
@@ -65,46 +67,6 @@ public final class ScriptManager {
     }
 
     /**
-     * 执行脚本。
-     *
-     * 保存并恢复调用方的 ScriptContext，避免嵌套调用清掉外层上下文。
-     */
-    public static Object eval(String source, ScriptOptions options) {
-        ensureInit();
-        Map<String, Object> previous = ScriptContext.getCurrent();
-        Map<String, Object> variables = createScriptVariables(options.getVariables());
-        ScriptContext.setCurrent(variables);
-        ManagedSession session = createSession(variables, options.getPreludeScripts());
-        try {
-            ScriptResult result = session.eval(source);
-            checkResult("执行脚本失败", result);
-            return result.getValue();
-        } finally {
-            session.close();
-            if (previous != null) {
-                ScriptContext.setCurrent(previous);
-            } else {
-                ScriptContext.clear();
-            }
-        }
-    }
-
-    /**
-     * 在已打开的会话中执行脚本。
-     *
-     * <p>调用方负责设置 {@link ScriptContext}、管理会话生命周期，并在执行完成后恢复上下文。</p>
-     *
-     * @param session 已打开的脚本会话。
-     * @param source 要执行的脚本源码。
-     * @return 脚本返回值。
-     */
-    public static Object eval(ScriptSession session, String source) {
-        ScriptResult result = session.eval(source);
-        checkResult("执行脚本失败", result);
-        return result.getValue();
-    }
-
-    /**
      * 调用已装载脚本会话中的函数。
      *
      * @param session 已打开的脚本会话。
@@ -119,10 +81,81 @@ public final class ScriptManager {
     }
 
     /**
-     * 执行脚本（无上下文变量）。
+     * 将配置表达式编译成零参数 JavaScript 函数。
+     *
+     * <p>表达式文本只在首次装入会话时通过 {@code eval} 声明函数；后续执行全部经由
+     * {@link #invokeCompiled(ScriptSession, CompiledScript, Object...)} 调用，禁止把表达式文本直接交给运行时执行。</p>
+     *
+     * @param id 业务侧稳定标识。
+     * @param expression JavaScript 表达式。
+     * @return 可跨会话复用的编译函数描述。
      */
-    public static Object eval(String source) {
-        return eval(source, new ScriptOptions());
+    public static CompiledScript compileExpression(String id, String expression) {
+        return CompiledScript.Companion.expression(id, expression);
+    }
+
+    /**
+     * 将 JavaScript 语句块编译成零参数函数。
+     *
+     * @param id 业务侧稳定标识。
+     * @param action JavaScript 语句块。
+     * @return 可跨会话复用的编译函数描述。
+     */
+    public static CompiledScript compileAction(String id, String action) {
+        return CompiledScript.Companion.action(id, action);
+    }
+
+    /**
+     * 在独立会话中调用已编译函数。
+     *
+     * @param function 已编译函数。
+     * @param options 本次执行上下文。
+     * @param args 调用参数。
+     * @return 函数返回值。
+     */
+    public static Object invokeCompiled(CompiledScript function, ScriptOptions options, Object... args) {
+        ensureInit();
+        Map<String, Object> previous = ScriptContext.getCurrent();
+        Map<String, Object> variables = createScriptVariables(options.getVariables());
+        ScriptContext.setCurrent(variables);
+        ManagedSession session = createSession(variables, options.getPreludeScripts());
+        try {
+            return invokeCompiled(session, function, args);
+        } finally {
+            session.close();
+            if (previous != null) {
+                ScriptContext.setCurrent(previous);
+            } else {
+                ScriptContext.clear();
+            }
+        }
+    }
+
+    /**
+     * 在已打开会话中调用已编译函数。
+     *
+     * <p>每个函数在同一会话内仅安装一次，之后只通过函数调用执行。</p>
+     *
+     * @param session 当前 ScriptManager 会话。
+     * @param function 已编译函数。
+     * @param args 调用参数。
+     * @return 函数返回值。
+     */
+    public static Object invokeCompiled(ScriptSession session, CompiledScript function, Object... args) {
+        ScriptResult result = session.invoke(function, adaptArguments(args));
+        checkResult("执行预编译脚本函数失败: " + function.getFunctionName(), result);
+        return result.getValue();
+    }
+
+    /**
+     * 将已编译函数安装到会话。
+     *
+     * @param session 当前 ScriptManager 会话。
+     * @param function 已编译函数。
+     */
+    public static void installCompiledFunction(ScriptSession session, CompiledScript function) {
+        ScriptResult result = session.install(function);
+        checkResult("安装预编译脚本函数失败: " + function.getFunctionName(), result);
     }
 
     /**
@@ -388,8 +421,23 @@ public final class ScriptManager {
         }
 
         @Override
+        public ScriptResult eval(ScriptSource source) {
+            return delegate.eval(source);
+        }
+
+        @Override
+        public ScriptResult install(CompiledScript script) {
+            return delegate.install(script);
+        }
+
+        @Override
         public ScriptResult invoke(String name, Object... args) {
             return delegate.invoke(name, args);
+        }
+
+        @Override
+        public ScriptResult invoke(CompiledScript script, Object... args) {
+            return delegate.invoke(script, args);
         }
 
         @Override
@@ -583,6 +631,7 @@ public final class ScriptManager {
         private static final class ContextSession implements ScriptSession {
 
             private final com.gitee.scriptengine.api.ScriptContext context;
+            private final Set<String> installedScripts = new java.util.LinkedHashSet<>();
             private boolean closed;
 
             private ContextSession(com.gitee.scriptengine.api.ScriptContext context) {
@@ -593,6 +642,25 @@ public final class ScriptManager {
             public ScriptResult eval(String source) {
                 checkClosed();
                 return context.eval(source);
+            }
+
+            @Override
+            public ScriptResult eval(ScriptSource source) {
+                checkClosed();
+                return context.eval(source);
+            }
+
+            @Override
+            public ScriptResult install(CompiledScript script) {
+                checkClosed();
+                if (installedScripts.contains(script.getFunctionName())) {
+                    return new ScriptResult(null, true, null);
+                }
+                ScriptResult result = eval(script.getSource());
+                if (result.getSuccess()) {
+                    installedScripts.add(script.getFunctionName());
+                }
+                return result;
             }
 
             @Override
@@ -613,6 +681,15 @@ public final class ScriptManager {
             }
 
             @Override
+            public ScriptResult invoke(CompiledScript script, Object... arguments) {
+                ScriptResult installResult = install(script);
+                if (!installResult.getSuccess()) {
+                    return installResult;
+                }
+                return invoke(script.getFunctionName(), arguments);
+            }
+
+            @Override
             public boolean hasFunction(String name) {
                 checkClosed();
                 ScriptValue function = context.getBindings().getMember(name);
@@ -628,6 +705,7 @@ public final class ScriptManager {
                     return;
                 }
                 closed = true;
+                installedScripts.clear();
                 context.close();
             }
 

@@ -9,13 +9,17 @@ import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.scriptengine.api.ScriptSession
+import com.gitee.scriptengine.api.CompiledScript
 import org.bukkit.entity.Player
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 条件执行器。
  * 集中定义在 config.yml 的条件模板通过 key 引用 + 传参覆盖后，由本类执行。
  */
 class ConditionEvaluator {
+
+    private val propExpressions = ConcurrentHashMap<String, CompiledScript>()
 
     /**
      * 批量校验的单个条件请求。
@@ -47,7 +51,16 @@ class ConditionEvaluator {
         player: Player,
         contextVars: Map<String, Any> = emptyMap()
     ): VerifyResult {
-        return verifyInternal(conditions, player, contextVars, null)
+        val session = ScriptManager.openReusableSession(ScriptOptions.of(), emptySet())
+        try {
+            val conditionConfigs = collectConditionConfigs(listOf(VerifyRequest("verify", conditions, contextVars)))
+            for (conditionConfig in conditionConfigs) {
+                conditionConfig.install(session)
+            }
+            return verifyInternal(conditions, player, contextVars, session)
+        } finally {
+            session.close()
+        }
     }
 
     /**
@@ -163,7 +176,7 @@ class ConditionEvaluator {
         conditions: Map<String, Map<String, Any>>,
         player: Player,
         contextVars: Map<String, Any>,
-        session: ScriptSession?
+        session: ScriptSession
     ): VerifyResult {
         val profile = player.plannersTemplate
         val router = profile.playerRouter
@@ -171,10 +184,8 @@ class ConditionEvaluator {
         val hints = mutableListOf<String>()
         val options = createOptions(player, profile, router, route)
         val previousContext = ScriptContext.getCurrent()
-        if (session != null) {
-            ScriptContext.setCurrent(options.variables)
-            ScriptManager.rebindReusableSession(session, options, setOf("props"))
-        }
+        ScriptContext.setCurrent(options.variables)
+        ScriptManager.rebindReusableSession(session, options, setOf("props"))
 
         try {
             for ((key, overrideProps) in conditions) {
@@ -187,7 +198,7 @@ class ConditionEvaluator {
                 options.set("props", props)
 
                 val passed = try {
-                    evalCondition(cfg, options, session, props)
+                    evalCondition(cfg, session, props)
                 } catch (e: Exception) {
                     false
                 }
@@ -198,12 +209,10 @@ class ConditionEvaluator {
                 }
             }
         } finally {
-            if (session != null) {
-                if (previousContext == null) {
-                    ScriptContext.clear()
-                } else {
-                    ScriptContext.setCurrent(previousContext)
-                }
+            if (previousContext == null) {
+                ScriptContext.clear()
+            } else {
+                ScriptContext.setCurrent(previousContext)
             }
         }
         return VerifyResult.PASSED
@@ -225,34 +234,43 @@ class ConditionEvaluator {
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
 
-        for ((key, overrideProps) in conditions) {
-            val cfg = Planners.conditions.get()[key]
-            if (cfg == null) {
-                error("Unknown condition key: $key")
+        val session = ScriptManager.openReusableSession(ScriptOptions.of(), emptySet())
+        val previousContext = ScriptContext.getCurrent()
+        try {
+            for ((key, overrideProps) in conditions) {
+                val cfg = Planners.conditions.get()[key]
+                if (cfg == null) {
+                    error("Unknown condition key: $key")
+                }
+                if (cfg.consume == null) {
+                    continue
+                }
+                cfg.install(session)
+                val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars, session)
+                val props = resolvedProps.values
+                val options = createOptions(player, profile, router, route)
+                options.set("props", props)
+                for ((contextKey, contextValue) in contextVars) {
+                    options.set(contextKey, contextValue)
+                }
+                ScriptContext.setCurrent(options.variables)
+                ScriptManager.rebindReusableSession(session, options, setOf("props"))
+                cfg.consume(session, props)
             }
-            if (cfg.consume == null) {
-                continue
+        } finally {
+            if (previousContext == null) {
+                ScriptContext.clear()
+            } else {
+                ScriptContext.setCurrent(previousContext)
             }
-
-            val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars, null)
-            val props = resolvedProps.values
-
-            val options = createOptions(player, profile, router, route)
-            options.set("props", props)
-
-            try {
-                ScriptManager.eval(cfg.consume, options)
-            } catch (e: Exception) {
-                // consume 失败不阻塞后续
-                e.printStackTrace()
-            }
+            session.close()
         }
     }
 
     // ---- 内部 ----
 
     /**
-     * 合并默认 props 与调用处覆盖值，并将 String 值 eval 为实际值。
+     * 合并默认 props 与调用处覆盖值，并将 String 值通过预编译函数计算为实际值。
      */
     private fun resolveProps(
         defaultProps: Map<String, Any>,
@@ -262,7 +280,7 @@ class ConditionEvaluator {
         router: PlayerRouter?,
         route: PlayerRoute?,
         contextVars: Map<String, Any>,
-        session: ScriptSession?
+        session: ScriptSession
     ): ResolvedProps {
         val merged = defaultProps.toMutableMap()
         merged.putAll(overrideProps)
@@ -272,7 +290,7 @@ class ConditionEvaluator {
         for ((k, v) in merged) {
             resolved[k] = when (v) {
                 is String -> {
-                    if (session != null && v.toDoubleOrNull() == null) {
+                    if (v.toDoubleOrNull() == null) {
                         reboundSession = true
                     }
                     evalValue(v, player, profile, router, route, contextVars, session)
@@ -286,8 +304,7 @@ class ConditionEvaluator {
     /**
      * 对 String 值尝试求值：
      * 1. 纯数字 → 转为 Int/Double
-     * 2. JS 公式 → 执行并返回结果
-     * 3. eval 抛异常 → 作为字面量字符串
+     * 2. JS 公式 → 调用预编译函数并返回结果
      */
     private fun evalValue(
         expr: String,
@@ -296,7 +313,7 @@ class ConditionEvaluator {
         router: PlayerRouter?,
         route: PlayerRoute?,
         contextVars: Map<String, Any>,
-        session: ScriptSession?
+        session: ScriptSession
     ): Any {
         // 纯数字字符串
         val doubleValue = expr.toDoubleOrNull()
@@ -307,19 +324,15 @@ class ConditionEvaluator {
                 return doubleValue
             }
         }
-        // JS 公式
-        return try {
-            val options = createOptions(player, profile, router, route)
-            contextVars.forEach { (k, v) -> options.set(k, v) }
-            val value = eval(expr, options, session)
-            if (value == null) {
-                expr
-            } else {
-                value
-            }
-        } catch (e: Exception) {
-            expr
+        val options = createOptions(player, profile, router, route)
+        for ((key, value) in contextVars) {
+            options.set(key, value)
         }
+        val result = invokeExpression(expr, options, session)
+        if (result == null) {
+            error("条件属性表达式返回了 null: $expr")
+        }
+        return result
     }
 
     /**
@@ -351,15 +364,13 @@ class ConditionEvaluator {
         return options
     }
 
-    private fun eval(source: String, options: ScriptOptions, session: ScriptSession?): Any? {
-        if (session == null) {
-            return ScriptManager.eval(source, options)
-        }
+    private fun invokeExpression(source: String, options: ScriptOptions, session: ScriptSession): Any? {
         val previousContext = ScriptContext.getCurrent()
         ScriptContext.setCurrent(options.variables)
         try {
             ScriptManager.rebindReusableSession(session, options, emptySet())
-            return ScriptManager.eval(session, source)
+            val function = getPropExpression(source)
+            return ScriptManager.invokeCompiled(session, function)
         } finally {
             if (previousContext == null) {
                 ScriptContext.clear()
@@ -375,16 +386,21 @@ class ConditionEvaluator {
      * 批量模式下基础上下文已在单个节点开始时绑定，只替换当前条件的 props，
      * 防止同一节点的多条条件反复重建全局脚本绑定。
      */
-    private fun evalCondition(
-        config: ConditionConfig,
-        options: ScriptOptions,
-        session: ScriptSession?,
-        props: Map<String, Any>
-    ): Boolean {
-        if (session == null) {
-            return ScriptManager.eval(config.exper, options) == true
-        }
+    private fun evalCondition(config: ConditionConfig, session: ScriptSession, props: Map<String, Any>): Boolean {
         return config.evaluate(session, props)
+    }
+
+    private fun getPropExpression(source: String): CompiledScript {
+        val cached = propExpressions[source]
+        if (cached != null) {
+            return cached
+        }
+        val compiled = ScriptManager.compileExpression("condition-prop", source)
+        val raced = propExpressions.putIfAbsent(source, compiled)
+        if (raced != null) {
+            return raced
+        }
+        return compiled
     }
 
     /**

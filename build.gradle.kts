@@ -65,16 +65,18 @@ dependencies {
     testCompileOnly("org.ejml:ejml-core:0.41")
     testCompileOnly("org.ejml:ejml-simple:0.41")
     testCompileOnly("org.ejml:ejml-fdense:0.41")
+    testRuntimeOnly("org.ejml:ejml-simple:0.41")
     compileOnly("com.mojang:datafixerupper:4.0.26")
 
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs") {
         exclude("ScriptEngine-*.jar")
     })
-    compileOnly("com.gitee.scriptengine:scriptengine-common:2.1.0")
-    compileOnly("com.gitee.scriptengine:scriptengine-runtime:2.1.0")
+    compileOnly("com.gitee.scriptengine:scriptengine-common:2.2.0")
+    compileOnly("com.gitee.scriptengine:scriptengine-runtime:2.2.0")
     testImplementation("org.graalvm.polyglot:polyglot:24.1.1")
     testImplementation("org.graalvm.js:js-language:24.1.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 }
 
 tasks.withType<JavaCompile> {
@@ -91,6 +93,13 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         freeCompilerArgs.add("-Xjvm-default=all")
+    }
+}
+
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
     }
 }
 
