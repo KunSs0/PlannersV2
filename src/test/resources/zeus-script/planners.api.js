@@ -37,6 +37,7 @@
     var enumName = Utils.enumName;
     var callIfPresent = Utils.callIfPresent;
     var futureThen = Utils.futureThen;
+    var toScriptObject = Utils.requireFunction("__toScriptObject");
 
     /**
      * 将已加载的 Bukkit 玩家或 PlayerTemplate 解析为玩家档案。
@@ -1728,6 +1729,27 @@
              */
             setSkillLevel: function (template, skill, level) {
                 PlayerTemplateAPI.setSkillLevel(template, skill, Number(level));
+            }
+        },
+
+        /**
+         * 玩家路线动态读取工具。
+         *
+         * @namespace PlannersJs.route
+         */
+        route: {
+            /**
+             * 获取玩家路线的节点状态读取对象。
+             *
+             * @param {com.gitee.planners.core.player.PlayerRoute} route 玩家路线。
+             * @param {org.bukkit.entity.Player} player Bukkit 玩家。
+             * @returns {Object} 可读取节点等级、可激活状态和提示的动态对象。
+             */
+            getPlayerRoute: function (route, player) {
+                if (route == null || player == null) {
+                    return null;
+                }
+                return toScriptObject(route.getPlayerRoute(player));
             }
         },
 

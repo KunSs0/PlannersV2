@@ -50,8 +50,6 @@ dependencies {
     compileOnly("ink.ptms.core:v12004:12004:universal")
 
     compileOnly("com.google.code.gson:gson:2.8.9")
-    // GraalVM polyglot API：脚本代理视图（ProxyObject/ProxyArray/ProxyExecutable）
-    compileOnly("org.graalvm.polyglot:polyglot:24.1.1")
     // https://mvnrepository.com/artifact/com.google.guava/guava
     implementation("com.google.guava:guava:33.0.0-jre")
 

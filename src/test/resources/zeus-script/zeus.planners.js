@@ -143,8 +143,8 @@ function toPlayerTreeData(route, tree, context) {
         nodes.push(toTreeNodeData(
             treeId,
             definition,
-            Number(route.getNodeLevelById(treeId, nodeId)),
-            route.isNodeCanAdvance(treeId, nodeId),
+            Number(route.getNodeLevel(treeId, nodeId)),
+            route.canAdvanceNode(treeId, nodeId),
             route.getNodeHints(treeId, nodeId),
             context
         ));
@@ -289,7 +289,7 @@ function toPlayerJobData(route, player, template, context, includeTrees, include
     }
     var trees = [];
     if (includeTrees) {
-        var treeView = route.getSkillTreeRuntimeProjectionView(player);
+        var treeView = PlannersJs.route.getPlayerRoute(route, player);
         var treeValues = PlannersJs.convert.toArray(route.getSkillTrees());
         for (var i = 0; i < treeValues.length; i++) {
             trees.push(toPlayerTreeData(treeView, treeValues[i], context));

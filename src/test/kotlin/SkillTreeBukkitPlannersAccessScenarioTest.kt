@@ -1,10 +1,10 @@
-import com.gitee.planners.core.player.PlayerRoutePolyglotView
-import com.gitee.planners.core.player.RealLookupTarget
-import com.gitee.planners.core.player.RealLookupTreeDefinition
+import com.gitee.planners.core.script.proxy.ProxyRouteTarget
+import com.gitee.planners.core.script.proxy.ProxyTreeDefinition
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess
 import org.graalvm.polyglot.proxy.ProxyArray
 import org.graalvm.polyglot.proxy.ProxyExecutable
+import org.graalvm.polyglot.proxy.ProxyObject
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -82,7 +82,7 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
                     "function __newCtx() { return { skillDataCache: {}, skillDataById: {} }; }" +
                     "function __stageImmutable(ctx, player, template, playerRouter, backpackData) { return ZeusJs.planners.__bench.toImmutableRouterData(playerRouter.getRouter(), player, template, ctx, null); }" +
                     "function __stagePlayerJobs(ctx, player, template, playerRouter, backpackData) { return ZeusJs.planners.__bench.toSkillTreePlayerData(player, template, playerRouter, ctx, backpackData); }" +
-                    "function __stageNodeLoop(player, template, playerRouter) { var view = playerRouter.getCurrentRoute().getSkillTreeRuntimeProjectionView(player); var sink = 0; for (var t = 0; t < view.getTreeCount(); t++) { var treeId = view.getTreeId(t); var count = view.getNodeCount(treeId); for (var i = 0; i < count; i++) { var nodeId = view.getNodeIdAt(treeId, i); sink += view.getNodeLevelById(treeId, nodeId); if (view.isNodeCanAdvance(treeId, nodeId)) { sink += 1; } sink += view.getNodeHints(treeId, nodeId).length; } } return sink; }"
+                    "function __stageNodeLoop(player, template, playerRouter) { var view = PlannersJs.route.getPlayerRoute(playerRouter.getCurrentRoute(), player); var sink = 0; for (var t = 0; t < view.getTreeCount(); t++) { var treeId = view.getTreeId(t); var count = view.getNodeCount(treeId); for (var i = 0; i < count; i++) { var nodeId = view.getNodeIdAt(treeId, i); sink += view.getNodeLevel(treeId, nodeId); if (view.canAdvanceNode(treeId, nodeId)) { sink += 1; } sink += view.getNodeHints(treeId, nodeId).length; } } return sink; }"
             )
 
             // 每轮模拟完整管线顺序：backpack → immutable(填充技能数据缓存) → playerJobs → 纯节点反查环
@@ -131,7 +131,7 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
                 "js",
                 "function __nodeBench(player, template, playerRouter, repeats) { " +
                     "var route = playerRouter.getCurrentRoute(); " +
-                    "var view = route.getSkillTreeRuntimeProjectionView(player); " +
+                "var view = PlannersJs.route.getPlayerRoute(route, player); " +
                     "var treeId = view.getTreeId(0); " +
                     "var tree = null; var treeValues = PlannersJs.convert.toArray(route.getSkillTrees()); for (var i = 0; i < treeValues.length; i++) { if (String(treeValues[i].getId()) === treeId) { tree = treeValues[i]; } } " +
                     "var structure = ZeusJs.planners.__bench.getTreeStructure(tree); " +
@@ -139,11 +139,11 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
                     "var immutable = ZeusJs.planners.__bench.toImmutableRouterData(playerRouter.getRouter(), player, template, ctx, null); " +
                     // 预取全部输入，只测节点组装本身
                     "var defs = structure.nodes; var levels = []; var advances = []; var hintsArr = []; var nodeIds = []; " +
-                    "for (var i = 0; i < defs.length; i++) { var nodeId = view.getNodeIdAt(treeId, i); nodeIds.push(nodeId); levels.push(view.getNodeLevelById(treeId, nodeId)); advances.push(view.isNodeCanAdvance(treeId, nodeId)); hintsArr.push(view.getNodeHints(treeId, nodeId)); } " +
+                    "for (var i = 0; i < defs.length; i++) { var nodeId = view.getNodeIdAt(treeId, i); nodeIds.push(nodeId); levels.push(view.getNodeLevel(treeId, nodeId)); advances.push(view.canAdvanceNode(treeId, nodeId)); hintsArr.push(view.getNodeHints(treeId, nodeId)); } " +
                     "var result = { lookup: [], staticBuild: [], dynamicBuild: [], skillMount: [], full: [] }; " +
                     "for (var r = 0; r < repeats; r++) { " +
                     "  var t0 = performanceNow();" +
-                    "  for (var i = 0; i < defs.length; i++) { sink += view.getNodeLevelById(treeId, nodeIds[i]); if (view.isNodeCanAdvance(treeId, nodeIds[i])) { sink += 1; } sink += view.getNodeHints(treeId, nodeIds[i]).length; } " +
+                    "  for (var i = 0; i < defs.length; i++) { sink += view.getNodeLevel(treeId, nodeIds[i]); if (view.canAdvanceNode(treeId, nodeIds[i])) { sink += 1; } sink += view.getNodeHints(treeId, nodeIds[i]).length; } " +
                     "  result.lookup.push(performanceNow() - t0); " +
                     "  t0 = performanceNow();" +
                     "  for (var i = 0; i < defs.length; i++) { var d = defs[i]; var obj = { id: d.id, type: d.type, position: { x: d.x, y: d.y }, maxLevel: d.maxLevel, requirements: d.requirements }; } " +
@@ -347,6 +347,7 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
         val rewrittenWithBench = rewritten.substring(0, injectIndex) + benchExport + rewritten.substring(injectIndex)
 
         val bindings = context.getBindings("js")
+        bindings.putMember("__toScriptObject", ProxyExecutable { arguments -> arguments[0] })
         bindings.putMember("MockDynamicSkillIcon", scenario.renderer)
         bindings.putMember("MockSkillTreeNodeEffectService", scenario.skillLevels)
         bindings.putMember("MockBukkit", scenario.bukkit)
@@ -371,6 +372,9 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
                         get: function (type, id) { return MockRegistry.get(type, id); },
                         backpack: function () { return MockRegistry.getBackpack(); },
                         cached: function (namespace, key, builder) { return MockRegistry.cached(namespace, key, builder); }
+                    },
+                    route: {
+                        getPlayerRoute: function (route, player) { return route.getPlayerRoute(player); }
                     },
                     backpack: {
                         currentPage: function (template) { return MockBackpack.currentPage(template); }
@@ -801,14 +805,14 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
     /**
      * 模拟玩家职业阶段。
      *
-     * 节点运行时状态按业务粒度逐节点存储，通过生产代理层
-     * [PlayerRoutePolyglotView] 暴露给脚本逐个反查。
+     * 节点运行时状态按业务粒度逐节点存储，通过动态路线对象
+     * 暴露给脚本逐个反查。
      */
     class MockPlayerRoute(
         private val jobId: String,
         private val registeredSkills: Map<String, MockPlayerSkill>,
         private val trees: List<MockTree>
-    ) : RealLookupTarget {
+    ) : ProxyRouteTarget<MockPlayer> {
 
         private val levelsByNodeId = LinkedHashMap<String, LinkedHashMap<String, Int>>()
         private val canAdvanceByNodeId = LinkedHashMap<String, LinkedHashMap<String, Boolean>>()
@@ -830,18 +834,18 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
             }
         }
 
-        override val lookupSkillTrees: List<RealLookupTreeDefinition>
+        override val proxySkillTrees: List<ProxyTreeDefinition>
             get() = treeDefinitions
 
         override fun getNodeLevel(treeId: String, nodeId: String): Int {
             return levelsByNodeId[treeId]?.get(nodeId) ?: 0
         }
 
-        override fun isNodeCanAdvance(treeId: String, nodeId: String): Boolean {
+        override fun isNodeCanAdvance(player: MockPlayer, treeId: String, nodeId: String): Boolean {
             return canAdvanceByNodeId[treeId]?.get(nodeId) ?: false
         }
 
-        override fun getNodeHints(treeId: String, nodeId: String): List<String> {
+        override fun getNodeHints(player: MockPlayer, treeId: String, nodeId: String): List<String> {
             return hintsByNodeId[treeId]?.get(nodeId) ?: emptyList()
         }
 
@@ -881,18 +885,87 @@ class SkillTreeBukkitPlannersAccessScenarioTest {
         }
 
         /**
-         * 返回逐节点反查的 polyglot 业务代理视图。
+         * 返回逐节点反查的动态业务视图。
          *
          * @param player 当前玩家。
          * @return 生产代理层视图。
          */
-        fun getSkillTreeRuntimeProjectionView(player: MockPlayer): Any {
-            return PlayerRoutePolyglotView(this)
+        fun getPlayerRoute(player: MockPlayer): Any {
+            return MockPlayerRouteView(this, player)
+        }
+    }
+
+    /** 原生 Polyglot 测试上下文中的动态路线对象。 */
+    private class MockPlayerRouteView(
+        private val route: MockPlayerRoute,
+        private val player: MockPlayer
+    ) : ProxyObject {
+
+        private val members = setOf(
+            "getTreeCount",
+            "getTreeId",
+            "getNodeCount",
+            "getNodeIdAt",
+            "getNodeLevel",
+            "canAdvanceNode",
+            "getNodeHints"
+        )
+
+        override fun getMember(key: String?): Any {
+            if (key == "getTreeCount") {
+                return ProxyExecutable { route.proxySkillTrees.size }
+            }
+            if (key == "getTreeId") {
+                return ProxyExecutable { args -> route.proxySkillTrees[args[0].asInt()].id }
+            }
+            if (key == "getNodeCount") {
+                return ProxyExecutable { args -> tree(args[0].asString()).nodeIds.size }
+            }
+            if (key == "getNodeIdAt") {
+                return ProxyExecutable { args ->
+                    val definition = tree(args[0].asString())
+                    definition.nodeIds[args[1].asInt()]
+                }
+            }
+            if (key == "getNodeLevel") {
+                return ProxyExecutable { args -> route.getNodeLevel(args[0].asString(), args[1].asString()) }
+            }
+            if (key == "canAdvanceNode") {
+                return ProxyExecutable { args -> route.isNodeCanAdvance(player, args[0].asString(), args[1].asString()) }
+            }
+            if (key == "getNodeHints") {
+                return ProxyExecutable { args ->
+                    val hints = route.getNodeHints(player, args[0].asString(), args[1].asString())
+                    hints.toTypedArray()
+                }
+            }
+            throw IllegalArgumentException("未知成员: $key")
+        }
+
+        private fun tree(treeId: String): ProxyTreeDefinition {
+            for (definition in route.proxySkillTrees) {
+                if (definition.id == treeId) {
+                    return definition
+                }
+            }
+            throw IllegalArgumentException("未知技能树: $treeId")
+        }
+
+        override fun getMemberKeys(): Any {
+            return members
+        }
+
+        override fun hasMember(key: String?): Boolean {
+            return members.contains(key)
+        }
+
+        override fun putMember(key: String?, value: org.graalvm.polyglot.Value?) {
+            throw UnsupportedOperationException("只读")
         }
     }
 
     /** Mock 技能树定义的最小视图。 */
-    private class MockTreeDefinition(tree: MockTree) : RealLookupTreeDefinition {
+    private class MockTreeDefinition(tree: MockTree) : ProxyTreeDefinition {
 
         override val id: String = tree.getId()
 

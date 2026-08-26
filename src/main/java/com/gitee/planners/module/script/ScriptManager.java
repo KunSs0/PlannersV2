@@ -9,6 +9,7 @@ import com.gitee.scriptengine.api.ScriptSession;
 import com.gitee.scriptengine.api.ScriptSource;
 import com.gitee.scriptengine.api.ScriptValue;
 import com.gitee.scriptengine.api.ScriptWorkspace;
+import com.gitee.scriptengine.api.ReusableScriptSession;
 import com.gitee.scriptengine.api.WorkspaceConfig;
 import com.gitee.scriptengine.loader.WorkspaceConfigLoader;
 import com.gitee.scriptengine.runtime.ScriptWorkspaces;
@@ -598,7 +599,11 @@ public final class ScriptManager {
         }
         SessionTimerHost timerHost = new SessionTimerHost();
         bindings.put("__plannersTimerHost", timerHost);
-        ScriptSession delegate = workspace.createSession(bindings, preludeScripts);
+        ReusableScriptSession delegate = workspace.createReusableSession(
+            bindings,
+            preludeScripts,
+            transientBindings
+        );
         ManagedSession session = new ManagedSession(delegate, variables, carrier, timerHost);
         timerHost.attach(session);
         ACTIVE_SESSIONS.add(session);
@@ -808,14 +813,14 @@ public final class ScriptManager {
             "    fn();\n" +
             "};\n";
 
-        private final ScriptSession delegate;
+        private final ReusableScriptSession delegate;
         private final Map<String, Object> variables;
         private final Object[] carrier;
         private final Map<Integer, ScheduledTask> tasks = new ConcurrentHashMap<>();
         private boolean closeRequested;
         private boolean closed;
 
-        private ManagedSession(ScriptSession delegate, Map<String, Object> variables, Object[] carrier, SessionTimerHost timerHost) {
+        private ManagedSession(ReusableScriptSession delegate, Map<String, Object> variables, Object[] carrier, SessionTimerHost timerHost) {
             this.delegate = delegate;
             this.variables = variables;
             this.carrier = carrier;
@@ -866,7 +871,7 @@ public final class ScriptManager {
                 variables.putAll(nextVariables);
             }
             Map<String, Object> merged = new LinkedHashMap<>(variables);
-            injectGlobals(delegate, merged);
+            delegate.rebind(merged, transientBindings);
         }
 
         /** 替换一个临时全局变量。 */
@@ -877,7 +882,7 @@ public final class ScriptManager {
                 }
                 variables.put(key, value);
             }
-            injectGlobal(delegate, key, value);
+            delegate.bind(key, value);
         }
 
         private void installTimerFunctions() {

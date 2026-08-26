@@ -12,6 +12,10 @@ import com.gitee.planners.core.config.ImmutableSkillTree
 import com.gitee.planners.core.config.SkillTreeNode
 import com.gitee.planners.core.config.SkillTreeSkillNode
 import com.gitee.planners.core.database.Database
+import com.gitee.planners.core.script.proxy.ProxyPlayerRoute
+import com.gitee.planners.core.script.proxy.ProxyRouteTarget
+import com.gitee.planners.core.script.proxy.ProxyTreeDefinition
+import com.gitee.planners.core.script.proxy.ProxyTreeDefinitionView
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.util.concurrent.CompletableFuture
@@ -24,7 +28,7 @@ class PlayerRoute(
     val jobId: String,
     skills: List<PlayerSkill>,
     nodeStates: List<PlayerSkillTreeNodeState>
-) : RealLookupTarget {
+) : ProxyRouteTarget<Player> {
 
     val router: ImmutableRouter
         get() = Registries.ROUTER.getOrNull(routerId) ?: error("Could not find router with id '$routerId'")
@@ -40,19 +44,6 @@ class PlayerRoute(
     private val nodeStatesByKey = LinkedHashMap<String, PlayerSkillTreeNodeState>()
     private val pendingNodeAdvancements = ConcurrentHashMap.newKeySet<String>()
     private val evaluator = ConditionEvaluator()
-
-    /** 当前线程绑定的玩家（脚本请求入口通过 [bindCurrentPlayer] 绑定）。 */
-    private val currentPlayer = ThreadLocal<Player>()
-
-    /** 在当前线程绑定玩家上下文，供逐节点反查的节点校验使用。 */
-    fun bindCurrentPlayer(player: Player) {
-        currentPlayer.set(player)
-    }
-
-    /** 清除当前线程的玩家上下文。 */
-    fun unbindCurrentPlayer() {
-        currentPlayer.remove()
-    }
 
     init {
         for (skill in skills) {
@@ -83,12 +74,18 @@ class PlayerRoute(
             return result
         }
 
-    override val lookupSkillTrees: List<RealLookupTreeDefinition>
-        get() = skillTrees.map { TreeDefinitionView(it) }
+    override val proxySkillTrees: List<ProxyTreeDefinition>
+        get() {
+            val result = ArrayList<ProxyTreeDefinition>()
+            for (tree in skillTrees) {
+                result.add(ProxyTreeDefinitionView(tree))
+            }
+            return result
+        }
 
-    /** 生成脚本侧逐节点反查的 polyglot 业务代理视图。 */
-    fun getSkillTreeRuntimeProjectionView(player: Player): Any {
-        return PlayerRoutePolyglotView(this)
+    /** 生成脚本侧逐节点反查的动态路线对象。 */
+    fun getPlayerRoute(player: Player): ProxyPlayerRoute<Player> {
+        return ProxyPlayerRoute(this, player)
     }
 
     fun getSkillTreeOrNull(treeId: String): ImmutableSkillTree? {
@@ -152,18 +149,12 @@ class PlayerRoute(
         return state.level
     }
 
-    override fun isNodeCanAdvance(treeId: String, nodeId: String): Boolean {
-        return canAdvanceNode(requireCurrentPlayer(), treeId, nodeId).passed
+    override fun isNodeCanAdvance(player: Player, treeId: String, nodeId: String): Boolean {
+        return canAdvanceNode(player, treeId, nodeId).passed
     }
 
-    override fun getNodeHints(treeId: String, nodeId: String): List<String> {
-        return canAdvanceNode(requireCurrentPlayer(), treeId, nodeId).hints
-    }
-
-    /** 当前线程绑定的玩家（由脚本请求入口绑定）。 */
-    private fun requireCurrentPlayer(): Player {
-        return currentPlayer.get()
-            ?: error("当前线程未绑定玩家上下文，无法执行节点校验")
+    override fun getNodeHints(player: Player, treeId: String, nodeId: String): List<String> {
+        return canAdvanceNode(player, treeId, nodeId).hints
     }
 
     fun getNodeLevels(treeId: String): Map<String, Int> {
