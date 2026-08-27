@@ -15,7 +15,7 @@ __option__:
     duration: 4 * level
   max-level: 4
 action: |
-  function main() {
-    tell("&a钢铁意志 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&a钢铁意志 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

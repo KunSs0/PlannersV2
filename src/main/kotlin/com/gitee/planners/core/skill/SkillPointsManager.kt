@@ -11,6 +11,19 @@ import taboolib.common.platform.event.SubscribeEvent
 object SkillPointsManager {
 
     private val accumulatedCache = mutableMapOf<Int, Int>()
+    private val expressions = LinkedHashMap<String, SingletonScript>()
+
+    /**
+     * 在 Workspace 加载前登记技能点公式的全部 Nova SourceUnit。
+     */
+    fun prepareSources() {
+        expressions.clear()
+        registerExpression(Planners.skillPointsPerLevel.get())
+        val bonuses = Planners.skillPointsBonuses.get()
+        for ((_, bonusPair) in bonuses) {
+            registerExpression(bonusPair.second)
+        }
+    }
 
     @SubscribeEvent
     fun e(e: PlayerLevelChangeEvent) {
@@ -65,12 +78,22 @@ object SkillPointsManager {
     }
 
     private fun evalExpr(expr: String, level: Int): Int {
-        return try {
-            val script = SingletonScript(expr)
-            val options = ScriptOptions.of().set("level", level)
-            script.eval(options)?.toString()?.toDoubleOrNull()?.toInt() ?: 0
-        } catch (_: Exception) {
-            0
+        val script = expressions[expr]
+        if (script == null) {
+            throw IllegalStateException("The skill-points expression was not precompiled: $expr")
+        }
+        val options = ScriptOptions.of().set("level", level)
+        val result = script.eval(options)
+        if (result == null) {
+            throw IllegalStateException("The skill-points expression returned null: $expr")
+        }
+        return result.toString().toDouble().toInt()
+    }
+
+    /** 登记一条去重后的技能点公式。 */
+    private fun registerExpression(expression: String) {
+        if (!expressions.containsKey(expression)) {
+            expressions[expression] = SingletonScript(expression, "config:skill-points:${expression.hashCode()}")
         }
     }
 }

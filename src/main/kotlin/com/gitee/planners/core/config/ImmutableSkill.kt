@@ -9,14 +9,12 @@ import com.gitee.planners.core.skill.context.SkillContext
 import com.gitee.planners.core.skill.directing.DirectingConfigSection
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
-import com.gitee.scriptengine.api.ScriptResult
-import com.gitee.scriptengine.api.CompiledScript
-import com.gitee.planners.module.script.ScriptContext
+import com.gitee.planners.module.script.NovaScriptUnit
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
-import taboolib.common.platform.function.warning
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
@@ -49,16 +47,16 @@ class ImmutableSkill(config: Configuration) : Unique {
         } else {
             val type = directingSection.getString("type")
             if (type == null || type.isBlank()) {
-                throw IllegalArgumentException("技能 '$id' 的 directing 缺少 type")
+                throw IllegalArgumentException("Skill '$id' directing configuration is missing type")
             }
             val provider = DirectingProviderRegistry.getOrNull(type)
             if (provider == null) {
-                throw IllegalArgumentException("技能 '$id' 的 directing.type 未注册: $type")
+                throw IllegalArgumentException("Skill '$id' directing type is not registered: $type")
             }
             val config = DirectingConfigSection(directingSection)
             val decoded = provider.decode(config)
             if (decoded.type != type) {
-                throw IllegalArgumentException("技能 '$id' 的 directing provider 返回了不匹配的 type: ${decoded.type}")
+                throw IllegalArgumentException("Skill '$id' directing provider returned a mismatched type: ${decoded.type}")
             }
             directing = decoded
         }
@@ -99,23 +97,10 @@ class ImmutableSkill(config: Configuration) : Unique {
     /** 脚本源代码 */
     val action = config.getString("action", config.getString("run", ""))!!
 
-    /** 技能级 PRELUDE 脚本路径，会在该技能脚本 Context 中额外注入。 */
-    val preludeScripts: List<String>
-    init {
-        val configuredPrelude = option.getStringList("prelude")
-        val paths = ArrayList<String>()
-        for (path in configuredPrelude) {
-            if (path.isNotBlank()) {
-                paths.add(path.trim())
-            }
-        }
-        preludeScripts = paths
-    }
-
     /**
      * 技能提供的属性。
      * key = 属性键（在 registry 中为逻辑属性，否则为物理直通）
-     * value = JS 表达式字符串或数字
+     * value = Nova 表达式字符串或数字
      */
     val attributes: Map<String, String>
         get() {
@@ -141,14 +126,31 @@ class ImmutableSkill(config: Configuration) : Unique {
      *
      * 所有值在函数局部作用域按 YAML 声明顺序计算，避免向长期 Context 写入玩家变量。
      */
-    private val displayVariablesFunction: CompiledScript = createDisplayVariablesFunction()
+    private val displayVariablesFunction: NovaScriptUnit = createDisplayVariablesFunction()
+
+    /** 技能 action 对应的启动期预编译 Nova 模块。 */
+    private val actionModule: NovaScriptUnit?
+    init {
+        if (action.isBlank()) {
+            actionModule = null
+        } else {
+            actionModule = ScriptManager.compileModule("skill:$id:action", action)
+        }
+    }
+
+    /** 启动期预编译的技能属性 Nova 表达式。 */
+    val attributeScripts: Map<String, SingletonScript> = attributes.mapValues { entry ->
+        SingletonScript(entry.value, "skill:$id:attribute:${entry.key}")
+    }
+
+    /** 显示模板表达式到启动期预编译 Nova SourceUnit 的映射。 */
+    private val templateScripts = ConcurrentHashMap<String, NovaScriptUnit>()
 
     init {
-        validateDisplayTemplate("display.icon.name", displayIconName)
+        registerDisplayTemplate("display.icon.name", displayIconName)
         for (index in displayIconLore.indices) {
-            validateDisplayTemplate("display.icon.lore[$index]", displayIconLore[index])
+            registerDisplayTemplate("display.icon.lore[$index]", displayIconLore[index])
         }
-        ScriptManager.installPersistent(displayVariablesFunction)
     }
 
     /** 外部插件实现的 Hook 标记接口 */
@@ -184,7 +186,6 @@ class ImmutableSkill(config: Configuration) : Unique {
     companion object {
         private val decoders = ConcurrentHashMap<String, Decoder>()
         val displayTemplatePattern: Pattern = Pattern.compile("\\{\\{(.+?)}}")
-        private val displayTemplateKeyPattern = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
 
         fun registerHook(namespace: String, decoder: Decoder) {
             decoders[namespace] = decoder
@@ -217,33 +218,21 @@ class ImmutableSkill(config: Configuration) : Unique {
         }
 
         val task = {
-            val vars = options.variables
-            ScriptContext.setCurrent(vars)
+            // 全部 YAML variable 表达式先由同一 Workspace 的预编译 Nova 批处理入口计算。
+            val resolvedVariables = evaluateDisplayVariables(options)
+            for ((variableId, variableValue) in resolvedVariables) {
+                options.set(variableId, variableValue)
+            }
             val session = ScriptManager.openSession(options)
             try {
-                val evalResult = session.eval(action)
-                val evalSuccess = handleScriptResult("加载", evalResult)
-                if (!evalSuccess) {
+                val module = actionModule
+                if (module == null) {
                     null
-                } else if (session.hasFunction("main")) {
-                    val invokeResult = session.invoke("main")
-                    val invokeSuccess = handleScriptResult("执行", invokeResult)
-                    if (invokeSuccess) {
-                        invokeResult.value
-                    } else {
-                        null
-                    }
                 } else {
-                    evalResult.value
+                    session.invoke(module, "execute")
                 }
-            } catch (e: Throwable) {
-                warning("[Skill] 技能脚本执行异常: $id")
-                warning("[Skill] ${e.javaClass.simpleName}: ${e.message}")
-                e.printStackTrace()
-                null
             } finally {
                 session.close()
-                ScriptContext.clear()
             }
         }
 
@@ -254,21 +243,29 @@ class ImmutableSkill(config: Configuration) : Unique {
         }
     }
 
-    fun getVariableOrNull(id: String): Variable? {
-        return immutableVariables[id]
+    /**
+     * 调用当前技能 action 模块中的业务回调。
+     *
+     * @param functionName action 模块导出的函数名。
+     * @param options 本次技能调用绑定。
+     * @param payload 回调负载。
+     * @return Nova 回调返回值；技能未声明 action 时返回 null。
+     */
+    fun invokeActionFunction(functionName: String, options: ScriptOptions, payload: Map<String, Any>): Any? {
+        val module = actionModule
+        if (module == null) {
+            return null
+        }
+        val session = ScriptManager.openSession(options)
+        try {
+            return session.invoke(module, functionName, payload)
+        } finally {
+            session.close()
+        }
     }
 
-    private fun handleScriptResult(stage: String, result: ScriptResult): Boolean {
-        if (result.success) {
-            return true
-        }
-        val error = result.error
-        warning("[Skill] 技能脚本${stage}异常: $id")
-        if (error != null) {
-            warning("[Skill] ${error.javaClass.simpleName}: ${error.message}")
-            error.printStackTrace()
-        }
-        return false
+    fun getVariableOrNull(id: String): Variable? {
+        return immutableVariables[id]
     }
 
     fun getVariables(): Map<String, Variable> {
@@ -286,10 +283,10 @@ class ImmutableSkill(config: Configuration) : Unique {
             options.variables["profile"]
         )
         if (values !is List<*>) {
-            throw IllegalStateException("技能 '$id' 显示变量批处理返回类型错误")
+            throw IllegalStateException("Skill '$id' display variable batch returned an invalid type")
         }
         if (values.size != immutableVariables.size) {
-            throw IllegalStateException("技能 '$id' 显示变量批处理返回数量错误")
+            throw IllegalStateException("Skill '$id' display variable batch returned an invalid value count")
         }
         val result = LinkedHashMap<String, Any?>()
         var index = 0
@@ -300,23 +297,42 @@ class ImmutableSkill(config: Configuration) : Unique {
         return result
     }
 
-    private fun validateDisplayTemplate(path: String, text: String?) {
+    /**
+     * 使用 RuntimeWorkspace 预编译入口计算一个 `{{expression}}`。
+     *
+     * @param expression 模板中的原始 Nova 表达式。
+     * @param options 已包含技能变量与调用上下文的绑定。
+     * @return Nova 表达式结果。
+     */
+    fun evaluateDisplayTemplate(expression: String, options: ScriptOptions): Any? {
+        val normalized = expression.trim()
+        val script = templateScripts[normalized]
+        if (script == null) {
+            throw IllegalStateException("Skill '$id' display template was not precompiled: {{$normalized}}")
+        }
+        return ScriptManager.invokePersistent(script, options)
+    }
+
+    /** 扫描一项显示文本，并在 Workspace load 前登记其中全部 Nova 模板表达式。 */
+    private fun registerDisplayTemplate(path: String, text: String?) {
         if (text == null) {
             return
         }
         val matcher = displayTemplatePattern.matcher(text)
+        var expressionIndex = 0
         while (matcher.find()) {
-            val key = matcher.group(1)
-            if (!displayTemplateKeyPattern.matches(key)) {
-                throw IllegalArgumentException("技能 '$id' 的 $path 占位符必须为 {{变量名}}，不支持内联表达式: {{$key}}")
+            val expression = matcher.group(1).trim()
+            if (expression.isEmpty()) {
+                throw IllegalArgumentException("Skill '$id' has a blank display template at $path")
             }
-            if (key != "level" && !immutableVariables.containsKey(key)) {
-                throw IllegalArgumentException("技能 '$id' 的 $path 引用了未声明变量: {{$key}}")
-            }
+            val sourceId = "skill:$id:template:$path:$expressionIndex"
+            val script = ScriptManager.compileExpression(sourceId, expression)
+            templateScripts[expression] = script
+            expressionIndex += 1
         }
     }
 
-    private fun createDisplayVariablesFunction(): CompiledScript {
+    private fun createDisplayVariablesFunction(): NovaScriptUnit {
         val body = StringBuilder()
         for ((_, variable) in immutableVariables) {
             variable.appendDisplayEvaluation(body)
@@ -330,7 +346,7 @@ class ImmutableSkill(config: Configuration) : Unique {
             body.append(variableId)
             first = false
         }
-        body.append("];\n")
+        body.append("]\n")
         return ScriptManager.compileAction(
             "skill:$id:display-variables",
             listOf("sender", "level", "ctx", "skill", "profile"),

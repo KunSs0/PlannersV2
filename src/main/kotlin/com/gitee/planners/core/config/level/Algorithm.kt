@@ -20,7 +20,12 @@ interface Algorithm {
     fun getCallbacks(level: Int): List<LevelCallback> = emptyList()
 
 
-    class Js(val root: ConfigurationSection) : Algorithm, Unique {
+    /**
+     * 使用预编译 Nova 表达式计算等级经验与回调的算法实现。
+     *
+     * @property root 等级算法配置节。
+     */
+    class Nova(val root: ConfigurationSection) : Algorithm, Unique {
 
         override val id: String = root.name
 
@@ -28,7 +33,14 @@ interface Algorithm {
 
         override val maxLevel = root.getInt("max")
 
-        private val action = SingletonScript(root.getString("experience"))
+        private val action: SingletonScript
+        init {
+            val experience = root.getString("experience")
+            if (experience == null || experience.isBlank()) {
+                throw IllegalArgumentException("Level algorithm '$id' requires an experience expression")
+            }
+            action = SingletonScript(experience, "level:$id:experience")
+        }
 
         private val callbacks = parseCallbacks(root.getConfigurationSection("callbacks"))
 
@@ -37,7 +49,12 @@ interface Algorithm {
                 it.set("sender", player)
                 it.set("level", level)
             }
-            return action.run(options).thenApply { it?.cint ?: Int.MAX_VALUE }
+            return action.run(options).thenApply { result ->
+                if (result == null) {
+                    throw IllegalStateException("Level algorithm '$id' returned null")
+                }
+                result.cint
+            }
         }
 
         override fun getCallbacks(level: Int): List<LevelCallback> {
@@ -48,19 +65,32 @@ interface Algorithm {
             if (section == null) {
                 return emptyMap()
             }
-            return section.getKeys(false).mapNotNull { key ->
+            val result = LinkedHashMap<Int, List<LevelCallback>>()
+            for (key in section.getKeys(false)) {
                 val level = key.toIntOrNull()
                 if (level == null) {
                     warning("Unknown level callback key: $key")
-                    return@mapNotNull null
+                    continue
                 }
-                val callbacks = when {
-                    section.isList(key) -> section.getStringList(key)
-                    section.isString(key) -> listOfNotNull(section.getString(key))
-                    else -> emptyList()
-                }.mapNotNull { LevelCallback.parse(it) }
-                level to callbacks
-            }.toMap()
+                val sources = ArrayList<String>()
+                if (section.isList(key)) {
+                    sources.addAll(section.getStringList(key))
+                } else if (section.isString(key)) {
+                    val source = section.getString(key)
+                    if (source != null) {
+                        sources.add(source)
+                    }
+                }
+                val callbacks = ArrayList<LevelCallback>()
+                for (source in sources) {
+                    val callback = LevelCallback.parse("level:$id:callback:$key", source)
+                    if (callback != null) {
+                        callbacks.add(callback)
+                    }
+                }
+                result[level] = callbacks
+            }
+            return result
         }
 
     }
@@ -71,36 +101,9 @@ interface Algorithm {
             if (root == null) {
                 return null
             }
-            return Js(root)
+            return Nova(root)
         }
 
     }
 
-}
-
-class LevelCallback private constructor(
-    val command: String?,
-    val script: SingletonScript?
-) {
-
-    companion object {
-
-        fun parse(source: String): LevelCallback? {
-            val value = source.trim()
-            if (value.isEmpty()) {
-                return null
-            }
-            val normalized = value.trimStart()
-            return if (normalized.startsWith("js:")) {
-                val script = normalized.removePrefix("js:").trimStart()
-                if (script.isEmpty()) {
-                    null
-                } else {
-                    LevelCallback(null, SingletonScript(script))
-                }
-            } else {
-                LevelCallback(value, null)
-            }
-        }
-    }
 }

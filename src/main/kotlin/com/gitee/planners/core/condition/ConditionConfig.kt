@@ -2,7 +2,7 @@ package com.gitee.planners.core.condition
 
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
-import com.gitee.scriptengine.api.ScriptSession
+import com.gitee.planners.module.script.NovaSession
 
 /**
  * 不可变条件定义。
@@ -20,22 +20,21 @@ class ConditionConfig(
 
     private val expressionFunction = ScriptManager.compileAction(
         "condition:$key:expression",
-        "var props = __plannersConditionProps; return ($exper);"
+        "val props = __plannersConditionProps\nreturn ($exper)"
     )
 
     private val batchFunction = ScriptManager.compileAction(
         "condition:$key:batch",
         listOf("player", "profile", "router", "route", "values"),
-        "var result = '';" +
-            "for (var i = 0; i < values.length; i++) {" +
-            "var input = values[i];" +
-            "var props = input.props;" +
-            "var treeId = input.treeId;" +
-            "var nodeId = input.nodeId;" +
-            "var nodeLevel = input.nodeLevel;" +
-            "result += ($exper) ? '1' : '0';" +
-            "}" +
-            "return result;"
+        "var result = \"\"\n" +
+            "for (input in values) {\n" +
+            "val props = input.props\n" +
+            "val treeId = input.treeId\n" +
+            "val nodeId = input.nodeId\n" +
+            "val nodeLevel = input.nodeLevel\n" +
+            "result += if ($exper) \"1\" else \"0\"\n" +
+            "}\n" +
+            "return result"
     )
 
     private val consumeFunction = if (consume == null) {
@@ -43,38 +42,28 @@ class ConditionConfig(
     } else {
         ScriptManager.compileAction(
             "condition:$key:consume",
-            "var props = __plannersConditionProps;" + consume
+            "val props = __plannersConditionProps\n" + consume
         )
     }
 
-    private var persistentInstalled = false
-
     /**
-     * 将条件批量函数安装到长期 ScriptEngine 会话。
+     * 校验条件入口已经在当前 Workspace 加载前完成登记。
      *
-     * 配置节点会在 Bukkit 插件启用前解码，因此不能在构造阶段创建 Graal Context。
-     * 插件启用时主动调用本方法；配置热重载产生的新条件由首次批量校验兜底安装。
+     * 条件对象构造函数已经登记表达式、批处理与消耗 SourceUnit；这里显式验证模块标识，
+     * 供插件启动和重建流程清楚表达“收集条件源码”阶段。
      */
-    @Synchronized
-    fun installPersistent() {
-        if (persistentInstalled) {
-            return
+    fun registerSources() {
+        if (expressionFunction.moduleId.isBlank() || batchFunction.moduleId.isBlank()) {
+            throw IllegalStateException("A condition Nova module ID must not be blank: $key")
         }
-        ScriptManager.installPersistent(batchFunction)
-        persistentInstalled = true
-    }
-
-    /** 将条件函数安装到当前会话。 */
-    fun install(session: ScriptSession) {
-        ScriptManager.installCompiledFunction(session, expressionFunction)
         val consumeFunction = this.consumeFunction
-        if (consumeFunction != null) {
-            ScriptManager.installCompiledFunction(session, consumeFunction)
+        if (consumeFunction != null && consumeFunction.moduleId.isBlank()) {
+            throw IllegalStateException("A condition consume Nova module ID must not be blank: $key")
         }
     }
 
     /** 使用当前会话已绑定的 player、route 等上下文执行条件。 */
-    fun evaluate(session: ScriptSession, conditionProps: Map<String, Any>): Boolean {
+    fun evaluate(session: NovaSession, conditionProps: Map<String, Any>): Boolean {
         ScriptManager.setReusableSessionBinding(session, "__plannersConditionProps", conditionProps)
         return ScriptManager.invokeCompiled(session, expressionFunction) == true
     }
@@ -82,13 +71,12 @@ class ConditionConfig(
     /**
      * 在长期工作区 Context 内批量执行条件。
      *
-     * 参数均为函数局部变量，不写入 JavaScript 全局作用域。
+     * 参数均为函数局部变量，不写入 Nova 全局作用域。
      */
     fun evaluateBatchPersistent(
         options: ScriptOptions,
         conditionInputs: List<Map<String, Any>>
     ): BatchEvaluation {
-        installPersistent()
         val invocation = ScriptManager.invokePersistentProfiled(
             batchFunction,
             options,
@@ -118,7 +106,7 @@ class ConditionConfig(
     }
 
     /** 执行已经验证通过的条件消耗。 */
-    fun consume(session: ScriptSession, conditionProps: Map<String, Any>) {
+    fun consume(session: NovaSession, conditionProps: Map<String, Any>) {
         val consumeFunction = this.consumeFunction
         if (consumeFunction == null) {
             return

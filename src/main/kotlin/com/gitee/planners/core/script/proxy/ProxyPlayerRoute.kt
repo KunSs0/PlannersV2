@@ -1,43 +1,19 @@
 package com.gitee.planners.core.script.proxy
 
-import com.gitee.scriptengine.api.ScriptFunction
-import com.gitee.scriptengine.api.ScriptObject
-import com.gitee.scriptengine.api.ScriptValue
-
 class ProxyPlayerRoute<P>(
     private val route: ProxyRouteTarget<P>,
     private val player: P
-) : ScriptObject {
+) {
 
     private class TreeIndex(val definition: ProxyTreeDefinition)
 
     private val treeIndexes = LinkedHashMap<String, TreeIndex>()
     private val canAdvanceCache = HashMap<String, Boolean>()
     private val hintsCache = HashMap<String, List<String>>()
-    private val members = LinkedHashMap<String, ScriptFunction>()
 
     init {
         for (tree in route.proxySkillTrees) {
             treeIndexes[tree.id] = TreeIndex(tree)
-        }
-        members["getTreeCount"] = function { route.proxySkillTrees.size }
-        members["getTreeId"] = function { arguments ->
-            route.proxySkillTrees[arguments[0].asInt()].id
-        }
-        members["getNodeCount"] = function { arguments ->
-            view(arguments[0].asString()).definition.nodeIds.size
-        }
-        members["getNodeIdAt"] = function { arguments ->
-            view(arguments[0].asString()).definition.nodeIds[arguments[1].asInt()]
-        }
-        members["getNodeLevel"] = function { arguments ->
-            route.getNodeLevel(arguments[0].asString(), arguments[1].asString())
-        }
-        members["canAdvanceNode"] = function { arguments ->
-            cachedCanAdvance(arguments[0].asString(), arguments[1].asString())
-        }
-        members["getNodeHints"] = function { arguments ->
-            ProxyStringList(cachedHints(arguments[0].asString(), arguments[1].asString()))
         }
     }
 
@@ -68,32 +44,43 @@ class ProxyPlayerRoute<P>(
     private fun view(treeId: String): TreeIndex {
         val result = treeIndexes[treeId]
         if (result == null) {
-            throw IllegalArgumentException("未知技能树: $treeId")
+            throw IllegalArgumentException("Unknown skill tree: $treeId")
         }
         return result
     }
 
-    private fun function(block: (Array<out ScriptValue>) -> Any?): ScriptFunction {
-        return ScriptFunction { arguments -> block(arguments) }
+    /** @return 路线包含的技能树数量。 */
+    fun getTreeCount(): Int {
+        return route.proxySkillTrees.size
     }
 
-    override fun getMember(key: String): Any? {
-        val result = members[key]
-        if (result == null) {
-            throw IllegalArgumentException("未知成员: $key")
-        }
-        return result
+    /** @return 指定索引的技能树 ID。 */
+    fun getTreeId(index: Int): String {
+        return route.proxySkillTrees[index].id
     }
 
-    override fun getMemberKeys(): Array<String> {
-        return members.keys.toTypedArray()
+    /** @return 指定技能树的节点数量。 */
+    fun getNodeCount(treeId: String): Int {
+        return view(treeId).definition.nodeIds.size
     }
 
-    override fun hasMember(key: String): Boolean {
-        return members.containsKey(key)
+    /** @return 指定技能树索引位置的节点 ID。 */
+    fun getNodeIdAt(treeId: String, index: Int): String {
+        return view(treeId).definition.nodeIds[index]
     }
 
-    override fun putMember(key: String, value: ScriptValue) {
-        throw UnsupportedOperationException("只读")
+    /** @return 指定节点的当前等级。 */
+    fun getNodeLevel(treeId: String, nodeId: String): Int {
+        return route.getNodeLevel(treeId, nodeId)
+    }
+
+    /** @return 指定节点当前能否升级。 */
+    fun canAdvanceNode(treeId: String, nodeId: String): Boolean {
+        return cachedCanAdvance(treeId, nodeId)
+    }
+
+    /** @return 指定节点当前的提示文本。 */
+    fun getNodeHints(treeId: String, nodeId: String): ProxyStringList {
+        return ProxyStringList(cachedHints(treeId, nodeId))
     }
 }

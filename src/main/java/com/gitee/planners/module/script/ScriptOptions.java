@@ -7,10 +7,7 @@ import com.gitee.planners.core.skill.context.SkillContext;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -22,7 +19,6 @@ import java.util.function.Consumer;
 public class ScriptOptions {
 
     private final Map<String, Object> variables = new LinkedHashMap<>();
-    private final List<String> preludeScripts = new ArrayList<>();
     private boolean async = false;
 
     public ScriptOptions set(String key, Object value) {
@@ -41,23 +37,6 @@ public class ScriptOptions {
 
     public Map<String, Object> getVariables() {
         return variables;
-    }
-
-    /** 设置本次脚本执行需要额外注入的 PRELUDE 脚本路径。 */
-    public ScriptOptions setPreludeScripts(List<String> paths) {
-        preludeScripts.clear();
-        if (paths != null) {
-            for (String path : paths) {
-                if (path != null && !path.trim().isEmpty()) {
-                    preludeScripts.add(path.trim());
-                }
-            }
-        }
-        return this;
-    }
-
-    public List<String> getPreludeScripts() {
-        return Collections.unmodifiableList(preludeScripts);
     }
 
     // ---- 静态工厂 ----
@@ -83,7 +62,6 @@ public class ScriptOptions {
     public static ScriptOptions sender(Object sender, ScriptOptions base) {
         ScriptOptions options = new ScriptOptions();
         options.variables.putAll(base.variables);
-        options.preludeScripts.addAll(base.preludeScripts);
         options.async = base.async;
         options.set("sender", sender);
         return options;
@@ -140,7 +118,6 @@ public class ScriptOptions {
         options.set("ctx", new SkillContext(proxyTarget, immutableSkill, level));
         if (immutableSkill != null) {
             options.set("skill", immutableSkill);
-            options.setPreludeScripts(immutableSkill.getPreludeScripts());
         }
         if (player != null) {
             options.set("profile", getProfile(player));

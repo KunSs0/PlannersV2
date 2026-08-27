@@ -1,5 +1,7 @@
 package com.gitee.planners.core.config
 
+import com.gitee.planners.module.script.NovaScriptUnit
+
 /**
  * 状态定义接口。
  */
@@ -34,7 +36,7 @@ interface State {
      * 状态脚本源码，通过约定函数名调用内置事件处理器。
      *
      * 内置事件函数：
-     * - main(): 状态加载时执行一次
+     * - onLoad(): 状态加载时执行一次
      * - onStateAttach(): 状态附加时触发
      * - onStateDetach(): 状态移除时触发
      * - onStateMount(): 状态首次挂载时触发
@@ -42,4 +44,7 @@ interface State {
      * - onStateEnd(): 状态自然结束时触发
      */
     val action: String?
+
+    /** 启动期预编译后的 Nova 状态模块。 */
+    val actionModule: NovaScriptUnit?
 }

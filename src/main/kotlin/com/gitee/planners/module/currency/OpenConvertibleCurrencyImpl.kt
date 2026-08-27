@@ -63,7 +63,7 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
     }
 
 
-    class SimpleAction(action: String) : SingletonScript(action) {
+    class SimpleAction(action: String) : SingletonScript(action, "currency-action:${action.hashCode()}") {
 
         fun runNow(player: Player, vararg args: Pair<String, Any?>) {
             val options = ScriptOptions.common(player)

@@ -15,7 +15,7 @@ __option__:
     duration: 3 * level
   max-level: 5
 action: |
-  function main() {
-    tell("&a战吼 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&a战吼 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

@@ -13,8 +13,8 @@ __option__:
     damage: 20 * level + 50
   max-level: 3
 action: |
-  function main() {
-    tell("&a释放斩击 Lv" + level)
-    damage(sender, target, getVar("damage"))
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&a释放斩击 Lv" + level)
+    ProxyDamage.Companion.builder().source(sender.getInstance()).target(target.getInstance()).damage(damage).cause(DamageCause.Companion.of("SKILL")).build().execute()
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

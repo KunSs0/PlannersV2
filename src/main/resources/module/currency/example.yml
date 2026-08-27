@@ -2,10 +2,10 @@ money:
   name: '金币'
   action:
     # 余额查询
-    hook: getBalance()
+    hook: Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().getBalance(sender)
     # 余额提取
-    withdraw: takeBalance(arg)
+    withdraw: Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().withdrawPlayer(sender, arg).transactionSuccess()
     # 余额存入
-    deposit: giveBalance(arg)
+    deposit: Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().depositPlayer(sender, arg).transactionSuccess()
     # 余额设置
-    set: setBalance(arg)
+    set: if (Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().getBalance(sender) > arg) Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().withdrawPlayer(sender, Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().getBalance(sender) - arg).transactionSuccess() else Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().depositPlayer(sender, arg - Java.static("org.bukkit.Bukkit", "getServicesManager").getRegistration(Economy).getProvider().getBalance(sender)).transactionSuccess()

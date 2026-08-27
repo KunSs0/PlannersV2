@@ -13,7 +13,7 @@ __option__:
     damage: 35 * level + 80
   max-level: 15
 action: |
-  function main() {
-    tell("&c释放重斩 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&c释放重斩 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

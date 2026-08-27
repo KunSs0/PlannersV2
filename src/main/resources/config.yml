@@ -40,12 +40,12 @@ settings:
       consume: "router.takeSkillPoints(props.amount)"
 
     is_warrior:
-      exper: "router != null && router.getCurrentJob().getId() == 'warrior'"
+      exper: 'router != null && router.getCurrentJob().getId() == "warrior"'
       props: {}
       hint: "需要战士职业"
 
     is_mage:
-      exper: "router != null && router.getCurrentJob().getId() == 'mage'"
+      exper: 'router != null && router.getCurrentJob().getId() == "mage"'
       props: {}
       hint: "需要法师职业"
 
@@ -72,9 +72,9 @@ settings:
 
   # 技能点配置
   skill-points:
-    # 每级获得点数，JS 表达式，变量: level
-    per-level: "level <= 30 ? 3 : 2"
-    # 关键等级额外奖励，JS 表达式，变量: level
+    # 每级获得点数，Nova 表达式，变量: level
+    per-level: "if (level <= 30) 3 else 2"
+    # 关键等级额外奖励，Nova 表达式，变量: level
     bonuses:
       10: "5"
       20: "5"
@@ -158,7 +158,7 @@ settings:
   magic-point:
     resume:
       # 法力值的恢复的运算表达式
-      expression: "1 + random(1, 2)"
+      expression: "1 + Java.static(\"java.util.concurrent.ThreadLocalRandom\", \"current\").nextInt(1, 3)"
       # 法力值的恢复的更新任务的轮询周期,单位tick
       update-tick: 20
     upper-limit:

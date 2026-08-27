@@ -2,6 +2,7 @@ package com.gitee.planners.core.config
 
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.Variable
+import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import org.bukkit.inventory.ItemStack
@@ -55,14 +56,14 @@ class ImmutableJob(private val config: Configuration) {
             }
         }
         if (duplicateSkills.isNotEmpty()) {
-            error("Job '$id' 包含重复技能: ${duplicateSkills.joinToString(", ")}")
+            error("Job '$id' contains duplicate skills: ${duplicateSkills.joinToString(", ")}")
         }
     }
 
     /**
      * 职业提供的属性。
      * key = 属性键（在 registry 中为逻辑属性，否则为物理直通）
-     * value = JS 表达式字符串或数字
+     * value = Nova 表达式字符串或数字
      */
     val attributes: Map<String, String>
         get() {
@@ -72,6 +73,11 @@ class ImmutableJob(private val config: Configuration) {
             }
             return section.getValues(false).mapValues { it.value.toString() }
         }
+
+    /** 启动期预编译的职业属性 Nova 表达式。 */
+    val attributeScripts: Map<String, SingletonScript> = attributes.mapValues { entry ->
+        SingletonScript(entry.value, "job:$id:attribute:${entry.key}")
+    }
 
     fun hasSkill(id: String): Boolean {
         return skillIds.contains(id)

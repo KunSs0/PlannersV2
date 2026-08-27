@@ -1,5 +1,7 @@
 package com.gitee.planners.core.config
 
+import com.gitee.planners.module.script.NovaScriptUnit
+import com.gitee.planners.module.script.ScriptManager
 import taboolib.library.configuration.ConfigurationSection
 
 class ImmutableState(val config: ConfigurationSection) : State {
@@ -28,5 +30,15 @@ class ImmutableState(val config: ConfigurationSection) : State {
             return raw
         }
         return null
+    }
+
+    override val actionModule: NovaScriptUnit?
+    init {
+        val source = action
+        if (source == null) {
+            actionModule = null
+        } else {
+            actionModule = ScriptManager.compileModule("state:$id:action", source)
+        }
     }
 }

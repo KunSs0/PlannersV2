@@ -24,14 +24,14 @@ object States {
     @Awake(LifeCycle.ENABLE)
     fun init() {
         for (state in Registries.STATE.values()) {
-            val source = state.action ?: continue
+            val module = state.actionModule
+            if (module == null) {
+                continue
+            }
             val options = ScriptOptions.of()
             val session = ScriptManager.openSession(options)
             try {
-                session.eval(source)
-                if (session.hasFunction("main")) {
-                    session.invoke("main")
-                }
+                session.invoke(module, "onLoad")
             } catch (e: Exception) {
                 warning("Failed to initialize state script: ${state.id}")
                 e.printStackTrace()
@@ -102,9 +102,17 @@ object States {
     }
 
     private fun invokeCallback(state: State, entity: ProxyTarget<*>, event: Any, funcName: String) {
-        val source = state.action ?: return
-        val target = entity as? ProxyTarget.Entity<*> ?: return
-        if (!target.hasState(state)) return
+        val module = state.actionModule
+        if (module == null) {
+            return
+        }
+        val target = entity as? ProxyTarget.Entity<*>
+        if (target == null) {
+            return
+        }
+        if (!target.hasState(state)) {
+            return
+        }
 
         val options = ScriptOptions.create {
             it.set("sender", target.instance)
@@ -114,12 +122,9 @@ object States {
 
         val session = ScriptManager.openSession(options)
         try {
-            session.eval(source)
-            if (session.hasFunction(funcName)) {
-                session.invoke(funcName)
-            }
-        } catch (_: Exception) {
-            // 函数不存在或执行失败，忽略
+            session.invoke(module, funcName)
+        } catch (exception: Exception) {
+            warning("Failed to invoke state callback '$funcName' for '${state.id}': ${exception.message}")
         } finally {
             session.close()
         }

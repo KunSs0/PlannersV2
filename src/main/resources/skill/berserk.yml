@@ -15,7 +15,7 @@ __option__:
     damage_taken: 3 * level + 10
   max-level: 18
 action: |
-  function main() {
-    tell("&4狂暴 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&4狂暴 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

@@ -138,7 +138,8 @@ object PlannersAPI {
         extraVariables.putAll(variables)
         val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
         val options = ScriptOptions.forSkill(player, level, skill.immutable, extraVariables)
-        return ScriptManager.invokeActionFunction(skill.immutable.action, method, options, payload)
+        val result = skill.immutable.invokeActionFunction(method, options, payload)
+        return result != null
     }
 
     /**

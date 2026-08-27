@@ -51,10 +51,11 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         val matcher = ImmutableSkill.displayTemplatePattern.matcher(text.trim())
         val rendered = StringBuffer()
         while (matcher.find()) {
-            val key = matcher.group(1)
-            val value = preparedOptions.variables[key]
-            check(value != null) {
-                "技能 '${skill.id}' 的图标占位符 {{$key}} 未计算出变量值"
+            val expression = matcher.group(1)
+            // 模板业务表达式始终通过启动期预编译的 Nova SourceUnit 执行。
+            val value = skill.evaluateDisplayTemplate(expression, preparedOptions)
+            if (value == null) {
+                throw IllegalStateException("Skill '${skill.id}' display template returned null: {{$expression}}")
             }
             matcher.appendReplacement(rendered, Matcher.quoteReplacement(value.toString()))
             profiling.templateResolveCount += 1
@@ -99,10 +100,11 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         val matcher = ImmutableSkill.displayTemplatePattern.matcher(text.trim())
         val rendered = StringBuffer()
         while (matcher.find()) {
-            val key = matcher.group(1)
-            val value = renderingOptions.variables[key]
-            check(value != null) {
-                "技能 '${skill.id}' 的图标占位符 {{$key}} 未计算出变量值"
+            val expression = matcher.group(1)
+            // 模板业务表达式始终通过启动期预编译的 Nova SourceUnit 执行。
+            val value = skill.evaluateDisplayTemplate(expression, renderingOptions)
+            if (value == null) {
+                throw IllegalStateException("Skill '${skill.id}' display template returned null: {{$expression}}")
             }
             matcher.appendReplacement(rendered, Matcher.quoteReplacement(value.toString()))
             profiling.templateResolveCount += 1

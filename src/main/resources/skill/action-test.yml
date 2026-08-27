@@ -3,27 +3,36 @@ __option__:
   category: [active]
 
 action: |
-  function main() {
+  fun execute() {
     // 测试默认 sender (不传 targets，使用 LeastType.SENDER)
-    damage(10)
-    heal(5)
+    ProxyDamage.Companion.of(sender.getInstance(), 10).execute()
+    sender.getInstance().setHealth(Java.static("java.lang.Math", "min", sender.getInstance().getHealth() + 5, sender.getInstance().getMaxHealth()))
 
     // 使用 finder 链式选择器选择目标
-    var targets = finder().range(8).excludeType("player").limit(5).build()
-    damage(20, targets)
+    var targets = TargetFinder(sender.getBukkitLocation(), sender.getInstance(), EntityFacingProviders.INSTANCE.getFacingYaw(sender.getInstance())).range(8).excludeType("player").limit(5).build()
+    for (target in targets) {
+      ProxyDamage.Companion.of(target.getInstance(), 20).execute()
+    }
 
     // 测试药水效果 (默认 sender)
-    potion("SPEED", 1, 200)
+    val speed = Java.static("org.bukkit.potion.PotionEffectType", "getByName", "SPEED")
+    sender.getInstance().addPotionEffect(PotionEffect(speed, 200, 0, false, true))
 
     // 测试速度 (指定目标)
-    velocityAdd(0, 1, 0, targets)
+    for (target in targets) {
+      val entity = target.getInstance()
+      entity.setVelocity(entity.getVelocity().add(Vector(0, 1, 0)))
+    }
 
     // 测试状态
-    freeze(100, targets)
-    fire(60, targets)
+    for (target in targets) {
+      target.getInstance().setFreezeTicks(100)
+      target.getInstance().setFireTicks(60)
+    }
 
     // 测试声音 (默认 sender)
-    sound("ENTITY_PLAYER_LEVELUP", 1.0, 1.0)
+    val player = sender.getInstance()
+    player.playSound(player.getLocation(), Java.static("org.bukkit.Sound", "valueOf", "ENTITY_PLAYER_LEVELUP"), 1.0, 1.0)
 
-    tell("技能执行完毕")
+    sender.sendMessage("技能执行完毕")
   }

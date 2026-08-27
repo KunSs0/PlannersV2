@@ -19,7 +19,7 @@ import taboolib.platform.util.onlinePlayers
  * 默认魔力值提供器。
  *
  * 定期在 Bukkit 主线程计算在线玩家的魔力上限与恢复值。脚本表达式会复用
- * GraalJS 上下文，因此不得从多个异步调度线程并发执行。
+ * Nova Workspace，因此所有 Bukkit 对象访问均显式调度到主线程。
  */
 class DefaultMagicPointProvider : MagicPointProvider {
 
@@ -60,7 +60,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
      * 注册魔力更新定时任务。
      *
      * 每次配置重载都会先取消旧任务，再使用主线程任务重新注册。运行在主线程
-     * 能保证 GraalJS 上下文串行访问，同时满足 Bukkit 玩家对象仅由主线程访问的要求。
+     * 能保证 Nova 入口串行访问，同时满足 Bukkit 玩家对象仅由主线程访问的要求。
      */
     private fun scheduleUpdateTasks() {
         if (!enabled) {
@@ -91,8 +91,11 @@ class DefaultMagicPointProvider : MagicPointProvider {
             return
         }
         val data = expressionResume.get().eval(ScriptOptions.common(player))
+        if (data == null) {
+            throw IllegalStateException("The magic point resume expression returned null")
+        }
         val template = player.plannersTemplate
-        template.magicPoint += data?.cint ?: 0
+        template.magicPoint += data.cint
     }
 
     /**
@@ -109,7 +112,10 @@ class DefaultMagicPointProvider : MagicPointProvider {
             return
         }
         val data = expressionUpperLimit.get().eval(ScriptOptions.common(player))
-        setPointInUpperLimit(player, data?.cint ?: 0)
+        if (data == null) {
+            throw IllegalStateException("The magic point upper-limit expression returned null")
+        }
+        setPointInUpperLimit(player, data.cint)
     }
 
 
@@ -117,12 +123,20 @@ class DefaultMagicPointProvider : MagicPointProvider {
 
         @ConfigNode("settings.magic-point.upper-limit.expression")
         val expressionUpperLimit = lazyConversion<String?, SingletonScript> {
-            SingletonScript(this ?: "${Int.MAX_VALUE}")
+            val source = this
+            if (source == null || source.isBlank()) {
+                throw IllegalStateException("The magic point upper-limit expression is required")
+            }
+            SingletonScript(source, "config:magic-point:upper-limit")
         }
 
         @ConfigNode("settings.magic-point.resume.expression")
         val expressionResume = lazyConversion<String?, SingletonScript> {
-            SingletonScript(this ?: "${Int.MAX_VALUE}")
+            val source = this
+            if (source == null || source.isBlank()) {
+                throw IllegalStateException("The magic point resume expression is required")
+            }
+            SingletonScript(source, "config:magic-point:resume")
         }
 
         @ConfigNode("settings.magic-point.upper-limit.update-tick")

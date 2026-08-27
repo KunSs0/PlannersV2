@@ -4,8 +4,7 @@ import com.gitee.planners.api.job.Variable
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.SingletonScript
-import com.gitee.scriptengine.api.ScriptSession
-import taboolib.common5.cbool
+import com.gitee.planners.module.script.NovaSession
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
 import java.util.concurrent.CompletableFuture
@@ -18,7 +17,7 @@ interface ImmutableVariable : Variable {
      * @param session 当前图标渲染使用的脚本会话。
      * @return 变量计算结果。
      */
-    fun evaluate(session: ScriptSession): Any?
+    fun evaluate(session: NovaSession): Any?
 
     /** 向技能显示变量批处理函数写入局部计算语句。 */
     fun appendDisplayEvaluation(builder: StringBuilder)
@@ -29,7 +28,7 @@ interface ImmutableVariable : Variable {
 
         fun parse(id: String, value: Any): ImmutableVariable {
             require(identifierPattern.matches(id)) {
-                "变量 ID '$id' 必须是合法 JavaScript 标识符，只允许字母、数字和下划线，且不能以数字开头"
+                "Variable ID '$id' must be a valid Nova identifier"
             }
             return when (value) {
 
@@ -53,34 +52,34 @@ interface ImmutableVariable : Variable {
 
     }
 
-    open class Default(override val id: String, action: String) : SingletonScript(action), ImmutableVariable {
+    open class Default(override val id: String, action: String) : SingletonScript(action, "variable:$id:action"), ImmutableVariable {
 
         /**
-         * 计算当前变量，并将结果同步写入当前 JavaScript 全局作用域。
+         * 计算当前变量，并将结果同步写入当前 Nova 会话绑定。
          *
          * @param session 当前脚本会话。
          * @return 变量计算结果。
          */
-        override fun evaluate(session: ScriptSession): Any? {
+        override fun evaluate(session: NovaSession): Any? {
             return evaluateFor(session, id)
         }
 
         override fun appendDisplayEvaluation(builder: StringBuilder) {
-            builder.append("var ")
+            builder.append("val ")
             builder.append(id)
             builder.append(" = (")
             builder.append(action)
-            builder.append(");\n")
+            builder.append(")\n")
         }
 
         /**
-         * 计算变量表达式并写入指定的 JavaScript 变量名。
+         * 计算变量表达式并写入指定的 Nova 变量名。
          *
          * @param session 当前脚本会话。
          * @param targetId 接收计算结果的变量 ID。
          * @return 变量计算结果。
          */
-        internal fun evaluateFor(session: ScriptSession, targetId: String): Any? {
+        internal fun evaluateFor(session: NovaSession, targetId: String): Any? {
             val action = action
             if (action.isEmpty()) {
                 return null
@@ -91,43 +90,20 @@ interface ImmutableVariable : Variable {
         }
     }
 
-    class Case(condition: String, id: String, action: String) : Default(id, action) {
-
-        val condition = SingletonScript(condition)
-
-        /**
-         * 玩家是否匹配条件
-         */
-        fun match(options: ScriptOptions): Boolean {
-            return condition.run(options).thenApply { it.cbool }.getNow(false)
-        }
-
-        /**
-         * 在当前会话内计算分支条件。
-         *
-         * @param session 当前脚本会话。
-         * @return 条件成立时为 true。
-         */
-        fun matches(session: ScriptSession): Boolean {
-            val value = condition.invoke(session)
-            return value.cbool
-        }
-
-    }
-
+    /**
+     * 由 YAML 条件分支生成单个 Nova 表达式的变量。
+     *
+     * Kotlin 仅负责把声明顺序映射为 Nova `if ... else` 源码；分支判断和结果计算均由
+     * RuntimeWorkspace 预编译后的 Nova 入口执行。
+     */
     class When(override val id: String, values: List<ConfigurationSection>) : ImmutableVariable {
 
-        private val cases = values.map {
-            val id = it.getString("id", "__CASE__")!!
-            val condition = it.getString("condition", "true")!!
-            val action = it.getString("action", "null")!!
-            Case(condition, id, action)
-        }
+        private val expression = createExpression(values)
+        private val script = SingletonScript(expression, "variable:$id:branches")
 
+        /** 使用预编译 Nova 分支表达式计算变量。 */
         override fun run(options: ScriptOptions): CompletableFuture<Any?> {
-            val case = cases.firstOrNull { it.match(options) } ?: return CompletableFuture.completedFuture(false)
-
-            return case.run(options)
+            return script.run(options)
         }
 
         /**
@@ -136,37 +112,40 @@ interface ImmutableVariable : Variable {
          * @param session 当前脚本会话。
          * @return 首个匹配分支的结果；没有匹配分支时为 false。
          */
-        override fun evaluate(session: ScriptSession): Any? {
-            for (case in cases) {
-                if (case.matches(session)) {
-                    return case.evaluateFor(session, id)
-                }
-            }
-            return false
+        override fun evaluate(session: NovaSession): Any? {
+            val value = script.invoke(session)
+            ScriptManager.setReusableSessionBinding(session, id, value)
+            return value
         }
 
+        /** 将同一 Nova 分支表达式写入显示变量批处理函数。 */
         override fun appendDisplayEvaluation(builder: StringBuilder) {
-            builder.append("var ")
+            builder.append("val ")
             builder.append(id)
-            builder.append(" = false;\n")
-            builder.append("var __plannersMatched_")
-            builder.append(id)
-            builder.append(" = false;\n")
-            for (case in cases) {
-                builder.append("if (!__plannersMatched_")
-                builder.append(id)
-                builder.append(" && (")
-                builder.append(case.condition.action)
-                builder.append(")) {\n")
-                builder.append(id)
-                builder.append(" = (")
-                builder.append(case.action)
-                builder.append(");\n")
-                builder.append("__plannersMatched_")
-                builder.append(id)
-                builder.append(" = true;\n")
-                builder.append("}\n")
+            builder.append(" = (")
+            builder.append(expression)
+            builder.append(")\n")
+        }
+
+        /** 按声明逆序折叠成保持首个匹配语义的 Nova `if ... else` 表达式。 */
+        private fun createExpression(values: List<ConfigurationSection>): String {
+            if (values.isEmpty()) {
+                throw IllegalArgumentException("Variable '$id' must declare at least one condition branch")
             }
+            var generated = "false"
+            for (index in values.size - 1 downTo 0) {
+                val section = values[index]
+                val condition = section.getString("condition")
+                if (condition == null || condition.isBlank()) {
+                    throw IllegalArgumentException("Variable '$id' branch $index is missing condition")
+                }
+                val action = section.getString("action")
+                if (action == null || action.isBlank()) {
+                    throw IllegalArgumentException("Variable '$id' branch $index is missing action")
+                }
+                generated = "if ($condition) ($action) else ($generated)"
+            }
+            return generated
         }
 
     }

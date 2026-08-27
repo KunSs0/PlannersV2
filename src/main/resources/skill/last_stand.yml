@@ -14,7 +14,7 @@ __option__:
     heal: 50 * level + 100
   max-level: 1
 action: |
-  function main() {
-    tell("&6绝境求生触发")
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&6绝境求生触发")
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

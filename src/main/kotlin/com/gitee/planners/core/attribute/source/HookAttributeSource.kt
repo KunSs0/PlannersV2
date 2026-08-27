@@ -34,8 +34,8 @@ class HookAttributeSource : AttributeSource {
         // Job hook.attributes
         val job = playerRouter.getCurrentJob()
         val options = ScriptOptions.common(entity)
-        for ((key, expr) in job.attributes) {
-            val value = eval(expr, options)
+        for ((key, script) in job.attributeScripts) {
+            val value = eval(script, options)
             if (value != null) {
                 result[key] = value
             }
@@ -48,8 +48,8 @@ class HookAttributeSource : AttributeSource {
                 continue
             }
             val skillOptions = PlannersAPI.newOptions(entity, skill)
-            for ((key, expr) in skill.immutable.attributes) {
-                val value = eval(expr, skillOptions)
+            for ((key, script) in skill.immutable.attributeScripts) {
+                val value = eval(script, skillOptions)
                 if (value != null) {
                     val current = result[key]
                     if (current == null) {
@@ -72,17 +72,11 @@ class HookAttributeSource : AttributeSource {
         return result
     }
 
-    private fun eval(expr: String, options: ScriptOptions): Double? {
-        val parsed = expr.toDoubleOrNull()
-        if (parsed != null) {
-            return parsed
+    private fun eval(script: SingletonScript, options: ScriptOptions): Double? {
+        val result = script.eval(options)
+        if (result == null) {
+            return null
         }
-        return try {
-            val script = SingletonScript(expr)
-            val result = script.eval(options)
-            result?.toString()?.toDoubleOrNull()
-        } catch (_: Exception) {
-            null
-        }
+        return result.toString().toDoubleOrNull()
     }
 }

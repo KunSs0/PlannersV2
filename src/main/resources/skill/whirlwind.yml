@@ -15,7 +15,7 @@ __option__:
     damage: 18 * level + 40
   max-level: 10
 action: |
-  function main() {
-    tell("&a旋风斩 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&a旋风斩 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

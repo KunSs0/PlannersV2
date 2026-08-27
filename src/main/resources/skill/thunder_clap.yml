@@ -15,7 +15,7 @@ __option__:
     stun_duration: 1 + level / 3
   max-level: 8
 action: |
-  function main() {
-    tell("&e雷霆一击 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&e雷霆一击 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

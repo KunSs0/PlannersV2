@@ -7,8 +7,11 @@ import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionConfig
 import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.core.config.SkillCategorySpec
+import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
+import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.module.script.YamlNovaSourceCollector
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -18,6 +21,7 @@ import taboolib.common.platform.Plugin
 import taboolib.common.platform.function.adaptCommandSender
 import taboolib.common.platform.function.info
 import taboolib.common.platform.function.warning
+import taboolib.common.platform.function.getDataFolder
 import taboolib.module.configuration.Config
 import taboolib.module.configuration.ConfigNode
 import taboolib.module.configuration.ConfigNodeTransfer
@@ -43,7 +47,7 @@ object Planners : Plugin() {
         "$GREEN┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$RESET"
     )
 
-    @Config(autoReload = true)
+    @Config(autoReload = false)
     lateinit var config: Configuration
         private set
 
@@ -98,7 +102,7 @@ object Planners : Plugin() {
         val cfg = value as ConfigurationSection
         val name = cfg.getString("name")
         if (name == null || name.isBlank()) {
-            throw IllegalArgumentException("技能分类 '$key' 缺少有效的 name 配置")
+            throw IllegalArgumentException("Skill category '$key' requires a valid name")
         }
         SkillCategorySpec(key, name)
     }
@@ -155,17 +159,35 @@ object Planners : Plugin() {
     override fun onEnable() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
-        ScriptManager.init()
+        ScriptManager.prepare()
+        YamlNovaSourceCollector.collect(getDataFolder().toPath())
         val configuredConditions = conditions.get()
         for (condition in configuredConditions.values) {
-            condition.installPersistent()
+            condition.registerSources()
         }
         Registries.init()
+        SkillPointsManager.prepareSources()
+        DefaultMagicPointProvider.expressionUpperLimit.get()
+        DefaultMagicPointProvider.expressionResume.get()
         AttributeProxy.register(HookAttributeSource())
 
-        val function = ScriptManager.compileExpression("engine-health", "'Planners JS 引擎就绪 — 引擎: GraalJS'")
-        val result = ScriptManager.invokeCompiled(function, ScriptOptions.of())
-        info("[Planners 脚本自检] ${result}")
+    }
+
+    /**
+     * 在全部配置 Registry 完成 ACTIVE 加载后预编译并激活 Nova Workspace。
+     */
+    override fun onActive() {
+        // load 会解析全部物理入口与配置构造阶段登记的虚拟 SourceUnit。
+        ScriptManager.load()
+        info("[Planners Nova] Workspace is active")
+    }
+
+    /**
+     * 插件停止时销毁 Workspace 资源树。
+     */
+    override fun onDisable() {
+        // WorkspaceTasks、业务作用域和持久作用域均由 Workspace 一次性释放。
+        ScriptManager.dispose()
     }
 
 }

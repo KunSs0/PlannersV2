@@ -4,12 +4,11 @@ import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.ScriptContext
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
-import com.gitee.scriptengine.api.ScriptSession
-import com.gitee.scriptengine.api.CompiledScript
+import com.gitee.planners.module.script.NovaScriptUnit
+import com.gitee.planners.module.script.NovaSession
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class ConditionEvaluator {
 
-    private val propExpressions = ConcurrentHashMap<String, CompiledScript>()
+    private val propExpressions = ConcurrentHashMap<String, NovaScriptUnit>()
 
     /**
      * 批量校验的单个条件请求。
@@ -55,7 +54,7 @@ class ConditionEvaluator {
         try {
             val conditionConfigs = collectConditionConfigs(listOf(VerifyRequest("verify", conditions, contextVars)))
             for (conditionConfig in conditionConfigs) {
-                conditionConfig.install(session)
+                conditionConfig.registerSources()
             }
             return verifyInternal(conditions, player, contextVars, session)
         } finally {
@@ -239,7 +238,7 @@ class ConditionEvaluator {
      * 在同一脚本会话中批量校验多个条件组。
      *
      * 每个请求保持与 [verify] 一致的条件顺序和失败短路结果，
-     * 脚本计算按条件定义分组批量执行，避免节点数量线性增加 GraalJS 调用次数。
+     * 脚本计算按条件定义分组批量执行，避免节点数量线性增加 Nova 调用次数。
      *
      * @param requests 待校验请求列表。
      * @param player 当前玩家。
@@ -313,26 +312,19 @@ class ConditionEvaluator {
             }
             profiling.groupInputBuildNanos += System.nanoTime() - inputBuildStart
             val invocationStart = System.nanoTime()
-            var evaluation: ConditionConfig.BatchEvaluation?
+            val evaluation: ConditionConfig.BatchEvaluation
             try {
                 evaluation = config.evaluateBatchPersistent(options, inputs)
             } catch (exception: Exception) {
                 profiling.recordConditionInvokeFailure(exception)
-                evaluation = null
+                throw IllegalStateException("Failed to evaluate Nova condition batch: $key", exception)
             }
             profiling.conditionInvokeNanos += System.nanoTime() - invocationStart
-            val encoded: String
-            if (evaluation == null) {
-                encoded = ""
-            } else {
-                encoded = evaluation.encoded
-                profiling.recordConditionInvocation(key, group.size, evaluation.invocation)
-            }
+            val encoded = evaluation.encoded
+            profiling.recordConditionInvocation(key, group.size, evaluation.invocation)
             val resultApplyStart = System.nanoTime()
             if (encoded.length != group.size) {
-                for (preparedCondition in group) {
-                    preparedCondition.passed = false
-                }
+                throw IllegalStateException("Nova condition batch returned an invalid result length: $key")
             } else {
                 for (index in group.indices) {
                     group[index].passed = encoded[index] == '1'
@@ -364,43 +356,27 @@ class ConditionEvaluator {
         conditions: Map<String, Map<String, Any>>,
         player: Player,
         contextVars: Map<String, Any>,
-        session: ScriptSession
+        session: NovaSession
     ): VerifyResult {
         val profile = player.plannersTemplate
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
         val hints = mutableListOf<String>()
         val options = createOptions(player, profile, router, route)
-        val previousContext = ScriptContext.getCurrent()
-        ScriptContext.setCurrent(options.variables)
         ScriptManager.rebindReusableSession(session, options, setOf("props"))
 
-        try {
-            for ((key, overrideProps) in conditions) {
-                val cfg = Planners.conditions.get()[key]
-                if (cfg == null) {
-                    error("Unknown condition key: $key")
-                }
-                val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
-                val props = resolvedProps.values
-                options.set("props", props)
-
-                val passed = try {
-                    evalCondition(cfg, session, props)
-                } catch (e: Exception) {
-                    false
-                }
-
-                if (!passed) {
-                    hints.add(interpolate(cfg.hint, props))
-                    return VerifyResult(false, hints)
-                }
+        for ((key, overrideProps) in conditions) {
+            val cfg = Planners.conditions.get()[key]
+            if (cfg == null) {
+                error("Unknown condition key: $key")
             }
-        } finally {
-            if (previousContext == null) {
-                ScriptContext.clear()
-            } else {
-                ScriptContext.setCurrent(previousContext)
+            val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
+            val props = resolvedProps.values
+            options.set("props", props)
+            val passed = evalCondition(cfg, session, props)
+            if (!passed) {
+                hints.add(interpolate(cfg.hint, props))
+                return VerifyResult(false, hints)
             }
         }
         return VerifyResult.PASSED
@@ -423,7 +399,6 @@ class ConditionEvaluator {
         val route = if (router != null) router.currentRoute else null
 
         val session = ScriptManager.openReusableSession(ScriptOptions.of(), emptySet())
-        val previousContext = ScriptContext.getCurrent()
         try {
             for ((key, overrideProps) in conditions) {
                 val cfg = Planners.conditions.get()[key]
@@ -433,7 +408,7 @@ class ConditionEvaluator {
                 if (cfg.consume == null) {
                     continue
                 }
-                cfg.install(session)
+                cfg.registerSources()
                 val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
                 val props = resolvedProps.values
                 val options = createOptions(player, profile, router, route)
@@ -441,16 +416,10 @@ class ConditionEvaluator {
                 for ((contextKey, contextValue) in contextVars) {
                     options.set(contextKey, contextValue)
                 }
-                ScriptContext.setCurrent(options.variables)
                 ScriptManager.rebindReusableSession(session, options, setOf("props"))
                 cfg.consume(session, props)
             }
         } finally {
-            if (previousContext == null) {
-                ScriptContext.clear()
-            } else {
-                ScriptContext.setCurrent(previousContext)
-            }
             session.close()
         }
     }
@@ -488,7 +457,7 @@ class ConditionEvaluator {
     /**
      * 对 String 值尝试求值：
      * 1. 纯数字 → 转为 Int/Double
-     * 2. JS 公式 → 调用预编译函数并返回结果
+     * 2. Nova 公式 → 调用预编译函数并返回结果
      */
     private fun evalValue(
         expr: String,
@@ -518,7 +487,7 @@ class ConditionEvaluator {
             profiling.propertyExpressionNanos += System.nanoTime() - expressionStart
         }
         if (result == null) {
-            error("条件属性表达式返回了 null: $expr")
+            error("Condition property expression returned null: $expr")
         }
         return result
     }
@@ -593,11 +562,11 @@ class ConditionEvaluator {
      * 批量模式下基础上下文已在单个节点开始时绑定，只替换当前条件的 props，
      * 防止同一节点的多条条件反复重建全局脚本绑定。
      */
-    private fun evalCondition(config: ConditionConfig, session: ScriptSession, props: Map<String, Any>): Boolean {
+    private fun evalCondition(config: ConditionConfig, session: NovaSession, props: Map<String, Any>): Boolean {
         return config.evaluate(session, props)
     }
 
-    private fun getPropExpression(source: String): CompiledScript {
+    private fun getPropExpression(source: String): NovaScriptUnit {
         val cached = propExpressions[source]
         if (cached != null) {
             return cached

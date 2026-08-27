@@ -1,115 +1,106 @@
-import org.graalvm.polyglot.Context
-import org.graalvm.polyglot.HostAccess
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
+/** 验证技能变量在预编译 Nova Workspace 中的重绑定、隔离与复用语义。 */
 class SkillTreeRuntimeScenarioTest {
 
+    @TempDir
+    lateinit var root: Path
+
+    /** 同一预编译入口可以使用不同调用绑定计算玩家等级变量。 */
     @Test
     fun oneSessionCanRebindPlayerValuesBetweenSkillCalculations() {
-        val session = createSession()
+        val workspace = createWorkspace(root.resolve("rebind"))
         try {
-            val bindings = session.getBindings("js")
-            bindings.putMember("level", 2)
-            val first = session.eval("js", "level * 10").asInt()
-            bindings.putMember("level", 4)
-            val second = session.eval("js", "level * 10").asInt()
-            assertEquals(20, first)
-            assertEquals(40, second)
+            val first = workspace.invoke(MODULE, "multiply", mapOf("level" to 2))
+            val second = workspace.invoke(MODULE, "multiply", mapOf("level" to 4))
+            assertEquals(20L, (first as Number).toLong())
+            assertEquals(40L, (second as Number).toLong())
         } finally {
-            session.close()
+            workspace.close()
         }
     }
 
+    /** 两次技能变量批量结果必须保持对象和值隔离。 */
     @Test
     fun skillVariableBatchKeepsValuesIsolatedAfterRebind() {
-        val session = createSession()
+        val workspace = createWorkspace(root.resolve("batch"))
         try {
-            val bindings = session.getBindings("js")
-            bindings.putMember("level", 3)
-            val first = session.eval("js", "({power: level * 10, label: 'skill-' + level})")
-            bindings.putMember("level", 7)
-            val second = session.eval("js", "({power: level * 10, label: 'skill-' + level})")
-            assertEquals(30, first.getMember("power").asInt())
-            assertEquals("skill-3", first.getMember("label").asString())
-            assertEquals(70, second.getMember("power").asInt())
-            assertEquals("skill-7", second.getMember("label").asString())
+            val first = workspace.invoke(MODULE, "buildVariables", mapOf("level" to 3)) as Map<*, *>
+            val second = workspace.invoke(MODULE, "buildVariables", mapOf("level" to 7)) as Map<*, *>
+            assertEquals(30L, (first["power"] as Number).toLong())
+            assertEquals("skill-3", first["label"])
+            assertEquals(70L, (second["power"] as Number).toLong())
+            assertEquals("skill-7", second["label"])
             assertNotSame(first, second)
         } finally {
-            session.close()
+            workspace.close()
         }
     }
 
+    /** 一个 Workspace 复用预编译模块，独立 Workspace 仍保持生命周期隔离。 */
     @Test
     fun sessionReuseAvoidsCreatingOneContextPerSkill() {
-        val sharedSession = createSession()
-        val separateSession = createSession()
+        val shared = createWorkspace(root.resolve("shared"))
+        val separate = createWorkspace(root.resolve("separate"))
         try {
-            val sharedBindings = sharedSession.getBindings("js")
-            sharedBindings.putMember("level", 1)
-            val sharedFirst = sharedSession.eval("js", "level + 1").asInt()
-            sharedBindings.putMember("level", 2)
-            val sharedSecond = sharedSession.eval("js", "level + 1").asInt()
-            val separateBindings = separateSession.getBindings("js")
-            separateBindings.putMember("level", 1)
-            val separateValue = separateSession.eval("js", "level + 1").asInt()
-            assertEquals(2, sharedFirst)
-            assertEquals(3, sharedSecond)
-            assertEquals(2, separateValue)
-            assertTrue(sharedSession !== separateSession)
+            val sharedFirst = shared.invoke(MODULE, "increment", mapOf("level" to 1))
+            val sharedSecond = shared.invoke(MODULE, "increment", mapOf("level" to 2))
+            val separateValue = separate.invoke(MODULE, "increment", mapOf("level" to 1))
+            assertEquals(2L, (sharedFirst as Number).toLong())
+            assertEquals(3L, (sharedSecond as Number).toLong())
+            assertEquals(2L, (separateValue as Number).toLong())
+            assertTrue(shared !== separate)
         } finally {
-            sharedSession.close()
-            separateSession.close()
+            shared.close()
+            separate.close()
         }
     }
 
+    /** 采样预编译 Workspace 复用与独立构建的非零耗时。 */
     @Test
     fun measureSessionReuseCost() {
-        val warmupSession = createSession()
-        warmupSession.getBindings("js").putMember("level", 1)
-        repeat(100) {
-            warmupSession.eval("js", "level * 10").asInt()
-        }
-        warmupSession.close()
-
-        val sharedSession = createSession()
-        val sharedBindings = sharedSession.getBindings("js")
+        val shared = createWorkspace(root.resolve("performance-shared"))
         val sharedStart = System.nanoTime()
         repeat(1000) { index ->
-            sharedBindings.putMember("level", index)
-            sharedSession.eval("js", "level * 10").asInt()
+            shared.invoke(MODULE, "multiply", mapOf("level" to index))
         }
         val sharedElapsed = System.nanoTime() - sharedStart
-        sharedSession.close()
+        shared.close()
 
         val separateStart = System.nanoTime()
         repeat(20) { index ->
-            val separateSession = createSession()
-            separateSession.getBindings("js").putMember("level", index)
-            separateSession.eval("js", "level * 10").asInt()
-            separateSession.close()
+            val workspace = createWorkspace(root.resolve("performance-$index"))
+            workspace.invoke(MODULE, "multiply", mapOf("level" to index))
+            workspace.close()
         }
         val separateElapsed = System.nanoTime() - separateStart
-        val sharedMicrosPerEval = sharedElapsed / 1_000_000.0
-        val separateMicrosPerEval = separateElapsed / 20_000.0
-
         println(
-            "[SkillTreePerfTest] sharedEvalTotalMs=" + (sharedElapsed / 1_000_000.0) +
-                " sharedEvalUsPerOp=" + sharedMicrosPerEval +
-                " separateContextTotalMs=" + (separateElapsed / 1_000_000.0) +
-                " separateContextUsPerOp=" + separateMicrosPerEval
+            "[SkillTreeNovaPerfTest] sharedTotalMs=" + sharedElapsed / 1_000_000.0 +
+                " separateTotalMs=" + separateElapsed / 1_000_000.0
         )
         assertTrue(sharedElapsed > 0L)
         assertTrue(separateElapsed > 0L)
     }
 
-    private fun createSession(): Context {
-        return Context.newBuilder("js")
-            .allowHostAccess(HostAccess.ALL)
-            .allowHostClassLookup { true }
-            .option("engine.WarnInterpreterOnly", "false")
-            .build()
+    /** 创建并预编译当前场景使用的通用技能变量模块。 */
+    private fun createWorkspace(path: Path): NovaScenarioWorkspace {
+        val workspace = NovaScenarioWorkspace(path)
+        workspace.register(
+            MODULE,
+            "fun multiply() = level * 10\n" +
+                "fun increment() = level + 1\n" +
+                "fun buildVariables() = mapOf(\"power\" to level * 10, \"label\" to \"skill-\" + level)\n"
+        )
+        workspace.load()
+        return workspace
+    }
+
+    companion object {
+        private const val MODULE = "@planners/generated/runtime-scenario"
     }
 }

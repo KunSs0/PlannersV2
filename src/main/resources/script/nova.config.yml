@@ -1,0 +1,17 @@
+version: 1
+name: planners
+
+aliases:
+  "@planners": "planners"
+  "@nova": "libs"
+
+sources:
+  - "planners"
+  - "libs"
+
+entries:
+  - "@planners/bootstrap"
+
+runtime:
+  security: trusted-server
+  thread: main

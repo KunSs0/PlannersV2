@@ -16,12 +16,15 @@ __option__:
     attributes:
       - "攻击力 +${10 * level}"
 action: |
-  function main() {
-    tell("技能释放成功")
-    sleep(1500)
-    setCooldown(skill, 200)
+  fun onCooldownReady() {
+    Cooler.INSTANCE.set(sender.getInstance(), skill, 200)
   }
 
-  function handleHit() {
-    tell("on hit " + target)
+  fun execute() {
+    sender.sendMessage("技能释放成功")
+    Java.static("com.novalang.workspace.WorkspaceTasks", "later", 1500, __workspaceEntry, "onCooldownReady")
+  }
+
+  fun handleHit() {
+    sender.sendMessage("on hit " + target)
   }

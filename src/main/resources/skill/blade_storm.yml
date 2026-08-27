@@ -15,7 +15,7 @@ __option__:
     damage_per_hit: 15 * level + 60
   max-level: 18
 action: |
-  function main() {
-    tell("&b剑刃风暴 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&b剑刃风暴 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

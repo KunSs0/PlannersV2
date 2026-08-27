@@ -52,7 +52,7 @@ class PlayerRoute(
         for (state in nodeStates) {
             val key = nodeStateKey(state.treeId, state.nodeId)
             if (nodeStatesByKey.containsKey(key)) {
-                error("PlayerRoute '$bindingId' 存在重复技能树节点状态: $key")
+            error("PlayerRoute '$bindingId' contains a duplicate skill-tree node state: $key")
             }
             nodeStatesByKey[key] = state
         }
@@ -67,7 +67,7 @@ class PlayerRoute(
             for (treeId in route.skillTreeIds) {
                 val tree = Registries.SKILL_TREE.getOrNull(treeId)
                 if (tree == null) {
-                    error("PlayerRoute '$bindingId' 找不到技能树 '$treeId'")
+                    error("PlayerRoute '$bindingId' cannot find skill tree '$treeId'")
                 }
                 result.add(tree)
             }
@@ -200,7 +200,7 @@ class PlayerRoute(
      * 一次性校验当前职业阶段的全部技能树节点。
      *
      * 静态图关系在配置解码时已经验证；此处只检查玩家当前节点等级、前置节点状态和
-     * 动态条件。所有树的动态条件请求合并到同一个 GraalJS 会话中执行。
+     * 动态条件。所有树的动态条件请求合并到同一个 Nova 串行作用域中执行。
      *
      * @param player 当前玩家。
      * @return 技能树 ID 到节点校验结果的映射。
@@ -275,11 +275,11 @@ class PlayerRoute(
         for ((requestId, verification) in batchVerification.results) {
             val target = requestTargets[requestId]
             if (target == null) {
-                error("技能树节点校验结果缺少目标: $requestId")
+                error("Skill-tree node verification is missing target: $requestId")
             }
             val treeResults = results[target.treeId]
             if (treeResults == null) {
-                error("技能树节点校验结果缺少技能树: ${target.treeId}")
+                error("Skill-tree node verification is missing tree: ${target.treeId}")
             }
             treeResults[target.nodeId] = verification
         }
@@ -296,7 +296,7 @@ class PlayerRoute(
         val node = getNode(tree, nodeId)
         val stateKey = nodeStateKey(treeId, nodeId)
         if (!pendingNodeAdvancements.add(stateKey)) {
-            throw IllegalStateException("节点正在激活中")
+            throw IllegalStateException("The skill-tree node is already being advanced")
         }
         try {
             return advanceNodeInternal(player, tree, node, stateKey)
@@ -322,7 +322,7 @@ class PlayerRoute(
         val targetLevel = currentLevel + 1
         val conditions = node.levels[targetLevel]
         if (conditions == null) {
-            throw IllegalStateException("节点未定义 Lv$targetLevel 条件")
+            throw IllegalStateException("The skill-tree node does not define conditions for level $targetLevel")
         }
         evaluator.consume(conditions, player, createConditionContext(treeId, nodeId, targetLevel))
         val existingState = getNodeStateOrNull(treeId, nodeId)
@@ -361,11 +361,11 @@ class PlayerRoute(
     }
 
     private fun getTree(treeId: String): ImmutableSkillTree {
-        return getSkillTreeOrNull(treeId) ?: error("职业 '$jobId' 未绑定技能树 '$treeId'")
+        return getSkillTreeOrNull(treeId) ?: error("Job '$jobId' is not bound to skill tree '$treeId'")
     }
 
     private fun getNode(tree: ImmutableSkillTree, nodeId: String): SkillTreeNode {
-        return tree.nodes[nodeId] ?: error("技能树 '${tree.id}' 不存在节点 '$nodeId'")
+        return tree.nodes[nodeId] ?: error("Skill tree '${tree.id}' does not contain node '$nodeId'")
     }
 
     private fun createConditionContext(treeId: String, nodeId: String, targetLevel: Int): Map<String, Any> {

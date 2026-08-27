@@ -24,7 +24,7 @@ import kotlin.math.sin
  * 链式目标查找器 - 立即执行模式
  *
  * 示例：
- * ```js
+ * ```nova
  * // 基础用法
  * var targets = finder().range(10).type("zombie").limit(3).build()
  *
@@ -49,7 +49,10 @@ class TargetFinder @JvmOverloads constructor(
 
     fun range(r: Double): TargetFinder {
         val nearby = runSync {
-            val world = origin.world ?: return@runSync emptyList()
+            val world = origin.world
+            if (world == null) {
+                return@runSync emptyList()
+            }
             world.getNearbyEntities(origin, r, r, r)
                 .filterIsInstance<LivingEntity>()
                 .filter { it.location.distance(origin) <= r }
@@ -87,7 +90,10 @@ class TargetFinder @JvmOverloads constructor(
     @JvmOverloads
     fun sector(radius: Double, angle: Double, yaw: Float? = null): TargetFinder {
         val found = runSync {
-            val world = origin.world ?: return@runSync emptyList()
+            val world = origin.world
+            if (world == null) {
+                return@runSync emptyList()
+            }
             val loc = origin.clone()
             val directionYaw = yaw ?: facingYaw ?: loc.yaw
             val sampling = world.getNearbyEntities(loc, radius, radius, radius)
@@ -112,7 +118,7 @@ class TargetFinder @JvmOverloads constructor(
      * @param z      矩形长度（前后方向，full length）
      * @param offset 可选偏移量 {x: 左右, y: 上下, z: 前后}，默认均为 0
      *
-     * ```js
+     * ```nova
      * finder().rect(5, 3, 4).build()
      * finder().rect(5, 3, 4, {x: 0, y: 0, z: 2}).build()
      * ```
@@ -123,7 +129,10 @@ class TargetFinder @JvmOverloads constructor(
         val oz = (offset?.get("z") as? Number)?.toDouble() ?: 0.0
 
         val found = runSync {
-            val world = origin.world ?: return@runSync emptyList()
+            val world = origin.world
+            if (world == null) {
+                return@runSync emptyList()
+            }
             val loc = origin.clone()
             val directionYaw = facingYaw ?: loc.yaw
 
@@ -149,7 +158,10 @@ class TargetFinder @JvmOverloads constructor(
     }
 
     private fun spawnSectorDebugParticles(origin: Location, radius: Double, angle: Double, directionYaw: Float) {
-        val world = origin.world ?: return
+        val world = origin.world
+        if (world == null) {
+            return
+        }
         val safeRadius = radius.coerceAtLeast(0.0)
         if (safeRadius == 0.0) {
             return
@@ -197,7 +209,10 @@ class TargetFinder @JvmOverloads constructor(
         origin: Location, w: Double, h: Double, z: Double,
         directionYaw: Float, ox: Double, oy: Double, oz: Double
     ) {
-        val world = origin.world ?: return
+        val world = origin.world
+        if (world == null) {
+            return
+        }
         val particle = Planners.sectorSelectorDebugParticle.get()
         val step = Planners.sectorSelectorDebugStep.coerceAtLeast(0.5)
 
@@ -252,7 +267,9 @@ class TargetFinder @JvmOverloads constructor(
         val types = type.split(",").map { it.trim() }.mapNotNull { name ->
             EntityType.values().find { it.name.equals(name, ignoreCase = true) }
         }
-        if (types.isEmpty()) error("未知实体类型: $type")
+        if (types.isEmpty()) {
+            error("Unknown entity type: $type")
+        }
         entities.retainAll { it.type in types }
         return this
     }
@@ -261,7 +278,9 @@ class TargetFinder @JvmOverloads constructor(
         val types = type.split(",").map { it.trim() }.mapNotNull { name ->
             EntityType.values().find { it.name.equals(name, ignoreCase = true) }
         }
-        if (types.isEmpty()) error("未知实体类型: $type")
+        if (types.isEmpty()) {
+            error("Unknown entity type: $type")
+        }
         entities.removeAll { it.type in types }
         return this
     }
@@ -290,7 +309,9 @@ class TargetFinder @JvmOverloads constructor(
 
     fun sort(type: String): TargetFinder {
         val sortType = SortType.values().find { it.name.equals(type, ignoreCase = true) }
-            ?: error("未知排序类型: $type")
+        if (sortType == null) {
+            error("Unknown target sort type: $type")
+        }
         val sorted = when (sortType) {
             SortType.NAME -> entities.sortedBy { it.name }
             SortType.DISTANCE -> entities.sortedBy { it.location.distance(origin) }

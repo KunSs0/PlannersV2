@@ -28,7 +28,8 @@ taboolib {
         dependencies {
             name("MythicMobs").optional(true)
             name("PlaceholderAPI").optional(true)
-            name("ScriptEngine")
+            name("NovaLang")
+            name("Vault")
         }
     }
 
@@ -70,13 +71,8 @@ dependencies {
     compileOnly("com.mojang:datafixerupper:4.0.26")
 
     compileOnly(kotlin("stdlib"))
-    compileOnly(fileTree("libs") {
-        exclude("ScriptEngine-*.jar")
-    })
-    compileOnly("com.gitee.scriptengine:scriptengine-common:2.2.0")
-    compileOnly("com.gitee.scriptengine:scriptengine-runtime:2.2.0")
-    testImplementation("org.graalvm.polyglot:polyglot:24.1.1")
-    testImplementation("org.graalvm.js:js-language:24.1.1")
+    compileOnly(fileTree("libs"))
+    compileOnly("com.novalang:nova-runtime-workspace:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.91.1") {
         exclude(group = "io.papermc.paper", module = "paper-api")
@@ -98,14 +94,12 @@ dependencies {
     testImplementation("it.unimi.dsi:fastutil:8.5.15")
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation("com.mojang:brigadier:1.3.10")
-    testImplementation("com.gitee.scriptengine:scriptengine-common:2.2.0")
-    testImplementation("com.gitee.scriptengine:scriptengine-runtime:2.2.0")
+    testImplementation("com.novalang:nova-runtime-workspace:0.2.0")
+    testRuntimeOnly(files("libs/[经济]Vault[前置插件].jar"))
     testImplementation("org.xerial:sqlite-jdbc:3.49.1.0")
     val extraTestLibraries = providers.gradleProperty("planners.test.extraLibs")
     if (extraTestLibraries.isPresent) {
         val extraFiles = fileTree(mapOf("dir" to extraTestLibraries.get(), "include" to listOf("**/*.jar")))
-        extraFiles.exclude("**/graalvm/**")
-        extraFiles.exclude("**/truffle/**")
         testImplementation(extraFiles)
     }
 }
@@ -113,12 +107,6 @@ dependencies {
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
-
-task("runGraalTest", JavaExec::class) {
-    classpath = sourceSets["test"].runtimeClasspath
-    mainClass.set("GraalJsThreadTest")
-}
-
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     compilerOptions {
@@ -141,9 +129,11 @@ configurations.named("testRuntimeClasspath") {
 
 tasks.test {
     useJUnitPlatform()
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    })
     val externalTestProperties = listOf(
-        "planners.test.plannersRoot",
-        "planners.test.graalJsRoot"
+        "planners.test.plannersRoot"
     )
     for (propertyName in externalTestProperties) {
         val property = providers.gradleProperty(propertyName)
@@ -154,6 +144,18 @@ tasks.test {
     testLogging {
         showStandardStreams = true
     }
+}
+
+val apiJar by tasks.registering(Jar::class) {
+    description = "Build the independent Planners API jar for compile-time plugin integrations"
+    group = "build"
+    dependsOn(tasks.named("classes"))
+    archiveClassifier.set("api")
+    from(sourceSets.main.get().output.classesDirs)
+}
+
+tasks.named("taboolibBuildApi") {
+    finalizedBy(apiJar)
 }
 
 java {

@@ -13,7 +13,7 @@ __option__:
     reflect: 20 * level + 40
   max-level: 4
 action: |
-  function main() {
-    tell("&e反击 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&e反击 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

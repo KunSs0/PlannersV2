@@ -15,7 +15,7 @@ __option__:
     duration: 5 * level
   max-level: 2
 action: |
-  function main() {
-    tell("&4嗜血 Lv" + level)
-    setCooldown(skill, getVar("cooldown"))
+  fun execute() {
+    sender.sendMessage("&4嗜血 Lv" + level)
+    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }
