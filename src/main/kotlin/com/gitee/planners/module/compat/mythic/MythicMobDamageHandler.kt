@@ -8,50 +8,78 @@ import io.lumine.xikage.mythicmobs.MythicMobs
 import io.lumine.xikage.mythicmobs.adapters.bukkit.BukkitAdapter
 import io.lumine.xikage.mythicmobs.skills.placeholders.Placeholder
 import io.lumine.xikage.mythicmobs.skills.placeholders.PlaceholderMeta
+import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.server.PluginEnableEvent
 import taboolib.common.LifeCycle
+import taboolib.common.platform.Awake
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.info
-import taboolib.common.platform.function.registerLifeCycleTask
 import java.util.function.BiFunction
 
 object MythicMobDamageHandler {
 
-    init {
-        registerLifeCycleTask(LifeCycle.ENABLE) {
-            if (MythicMobsLoader.isEnable) {
-                if (MythicMobsLoader.version[0] == 4) {
-                    MythicMobs.inst().placeholderManager.register("caster.pl.metadata", Placeholder.meta(object : BiFunction<PlaceholderMeta,String,String> {
-
-                        override fun apply(metadata: PlaceholderMeta, args: String): String {
-                            val target = ProxyTarget.of(metadata.caster.entity)
-                            if (target !is ProxyTarget.Containerization) {
-                                return "null"
-                            }
-
-                            return target.getMetadata(args).toString();
-                        }
-                    }))
-                }
-                // v5
-                else if (MythicMobsLoader.version[0] == 5) {
-                    MythicBukkit.inst().placeholderManager.register("caster.pl.metadata", io.lumine.mythic.core.skills.placeholders.Placeholder.meta(object : BiFunction<io.lumine.mythic.core.skills.placeholders.PlaceholderMeta,String,String> {
-
-                        override fun apply(metadata: io.lumine.mythic.core.skills.placeholders.PlaceholderMeta, args: String): String {
-                            val target = ProxyTarget.of(metadata.caster.entity)
-                            if (target !is ProxyTarget.Containerization) {
-                                return "null"
-                            }
-
-                            return target.getMetadata(args).toString();
-                        }
-                    }))
-                }
-
-            }
+    @Awake(LifeCycle.ENABLE)
+    fun init() {
+        if (Bukkit.getPluginManager().isPluginEnabled("MythicMobs")) {
+            registerPlaceholder()
         }
+    }
+
+    @SubscribeEvent
+    fun onPluginEnable(event: PluginEnableEvent) {
+        if (event.plugin.name != "MythicMobs") {
+            return
+        }
+        registerPlaceholder()
+    }
+
+    private fun registerPlaceholder() {
+        val majorVersion = MythicMobsLoader.version.getOrNull(0)
+        if (majorVersion == 4) {
+            registerMythicMobs4Placeholder()
+            return
+        }
+        if (majorVersion == 5) {
+            registerMythicMobs5Placeholder()
+            return
+        }
+        info("MythicMobDamageHandler: Unsupported MythicMobs version ${MythicMobsLoader.version.joinToString(".")}")
+    }
+
+    private fun registerMythicMobs4Placeholder() {
+        val placeholder = Placeholder.meta(object : BiFunction<PlaceholderMeta, String, String> {
+
+            override fun apply(metadata: PlaceholderMeta, args: String): String {
+                val target = ProxyTarget.of(metadata.caster.entity)
+                if (target !is ProxyTarget.Containerization) {
+                    return "null"
+                }
+                return target.getMetadata(args).toString()
+            }
+        })
+        MythicMobs.inst().placeholderManager.register("caster.pl.metadata", placeholder)
+    }
+
+    private fun registerMythicMobs5Placeholder() {
+        val placeholder = io.lumine.mythic.core.skills.placeholders.Placeholder.meta(
+            object : BiFunction<io.lumine.mythic.core.skills.placeholders.PlaceholderMeta, String, String> {
+
+                override fun apply(
+                    metadata: io.lumine.mythic.core.skills.placeholders.PlaceholderMeta,
+                    args: String
+                ): String {
+                    val target = ProxyTarget.of(metadata.caster.entity)
+                    if (target !is ProxyTarget.Containerization) {
+                        return "null"
+                    }
+                    return target.getMetadata(args).toString()
+                }
+            }
+        )
+        MythicBukkit.inst().placeholderManager.register("caster.pl.metadata", placeholder)
     }
 
     @SubscribeEvent

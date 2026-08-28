@@ -132,15 +132,6 @@ tasks.test {
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(21))
     })
-    val externalTestProperties = listOf(
-        "planners.test.plannersRoot"
-    )
-    for (propertyName in externalTestProperties) {
-        val property = providers.gradleProperty(propertyName)
-        if (property.isPresent) {
-            systemProperty(propertyName, property.get())
-        }
-    }
     testLogging {
         showStandardStreams = true
     }

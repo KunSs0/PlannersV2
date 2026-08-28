@@ -20,7 +20,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Planners Nova Workspace 与现网 YAML 脚本的集成验收。
+ * Planners Nova Workspace 与通用默认 YAML 脚本的集成验收。
  */
 class NovaWorkspaceIntegrationTest {
 
@@ -124,23 +124,12 @@ class NovaWorkspaceIntegrationTest {
         assertTrue(scheduler.handle.cancelled)
     }
 
-    /** 遍历项目资源与现网 Planners 配置，并验证所有脚本块都能通过 Nova 语法编译。 */
+    /** 遍历项目通用默认资源，并验证所有脚本块都能通过 Nova 语法编译。 */
     @Test
-    fun shouldCompileEveryDeployedYamlScript() {
+    fun shouldCompileEveryDefaultYamlScript() {
         installDirectScheduler()
-        val configuredRoot = System.getProperty("planners.test.plannersRoot")
-        val deploymentRoot: Path
-        if (configuredRoot == null || configuredRoot.isBlank()) {
-            deploymentRoot = Path.of("E:/temp/server-main/plugins/Planners")
-        } else {
-            deploymentRoot = Path.of(configuredRoot)
-        }
-        if (!Files.isDirectory(deploymentRoot)) {
-            throw IllegalStateException("The deployed Planners configuration does not exist: $deploymentRoot")
-        }
         val sourceRoot = Path.of("src/main/resources").toAbsolutePath().normalize()
         val sourceStats = compileYamlRoot(sourceRoot, "project-resources")
-        val deploymentStats = compileYamlRoot(deploymentRoot, "deployed-resources")
         println(
             "Nova YAML audit: sourceFiles=${sourceStats.scannedFiles}, " +
                 "sourceExecutableFiles=${sourceStats.executableFiles}, " +
@@ -149,16 +138,8 @@ class NovaWorkspaceIntegrationTest {
                 "candidates=${sourceStats.candidateUnits}, excluded=${sourceStats.excludedReasons}, " +
                 "categories=${sourceStats.semanticCategories}"
         )
-        println(
-            "Nova YAML audit: deploymentFiles=${deploymentStats.scannedFiles}, " +
-                "deploymentExecutableFiles=${deploymentStats.executableFiles}, " +
-                "deploymentUnits=${deploymentStats.sourceUnits}, semanticUnits=${deploymentStats.semanticUnits}, " +
-                "templateUnits=${deploymentStats.templateUnits}, deploymentBusinessLines=${deploymentStats.businessLines}, " +
-                "candidates=${deploymentStats.candidateUnits}, excluded=${deploymentStats.excludedReasons}, " +
-                "categories=${deploymentStats.semanticCategories}"
-        )
-        assertTrue(deploymentStats.executableFiles > 0, "No executable deployed YAML files were compiled")
-        assertTrue(deploymentStats.sourceUnits > 0, "No deployed Nova SourceUnit was compiled")
+        assertTrue(sourceStats.executableFiles > 0, "No executable default YAML files were compiled")
+        assertTrue(sourceStats.sourceUnits > 0, "No default Nova SourceUnit was compiled")
     }
 
     /** 遍历一个配置根目录并编译其中全部 YAML 脚本节点。 */
