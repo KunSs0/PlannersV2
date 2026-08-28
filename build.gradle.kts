@@ -29,7 +29,7 @@ taboolib {
             name("MythicMobs").optional(true)
             name("PlaceholderAPI").optional(true)
             name("NovaLang")
-            name("Vault")
+            name("Vault").optional(true)
         }
     }
 
