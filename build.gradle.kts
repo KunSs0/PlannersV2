@@ -40,7 +40,6 @@ taboolib {
 
 repositories {
     mavenCentral()
-    mavenLocal()
     maven("https://repo.tabooproject.org/repository/releases")
     maven("https://repo.papermc.io/repository/maven-public/")
 }
@@ -72,7 +71,8 @@ dependencies {
 
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
-    compileOnly("com.novalang:nova-runtime-workspace:0.2.0")
+    testImplementation(files("libs/nova-runtime-workspace-0.2.0.jar"))
+    testImplementation(files("libs/nova-runtime-all-0.2.0.jar"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.91.1") {
         exclude(group = "io.papermc.paper", module = "paper-api")
@@ -94,7 +94,6 @@ dependencies {
     testImplementation("it.unimi.dsi:fastutil:8.5.15")
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation("com.mojang:brigadier:1.3.10")
-    testImplementation("com.novalang:nova-runtime-workspace:0.2.0")
     testRuntimeOnly(files("libs/[经济]Vault[前置插件].jar"))
     testImplementation("org.xerial:sqlite-jdbc:3.49.1.0")
     val extraTestLibraries = providers.gradleProperty("planners.test.extraLibs")
