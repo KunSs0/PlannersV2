@@ -4,7 +4,6 @@ import com.gitee.planners.Planners
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.player.PlayerLevelChangeEvent
 import com.gitee.planners.core.player.PlayerRouter
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
 import taboolib.common.platform.event.SubscribeEvent
 
@@ -82,8 +81,7 @@ object SkillPointsManager {
         if (script == null) {
             throw IllegalStateException("The skill-points expression was not precompiled: $expr")
         }
-        val options = ScriptOptions.of().set("level", level)
-        val result = script.eval(options)
+        val result = script.eval(level)
         if (result == null) {
             throw IllegalStateException("The skill-points expression returned null: $expr")
         }
@@ -93,7 +91,11 @@ object SkillPointsManager {
     /** 登记一条去重后的技能点公式。 */
     private fun registerExpression(expression: String) {
         if (!expressions.containsKey(expression)) {
-            expressions[expression] = SingletonScript(expression, "config:skill-points:${expression.hashCode()}")
+            expressions[expression] = SingletonScript(
+                expression,
+                "config:skill-points:${expression.hashCode()}",
+                listOf("level")
+            )
         }
     }
 }

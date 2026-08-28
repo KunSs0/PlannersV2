@@ -2,13 +2,12 @@ package com.gitee.planners.module.script
 
 import java.util.concurrent.CompletableFuture
 
-/**
- * 单个 Nova 表达式的启动期预编译封装。
- *
- * @param source Nova 表达式源码。
- * @param sourceId YAML 业务节点的稳定标识。
- */
-open class SingletonScript(source: String, sourceId: String) : Script {
+/** 启动期预编译、运行期只接受显式参数的 Nova 纯函数。 */
+open class SingletonScript(
+    source: String,
+    sourceId: String,
+    parameters: List<String> = emptyList()
+) {
 
     val action: String = source
     private val unit: NovaScriptUnit?
@@ -17,7 +16,7 @@ open class SingletonScript(source: String, sourceId: String) : Script {
         if (action.isEmpty()) {
             unit = null
         } else {
-            unit = ScriptManager.compileExpression(sourceId, action)
+            unit = ScriptManager.compileExpression(sourceId, parameters, action)
         }
     }
 
@@ -26,51 +25,22 @@ open class SingletonScript(source: String, sourceId: String) : Script {
         return action.isNotEmpty()
     }
 
-    /**
-     * 执行预编译表达式。
-     *
-     * `async` 只决定 Future 的提交方式；真正的 Bukkit 业务仍由 Workspace 的
-     * MAIN_THREAD 策略显式调度并同步等待。
-     */
-    override fun run(options: ScriptOptions): CompletableFuture<Any?> {
-        val compiled = unit
-        if (compiled == null) {
-            return CompletableFuture.completedFuture(null)
-        }
-        if (options.isAsync) {
+    /** 按调用方指定的提交方式执行纯函数。 */
+    fun run(async: Boolean, vararg arguments: Any?): CompletableFuture<Any?> {
+        if (async) {
             return CompletableFuture.supplyAsync {
-                ScriptManager.invokeCompiled(compiled, options)
+                eval(*arguments)
             }
         }
-        return CompletableFuture.completedFuture(ScriptManager.invokeCompiled(compiled, options))
+        return CompletableFuture.completedFuture(eval(*arguments))
     }
 
-    /** @return 当前表达式的同步结果。 */
-    fun eval(options: ScriptOptions): Any? {
+    /** 同步执行已编译纯函数。 */
+    fun eval(vararg arguments: Any?): Any? {
         val compiled = unit
         if (compiled == null) {
             return null
         }
-        return ScriptManager.invokeCompiled(compiled, options)
+        return ScriptManager.invokePure(compiled, *arguments)
     }
-
-    /** @return 无业务绑定时的同步结果。 */
-    fun eval(): Any? {
-        return eval(ScriptOptions.of())
-    }
-
-    /**
-     * 在现有会话中执行表达式。
-     *
-     * @param session 当前资源会话。
-     * @return 表达式结果。
-     */
-    fun invoke(session: NovaSession): Any? {
-        val compiled = unit
-        if (compiled == null) {
-            return null
-        }
-        return session.invoke(compiled)
-    }
-
 }

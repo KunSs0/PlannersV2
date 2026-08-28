@@ -26,6 +26,7 @@ object ScriptManager {
     private val lifecycleLock = Any()
     private val sources = LinkedHashMap<String, SourceUnit>()
     private val expressionUnits = LinkedHashMap<String, NovaScriptUnit>()
+    private val skillExpressionUnits = LinkedHashMap<String, NovaScriptUnit>()
     private val invocationSequence = AtomicLong(0L)
     private var workspace: RuntimeWorkspace? = null
     private var persistentScope: ResourceScope? = null
@@ -93,6 +94,7 @@ object ScriptManager {
             loaded = false
             sources.clear()
             expressionUnits.clear()
+            skillExpressionUnits.clear()
             if (current != null) {
                 current.dispose()
             }
@@ -183,6 +185,17 @@ object ScriptManager {
         }
     }
 
+    /** 按真实 YAML 来源登记只接收强类型技能执行上下文的表达式。 */
+    fun registerYamlSkillExpression(file: Path, yamlPath: String, originLine: Int, expression: String) {
+        val source = createExpressionSource(listOf("execution"), expression)
+        val unit = registerYaml(file, yamlPath, originLine, "evaluate", source, GENERATED_EXPRESSION_OFFSET)
+        synchronized(lifecycleLock) {
+            if (!skillExpressionUnits.containsKey(expression)) {
+                skillExpressionUnits[expression] = unit
+            }
+        }
+    }
+
     /**
      * 取得 YAML 收集阶段已经登记的表达式入口。
      *
@@ -198,6 +211,18 @@ object ScriptManager {
             val unit = expressionUnits[expression]
             if (unit == null) {
                 throw IllegalStateException("The Nova expression was not precompiled: $expression")
+            }
+            return unit
+        }
+    }
+
+    /** 取得 YAML 收集阶段已经登记的强类型技能表达式入口。 */
+    @JvmStatic
+    fun requirePrecompiledSkillExpression(expression: String): NovaScriptUnit {
+        synchronized(lifecycleLock) {
+            val unit = skillExpressionUnits[expression]
+            if (unit == null) {
+                throw IllegalStateException("The Nova skill expression was not precompiled: $expression")
             }
             return unit
         }
@@ -231,147 +256,47 @@ object ScriptManager {
         registerYaml(file, yamlPath, originLine, "execute", body, GENERATED_MODULE_OFFSET, moduleId)
     }
 
-    /**
-     * 创建一个拥有独立 BUSINESS_INSTANCE 资源作用域的会话。
-     *
-     * @param options 当前业务调用的宿主绑定。
-     * @return 可执行预编译入口并归属 Workspace 资源的业务会话。
-     */
+    /** 在持久作用域内执行只接收显式参数的纯函数入口。 */
     @JvmStatic
-    fun openSession(options: ScriptOptions): NovaSession {
-        ensureLoaded()
-        val activeWorkspace = requireWorkspace()
-        val ownerId = "session#${invocationSequence.incrementAndGet()}"
-        val scope = activeWorkspace.openScope(null, ScopeType.BUSINESS_INSTANCE, ownerId)
-        val bindings = LinkedHashMap<String, Any?>()
-        bindings.putAll(options.variables)
-        return NovaSession(bindings, scope)
-    }
-
-    /**
-     * 创建可重绑定的业务会话。
-     *
-     * @param options 会话的初始宿主绑定。
-     * @param transientBindings 每次重绑定前需要移除的临时绑定名。
-     * @return 新建的业务会话。
-     */
-    @JvmStatic
-    fun openReusableSession(options: ScriptOptions, transientBindings: Set<String>): NovaSession {
-        return openSession(options)
-    }
-
-    /**
-     * 替换复用会话的业务绑定。
-     *
-     * @param session 需要复用的业务会话。
-     * @param options 新一轮调用的宿主绑定。
-     * @param transientBindings 写入新绑定前必须移除的临时绑定名。
-     */
-    @JvmStatic
-    fun rebindReusableSession(session: NovaSession, options: ScriptOptions, transientBindings: Set<String>) {
-        for (key in transientBindings) {
-            session.bindings.remove(key)
-        }
-        session.bindings.putAll(options.variables)
-    }
-
-    /**
-     * 写入复用会话的单个绑定。
-     *
-     * @param session 需要更新的业务会话。
-     * @param key 绑定名称。
-     * @param value 绑定值。
-     */
-    @JvmStatic
-    fun setReusableSessionBinding(session: NovaSession, key: String, value: Any?) {
-        session.bind(key, value)
-    }
-
-    /**
-     * 在一次性业务会话中执行预编译入口。
-     *
-     * @param unit 已登记的 Nova 入口。
-     * @param options 当前调用的宿主绑定。
-     * @param args Nova 函数参数。
-     * @return Nova 函数返回值。
-     */
-    @JvmStatic
-    fun invokeCompiled(unit: NovaScriptUnit, options: ScriptOptions, vararg args: Any?): Any? {
-        val session = openSession(options)
-        try {
-            return session.invoke(unit, unit.functionName, *args)
-        } finally {
-            session.close()
-        }
-    }
-
-    /**
-     * 在现有业务会话中执行预编译入口。
-     *
-     * @param session 持有绑定和资源作用域的会话。
-     * @param unit 已登记的 Nova 入口。
-     * @param args Nova 函数参数。
-     * @return Nova 函数返回值。
-     */
-    @JvmStatic
-    fun invokeCompiled(session: NovaSession, unit: NovaScriptUnit, vararg args: Any?): Any? {
-        return session.invoke(unit, unit.functionName, *args)
-    }
-
-    /**
-     * 在持久串行资源作用域内执行预编译入口。
-     *
-     * @param unit 已登记的 Nova 入口。
-     * @param options 当前调用的宿主绑定。
-     * @param args Nova 函数参数。
-     * @return Nova 函数返回值。
-     */
-    @JvmStatic
-    fun invokePersistent(unit: NovaScriptUnit, options: ScriptOptions, vararg args: Any?): Any? {
+    fun invokePure(unit: NovaScriptUnit, vararg args: Any?): Any? {
         ensureLoaded()
         val activeWorkspace = requireWorkspace()
         val scope = persistentScope
         if (scope == null) {
             throw IllegalStateException("The Planners persistent Nova scope is not active")
         }
-        return invoke(activeWorkspace, scope, unit, options.variables, ExecutionPolicy.SERIAL_SCOPE, args)
+        return invoke(activeWorkspace, scope, unit, emptyMap(), ExecutionPolicy.SERIAL_SCOPE, args)
     }
 
-    /**
-     * 执行持久入口并采集宿主侧耗时。
-     *
-     * @param unit 已登记的 Nova 入口。
-     * @param options 当前调用的宿主绑定。
-     * @param args Nova 函数参数。
-     * @return 入口结果与宿主侧执行耗时。
-     */
+    /** 执行纯函数入口并记录完整宿主调用耗时。 */
     @JvmStatic
-    fun invokePersistentProfiled(unit: NovaScriptUnit, options: ScriptOptions, vararg args: Any?): PersistentInvocation {
+    fun invokePureProfiled(unit: NovaScriptUnit, vararg args: Any?): PureInvocation {
         val started = System.nanoTime()
-        val value = invokePersistent(unit, options, *args)
+        val value = invokePure(unit, *args)
         val elapsed = System.nanoTime() - started
-        return PersistentInvocation(value, 0L, 0L, 0L, 0L, 0L, 0L, 0L, elapsed, 0L)
+        return PureInvocation(value, elapsed)
     }
 
-    /**
-     * 在会话上下文内执行模块函数。
-     *
-     * @param session 持有绑定和资源作用域的会话。
-     * @param unit 已登记的 Nova 模块。
-     * @param functionName 本次调用的导出函数名。
-     * @param args Nova 函数参数。
-     * @return Nova 函数返回值。
-     */
-    internal fun invokeInSession(
-        session: NovaSession,
+    /** 在独立业务资源作用域内执行可创建任务或回调的入口。 */
+    @JvmStatic
+    fun invokeBusiness(
         unit: NovaScriptUnit,
         functionName: String,
+        bindings: Map<String, Any?>,
         vararg args: Any?
     ): Any? {
         ensureLoaded()
         val activeWorkspace = requireWorkspace()
-        val selected = NovaScriptUnit(unit.moduleId, functionName)
-        return invoke(activeWorkspace, session.scope, selected, session.bindings, ExecutionPolicy.MAIN_THREAD, args)
+        val ownerId = "business#${invocationSequence.incrementAndGet()}"
+        val scope = activeWorkspace.openScope(null, ScopeType.BUSINESS_INSTANCE, ownerId)
+        try {
+            val selected = NovaScriptUnit(unit.moduleId, functionName)
+            return invoke(activeWorkspace, scope, selected, bindings, ExecutionPolicy.MAIN_THREAD, args)
+        } finally {
+            if (scope.resourceCount == 0) {
+                scope.dispose()
+            }
+        }
     }
 
     /** 注册虚拟源码并拒绝加载后的运行期编译。 */
@@ -655,19 +580,9 @@ object ScriptManager {
         val line: Int
     )
 
-    /**
-     * 一次持久入口执行的宿主侧统计。
-     */
-    class PersistentInvocation(
+    /** 一次预编译纯函数调用的宿主侧统计。 */
+    class PureInvocation(
         val value: Any?,
-        val variablesCopyNanos: Long,
-        val contextSetNanos: Long,
-        val argumentAdaptNanos: Long,
-        val contextRestoreNanos: Long,
-        val lockWaitNanos: Long,
-        val installNanos: Long,
-        val functionLookupNanos: Long,
-        val functionExecuteNanos: Long,
-        val resultUnwrapNanos: Long
+        val elapsedNanos: Long
     )
 }

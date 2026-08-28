@@ -4,7 +4,7 @@ import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
-import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import org.bukkit.entity.Player
 import taboolib.common5.cint
 import taboolib.platform.util.asLangText
@@ -25,7 +25,7 @@ class CooldownPreCondition : CastPreCondition {
         return player.asLangText("precondition-cooldown")
     }
 
-    override fun verify(player: Player, skill: PlayerSkill, options: ScriptOptions): CastPreConditionResult? {
+    override fun verify(player: Player, skill: PlayerSkill, execution: SkillExecutionContext): CastPreConditionResult? {
         val remaining = Cooler.INSTANCE.get(player, skill)
         if (remaining > 0L) {
             return CastPreConditionResult.Failure(this, mapOf("remaining" to remaining))
@@ -33,8 +33,8 @@ class CooldownPreCondition : CastPreCondition {
         return null
     }
 
-    override fun consume(player: Player, skill: PlayerSkill, options: ScriptOptions) {
-        val cooldown = skill.getVariableOrNull("cooldown")?.run(options)?.getNow(null)?.cint
+    override fun consume(player: Player, skill: PlayerSkill, execution: SkillExecutionContext) {
+        val cooldown = execution.getVariable("cooldown")?.cint
         if (cooldown != null) {
             Cooler.INSTANCE.set(player, skill, cooldown)
         }

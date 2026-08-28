@@ -10,7 +10,6 @@ import com.gitee.planners.api.job.target.isExpired
 import com.gitee.planners.api.job.target.removeState
 import com.gitee.planners.core.config.State
 import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.ScriptOptions
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.Schedule
@@ -28,15 +27,11 @@ object States {
             if (module == null) {
                 continue
             }
-            val options = ScriptOptions.of()
-            val session = ScriptManager.openSession(options)
             try {
-                session.invoke(module, "onLoad")
+                ScriptManager.invokeBusiness(module, "onLoad", emptyMap())
             } catch (e: Exception) {
                 warning("Failed to initialize state script: ${state.id}")
                 e.printStackTrace()
-            } finally {
-                session.close()
             }
         }
     }
@@ -114,19 +109,15 @@ object States {
             return
         }
 
-        val options = ScriptOptions.create {
-            it.set("sender", target.instance)
-            it.set("event", event)
-            it.set("state", state)
-        }
+        val bindings = LinkedHashMap<String, Any?>()
+        bindings["sender"] = target.instance
+        bindings["event"] = event
+        bindings["state"] = state
 
-        val session = ScriptManager.openSession(options)
         try {
-            session.invoke(module, funcName)
+            ScriptManager.invokeBusiness(module, funcName, bindings)
         } catch (exception: Exception) {
             warning("Failed to invoke state callback '$funcName' for '${state.id}': ${exception.message}")
-        } finally {
-            session.close()
         }
     }
 }

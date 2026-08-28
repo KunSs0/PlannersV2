@@ -5,7 +5,7 @@ import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
-import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import org.bukkit.entity.Player
 import taboolib.common5.cint
 import taboolib.platform.util.asLangText
@@ -23,8 +23,8 @@ class MagicPointPreCondition : CastPreCondition {
         return player.asLangText("precondition-mp")
     }
 
-    override fun verify(player: Player, skill: PlayerSkill, options: ScriptOptions): CastPreConditionResult? {
-        val cost = skill.getVariableOrNull("mp")?.run(options)?.getNow(null)?.cint
+    override fun verify(player: Player, skill: PlayerSkill, execution: SkillExecutionContext): CastPreConditionResult? {
+        val cost = execution.getVariable("mp")?.cint
         if (cost == null) {
             return null
         }
@@ -38,8 +38,8 @@ class MagicPointPreCondition : CastPreCondition {
         return null
     }
 
-    override fun consume(player: Player, skill: PlayerSkill, options: ScriptOptions) {
-        val cost = skill.getVariableOrNull("mp")?.run(options)?.getNow(null)?.cint
+    override fun consume(player: Player, skill: PlayerSkill, execution: SkillExecutionContext) {
+        val cost = execution.getVariable("mp")?.cint
         if (cost != null) {
             player.plannersTemplate.magicPoint -= cost
         }

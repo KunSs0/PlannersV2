@@ -2,8 +2,6 @@ package com.gitee.planners.module.compat.attribute
 
 import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.module.script.ScriptOptions
-import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.event.player.PlayerSetRouteEvent
 import com.gitee.planners.api.event.player.PlayerSkillEvent

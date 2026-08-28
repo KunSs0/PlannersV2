@@ -33,7 +33,26 @@ class LevelCallback private constructor(
                 if (script.isEmpty()) {
                     return null
                 }
-                return LevelCallback(null, SingletonScript(script, sourceId))
+                return LevelCallback(
+                    null,
+                    SingletonScript(
+                        script,
+                        sourceId,
+                        listOf(
+                            "sender",
+                            "profile",
+                            "level",
+                            "from",
+                            "to",
+                            "player",
+                            "playerName",
+                            "name",
+                            "uuid",
+                            "router",
+                            "route"
+                        )
+                    )
+                )
             }
             return LevelCallback(value, null)
         }

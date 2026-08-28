@@ -8,8 +8,7 @@ class ProxyPlayerRoute<P>(
     private class TreeIndex(val definition: ProxyTreeDefinition)
 
     private val treeIndexes = LinkedHashMap<String, TreeIndex>()
-    private val canAdvanceCache = HashMap<String, Boolean>()
-    private val hintsCache = HashMap<String, List<String>>()
+    private val nodeInfoCache = HashMap<String, ProxyNodeInfo>()
 
     init {
         for (tree in route.proxySkillTrees) {
@@ -18,26 +17,14 @@ class ProxyPlayerRoute<P>(
     }
 
     @Synchronized
-    private fun cachedCanAdvance(treeId: String, nodeId: String): Boolean {
+    private fun cachedNodeInfo(treeId: String, nodeId: String): ProxyNodeInfo {
         val key = "$treeId:$nodeId"
-        val cached = canAdvanceCache[key]
+        val cached = nodeInfoCache[key]
         if (cached != null) {
             return cached
         }
-        val result = route.isNodeCanAdvance(player, treeId, nodeId)
-        canAdvanceCache[key] = result
-        return result
-    }
-
-    @Synchronized
-    private fun cachedHints(treeId: String, nodeId: String): List<String> {
-        val key = "$treeId:$nodeId"
-        val cached = hintsCache[key]
-        if (cached != null) {
-            return cached
-        }
-        val result = route.getNodeHints(player, treeId, nodeId)
-        hintsCache[key] = result
+        val result = route.getNodeInfo(player, treeId, nodeId)
+        nodeInfoCache[key] = result
         return result
     }
 
@@ -69,18 +56,9 @@ class ProxyPlayerRoute<P>(
         return view(treeId).definition.nodeIds[index]
     }
 
-    /** @return 指定节点的当前等级。 */
-    fun getNodeLevel(treeId: String, nodeId: String): Int {
-        return route.getNodeLevel(treeId, nodeId)
-    }
-
-    /** @return 指定节点当前能否升级。 */
-    fun canAdvanceNode(treeId: String, nodeId: String): Boolean {
-        return cachedCanAdvance(treeId, nodeId)
-    }
-
-    /** @return 指定节点当前的提示文本。 */
-    fun getNodeHints(treeId: String, nodeId: String): ProxyStringList {
-        return ProxyStringList(cachedHints(treeId, nodeId))
+    /** 一次反查指定节点的等级、升级结果和提示，同一代理内只计算一次。 */
+    fun getNodeInfo(treeId: String, nodeId: String): ProxyNodeInfo {
+        view(treeId)
+        return cachedNodeInfo(treeId, nodeId)
     }
 }

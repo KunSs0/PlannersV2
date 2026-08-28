@@ -1,7 +1,7 @@
 package com.gitee.planners.core.skill.precondition
 
 import com.gitee.planners.core.player.PlayerSkill
-import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import org.bukkit.entity.Player
 
 /**
@@ -32,13 +32,13 @@ interface CastPreCondition {
      *
      * @return 校验结果，返回 null 表示该技能不涉及此资源（跳过）
      */
-    fun verify(player: Player, skill: PlayerSkill, options: ScriptOptions): CastPreConditionResult?
+    fun verify(player: Player, skill: PlayerSkill, execution: SkillExecutionContext): CastPreConditionResult?
 
     /**
      * 校验通过后消耗资源。
      *
      * 默认无操作，需要消耗资源的条件重写此方法。
      */
-    fun consume(player: Player, skill: PlayerSkill, options: ScriptOptions) {}
+    fun consume(player: Player, skill: PlayerSkill, execution: SkillExecutionContext) {}
 
 }

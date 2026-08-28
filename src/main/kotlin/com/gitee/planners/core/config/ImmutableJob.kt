@@ -76,7 +76,7 @@ class ImmutableJob(private val config: Configuration) {
 
     /** 启动期预编译的职业属性 Nova 表达式。 */
     val attributeScripts: Map<String, SingletonScript> = attributes.mapValues { entry ->
-        SingletonScript(entry.value, "job:$id:attribute:${entry.key}")
+        SingletonScript(entry.value, "job:$id:attribute:${entry.key}", listOf("sender", "profile", "level"))
     }
 
     fun hasSkill(id: String): Boolean {

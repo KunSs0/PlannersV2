@@ -5,19 +5,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
-/** 验证技能变量在预编译 Nova Workspace 中的重绑定、隔离与复用语义。 */
+/** 验证技能变量在预编译 Nova Workspace 中的显式参数、隔离与复用语义。 */
 class SkillTreeRuntimeScenarioTest {
 
     @TempDir
     lateinit var root: Path
 
-    /** 同一预编译入口可以使用不同调用绑定计算玩家等级变量。 */
+    /** 同一预编译入口可以使用不同显式参数计算玩家等级变量。 */
     @Test
-    fun oneSessionCanRebindPlayerValuesBetweenSkillCalculations() {
-        val workspace = createWorkspace(root.resolve("rebind"))
+    fun precompiledFunctionAcceptsExplicitValuesBetweenSkillCalculations() {
+        val workspace = createWorkspace(root.resolve("arguments"))
         try {
-            val first = workspace.invoke(MODULE, "multiply", mapOf("level" to 2))
-            val second = workspace.invoke(MODULE, "multiply", mapOf("level" to 4))
+            val first = workspace.invokePure(MODULE, "multiply", 2)
+            val second = workspace.invokePure(MODULE, "multiply", 4)
             assertEquals(20L, (first as Number).toLong())
             assertEquals(40L, (second as Number).toLong())
         } finally {
@@ -30,8 +30,8 @@ class SkillTreeRuntimeScenarioTest {
     fun skillVariableBatchKeepsValuesIsolatedAfterRebind() {
         val workspace = createWorkspace(root.resolve("batch"))
         try {
-            val first = workspace.invoke(MODULE, "buildVariables", mapOf("level" to 3)) as Map<*, *>
-            val second = workspace.invoke(MODULE, "buildVariables", mapOf("level" to 7)) as Map<*, *>
+            val first = workspace.invokePure(MODULE, "buildVariables", 3) as Map<*, *>
+            val second = workspace.invokePure(MODULE, "buildVariables", 7) as Map<*, *>
             assertEquals(30L, (first["power"] as Number).toLong())
             assertEquals("skill-3", first["label"])
             assertEquals(70L, (second["power"] as Number).toLong())
@@ -42,15 +42,30 @@ class SkillTreeRuntimeScenarioTest {
         }
     }
 
+    /** 非批量条件也必须通过显式参数读取 profile、router 和 props。 */
+    @Test
+    fun singleNodeConditionUsesCompleteExplicitContext() {
+        val workspace = createWorkspace(root.resolve("single-condition"))
+        try {
+            val profile = FakeProfile(8)
+            val router = FakeRouter(3)
+            val props = mapOf("min" to 5, "amount" to 2)
+            val passed = workspace.invokePure(MODULE, "verifyNode", profile, router, props)
+            assertEquals(true, passed)
+        } finally {
+            workspace.close()
+        }
+    }
+
     /** 一个 Workspace 复用预编译模块，独立 Workspace 仍保持生命周期隔离。 */
     @Test
-    fun sessionReuseAvoidsCreatingOneContextPerSkill() {
+    fun workspacePureScopeAvoidsCreatingOneContextPerSkill() {
         val shared = createWorkspace(root.resolve("shared"))
         val separate = createWorkspace(root.resolve("separate"))
         try {
-            val sharedFirst = shared.invoke(MODULE, "increment", mapOf("level" to 1))
-            val sharedSecond = shared.invoke(MODULE, "increment", mapOf("level" to 2))
-            val separateValue = separate.invoke(MODULE, "increment", mapOf("level" to 1))
+            val sharedFirst = shared.invokePure(MODULE, "increment", 1)
+            val sharedSecond = shared.invokePure(MODULE, "increment", 2)
+            val separateValue = separate.invokePure(MODULE, "increment", 1)
             assertEquals(2L, (sharedFirst as Number).toLong())
             assertEquals(3L, (sharedSecond as Number).toLong())
             assertEquals(2L, (separateValue as Number).toLong())
@@ -61,13 +76,13 @@ class SkillTreeRuntimeScenarioTest {
         }
     }
 
-    /** 采样预编译 Workspace 复用与独立构建的非零耗时。 */
+    /** 采样预编译 Workspace 纯函数复用与独立构建的非零耗时。 */
     @Test
-    fun measureSessionReuseCost() {
+    fun measurePrecompiledPureInvocationCost() {
         val shared = createWorkspace(root.resolve("performance-shared"))
         val sharedStart = System.nanoTime()
         repeat(1000) { index ->
-            shared.invoke(MODULE, "multiply", mapOf("level" to index))
+            shared.invokePure(MODULE, "multiply", index)
         }
         val sharedElapsed = System.nanoTime() - sharedStart
         shared.close()
@@ -75,7 +90,7 @@ class SkillTreeRuntimeScenarioTest {
         val separateStart = System.nanoTime()
         repeat(20) { index ->
             val workspace = createWorkspace(root.resolve("performance-$index"))
-            workspace.invoke(MODULE, "multiply", mapOf("level" to index))
+            workspace.invokePure(MODULE, "multiply", index)
             workspace.close()
         }
         val separateElapsed = System.nanoTime() - separateStart
@@ -92,12 +107,27 @@ class SkillTreeRuntimeScenarioTest {
         val workspace = NovaScenarioWorkspace(path)
         workspace.register(
             MODULE,
-            "fun multiply() = level * 10\n" +
-                "fun increment() = level + 1\n" +
-                "fun buildVariables() = mapOf(\"power\" to level * 10, \"label\" to \"skill-\" + level)\n"
+            "fun multiply(level) = level * 10\n" +
+                "fun increment(level) = level + 1\n" +
+                "fun buildVariables(level) = mapOf(\"power\" to level * 10, \"label\" to \"skill-\" + level)\n" +
+                "fun verifyNode(profile, router, props) = profile.getLevel() >= props.min && router.getSkillPointsCurrent() >= props.amount\n"
         )
         workspace.load()
         return workspace
+    }
+
+    private class FakeProfile(private val level: Int) {
+
+        fun getLevel(): Int {
+            return level
+        }
+    }
+
+    private class FakeRouter(private val skillPoints: Int) {
+
+        fun getSkillPointsCurrent(): Int {
+            return skillPoints
+        }
     }
 
     companion object {

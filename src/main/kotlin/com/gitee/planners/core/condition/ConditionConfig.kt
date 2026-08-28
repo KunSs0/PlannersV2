@@ -1,13 +1,11 @@
 package com.gitee.planners.core.condition
 
 import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.ScriptOptions
-import com.gitee.planners.module.script.NovaSession
 
 /**
  * 不可变条件定义。
  *
- * 条件文本在配置加载时包装为命名函数；每个会话只安装一次，运行期只调用函数，
+ * 条件文本在配置加载时包装为命名函数；Workspace 启动时统一预编译，运行期只调用函数，
  * 禁止将条件表达式作为字符串再次执行。
  */
 class ConditionConfig(
@@ -20,7 +18,8 @@ class ConditionConfig(
 
     private val expressionFunction = ScriptManager.compileAction(
         "condition:$key:expression",
-        "val props = __plannersConditionProps\nreturn ($exper)"
+        listOf("player", "profile", "router", "route", "props"),
+        "return ($exper)"
     )
 
     private val batchFunction = ScriptManager.compileAction(
@@ -42,7 +41,8 @@ class ConditionConfig(
     } else {
         ScriptManager.compileAction(
             "condition:$key:consume",
-            "val props = __plannersConditionProps\n" + consume
+            listOf("player", "profile", "router", "route", "props"),
+            consume
         )
     }
 
@@ -62,28 +62,35 @@ class ConditionConfig(
         }
     }
 
-    /** 使用当前会话已绑定的 player、route 等上下文执行条件。 */
-    fun evaluate(session: NovaSession, conditionProps: Map<String, Any>): Boolean {
-        ScriptManager.setReusableSessionBinding(session, "__plannersConditionProps", conditionProps)
-        return ScriptManager.invokeCompiled(session, expressionFunction) == true
+    /** 使用完整显式业务参数执行已编译条件纯函数。 */
+    fun evaluate(
+        player: Any?,
+        profile: Any?,
+        router: Any?,
+        route: Any?,
+        conditionProps: Map<String, Any>
+    ): Boolean {
+        return ScriptManager.invokePure(expressionFunction, player, profile, router, route, conditionProps) == true
     }
 
     /**
-     * 在长期工作区 Context 内批量执行条件。
+     * 在 Workspace 持久资源作用域内批量执行条件。
      *
      * 参数均为函数局部变量，不写入 Nova 全局作用域。
      */
     fun evaluateBatchPersistent(
-        options: ScriptOptions,
+        player: Any?,
+        profile: Any?,
+        router: Any?,
+        route: Any?,
         conditionInputs: List<Map<String, Any>>
     ): BatchEvaluation {
-        val invocation = ScriptManager.invokePersistentProfiled(
+        val invocation = ScriptManager.invokePureProfiled(
             batchFunction,
-            options,
-            options.variables["player"],
-            options.variables["profile"],
-            options.variables["router"],
-            options.variables["route"],
+            player,
+            profile,
+            router,
+            route,
             conditionInputs
         )
         val result = invocation.value
@@ -97,21 +104,26 @@ class ConditionConfig(
      * 条件批处理执行结果。
      *
      * @property encoded 每个输入对应一个字符的通过结果。
-     * @property invocation 脚本长期会话的分段计时。
+     * @property invocation 预编译纯函数调用计时。
      */
     class BatchEvaluation(
         val encoded: String,
-        val invocation: ScriptManager.PersistentInvocation
+        val invocation: ScriptManager.PureInvocation
     ) {
     }
 
     /** 执行已经验证通过的条件消耗。 */
-    fun consume(session: NovaSession, conditionProps: Map<String, Any>) {
+    fun consume(
+        player: Any?,
+        profile: Any?,
+        router: Any?,
+        route: Any?,
+        conditionProps: Map<String, Any>
+    ) {
         val consumeFunction = this.consumeFunction
         if (consumeFunction == null) {
             return
         }
-        ScriptManager.setReusableSessionBinding(session, "__plannersConditionProps", conditionProps)
-        ScriptManager.invokeCompiled(session, consumeFunction)
+        ScriptManager.invokePure(consumeFunction, player, profile, router, route, conditionProps)
     }
 }

@@ -5,8 +5,8 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.attribute.AttributeSource
 import com.gitee.planners.core.config.ImmutableJob
 import com.gitee.planners.core.config.ImmutableSkill
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -33,9 +33,8 @@ class HookAttributeSource : AttributeSource {
 
         // Job hook.attributes
         val job = playerRouter.getCurrentJob()
-        val options = ScriptOptions.common(entity)
         for ((key, script) in job.attributeScripts) {
-            val value = eval(script, options)
+            val value = eval(script, entity, template, playerRouter.level)
             if (value != null) {
                 result[key] = value
             }
@@ -47,9 +46,9 @@ class HookAttributeSource : AttributeSource {
             if (skillLevel <= 0) {
                 continue
             }
-            val skillOptions = PlannersAPI.newOptions(entity, skill)
+            val execution = PlannersAPI.newExecution(entity, skill)
             for ((key, script) in skill.immutable.attributeScripts) {
-                val value = eval(script, skillOptions)
+                val value = eval(script, execution)
                 if (value != null) {
                     val current = result[key]
                     if (current == null) {
@@ -72,8 +71,16 @@ class HookAttributeSource : AttributeSource {
         return result
     }
 
-    private fun eval(script: SingletonScript, options: ScriptOptions): Double? {
-        val result = script.eval(options)
+    private fun eval(script: SingletonScript, sender: Player, profile: Any, level: Int): Double? {
+        val result = script.eval(sender, profile, level)
+        if (result == null) {
+            return null
+        }
+        return result.toString().toDoubleOrNull()
+    }
+
+    private fun eval(script: SingletonScript, execution: SkillExecutionContext): Double? {
+        val result = script.eval(*execution.skill.evaluationArguments(execution))
         if (result == null) {
             return null
         }

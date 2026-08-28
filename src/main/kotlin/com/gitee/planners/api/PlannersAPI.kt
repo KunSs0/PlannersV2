@@ -9,6 +9,7 @@ import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skill.directing.DirectingSessionManager
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionFeedback
@@ -17,8 +18,6 @@ import com.gitee.planners.core.skill.precondition.DefaultCastPreConditionFeedbac
 import com.gitee.planners.core.skill.precondition.builtin.CooldownPreCondition
 import com.gitee.planners.core.skill.precondition.builtin.MagicPointPreCondition
 import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
-import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.ScriptOptions
 import org.bukkit.entity.Player
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
@@ -82,8 +81,8 @@ object PlannersAPI {
      */
     fun getVariableValue(player: Player, skill: ImmutableSkill, variable: Variable): CompletableFuture<Any?> {
         val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
-        val options = ScriptOptions.forSkill(player, level, skill)
-        return variable.run(options)
+        val execution = newExecution(player, skill, level)
+        return CompletableFuture.completedFuture(execution.getVariable(variable.id))
     }
 
     /**
@@ -103,24 +102,29 @@ object PlannersAPI {
     /**
      * 创建技能选项
      */
-    fun newOptions(player: Player, skill: ImmutableSkill): ScriptOptions {
+    fun newExecution(player: Player, skill: ImmutableSkill): SkillExecutionContext {
         val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
-        return ScriptOptions.forSkill(player, level, skill)
+        return newExecution(player, skill, level)
     }
 
     /**
      * 创建技能选项
      */
-    fun newOptions(player: Player, skill: PlayerSkill): ScriptOptions {
+    fun newExecution(player: Player, skill: PlayerSkill): SkillExecutionContext {
         val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
-        return ScriptOptions.forSkill(player, level, skill.immutable)
+        return newExecution(player, skill.immutable, level)
     }
 
     /**
      * 创建技能选项
      */
-    fun newOptions(player: Player, skill: ImmutableSkill, level: Int): ScriptOptions {
-        return ScriptOptions.forSkill(player, level, skill)
+    fun newExecution(player: Player, skill: ImmutableSkill, level: Int): SkillExecutionContext {
+        val execution = SkillExecutionContext.create(ProxyTarget.BukkitEntity(player), level, skill)
+        val values = skill.evaluateDisplayVariables(execution)
+        for ((id, value) in values) {
+            execution.setVariable(id, value)
+        }
+        return execution
     }
 
     /**
@@ -137,8 +141,11 @@ object PlannersAPI {
         val extraVariables = LinkedHashMap<String, Any>()
         extraVariables.putAll(variables)
         val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
-        val options = ScriptOptions.forSkill(player, level, skill.immutable, extraVariables)
-        val result = skill.immutable.invokeActionFunction(method, options, payload)
+        val execution = newExecution(player, skill.immutable, level)
+        for ((id, value) in extraVariables) {
+            execution.setVariable(id, value)
+        }
+        val result = skill.immutable.invokeActionFunction(method, execution, payload)
         return result != null
     }
 
@@ -167,10 +174,10 @@ object PlannersAPI {
         if (!Check(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
-        val options = newOptions(player, skill)
+        val execution = newExecution(player, skill)
         val sortedConditions = castPreConditions.sortedBy { it.priority }
         for (condition in sortedConditions) {
-            val result = condition.verify(player, skill, options)
+            val result = condition.verify(player, skill, execution)
             if (result is CastPreConditionResult.Failure) {
                 castPreConditionFeedback.onFailed(player, result)
                 return ExecutableResult.preConditionFailed(result)
@@ -182,7 +189,7 @@ object PlannersAPI {
                 return ExecutableResult.cancelledWithEvent()
             }
             val started = DirectingSessionManager.start(player, skill, sourceKey) { result ->
-                continueAfterDirecting(player, skill, options, sortedConditions, result)
+                continueAfterDirecting(player, skill, execution, sortedConditions, result)
             }
             if (!started) {
                 return ExecutableResult.cancelledWithEvent()
@@ -195,12 +202,12 @@ object PlannersAPI {
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
             val context = SkillInputExec.Context(player, skill) { _ ->
-                continueCast(player, skill, options, sortedConditions, null)
+                continueCast(player, skill, execution, sortedConditions, null)
             }
             interceptor.intercept(context)
             return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
         }
-        return continueCast(player, skill, options, sortedConditions, null)
+        return continueCast(player, skill, execution, sortedConditions, null)
     }
 
     /**
@@ -213,19 +220,19 @@ object PlannersAPI {
      * @param directing 已确认的指向性结果。
      * @return 最终释放结果。
      */
-    private fun continueAfterDirecting(player: Player, skill: PlayerSkill, options: ScriptOptions, sortedConditions: List<CastPreCondition>, directing: DirectingResult): ExecutableResult {
+    private fun continueAfterDirecting(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult): ExecutableResult {
         if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
             val context = SkillInputExec.Context(player, skill) { _ ->
-                continueCast(player, skill, options, sortedConditions, directing)
+                continueCast(player, skill, execution, sortedConditions, directing)
             }
             interceptor.intercept(context)
             return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
         }
-        return continueCast(player, skill, options, sortedConditions, directing)
+        return continueCast(player, skill, execution, sortedConditions, directing)
     }
 
     /**
@@ -238,23 +245,22 @@ object PlannersAPI {
      * @param directing 已确认的指向性结果；普通技能为 null。
      * @return 最终释放结果。
      */
-    private fun continueCast(player: Player, skill: PlayerSkill, options: ScriptOptions, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+    private fun continueCast(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
         for (condition in sortedConditions) {
-            val result = condition.verify(player, skill, options)
+            val result = condition.verify(player, skill, execution)
             if (result is CastPreConditionResult.Failure) {
                 castPreConditionFeedback.onFailed(player, result)
                 return ExecutableResult.preConditionFailed(result)
             }
         }
         for (condition in sortedConditions) {
-            condition.consume(player, skill, options)
+            condition.consume(player, skill, execution)
         }
-        val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
-        val variables = LinkedHashMap<String, Any?>()
         if (directing != null) {
-            variables["directing"] = directing
+            execution.context.directing = directing
+            execution.setVariable("directing", directing)
         }
-        skill.immutable.execute(ProxyTarget.BukkitEntity(player), level, variables)
+        skill.immutable.execute(execution)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()
     }

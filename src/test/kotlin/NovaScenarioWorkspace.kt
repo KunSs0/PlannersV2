@@ -2,6 +2,7 @@ import com.novalang.runtime.Nova
 import com.novalang.runtime.NovaScheduler
 import com.novalang.runtime.SchedulerHolder
 import com.novalang.workspace.ExecutionPolicy
+import com.novalang.workspace.ResourceScope
 import com.novalang.workspace.RuntimeWorkspace
 import com.novalang.workspace.ScopeType
 import com.novalang.workspace.SourceUnit
@@ -20,6 +21,7 @@ import java.util.concurrent.Executor
 class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
 
     private val workspace: RuntimeWorkspace
+    private var pureScope: ResourceScope? = null
     private var loaded = false
 
     init {
@@ -68,7 +70,31 @@ class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
     /** 完成全部测试模块的统一预编译。 */
     fun load() {
         workspace.load()
+        pureScope = workspace.openScope(null, ScopeType.PERSISTENT_REGISTRATION, "scenario:pure")
         loaded = true
+    }
+
+    /** 使用显式参数调用预编译纯函数，不创建调用级上下文或业务绑定。 */
+    fun invokePure(
+        moduleId: String,
+        functionName: String,
+        vararg arguments: Any?
+    ): Any? {
+        if (!loaded) {
+            throw IllegalStateException("The Nova test Workspace has not been loaded")
+        }
+        val scope = pureScope
+        if (scope == null) {
+            throw IllegalStateException("The Nova test pure scope is not active")
+        }
+        return workspace.invoke(
+            moduleId,
+            functionName,
+            emptyMap(),
+            scope,
+            ExecutionPolicy.SERIAL_SCOPE,
+            *arguments
+        )
     }
 
     /**
@@ -108,6 +134,7 @@ class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
 
     /** 销毁 Workspace 资源树并释放进程级测试调度器。 */
     override fun close() {
+        pureScope = null
         workspace.dispose()
         SchedulerHolder.clear()
     }

@@ -5,13 +5,12 @@ import com.gitee.planners.api.common.Unique
 import com.gitee.planners.api.directing.DirectingDefinition
 import com.gitee.planners.api.directing.DirectingResult
 import com.gitee.planners.api.directing.DirectingProviderRegistry
-import com.gitee.planners.core.skill.context.SkillContext
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skill.directing.DirectingConfigSection
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.script.NovaScriptUnit
 import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
@@ -140,7 +139,7 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     /** 启动期预编译的技能属性 Nova 表达式。 */
     val attributeScripts: Map<String, SingletonScript> = attributes.mapValues { entry ->
-        SingletonScript(entry.value, "skill:$id:attribute:${entry.key}")
+        SingletonScript(entry.value, "skill:$id:attribute:${entry.key}", templateParameterNames())
     }
 
     /** 显示模板表达式到启动期预编译 Nova SourceUnit 的映射。 */
@@ -204,35 +203,24 @@ class ImmutableSkill(config: Configuration) : Unique {
             return CompletableFuture.completedFuture(null)
         }
 
-        val options = ScriptOptions.forSkill(sender, level, this@ImmutableSkill)
-        options.set("origin", (sender as? ProxyTarget.Location<*>)?.getBukkitLocation())
+        val execution = SkillExecutionContext.create(sender, level, this@ImmutableSkill, variables)
+        execution.origin = (sender as? ProxyTarget.Location<*>)?.getBukkitLocation()
         val directing = variables["directing"]
         if (directing is DirectingResult) {
-            val context = options.variables["ctx"]
-            if (context is SkillContext) {
-                context.directing = directing
-            }
-        }
-        for ((k, v) in variables) {
-            options.set(k, v)
+            execution.context.directing = directing
         }
 
         val task = {
             // 全部 YAML variable 表达式先由同一 Workspace 的预编译 Nova 批处理入口计算。
-            val resolvedVariables = evaluateDisplayVariables(options)
+            val resolvedVariables = evaluateDisplayVariables(execution)
             for ((variableId, variableValue) in resolvedVariables) {
-                options.set(variableId, variableValue)
+                execution.setVariable(variableId, variableValue)
             }
-            val session = ScriptManager.openSession(options)
-            try {
-                val module = actionModule
-                if (module == null) {
-                    null
-                } else {
-                    session.invoke(module, "execute")
-                }
-            } finally {
-                session.close()
+            val module = actionModule
+            if (module == null) {
+                null
+            } else {
+                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
             }
         }
 
@@ -247,21 +235,16 @@ class ImmutableSkill(config: Configuration) : Unique {
      * 调用当前技能 action 模块中的业务回调。
      *
      * @param functionName action 模块导出的函数名。
-     * @param options 本次技能调用绑定。
+     * @param execution 本次技能执行上下文。
      * @param payload 回调负载。
      * @return Nova 回调返回值；技能未声明 action 时返回 null。
      */
-    fun invokeActionFunction(functionName: String, options: ScriptOptions, payload: Map<String, Any>): Any? {
+    fun invokeActionFunction(functionName: String, execution: SkillExecutionContext, payload: Map<String, Any>): Any? {
         val module = actionModule
         if (module == null) {
             return null
         }
-        val session = ScriptManager.openSession(options)
-        try {
-            return session.invoke(module, functionName, payload)
-        } finally {
-            session.close()
-        }
+        return ScriptManager.invokeBusiness(module, functionName, execution.actionBindings(), payload)
     }
 
     fun getVariableOrNull(id: String): Variable? {
@@ -272,15 +255,14 @@ class ImmutableSkill(config: Configuration) : Unique {
         return immutableVariables
     }
 
-    fun evaluateDisplayVariables(options: ScriptOptions): Map<String, Any?> {
-        val values = ScriptManager.invokePersistent(
+    fun evaluateDisplayVariables(execution: SkillExecutionContext): Map<String, Any?> {
+        val values = ScriptManager.invokePure(
             displayVariablesFunction,
-            options,
-            options.variables["sender"],
-            options.variables["level"],
-            options.variables["ctx"],
-            options.variables["skill"],
-            options.variables["profile"]
+            execution.sender,
+            execution.level,
+            execution.context,
+            execution.skill,
+            execution.profile
         )
         if (values !is List<*>) {
             throw IllegalStateException("Skill '$id' display variable batch returned an invalid type")
@@ -301,16 +283,16 @@ class ImmutableSkill(config: Configuration) : Unique {
      * 使用 RuntimeWorkspace 预编译入口计算一个 `{{expression}}`。
      *
      * @param expression 模板中的原始 Nova 表达式。
-     * @param options 已包含技能变量与调用上下文的绑定。
+     * @param execution 已完成技能变量计算的执行上下文。
      * @return Nova 表达式结果。
      */
-    fun evaluateDisplayTemplate(expression: String, options: ScriptOptions): Any? {
+    fun evaluateDisplayTemplate(expression: String, execution: SkillExecutionContext): Any? {
         val normalized = expression.trim()
         val script = templateScripts[normalized]
         if (script == null) {
             throw IllegalStateException("Skill '$id' display template was not precompiled: {{$normalized}}")
         }
-        return ScriptManager.invokePersistent(script, options)
+        return ScriptManager.invokePure(script, *evaluationArguments(execution))
     }
 
     /** 扫描一项显示文本，并在 Workspace load 前登记其中全部 Nova 模板表达式。 */
@@ -326,7 +308,7 @@ class ImmutableSkill(config: Configuration) : Unique {
                 throw IllegalArgumentException("Skill '$id' has a blank display template at $path")
             }
             val sourceId = "skill:$id:template:$path:$expressionIndex"
-            val script = ScriptManager.compileExpression(sourceId, expression)
+            val script = ScriptManager.compileExpression(sourceId, templateParameterNames(), expression)
             templateScripts[expression] = script
             expressionIndex += 1
         }
@@ -352,6 +334,53 @@ class ImmutableSkill(config: Configuration) : Unique {
             listOf("sender", "level", "ctx", "skill", "profile"),
             body.toString()
         )
+    }
+
+    /** 执行已经完成变量批处理的技能上下文。 */
+    fun execute(execution: SkillExecutionContext): CompletableFuture<Any?> {
+        if (action.isEmpty()) {
+            return CompletableFuture.completedFuture(null)
+        }
+        val task = {
+            val module = actionModule
+            if (module == null) {
+                null
+            } else {
+                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
+            }
+        }
+        if (async) {
+            return CompletableFuture.supplyAsync(task)
+        }
+        return CompletableFuture.completedFuture(task())
+    }
+
+    /** 返回图标模板纯函数的稳定显式参数列表。 */
+    private fun templateParameterNames(): List<String> {
+        val parameters = ArrayList<String>()
+        parameters.add("sender")
+        parameters.add("level")
+        parameters.add("ctx")
+        parameters.add("skill")
+        parameters.add("profile")
+        for ((variableId, _) in immutableVariables) {
+            parameters.add(variableId)
+        }
+        return parameters
+    }
+
+    /** 返回技能纯函数统一使用的有序显式参数。 */
+    fun evaluationArguments(execution: SkillExecutionContext): Array<Any?> {
+        val arguments = ArrayList<Any?>()
+        arguments.add(execution.sender)
+        arguments.add(execution.level)
+        arguments.add(execution.context)
+        arguments.add(execution.skill)
+        arguments.add(execution.profile)
+        for ((variableId, _) in immutableVariables) {
+            arguments.add(execution.getVariable(variableId))
+        }
+        return arguments.toTypedArray()
     }
 
     /**

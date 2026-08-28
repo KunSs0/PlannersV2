@@ -30,9 +30,9 @@ val result: ExecutableResult = PlannersAPI.cast(player, playerSkill)
 val value: CompletableFuture<Any?> = PlannersAPI.getVariableValue(player, skill, "damage")
 val value2: CompletableFuture<Any?> = PlannersAPI.getVariableValue(player, skill, variable)
 
-// 创建脚本执行选项
-val options: ScriptOptions = PlannersAPI.newOptions(player, skill)
-val options2: ScriptOptions = PlannersAPI.newOptions(player, skill, level)
+// 创建一次强类型技能执行上下文；技能变量在创建时统一计算
+val execution: SkillExecutionContext = PlannersAPI.newExecution(player, skill)
+val execution2: SkillExecutionContext = PlannersAPI.newExecution(player, skill, level)
 ```
 
 ---
@@ -186,7 +186,6 @@ interface Route : Unique {
     fun getBranches(): List<Route>
     fun getJob(): Job
     fun getIcon(): ItemStack?
-    fun isInfer(player: Player, options: ScriptOptions): Condition.VerifyInfo
 }
 ```
 
@@ -195,7 +194,6 @@ interface Route : Unique {
 ```kotlin
 interface Variable {
     val id: String
-    fun run(options: ScriptOptions): CompletableFuture<Any?>
 }
 ```
 

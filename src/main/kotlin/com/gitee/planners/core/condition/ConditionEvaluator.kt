@@ -2,13 +2,11 @@ package com.gitee.planners.core.condition
 
 import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.module.script.NovaScriptUnit
-import com.gitee.planners.module.script.NovaSession
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap
 
@@ -50,16 +48,11 @@ class ConditionEvaluator {
         player: Player,
         contextVars: Map<String, Any> = emptyMap()
     ): VerifyResult {
-        val session = ScriptManager.openReusableSession(ScriptOptions.of(), emptySet())
-        try {
-            val conditionConfigs = collectConditionConfigs(listOf(VerifyRequest("verify", conditions, contextVars)))
-            for (conditionConfig in conditionConfigs) {
-                conditionConfig.registerSources()
-            }
-            return verifyInternal(conditions, player, contextVars, session)
-        } finally {
-            session.close()
+        val conditionConfigs = collectConditionConfigs(listOf(VerifyRequest("verify", conditions, contextVars)))
+        for (conditionConfig in conditionConfigs) {
+            conditionConfig.registerSources()
         }
+        return verifyInternal(conditions, player, contextVars)
     }
 
     /**
@@ -87,15 +80,7 @@ class ConditionEvaluator {
         var groupInputBuildNanos: Long = 0L
         var conditionInvokeNanos: Long = 0L
         var resultApplyNanos: Long = 0L
-        var persistentVariablesCopyNanos: Long = 0L
-        var persistentContextSetNanos: Long = 0L
-        var persistentArgumentsNanos: Long = 0L
-        var persistentContextRestoreNanos: Long = 0L
-        var persistentLockWaitNanos: Long = 0L
-        var persistentInstallNanos: Long = 0L
-        var persistentLookupNanos: Long = 0L
-        var persistentExecuteNanos: Long = 0L
-        var persistentUnwrapNanos: Long = 0L
+        var novaInvokeNanos: Long = 0L
         var propertyExpressionCount: Int = 0
         var conditionInvokeCount: Int = 0
         var conditionInvokeFailureCount: Int = 0
@@ -103,16 +88,16 @@ class ConditionEvaluator {
 
         private val groups = LinkedHashMap<String, GroupProfiling>()
 
-        /** 累加一次属性表达式调用的宿主与长期会话耗时。 */
-        fun recordPropertyInvocation(invocation: ScriptManager.PersistentInvocation) {
+        /** 累加一次属性表达式的预编译纯函数调用耗时。 */
+        fun recordPropertyInvocation(invocation: ScriptManager.PureInvocation) {
             propertyExpressionCount += 1
-            recordPersistentInvocation(invocation)
+            novaInvokeNanos += invocation.elapsedNanos
         }
 
         /** 累加一次按条件 key 批量执行的脚本调用。 */
-        fun recordConditionInvocation(key: String, inputCount: Int, invocation: ScriptManager.PersistentInvocation) {
+        fun recordConditionInvocation(key: String, inputCount: Int, invocation: ScriptManager.PureInvocation) {
             conditionInvokeCount += 1
-            recordPersistentInvocation(invocation)
+            novaInvokeNanos += invocation.elapsedNanos
             var group = groups[key]
             if (group == null) {
                 group = GroupProfiling()
@@ -120,8 +105,7 @@ class ConditionEvaluator {
             }
             group.inputCount += inputCount
             group.invokeCount += 1
-            group.executeNanos += invocation.functionExecuteNanos
-            group.totalNanos += totalInvocationNanos(invocation)
+            group.totalNanos += invocation.elapsedNanos
         }
 
         /** 记录批处理调用在脚本执行前后抛出的异常。 */
@@ -153,22 +137,8 @@ class ConditionEvaluator {
             text.append(conditionInvokeFailureCount)
             text.append(",apply=")
             text.append(formatMicros(resultApplyNanos))
-            text.append(",hostCopy=")
-            text.append(formatMicros(persistentVariablesCopyNanos))
-            text.append(",hostContext=")
-            text.append(formatMicros(persistentContextSetNanos + persistentContextRestoreNanos))
-            text.append(",args=")
-            text.append(formatMicros(persistentArgumentsNanos))
-            text.append(",lock=")
-            text.append(formatMicros(persistentLockWaitNanos))
-            text.append(",install=")
-            text.append(formatMicros(persistentInstallNanos))
-            text.append(",lookup=")
-            text.append(formatMicros(persistentLookupNanos))
-            text.append(",execute=")
-            text.append(formatMicros(persistentExecuteNanos))
-            text.append(",unwrap=")
-            text.append(formatMicros(persistentUnwrapNanos))
+            text.append(",novaInvoke=")
+            text.append(formatMicros(novaInvokeNanos))
             text.append("}")
             if (firstConditionInvokeFailure != null) {
                 text.append(" error=")
@@ -188,37 +158,11 @@ class ConditionEvaluator {
                     text.append(group.invokeCount)
                     text.append(",totalUs=")
                     text.append(formatMicros(group.totalNanos))
-                    text.append(",executeUs=")
-                    text.append(formatMicros(group.executeNanos))
                     first = false
                 }
                 text.append("}")
             }
             return text.toString()
-        }
-
-        private fun recordPersistentInvocation(invocation: ScriptManager.PersistentInvocation) {
-            persistentVariablesCopyNanos += invocation.variablesCopyNanos
-            persistentContextSetNanos += invocation.contextSetNanos
-            persistentArgumentsNanos += invocation.argumentAdaptNanos
-            persistentContextRestoreNanos += invocation.contextRestoreNanos
-            persistentLockWaitNanos += invocation.lockWaitNanos
-            persistentInstallNanos += invocation.installNanos
-            persistentLookupNanos += invocation.functionLookupNanos
-            persistentExecuteNanos += invocation.functionExecuteNanos
-            persistentUnwrapNanos += invocation.resultUnwrapNanos
-        }
-
-        private fun totalInvocationNanos(invocation: ScriptManager.PersistentInvocation): Long {
-            return invocation.variablesCopyNanos +
-                invocation.contextSetNanos +
-                invocation.argumentAdaptNanos +
-                invocation.contextRestoreNanos +
-                invocation.lockWaitNanos +
-                invocation.installNanos +
-                invocation.functionLookupNanos +
-                invocation.functionExecuteNanos +
-                invocation.resultUnwrapNanos
         }
 
         private fun formatMicros(nanos: Long): String {
@@ -230,12 +174,11 @@ class ConditionEvaluator {
             var inputCount: Int = 0
             var invokeCount: Int = 0
             var totalNanos: Long = 0L
-            var executeNanos: Long = 0L
         }
     }
 
     /**
-     * 在同一脚本会话中批量校验多个条件组。
+     * 在同一预编译 Workspace 中批量校验多个条件组。
      *
      * 每个请求保持与 [verify] 一致的条件顺序和失败短路结果，
      * 脚本计算按条件定义分组批量执行，避免节点数量线性增加 Nova 调用次数。
@@ -249,7 +192,7 @@ class ConditionEvaluator {
     }
 
     /**
-     * 在同一脚本会话中批量校验多个条件组，并返回请求级细分计时。
+     * 在同一预编译 Workspace 中批量校验多个条件组，并返回请求级细分计时。
      *
      * @param requests 待校验请求列表。
      * @param player 当前玩家。
@@ -264,7 +207,6 @@ class ConditionEvaluator {
         val profile = player.plannersTemplate
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
-        val options = createOptions(player, profile, router, route)
         val preparedRequests = ArrayList<MutableList<PreparedCondition>>()
         val groupedConditions = LinkedHashMap<String, MutableList<PreparedCondition>>()
         for (requestIndex in requests.indices) {
@@ -314,7 +256,7 @@ class ConditionEvaluator {
             val invocationStart = System.nanoTime()
             val evaluation: ConditionConfig.BatchEvaluation
             try {
-                evaluation = config.evaluateBatchPersistent(options, inputs)
+                evaluation = config.evaluateBatchPersistent(player, profile, router, route, inputs)
             } catch (exception: Exception) {
                 profiling.recordConditionInvokeFailure(exception)
                 throw IllegalStateException("Failed to evaluate Nova condition batch: $key", exception)
@@ -355,16 +297,12 @@ class ConditionEvaluator {
     private fun verifyInternal(
         conditions: Map<String, Map<String, Any>>,
         player: Player,
-        contextVars: Map<String, Any>,
-        session: NovaSession
+        contextVars: Map<String, Any>
     ): VerifyResult {
         val profile = player.plannersTemplate
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
         val hints = mutableListOf<String>()
-        val options = createOptions(player, profile, router, route)
-        ScriptManager.rebindReusableSession(session, options, setOf("props"))
-
         for ((key, overrideProps) in conditions) {
             val cfg = Planners.conditions.get()[key]
             if (cfg == null) {
@@ -372,8 +310,7 @@ class ConditionEvaluator {
             }
             val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
             val props = resolvedProps.values
-            options.set("props", props)
-            val passed = evalCondition(cfg, session, props)
+            val passed = cfg.evaluate(player, profile, router, route, props)
             if (!passed) {
                 hints.add(interpolate(cfg.hint, props))
                 return VerifyResult(false, hints)
@@ -398,29 +335,17 @@ class ConditionEvaluator {
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
 
-        val session = ScriptManager.openReusableSession(ScriptOptions.of(), emptySet())
-        try {
-            for ((key, overrideProps) in conditions) {
-                val cfg = Planners.conditions.get()[key]
-                if (cfg == null) {
-                    error("Unknown condition key: $key")
-                }
-                if (cfg.consume == null) {
-                    continue
-                }
-                cfg.registerSources()
-                val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
-                val props = resolvedProps.values
-                val options = createOptions(player, profile, router, route)
-                options.set("props", props)
-                for ((contextKey, contextValue) in contextVars) {
-                    options.set(contextKey, contextValue)
-                }
-                ScriptManager.rebindReusableSession(session, options, setOf("props"))
-                cfg.consume(session, props)
+        for ((key, overrideProps) in conditions) {
+            val cfg = Planners.conditions.get()[key]
+            if (cfg == null) {
+                error("Unknown condition key: $key")
             }
-        } finally {
-            session.close()
+            if (cfg.consume == null) {
+                continue
+            }
+            cfg.registerSources()
+            val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
+            cfg.consume(player, profile, router, route, resolvedProps.values)
         }
     }
 
@@ -477,12 +402,8 @@ class ConditionEvaluator {
                 return doubleValue
             }
         }
-        val options = createOptions(player, profile, router, route)
-        for ((key, value) in contextVars) {
-            options.set(key, value)
-        }
         val expressionStart = System.nanoTime()
-        val result = invokePersistentExpression(expr, options, contextVars, profiling)
+        val result = invokeExpression(expr, player, profile, router, route, contextVars, profiling)
         if (profiling != null) {
             profiling.propertyExpressionNanos += System.nanoTime() - expressionStart
         }
@@ -503,39 +424,23 @@ class ConditionEvaluator {
         return result
     }
 
-    private fun createOptions(
+    private fun invokeExpression(
+        source: String,
         player: Player,
         profile: PlayerTemplate,
         router: PlayerRouter?,
-        route: PlayerRoute?
-    ): ScriptOptions {
-        val options = ScriptOptions.of()
-        options.set("player", player)
-        options.set("profile", profile)
-        if (router != null) {
-            options.set("router", router)
-        }
-        if (route != null) {
-            options.set("route", route)
-        }
-        return options
-    }
-
-    private fun invokePersistentExpression(
-        source: String,
-        options: ScriptOptions,
+        route: PlayerRoute?,
         contextVars: Map<String, Any>,
         profiling: BatchProfiling?
     ): Any? {
         val function = getPropExpression(source)
         if (profiling != null) {
-            val invocation = ScriptManager.invokePersistentProfiled(
+            val invocation = ScriptManager.invokePureProfiled(
                 function,
-                options,
-                options.variables["player"],
-                options.variables["profile"],
-                options.variables["router"],
-                options.variables["route"],
+                player,
+                profile,
+                router,
+                route,
                 contextVars["treeId"],
                 contextVars["nodeId"],
                 contextVars["nodeLevel"]
@@ -543,27 +448,16 @@ class ConditionEvaluator {
             profiling.recordPropertyInvocation(invocation)
             return invocation.value
         }
-        return ScriptManager.invokePersistent(
+        return ScriptManager.invokePure(
             function,
-            options,
-            options.variables["player"],
-            options.variables["profile"],
-            options.variables["router"],
-            options.variables["route"],
+            player,
+            profile,
+            router,
+            route,
             contextVars["treeId"],
             contextVars["nodeId"],
             contextVars["nodeLevel"]
         )
-    }
-
-    /**
-     * 执行节点条件表达式。
-     *
-     * 批量模式下基础上下文已在单个节点开始时绑定，只替换当前条件的 props，
-     * 防止同一节点的多条条件反复重建全局脚本绑定。
-     */
-    private fun evalCondition(config: ConditionConfig, session: NovaSession, props: Map<String, Any>): Boolean {
-        return config.evaluate(session, props)
     }
 
     private fun getPropExpression(source: String): NovaScriptUnit {

@@ -253,8 +253,7 @@ warrior_vanguard:
 // 对每个条件 key:
 val cfg = Planners.conditions[key]           // 从 config.yml 取 ConditionConfig
 val props = merge(defaultProps, overrideProps) // 合并参数（String 值会 eval 求值）
-val options = ScriptOptions(player, profile, route, props)
-val passed = ScriptManager.eval(cfg.exper, options)  // 执行 JS 校验表达式
+val passed = cfg.evaluate(player, profile, router, route, props)
 if (!passed) { hints += interpolate(cfg.hint, props) }
 ```
 

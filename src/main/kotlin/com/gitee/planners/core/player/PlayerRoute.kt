@@ -13,6 +13,7 @@ import com.gitee.planners.core.config.SkillTreeNode
 import com.gitee.planners.core.config.SkillTreeSkillNode
 import com.gitee.planners.core.database.Database
 import com.gitee.planners.core.script.proxy.ProxyPlayerRoute
+import com.gitee.planners.core.script.proxy.ProxyNodeInfo
 import com.gitee.planners.core.script.proxy.ProxyRouteTarget
 import com.gitee.planners.core.script.proxy.ProxyTreeDefinition
 import com.gitee.planners.core.script.proxy.ProxyTreeDefinitionView
@@ -141,7 +142,7 @@ class PlayerRoute(
         return nodeStatesByKey[nodeStateKey(treeId, nodeId)]
     }
 
-    override fun getNodeLevel(treeId: String, nodeId: String): Int {
+    fun getNodeLevel(treeId: String, nodeId: String): Int {
         val state = nodeStatesByKey[nodeStateKey(treeId, nodeId)]
         if (state == null) {
             return 0
@@ -149,12 +150,10 @@ class PlayerRoute(
         return state.level
     }
 
-    override fun isNodeCanAdvance(player: Player, treeId: String, nodeId: String): Boolean {
-        return canAdvanceNode(player, treeId, nodeId).passed
-    }
-
-    override fun getNodeHints(player: Player, treeId: String, nodeId: String): List<String> {
-        return canAdvanceNode(player, treeId, nodeId).hints
+    override fun getNodeInfo(player: Player, treeId: String, nodeId: String): ProxyNodeInfo {
+        val level = getNodeLevel(treeId, nodeId)
+        val verification = canAdvanceNode(player, treeId, nodeId)
+        return ProxyNodeInfo(treeId, nodeId, level, verification.passed, verification.hints)
     }
 
     fun getNodeLevels(treeId: String): Map<String, Int> {

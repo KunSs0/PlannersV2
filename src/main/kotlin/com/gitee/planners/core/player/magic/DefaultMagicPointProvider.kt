@@ -5,7 +5,6 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersLoaded
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
 import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
@@ -90,7 +89,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
         if (!player.plannersLoaded) {
             return
         }
-        val data = expressionResume.get().eval(ScriptOptions.common(player))
+        val data = expressionResume.get().eval(player, player.plannersTemplate)
         if (data == null) {
             throw IllegalStateException("The magic point resume expression returned null")
         }
@@ -111,7 +110,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
         if (!player.plannersLoaded) {
             return
         }
-        val data = expressionUpperLimit.get().eval(ScriptOptions.common(player))
+        val data = expressionUpperLimit.get().eval(player, player.plannersTemplate)
         if (data == null) {
             throw IllegalStateException("The magic point upper-limit expression returned null")
         }
@@ -127,7 +126,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
             if (source == null || source.isBlank()) {
                 throw IllegalStateException("The magic point upper-limit expression is required")
             }
-            SingletonScript(source, "config:magic-point:upper-limit")
+            SingletonScript(source, "config:magic-point:upper-limit", listOf("sender", "profile"))
         }
 
         @ConfigNode("settings.magic-point.resume.expression")
@@ -136,7 +135,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
             if (source == null || source.isBlank()) {
                 throw IllegalStateException("The magic point resume expression is required")
             }
-            SingletonScript(source, "config:magic-point:resume")
+            SingletonScript(source, "config:magic-point:resume", listOf("sender", "profile"))
         }
 
         @ConfigNode("settings.magic-point.upper-limit.update-tick")

@@ -1,7 +1,6 @@
 package com.gitee.planners.core.config.level
 
 import com.gitee.planners.api.common.Unique
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.SingletonScript
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.warning
@@ -39,17 +38,13 @@ interface Algorithm {
             if (experience == null || experience.isBlank()) {
                 throw IllegalArgumentException("Level algorithm '$id' requires an experience expression")
             }
-            action = SingletonScript(experience, "level:$id:experience")
+            action = SingletonScript(experience, "level:$id:experience", listOf("sender", "level"))
         }
 
         private val callbacks = parseCallbacks(root.getConfigurationSection("callbacks"))
 
         override fun getExp(player: Player, level: Int): CompletableFuture<Int> {
-            val options = ScriptOptions.create {
-                it.set("sender", player)
-                it.set("level", level)
-            }
-            return action.run(options).thenApply { result ->
+            return action.run(false, player, level).thenApply { result ->
                 if (result == null) {
                     throw IllegalStateException("Level algorithm '$id' returned null")
                 }

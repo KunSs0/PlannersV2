@@ -1,10 +1,9 @@
 package com.gitee.planners.core.skill.formatter
 
-import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.asTarget
-import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
@@ -19,22 +18,16 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
 
     private val profiling = RenderProfiling()
 
-    private val options by lazy { createOptions() }
+    private val execution by lazy { createExecution() }
 
-    private fun createOptions(): ScriptOptions {
+    private fun createExecution(): SkillExecutionContext {
         val optionStart = System.nanoTime()
-        val player = sender.instance as? Player
-        val result: ScriptOptions
-        if (player != null) {
-            result = PlannersAPI.newOptions(player, skill, level)
-        } else {
-            result = ScriptOptions.forSkill(sender.instance ?: sender, level, skill)
-        }
+        val result = SkillExecutionContext.create(sender, level, skill)
         profiling.optionsCreateMs += elapsedMs(optionStart)
         val variableStart = System.nanoTime()
         val values = skill.evaluateDisplayVariables(result)
         for ((id, value) in values) {
-            result.set(id, value)
+            result.setVariable(id, value)
         }
         profiling.variableEvalMs += elapsedMs(variableStart)
         profiling.variableEvalCount += values.size
@@ -46,14 +39,14 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
             return ""
         }
         // 在模板替换开始前初始化变量，避免将懒加载的脚本计算重复计入模板耗时。
-        val preparedOptions = options
+        val preparedExecution = execution
         val templateStart = System.nanoTime()
         val matcher = ImmutableSkill.displayTemplatePattern.matcher(text.trim())
         val rendered = StringBuffer()
         while (matcher.find()) {
             val expression = matcher.group(1)
             // 模板业务表达式始终通过启动期预编译的 Nova SourceUnit 执行。
-            val value = skill.evaluateDisplayTemplate(expression, preparedOptions)
+            val value = skill.evaluateDisplayTemplate(expression, preparedExecution)
             if (value == null) {
                 throw IllegalStateException("Skill '${skill.id}' display template returned null: {{$expression}}")
             }
@@ -69,16 +62,16 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
      * 只渲染技能图标的文本字段，不创建或复制 ItemStack。
      */
     fun renderText(): RenderedIcon {
-        return renderText(options)
+        return renderText(execution)
     }
 
-    private fun renderText(renderingOptions: ScriptOptions): RenderedIcon {
+    private fun renderText(renderingExecution: SkillExecutionContext): RenderedIcon {
         val name = skill.displayIconName
         val renderedName: String?
         if (name == null) {
             renderedName = null
         } else {
-            val parsedName = renderTemplate(name, renderingOptions)
+            val parsedName = renderTemplate(name, renderingExecution)
             val colorStart = System.nanoTime()
             renderedName = parsedName.colored()
             profiling.colorizeMs += elapsedMs(colorStart)
@@ -86,7 +79,7 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         }
         val renderedLore = ArrayList<String>()
         for (line in skill.displayIconLore) {
-            val parsedLine = renderTemplate(line, renderingOptions)
+            val parsedLine = renderTemplate(line, renderingExecution)
             val colorStart = System.nanoTime()
             renderedLore.add(parsedLine.colored())
             profiling.colorizeMs += elapsedMs(colorStart)
@@ -95,14 +88,14 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         return RenderedIcon(renderedName, renderedLore, profiling)
     }
 
-    private fun renderTemplate(text: String, renderingOptions: ScriptOptions): String {
+    private fun renderTemplate(text: String, renderingExecution: SkillExecutionContext): String {
         val templateStart = System.nanoTime()
         val matcher = ImmutableSkill.displayTemplatePattern.matcher(text.trim())
         val rendered = StringBuffer()
         while (matcher.find()) {
             val expression = matcher.group(1)
             // 模板业务表达式始终通过启动期预编译的 Nova SourceUnit 执行。
-            val value = skill.evaluateDisplayTemplate(expression, renderingOptions)
+            val value = skill.evaluateDisplayTemplate(expression, renderingExecution)
             if (value == null) {
                 throw IllegalStateException("Skill '${skill.id}' display template returned null: {{$expression}}")
             }

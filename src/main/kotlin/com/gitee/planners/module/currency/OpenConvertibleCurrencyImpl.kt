@@ -1,6 +1,6 @@
 package com.gitee.planners.module.currency
 
-import com.gitee.planners.module.script.ScriptOptions
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.module.script.SingletonScript
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.warning
@@ -63,17 +63,24 @@ class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConverti
     }
 
 
-    class SimpleAction(action: String) : SingletonScript(action, "currency-action:${action.hashCode()}") {
+    class SimpleAction(action: String) : SingletonScript(
+        action,
+        "currency-action:${action.hashCode()}",
+        listOf("sender", "profile", "arg")
+    ) {
 
         fun runNow(player: Player, vararg args: Pair<String, Any?>) {
-            val options = ScriptOptions.common(player)
-            args.forEach { (k, v) -> options.set(k, v) }
-            this.run(options)
+            var argument: Any? = null
+            for ((key, value) in args) {
+                if (key == "arg") {
+                    argument = value
+                }
+            }
+            this.run(false, player, player.plannersTemplate, argument)
         }
 
         inline fun <reified T> getNow(sender: Player, parser: Function<Any?, T>): T {
-            val options = ScriptOptions.common(sender)
-            return parser.apply(this.eval(options))
+            return parser.apply(this.eval(sender, sender.plannersTemplate, null))
         }
 
     }

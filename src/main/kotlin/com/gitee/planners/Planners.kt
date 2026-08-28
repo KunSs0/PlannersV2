@@ -10,7 +10,6 @@ import com.gitee.planners.core.config.SkillCategorySpec
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.ScriptOptions
 import com.gitee.planners.module.script.YamlNovaSourceCollector
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit

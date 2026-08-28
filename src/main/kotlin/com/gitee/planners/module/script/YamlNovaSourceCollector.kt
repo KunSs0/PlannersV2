@@ -162,7 +162,7 @@ object YamlNovaSourceCollector {
             return
         }
         if (key == "condition" && path.contains("hook")) {
-            ScriptManager.registerYamlExpression(file, yamlPath, originLine, source)
+            ScriptManager.registerYamlSkillExpression(file, yamlPath, originLine, source)
             return
         }
         if (key == "consume") {
