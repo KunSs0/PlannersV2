@@ -44,8 +44,6 @@ object ScriptManager {
             }
             releaseResourceFile("script/nova.config.yml", false)
             releaseResourceFile("script/planners/bootstrap.nova", false)
-            releaseResourceFile("script/planners/lib/runtime.nova", false)
-            releaseResourceFile("script/libs/runtime.nova", false)
             val configFile = getDataFolder().toPath().resolve("script/nova.config.yml")
             val candidate = RuntimeWorkspace(configFile, PlannersWorkspaceHost)
             workspace = candidate
@@ -478,21 +476,17 @@ object ScriptManager {
         return activeWorkspace.invoke(unit.moduleId, unit.functionName, safeBindings, scope, policy, *args)
     }
 
-    /** 为每个生成模块安装 Workspace 机制库与直接 Java interop 所需类型。 */
+    /** 为每个生成模块安装业务前置 API 与直接 Java interop 所需类型。 */
     private fun appendRuntimeImports(body: StringBuilder) {
-        body.append("import \"@nova/runtime\"\n")
-        body.append("import \"@planners/lib/runtime\"\n")
+        body.append("import \"@nova/economy.api\"\n")
         body.append("import java com.gitee.planners.api.common.facing.EntityFacingProviders\n")
         body.append("import java com.gitee.planners.api.damage.DamageCause\n")
         body.append("import java com.gitee.planners.api.damage.ProxyDamage\n")
+        body.append("import java com.gitee.planners.api.effect.EffectProviders\n")
         body.append("import java com.gitee.planners.core.skill.cooler.Cooler\n")
         body.append("import java com.gitee.planners.module.compat.attribute.AttributeDriver\n")
         body.append("import java com.gitee.planners.module.script.finder.TargetFinder\n")
-        body.append("import java java.lang.Math\n")
-        body.append("import java java.lang.Thread\n")
-        body.append("import java java.util.concurrent.ThreadLocalRandom\n")
-        body.append("import java net.milkbowl.vault.economy.Economy\n")
-        body.append("import java org.bukkit.Bukkit\n")
+        body.append("import java com.novalang.workspace.WorkspaceTasks\n")
         body.append("import java org.bukkit.Sound\n")
         body.append("import java org.bukkit.potion.PotionEffect\n")
         body.append("import java org.bukkit.potion.PotionEffectType\n")
@@ -562,13 +556,13 @@ object ScriptManager {
     }
 
     /** 统一 imports 后表达式正文所在的生成行偏移。 */
-    internal const val GENERATED_EXPRESSION_OFFSET = 19
+    internal const val GENERATED_EXPRESSION_OFFSET = 18
 
     /** 统一 imports 后语句正文所在的生成行偏移。 */
-    internal const val GENERATED_ACTION_OFFSET = 19
+    internal const val GENERATED_ACTION_OFFSET = 18
 
     /** 统一 imports 后完整模块正文所在的生成行偏移。 */
-    internal const val GENERATED_MODULE_OFFSET = 20
+    internal const val GENERATED_MODULE_OFFSET = 19
 
     /** 确保业务调用前已完成启动期预编译，禁止运行期隐式加载。 */
     private fun ensureLoaded() {

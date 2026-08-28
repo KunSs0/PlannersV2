@@ -53,17 +53,14 @@ class NovaWorkspaceIntegrationTest {
                 "  security: trusted-server\n" +
                 "  thread: main\n"
         )
-        write("script/libs/runtime.nova", "fun identity(value) = value\n")
-        write("script/planners/lib/runtime.nova", "fun plannersRuntimeVersion(): Int = 1\n")
+        write("script/libs/economy.api.nova", "fun identity(value) = value\n")
         write(
             "script/planners/bootstrap.nova",
-            "import \"@nova/runtime\"\n" +
-                "import \"@planners/lib/runtime\"\n\n" +
-                "fun main() { identity(plannersRuntimeVersion()) }\n"
+            "fun main() { }\n"
         )
         val virtual = SourceUnit(
             "@planners/generated/test-expression",
-            "import \"@nova/runtime\"\n\nfun evaluate(level) {\n    return level * 2\n}\n",
+            "import \"@nova/economy.api\"\n\nfun evaluate(level) {\n    return level * 2\n}\n",
             workspaceRoot.resolve("config.yml"),
             "settings.test.expression",
             1,
@@ -105,7 +102,7 @@ class NovaWorkspaceIntegrationTest {
         val moduleId = "@planners/generated/task-test"
         val businessSource =
             "fun onLater() { }\n" +
-                "fun execute() { Java.static(\"com.novalang.workspace.WorkspaceTasks\", \"later\", 50, " +
+                "fun execute() { WorkspaceTasks.later(50, " +
                 "__workspaceEntry, \"onLater\") }\n"
         val source = ScriptManager.createModuleSource(moduleId, businessSource)
         val unit = SourceUnit(moduleId, source, workspaceRoot.resolve("skill/task.yml"), "skill.task.action", 1, 20, null)
@@ -372,18 +369,13 @@ class NovaWorkspaceIntegrationTest {
         return "@planners/generated/audit-${sequence.incrementAndGet()}-$suffix"
     }
 
-    /** 复制真实 Nova 库并写入 Alias 目标均位于 sources 内的测试配置。 */
+    /** 写入自包含的 @nova/economy.api 合成模块与 Alias 配置。 */
     private fun prepareAuditWorkspace(root: Path, workspaceName: String) {
-        writeAt(root, "script/libs/runtime.nova", Files.readString(Path.of("src/main/resources/script/libs/runtime.nova")))
-        writeAt(
-            root,
-            "script/planners/lib/runtime.nova",
-            Files.readString(Path.of("src/main/resources/script/planners/lib/runtime.nova"))
-        )
+        writeAt(root, "script/libs/economy.api.nova", "fun identity(value) = value\n")
         writeAt(
             root,
             "script/planners/bootstrap.nova",
-            Files.readString(Path.of("src/main/resources/script/planners/bootstrap.nova"))
+            "fun main() { }\n"
         )
         writeAt(
             root,

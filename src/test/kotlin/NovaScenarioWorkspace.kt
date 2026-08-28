@@ -40,13 +40,10 @@ class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
                 "  security: trusted-server\n" +
                 "  thread: main\n"
         )
-        write("script/libs/runtime.nova", "fun identity(value) = value\n")
-        write("script/planners/lib/runtime.nova", "fun plannersRuntimeVersion(): Int = 1\n")
+        write("script/libs/economy.api.nova", "fun identity(value) = value\n")
         write(
             "script/planners/bootstrap.nova",
-            "import \"@nova/runtime\"\n" +
-                "import \"@planners/lib/runtime\"\n\n" +
-                "fun main() { identity(plannersRuntimeVersion()) }\n"
+            "fun main() { }\n"
         )
         val host = WorkspaceHost { nova: Nova ->
             nova.setScriptClassLoader(NovaScenarioWorkspace::class.java.classLoader)

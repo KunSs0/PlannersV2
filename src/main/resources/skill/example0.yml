@@ -22,7 +22,7 @@ action: |
 
   fun execute() {
     sender.sendMessage("技能释放成功")
-    Java.static("com.novalang.workspace.WorkspaceTasks", "later", 1500, __workspaceEntry, "onCooldownReady")
+    WorkspaceTasks.later(1500, __workspaceEntry, "onCooldownReady")
   }
 
   fun handleHit() {

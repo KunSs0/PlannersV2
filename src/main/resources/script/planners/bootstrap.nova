@@ -1,6 +1,2 @@
-import "@nova/runtime"
-import "@planners/lib/runtime"
-
 fun main() {
-    identity(plannersRuntimeVersion())
 }
