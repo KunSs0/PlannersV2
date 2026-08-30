@@ -45,6 +45,12 @@ class TargetFinder @JvmOverloads constructor(
 
     enum class SortType { NAME, DISTANCE, RANDOM }
 
+    init {
+        if (sender != null && facingYaw == null) {
+            setFacing()
+        }
+    }
+
     // === 选择器 (立即执行，累加结果) ===
 
     fun range(r: Double): TargetFinder {
@@ -72,13 +78,49 @@ class TargetFinder @JvmOverloads constructor(
 
     fun origin(entity: LivingEntity): TargetFinder {
         this.origin = entity.location
-        this.facingYaw = EntityFacingProviders.getFacingYaw(entity)
+        this.facingYaw = resolveFacingYaw(entity)
+        return this
+    }
+
+    /**
+     * 从当前施法者同步目标选择朝向。
+     *
+     * @return 当前目标查找器。
+     * @throws IllegalStateException 当前查找器未绑定施法者时抛出。
+     */
+    fun setFacing(): TargetFinder {
+        val currentSender = sender
+        if (currentSender == null) {
+            throw IllegalStateException("TargetFinder.setFacing() requires a sender")
+        }
+        facingYaw = resolveFacingYaw(currentSender)
+        return this
+    }
+
+    /**
+     * 覆盖目标选择朝向。
+     *
+     * @param yaw 覆盖后的世界朝向。
+     * @return 当前目标查找器。
+     */
+    fun setFacing(yaw: Float): TargetFinder {
+        facingYaw = yaw
         return this
     }
 
     fun includeSelf(): TargetFinder {
         this.includeSelf = true
         return this
+    }
+
+    /**
+     * 通过全局朝向 Provider 解析实体当前朝向。
+     *
+     * @param entity 需要解析朝向的实体。
+     * @return Provider 返回的世界朝向。
+     */
+    private fun resolveFacingYaw(entity: LivingEntity): Float {
+        return EntityFacingProviders.getFacingYaw(entity)
     }
 
     /**

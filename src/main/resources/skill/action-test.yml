@@ -9,7 +9,7 @@ action: |
     sender.getInstance().setHealth(min(sender.getInstance().getHealth() + 5, sender.getInstance().getMaxHealth()))
 
     // 使用 finder 链式选择器选择目标
-    var targets = TargetFinder(sender.getBukkitLocation(), sender.getInstance(), EntityFacingProviders.INSTANCE.getFacingYaw(sender.getInstance())).range(8).excludeType("player").limit(5).build()
+    var targets = TargetFinder(sender.getBukkitLocation(), sender.getInstance()).range(8).excludeType("player").limit(5).build()
     for (target in targets) {
       ProxyDamage.Companion.of(target.getInstance(), 20).execute()
     }
