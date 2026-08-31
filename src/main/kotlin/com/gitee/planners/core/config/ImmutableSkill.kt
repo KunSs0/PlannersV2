@@ -14,7 +14,6 @@ import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
-import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import java.util.concurrent.CompletableFuture
@@ -155,9 +154,9 @@ class ImmutableSkill(config: Configuration) : Unique {
     /** 外部插件实现的 Hook 标记接口 */
     interface Hook
 
-    /** Hook 解码器：从配置段解析出 Hook 实例 */
+    /** Hook 解码器：从原始配置映射解析出 Hook 实例 */
     fun interface Decoder {
-        fun decode(section: ConfigurationSection): Hook
+        fun decode(config: Map<String, Any?>): Hook
     }
 
     /** 懒加载 hooks，首次访问时遍历 YAML __option__.hook.* 并用注册的 Decoder 解码 */
@@ -176,7 +175,7 @@ class ImmutableSkill(config: Configuration) : Unique {
                 if (decoder == null) {
                     continue
                 }
-                result[ns] = decoder.decode(nsSection)
+                result[ns] = decoder.decode(nsSection.toMap())
             }
             result
         }
