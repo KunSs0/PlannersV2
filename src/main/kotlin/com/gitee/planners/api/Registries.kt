@@ -2,6 +2,7 @@ package com.gitee.planners.api
 
 import com.gitee.planners.Planners
 import com.gitee.planners.core.config.*
+import com.gitee.planners.core.condition.ConditionEvaluator
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
@@ -91,11 +92,13 @@ object Registries {
         ScriptManager.dispose()
         Planners.config.reload()
         ScriptManager.prepare()
+        ConditionEvaluator.resetConfiguredProperties()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())
         val configuredConditions = Planners.conditions.get()
         for (condition in configuredConditions.values) {
             condition.registerSources()
         }
+        ConditionEvaluator.prepareConfiguredProperties(configuredConditions.values)
         // Registry 重读会构造业务对象，并在 Workspace load 前登记其虚拟 SourceUnit。
         AutoReloadable.onReload()
         SkillPointsManager.prepareSources()

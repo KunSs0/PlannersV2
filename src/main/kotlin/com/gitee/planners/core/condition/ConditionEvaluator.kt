@@ -16,7 +16,46 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class ConditionEvaluator {
 
-    private val propExpressions = ConcurrentHashMap<String, NovaScriptUnit>()
+    companion object {
+
+        private val propExpressions = ConcurrentHashMap<String, NovaScriptUnit>()
+        private val propExpressionParameters = listOf("player", "profile", "router", "route", "treeId", "nodeId", "nodeLevel")
+
+        /** 在 Workspace load 前登记条件默认 props 中的 Nova 表达式。 */
+        fun prepareConfiguredProperties(configurations: Collection<ConditionConfig>) {
+            for (configuration in configurations) {
+                for (propertyValue in configuration.props.values) {
+                    if (propertyValue is String) {
+                        if (propertyValue.isNotBlank() && propertyValue.toDoubleOrNull() == null) {
+                            getPropExpression(propertyValue)
+                        }
+                    }
+                }
+            }
+        }
+
+        /** 每次 Workspace 重建前清除上一代函数句柄，避免旧模块 ID 被复用。 */
+        fun resetConfiguredProperties() {
+            propExpressions.clear()
+        }
+
+        private fun getPropExpression(source: String): NovaScriptUnit {
+            val cached = propExpressions[source]
+            if (cached != null) {
+                return cached
+            }
+            val compiled = ScriptManager.compileExpression(
+                "condition-prop",
+                propExpressionParameters,
+                source
+            )
+            val raced = propExpressions.putIfAbsent(source, compiled)
+            if (raced != null) {
+                return raced
+            }
+            return compiled
+        }
+    }
 
     /**
      * 批量校验的单个条件请求。
@@ -461,20 +500,7 @@ class ConditionEvaluator {
     }
 
     private fun getPropExpression(source: String): NovaScriptUnit {
-        val cached = propExpressions[source]
-        if (cached != null) {
-            return cached
-        }
-        val compiled = ScriptManager.compileExpression(
-            "condition-prop",
-            listOf("player", "profile", "router", "route", "treeId", "nodeId", "nodeLevel"),
-            source
-        )
-        val raced = propExpressions.putIfAbsent(source, compiled)
-        if (raced != null) {
-            return raced
-        }
-        return compiled
+        return Companion.getPropExpression(source)
     }
 
     /**

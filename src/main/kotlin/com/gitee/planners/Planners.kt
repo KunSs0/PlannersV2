@@ -5,6 +5,7 @@ import com.gitee.planners.api.attribute.AttributeRegistryEntry
 import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionConfig
+import com.gitee.planners.core.condition.ConditionEvaluator
 import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.core.config.SkillCategorySpec
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
@@ -159,11 +160,13 @@ object Planners : Plugin() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
         ScriptManager.prepare()
+        ConditionEvaluator.resetConfiguredProperties()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())
         val configuredConditions = conditions.get()
         for (condition in configuredConditions.values) {
             condition.registerSources()
         }
+        ConditionEvaluator.prepareConfiguredProperties(configuredConditions.values)
         Registries.init()
         SkillPointsManager.prepareSources()
         DefaultMagicPointProvider.expressionUpperLimit.get()
