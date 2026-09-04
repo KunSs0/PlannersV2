@@ -19,7 +19,8 @@ __option__:
       - '&e难度： ||'
 
 swordsman:
-  # 分支 可以多分支转职
+  # 可选择剑魂或剑圣；也可先转剑魂，再转剑圣。
+  # branch 支持多个子职业，不同分支可汇合到同一个 Job，但不能形成循环。
   skill:
     trees:
       - warrior_vanguard

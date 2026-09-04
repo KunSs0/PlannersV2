@@ -52,16 +52,11 @@ class ImmutableRouter(private val config: Configuration) : Unique {
             error("Router '$id' 未定义起始 Job")
         }
 
-        val parentByRoute = mutableMapOf<String, String>()
         for (route in routes.values) {
             for (childId in route.branchIds) {
                 val child = getRouteOrNull(childId)
                 if (child == null) {
                     error("Router '$id' 的 Job '${route.id}' 引用了不存在的子 Job '$childId'")
-                }
-                val previousParent = parentByRoute.putIfAbsent(childId, route.id)
-                if (previousParent != null && previousParent != route.id) {
-                    error("Router '$id' 的 Job '$childId' 存在多个父 Job: '$previousParent', '${route.id}'")
                 }
             }
         }
@@ -119,6 +114,7 @@ class ImmutableRouter(private val config: Configuration) : Unique {
             }
         }
 
+        // visited 仅统计可达节点；汇合节点仍须沿每条路径校验祖先技能和循环。
         visited.add(route.id)
         val nextAncestorSkills = ancestorSkills + job.skillIds
         for (child in route.getBranches()) {
