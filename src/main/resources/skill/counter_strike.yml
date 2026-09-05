@@ -13,7 +13,9 @@ __option__:
     reflect: 20 * level + 40
   max-level: 4
 action: |
-  fun execute() {
+  import "planners.core"
+
+  fun main() {
     sender.sendMessage("&e反击 Lv" + level)
     Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

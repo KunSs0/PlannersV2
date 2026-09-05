@@ -11,6 +11,7 @@ import com.gitee.planners.core.config.SkillCategorySpec
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.module.script.ScriptManager
+import com.gitee.planners.module.script.PlannersCoreModule
 import com.gitee.planners.module.script.YamlNovaSourceCollector
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
@@ -156,6 +157,10 @@ object Planners : Plugin() {
      *  | |    | | (_| | | | | | | |  __/ |  \__ \    \  /  ___) |
      *  |_|    |_|\__,_|_| |_|_| |_|\___|_|  |___/     \/  |____/
      */
+    override fun onLoad() {
+        PlannersCoreModule.register()
+    }
+
     override fun onEnable() {
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
@@ -188,8 +193,9 @@ object Planners : Plugin() {
      * 插件停止时销毁 Workspace 资源树。
      */
     override fun onDisable() {
-        // WorkspaceTasks、业务作用域和持久作用域均由 Workspace 一次性释放。
+        // 业务作用域和持久作用域均由 Workspace 一次性释放。
         ScriptManager.dispose()
+        PlannersCoreModule.unregister()
     }
 
 }

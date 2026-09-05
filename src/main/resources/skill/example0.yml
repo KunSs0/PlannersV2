@@ -16,13 +16,11 @@ __option__:
     attributes:
       - "攻击力 +${10 * level}"
 action: |
-  fun onCooldownReady() {
-    Cooler.INSTANCE.set(sender.getInstance(), skill, 200)
-  }
+  import "planners.core"
 
-  fun execute() {
+  fun main() {
+    Cooler.INSTANCE.set(sender.getInstance(), skill, 200)
     sender.sendMessage("技能释放成功")
-    WorkspaceTasks.later(1500, __workspaceEntry, "onCooldownReady")
   }
 
   fun handleHit() {

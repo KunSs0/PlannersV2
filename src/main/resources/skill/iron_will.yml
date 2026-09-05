@@ -15,7 +15,9 @@ __option__:
     duration: 4 * level
   max-level: 4
 action: |
-  fun execute() {
+  import "planners.core"
+
+  fun main() {
     sender.sendMessage("&a钢铁意志 Lv" + level)
     Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

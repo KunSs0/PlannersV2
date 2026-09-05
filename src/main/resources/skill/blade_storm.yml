@@ -15,7 +15,9 @@ __option__:
     damage_per_hit: 15 * level + 60
   max-level: 18
 action: |
-  fun execute() {
+  import "planners.core"
+
+  fun main() {
     sender.sendMessage("&b剑刃风暴 Lv" + level)
     Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

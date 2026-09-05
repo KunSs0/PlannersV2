@@ -40,6 +40,7 @@ taboolib {
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven("https://repo.tabooproject.org/repository/releases")
     maven("https://repo.papermc.io/repository/maven-public/")
 }
@@ -70,9 +71,13 @@ dependencies {
     compileOnly("com.mojang:datafixerupper:4.0.26")
 
     compileOnly(kotlin("stdlib"))
-    compileOnly(fileTree("libs"))
-    testImplementation(files("libs/nova-runtime-workspace-0.2.0.jar"))
-    testImplementation(files("libs/nova-runtime-all-0.2.0.jar"))
+    compileOnly(fileTree("libs") {
+        exclude("nova-runtime-*.jar")
+    })
+    compileOnly("com.novalang:nova-runtime-workspace:0.2.0")
+    compileOnly("com.novalang:nova-bukkit:0.2.0")
+    testImplementation("com.novalang:nova-runtime-workspace:0.2.0")
+    testImplementation("com.novalang:nova-bukkit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.91.1") {
         exclude(group = "io.papermc.paper", module = "paper-api")

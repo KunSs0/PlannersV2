@@ -15,7 +15,9 @@ __option__:
     stun_duration: 1 + level / 3
   max-level: 8
 action: |
-  fun execute() {
+  import "planners.core"
+
+  fun main() {
     sender.sendMessage("&e雷霆一击 Lv" + level)
     Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

@@ -219,7 +219,7 @@ class ImmutableSkill(config: Configuration) : Unique {
             if (module == null) {
                 null
             } else {
-                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
+                ScriptManager.invokeBusiness(module, "main", execution.actionBindings())
             }
         }
 
@@ -345,7 +345,7 @@ class ImmutableSkill(config: Configuration) : Unique {
             if (module == null) {
                 null
             } else {
-                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
+                ScriptManager.invokeBusiness(module, "main", execution.actionBindings())
             }
         }
         if (async) {

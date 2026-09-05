@@ -15,7 +15,9 @@ __option__:
     knockback: 2 * level
   max-level: 14
 action: |
-  fun execute() {
+  import "planners.core"
+
+  fun main() {
     sender.sendMessage("&8裂地 Lv" + level)
     Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

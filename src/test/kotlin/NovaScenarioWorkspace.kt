@@ -32,17 +32,14 @@ class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
                 "name: planners-scenario-test\n" +
                 "aliases:\n" +
                 "  \"@planners\": \"planners\"\n" +
-                "  \"@nova\": \"libs\"\n" +
                 "sources:\n" +
                 "  - \"planners\"\n" +
-                "  - \"libs\"\n" +
                 "entries:\n" +
                 "  - \"@planners/bootstrap\"\n" +
                 "runtime:\n" +
                 "  security: trusted-server\n" +
                 "  thread: main\n"
         )
-        write("script/libs/economy.api.nova", "fun identity(value) = value\n")
         write(
             "script/planners/bootstrap.nova",
             "fun main() { }\n"

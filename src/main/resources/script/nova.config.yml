@@ -3,11 +3,9 @@ name: planners
 
 aliases:
   "@planners": "planners"
-  "@nova": "../../NovaLang/libs"
 
 sources:
   - "planners"
-  - "../../NovaLang/libs"
 
 entries:
   - "@planners/bootstrap"

@@ -1,5 +1,6 @@
 import com.novalang.runtime.NovaScheduler
 import com.novalang.runtime.SchedulerHolder
+import com.gitee.planners.module.script.PlannersCoreModule
 import com.gitee.planners.module.script.ScriptManager
 import com.novalang.workspace.ExecutionPolicy
 import com.novalang.workspace.RuntimeWorkspace
@@ -7,6 +8,7 @@ import com.novalang.workspace.ScopeType
 import com.novalang.workspace.SourceUnit
 import com.novalang.workspace.WorkspaceHost
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -27,13 +29,20 @@ class NovaWorkspaceIntegrationTest {
     @TempDir
     lateinit var workspaceRoot: Path
 
+    /** 每个 Workspace 测试前注册 Planners 进程级共享模块。 */
+    @BeforeEach
+    fun registerCoreModule() {
+        PlannersCoreModule.register()
+    }
+
     /** 每个测试后释放进程级测试调度器。 */
     @AfterEach
     fun clearScheduler() {
         SchedulerHolder.clear()
+        PlannersCoreModule.unregister()
     }
 
-    /** 验证 @planners 与 @nova Alias 均落在 sources 内并可执行虚拟入口。 */
+    /** 验证 Planners 核心模块可由虚拟入口显式导入并执行。 */
     @Test
     fun shouldLoadWorkspaceAndInvokeVirtualExpression() {
         installDirectScheduler()
@@ -43,24 +52,21 @@ class NovaWorkspaceIntegrationTest {
                 "name: planners-test\n" +
                 "aliases:\n" +
                 "  \"@planners\": \"planners\"\n" +
-                "  \"@nova\": \"libs\"\n" +
                 "sources:\n" +
                 "  - \"planners\"\n" +
-                "  - \"libs\"\n" +
                 "entries:\n" +
                 "  - \"@planners/bootstrap\"\n" +
                 "runtime:\n" +
                 "  security: trusted-server\n" +
                 "  thread: main\n"
         )
-        write("script/libs/economy.api.nova", "fun identity(value) = value\n")
         write(
             "script/planners/bootstrap.nova",
             "fun main() { }\n"
         )
         val virtual = SourceUnit(
             "@planners/generated/test-expression",
-            "import \"@nova/economy.api\"\n\nfun evaluate(level) {\n    return level * 2\n}\n",
+            "import \"planners.core\"\n\nfun evaluate(level) {\n    return level * 2\n}\n",
             workspaceRoot.resolve("config.yml"),
             "settings.test.expression",
             1,
@@ -71,7 +77,7 @@ class NovaWorkspaceIntegrationTest {
             nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
         }
         val workspace = RuntimeWorkspace(workspaceRoot.resolve("script/nova.config.yml"), host)
-        workspace.registerVirtualSource(virtual, true)
+        workspace.registerVirtualSource(virtual, true, false)
         try {
             workspace.load()
             val scope = workspace.openScope(null, ScopeType.INVOCATION, "test-expression")
@@ -91,34 +97,6 @@ class NovaWorkspaceIntegrationTest {
         } finally {
             workspace.dispose()
         }
-    }
-
-    /** 验证 WorkspaceTasks 任务归属业务 Scope，并在 Workspace dispose 时取消。 */
-    @Test
-    fun shouldDisposeScheduledWorkspaceTask() {
-        val scheduler = CapturingScheduler(Thread.currentThread())
-        SchedulerHolder.set(scheduler)
-        prepareAuditWorkspace(workspaceRoot, "planners-task-test")
-        val moduleId = "@planners/generated/task-test"
-        val businessSource =
-            "fun onLater() { }\n" +
-                "fun execute() { WorkspaceTasks.later(50, " +
-                "__workspaceEntry, \"onLater\") }\n"
-        val source = ScriptManager.createModuleSource(moduleId, businessSource)
-        val unit = SourceUnit(moduleId, source, workspaceRoot.resolve("skill/task.yml"), "skill.task.action", 1, 20, null)
-        val host = WorkspaceHost { nova ->
-            nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
-        }
-        val workspace = RuntimeWorkspace(workspaceRoot.resolve("script/nova.config.yml"), host)
-        workspace.registerVirtualSource(unit, true)
-        workspace.load()
-        val scope = workspace.openScope(null, ScopeType.BUSINESS_INSTANCE, "task-test")
-        workspace.invoke(moduleId, "execute", Collections.emptyMap<String, Any>(), scope, ExecutionPolicy.MAIN_THREAD)
-        assertEquals(1, scope.resourceCount)
-
-        workspace.dispose()
-
-        assertTrue(scheduler.handle.cancelled)
     }
 
     /** 遍历项目通用默认资源，并验证所有脚本块都能通过 Nova 语法编译。 */
@@ -344,9 +322,9 @@ class NovaWorkspaceIntegrationTest {
         sequence: AtomicInteger
     ) {
         val moduleId = createAuditModuleId(sequence, id)
-        val source = ScriptManager.createModuleSource(moduleId, action)
+        val source = ScriptManager.createModuleSource(action)
         val unit = SourceUnit(moduleId, source, originFile, id, 1, ScriptManager.GENERATED_MODULE_OFFSET, null)
-        workspace.registerVirtualSource(unit, true)
+        workspace.registerVirtualSource(unit, true, false)
     }
 
     /** 登记一个表达式或语句虚拟源。 */
@@ -360,7 +338,7 @@ class NovaWorkspaceIntegrationTest {
     ) {
         val moduleId = createAuditModuleId(sequence, id)
         val unit = SourceUnit(moduleId, source, originFile, id, 1, generatedLineOffset, null)
-        workspace.registerVirtualSource(unit, true)
+        workspace.registerVirtualSource(unit, true, false)
     }
 
     /** 生成一次测试 Workspace 内不冲突的虚拟模块 ID。 */
@@ -369,9 +347,8 @@ class NovaWorkspaceIntegrationTest {
         return "@planners/generated/audit-${sequence.incrementAndGet()}-$suffix"
     }
 
-    /** 写入自包含的 @nova/economy.api 合成模块与 Alias 配置。 */
+    /** 写入仅包含 Planners 本体模块的审计 Workspace 配置。 */
     private fun prepareAuditWorkspace(root: Path, workspaceName: String) {
-        writeAt(root, "script/libs/economy.api.nova", "fun identity(value) = value\n")
         writeAt(
             root,
             "script/planners/bootstrap.nova",
@@ -384,10 +361,8 @@ class NovaWorkspaceIntegrationTest {
                 "name: $workspaceName\n" +
                 "aliases:\n" +
                 "  \"@planners\": \"planners\"\n" +
-                "  \"@nova\": \"libs\"\n" +
                 "sources:\n" +
                 "  - \"planners\"\n" +
-                "  - \"libs\"\n" +
                 "entries:\n" +
                 "  - \"@planners/bootstrap\"\n" +
                 "runtime:\n" +
@@ -509,47 +484,4 @@ class NovaWorkspaceIntegrationTest {
         }
     }
 
-    /** 捕获一次延迟任务，用于验证 Workspace dispose 的资源释放。 */
-    private class CapturingScheduler(private val owner: Thread) : NovaScheduler {
-
-        val handle = CapturingHandle()
-
-        override fun mainExecutor(): Executor {
-            return Executor { command -> command.run() }
-        }
-
-        override fun asyncExecutor(): Executor {
-            return Executor { command -> command.run() }
-        }
-
-        override fun isMainThread(): Boolean {
-            return Thread.currentThread() === owner
-        }
-
-        override fun scheduleLater(delayMs: Long, task: Runnable): NovaScheduler.Cancellable {
-            return handle
-        }
-
-        override fun scheduleRepeat(
-            initialDelayMs: Long,
-            periodMs: Long,
-            task: Runnable
-        ): NovaScheduler.Cancellable {
-            throw UnsupportedOperationException("Repeating scheduling is not used by this test")
-        }
-
-        /** 可观察取消状态的调度句柄。 */
-        class CapturingHandle : NovaScheduler.Cancellable {
-
-            var cancelled: Boolean = false
-
-            override fun cancel() {
-                cancelled = true
-            }
-
-            override fun isCancelled(): Boolean {
-                return cancelled
-            }
-        }
-    }
 }

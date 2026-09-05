@@ -15,7 +15,9 @@ __option__:
     duration: 2 * level + 5
   max-level: 6
 action: |
-  fun execute() {
+  import "planners.core"
+
+  fun main() {
     sender.sendMessage("&a战斗狂热 Lv" + level)
     Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

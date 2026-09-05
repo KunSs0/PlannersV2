@@ -67,7 +67,7 @@ object ScriptManager {
             }
             try {
                 for (source in sources.values) {
-                    candidate.registerVirtualSource(source, true)
+                    candidate.registerVirtualSource(source, true, false)
                 }
                 candidate.load()
                 persistentScope = candidate.openScope(null, ScopeType.PERSISTENT_REGISTRATION, "planners:persistent")
@@ -124,7 +124,7 @@ object ScriptManager {
     @JvmStatic
     fun compileExpression(id: String, parameters: List<String>, expression: String): NovaScriptUnit {
         val source = createExpressionSource(parameters, expression)
-        return register(id, "evaluate", source, expression)
+        return register(id, "evaluate", source, expression, GENERATED_EXPRESSION_OFFSET)
     }
 
     /**
@@ -150,7 +150,7 @@ object ScriptManager {
     @JvmStatic
     fun compileAction(id: String, parameters: List<String>, action: String): NovaScriptUnit {
         val source = createActionSource(parameters, action)
-        return register(id, "evaluate", source, action)
+        return register(id, "evaluate", source, action, GENERATED_ACTION_OFFSET)
     }
 
     /**
@@ -158,13 +158,13 @@ object ScriptManager {
      *
      * @param id 业务入口的稳定来源标识。
      * @param source 完整 Nova 业务模块正文。
-     * @return 以 execute 为默认导出函数的入口描述。
+     * @return 以 main 为默认导出函数的入口描述。
      */
     @JvmStatic
     fun compileModule(id: String, source: String): NovaScriptUnit {
         val moduleId = createModuleId(id, source)
-        val body = createModuleSource(moduleId, source)
-        return registerResolved(id, moduleId, "execute", body, source)
+        val body = createModuleSource(source)
+        return registerResolved(id, moduleId, "main", body, source)
     }
 
     /**
@@ -252,8 +252,8 @@ object ScriptManager {
     fun registerYamlModule(file: Path, yamlPath: String, originLine: Int, source: String) {
         val id = createYamlSourceId(file, yamlPath)
         val moduleId = createModuleId(id, source)
-        val body = createModuleSource(moduleId, source)
-        registerYaml(file, yamlPath, originLine, "execute", body, GENERATED_MODULE_OFFSET, moduleId)
+        val body = createModuleSource(source)
+        registerYaml(file, yamlPath, originLine, "main", body, GENERATED_MODULE_OFFSET, moduleId)
     }
 
     /** 在持久作用域内执行只接收显式参数的纯函数入口。 */
@@ -300,7 +300,13 @@ object ScriptManager {
     }
 
     /** 注册虚拟源码并拒绝加载后的运行期编译。 */
-    private fun register(id: String, functionName: String, source: String, originSource: String): NovaScriptUnit {
+    private fun register(
+        id: String,
+        functionName: String,
+        source: String,
+        originSource: String,
+        generatedLineOffset: Int
+    ): NovaScriptUnit {
         synchronized(lifecycleLock) {
             val moduleId = createModuleId(id, source)
             if (sources.containsKey(moduleId)) {
@@ -310,7 +316,7 @@ object ScriptManager {
                 throw IllegalStateException("Nova sources must be registered before the Planners Workspace is loaded: $id")
             }
             val origin = locateOrigin(id, originSource)
-            val sourceUnit = SourceUnit(moduleId, source, origin.file, id, origin.line, 3, null)
+            val sourceUnit = SourceUnit(moduleId, source, origin.file, id, origin.line, generatedLineOffset, null)
             sources[moduleId] = sourceUnit
             return NovaScriptUnit(moduleId, functionName)
         }
@@ -401,23 +407,6 @@ object ScriptManager {
         return activeWorkspace.invoke(unit.moduleId, unit.functionName, safeBindings, scope, policy, *args)
     }
 
-    /** 为每个生成模块安装业务前置 API 与直接 Java interop 所需类型。 */
-    private fun appendRuntimeImports(body: StringBuilder) {
-        body.append("import \"@nova/economy.api\"\n")
-        body.append("import java com.gitee.planners.api.common.facing.EntityFacingProviders\n")
-        body.append("import java com.gitee.planners.api.damage.DamageCause\n")
-        body.append("import java com.gitee.planners.api.damage.ProxyDamage\n")
-        body.append("import java com.gitee.planners.api.effect.EffectProviders\n")
-        body.append("import java com.gitee.planners.core.skill.cooler.Cooler\n")
-        body.append("import java com.gitee.planners.module.compat.attribute.AttributeDriver\n")
-        body.append("import java com.gitee.planners.module.script.finder.TargetFinder\n")
-        body.append("import java com.novalang.workspace.WorkspaceTasks\n")
-        body.append("import java org.bukkit.Sound\n")
-        body.append("import java org.bukkit.potion.PotionEffect\n")
-        body.append("import java org.bukkit.potion.PotionEffectType\n")
-        body.append("import java org.bukkit.util.Vector\n\n")
-    }
-
     /**
      * 生成一个表达式虚拟模块。
      *
@@ -427,7 +416,6 @@ object ScriptManager {
      */
     internal fun createExpressionSource(parameters: List<String>, expression: String): String {
         val body = StringBuilder()
-        appendRuntimeImports(body)
         body.append("fun evaluate(")
         appendParameters(body, parameters)
         body.append(") {\n")
@@ -446,7 +434,6 @@ object ScriptManager {
      */
     internal fun createActionSource(parameters: List<String>, action: String): String {
         val body = StringBuilder()
-        appendRuntimeImports(body)
         body.append("fun evaluate(")
         appendParameters(body, parameters)
         body.append(") {\n")
@@ -458,16 +445,9 @@ object ScriptManager {
         return body.toString()
     }
 
-    /** 为 YAML 完整模块追加统一 imports，不修改业务正文。 */
-    internal fun createModuleSource(moduleId: String, source: String): String {
-        val body = StringBuilder()
-        appendRuntimeImports(body)
-        body.append("val __workspaceEntry = \"")
-        body.append(moduleId)
-        body.append("\"\n\n")
-        body.append(source)
-        body.append('\n')
-        return body.toString()
+    /** 完整业务模块直接使用 YAML 正文，保留其中显式声明的 import。 */
+    internal fun createModuleSource(source: String): String {
+        return source
     }
 
     /** 按声明顺序写入 Nova 函数参数。 */
@@ -480,14 +460,14 @@ object ScriptManager {
         }
     }
 
-    /** 统一 imports 后表达式正文所在的生成行偏移。 */
-    internal const val GENERATED_EXPRESSION_OFFSET = 18
+    /** 表达式包装中正文所在的生成行偏移。 */
+    internal const val GENERATED_EXPRESSION_OFFSET = 2
 
-    /** 统一 imports 后语句正文所在的生成行偏移。 */
-    internal const val GENERATED_ACTION_OFFSET = 18
+    /** 语句包装中正文所在的生成行偏移。 */
+    internal const val GENERATED_ACTION_OFFSET = 1
 
-    /** 统一 imports 后完整模块正文所在的生成行偏移。 */
-    internal const val GENERATED_MODULE_OFFSET = 19
+    /** 完整模块不产生前置源码行。 */
+    internal const val GENERATED_MODULE_OFFSET = 0
 
     /** 确保业务调用前已完成启动期预编译，禁止运行期隐式加载。 */
     private fun ensureLoaded() {

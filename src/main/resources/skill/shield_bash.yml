@@ -15,7 +15,9 @@ __option__:
     damage: 10 * level + 30
   max-level: 3
 action: |
-  fun execute() {
+  import "planners.core"
+
+  fun main() {
     sender.sendMessage("&a盾击 Lv" + level)
     Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }
