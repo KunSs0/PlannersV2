@@ -152,24 +152,41 @@ class TargetFinder @JvmOverloads constructor(
     }
 
     /**
-     * 矩形（3D Box）选择器
-     * 以 origin + offset 为中心、沿 facing 方向的矩形包围盒。
+     * 从当前原点创建无偏移、沿 facing 方向的矩形（3D Box）选择区域。
      *
-     * @param w      矩形宽度（左右方向，full width）
-     * @param h      矩形高度（上下方向，full height）
-     * @param z      矩形长度（前后方向，full length）
-     * @param offset 可选偏移量 {x: 左右, y: 上下, z: 前后}，默认均为 0
+     * @param width 矩形宽度（左右方向，完整宽度）。
+     * @param height 矩形高度（上下方向，完整高度）。
+     * @param length 矩形长度（前后方向，完整长度）。
+     * @return 当前目标查找器。
+     */
+    fun rect(width: Double, height: Double, length: Double): TargetFinder {
+        return rect(width, height, length, 0.0, 0.0, 0.0)
+    }
+
+    /**
+     * 从当前原点创建带偏移、沿 facing 方向的矩形（3D Box）选择区域。
      *
      * ```nova
      * finder().rect(5, 3, 4).build()
-     * finder().rect(5, 3, 4, {x: 0, y: 0, z: 2}).build()
+     * finder().rect(5, 3, 4, 0, 0, 2).build()
      * ```
+     *
+     * @param width 矩形宽度（左右方向，完整宽度）。
+     * @param height 矩形高度（上下方向，完整高度）。
+     * @param length 矩形长度（前后方向，完整长度）。
+     * @param offsetX 左右方向偏移量。
+     * @param offsetY 上下方向偏移量。
+     * @param offsetZ 前后方向偏移量。
+     * @return 当前目标查找器。
      */
-    fun rect(w: Double, h: Double, z: Double, offset: Map<String, Any?>? = null): TargetFinder {
-        val ox = (offset?.get("x") as? Number)?.toDouble() ?: 0.0
-        val oy = (offset?.get("y") as? Number)?.toDouble() ?: 0.0
-        val oz = (offset?.get("z") as? Number)?.toDouble() ?: 0.0
-
+    fun rect(
+        width: Double,
+        height: Double,
+        length: Double,
+        offsetX: Double,
+        offsetY: Double,
+        offsetZ: Double
+    ): TargetFinder {
         val found = runSync {
             val world = origin.world
             if (world == null) {
@@ -180,18 +197,37 @@ class TargetFinder @JvmOverloads constructor(
 
             // 预筛选半径：覆盖 rect 最远角点到 origin 的距离
             val preRadius = hypot(
-                hypot(w / 2.0 + abs(ox), z / 2.0 + abs(oz)),
-                h / 2.0 + abs(oy)
+                hypot(width / 2.0 + abs(offsetX), length / 2.0 + abs(offsetZ)),
+                height / 2.0 + abs(offsetY)
             )
 
             val sampling = world.getNearbyEntities(loc, preRadius, preRadius, preRadius)
                 .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
-            val result = RectNearestEntityFinder(loc, w, h, z, directionYaw, ox, oy, oz, sampling)
+            val result = RectNearestEntityFinder(
+                loc,
+                width,
+                height,
+                length,
+                directionYaw,
+                offsetX,
+                offsetY,
+                offsetZ,
+                sampling
+            )
                 .request()
                 .filterIsInstance<LivingEntity>()
 
             if (Planners.sectorSelectorDebug) {
-                spawnRectDebugParticles(loc, w, h, z, directionYaw, ox, oy, oz)
+                spawnRectDebugParticles(
+                    loc,
+                    width,
+                    height,
+                    length,
+                    directionYaw,
+                    offsetX,
+                    offsetY,
+                    offsetZ
+                )
             }
             result
         }

@@ -424,7 +424,7 @@ var targets = finder()
     .includeSelf()              // 包含自身
     .sector(5, 90, 0)           // 扇形（半径/角度/朝向）
     .rect(5, 3, 4)              // 矩形（宽/高/长）
-    .rect(5, 3, 4, {x: 0, y: 0, z: 2})  // 矩形（带偏移）
+    .rect(5, 3, 4, 0, 0, 2)     // 矩形（宽/高/长/x偏移/y偏移/z偏移）
     .limit(10)
     .sort("DISTANCE")           // NAME / DISTANCE / RANDOM
     .shuffle()

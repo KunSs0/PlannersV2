@@ -4,6 +4,7 @@ import com.gitee.planners.module.script.finder.TargetFinder
 import org.bukkit.Location
 import org.bukkit.entity.LivingEntity
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.lang.reflect.Proxy
@@ -53,6 +54,29 @@ class TargetFinderFacingTest {
         assertThrows(IllegalStateException::class.java) {
             finder.setFacing()
         }
+    }
+
+    /**
+     * 验证 Nova 只能按参数数量选择无偏移与完整偏移两个 rect 重载。
+     */
+    @Test
+    fun shouldExposeThreeAndSixArgumentRectOverloads() {
+        val rectArities = LinkedHashSet<Int>()
+        val methods = TargetFinder::class.java.declaredMethods
+        for (method in methods) {
+            if (method.name != "rect") {
+                continue
+            }
+            rectArities.add(method.parameterCount)
+            val parameterTypes = method.parameterTypes
+            for (parameterType in parameterTypes) {
+                assertEquals(Double::class.javaPrimitiveType, parameterType)
+            }
+        }
+
+        assertEquals(setOf(3, 6), rectArities)
+        assertFalse(rectArities.contains(4))
+        assertFalse(rectArities.contains(5))
     }
 
     /**

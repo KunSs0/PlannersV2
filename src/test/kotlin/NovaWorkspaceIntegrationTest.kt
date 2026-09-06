@@ -99,6 +99,40 @@ class NovaWorkspaceIntegrationTest {
         }
     }
 
+    /** 验证 Nova 能按参数数量解析 TargetFinder 的三参数与六参数 rect 重载。 */
+    @Test
+    fun shouldCompileTargetFinderRectOverloads() {
+        installDirectScheduler()
+        prepareAuditWorkspace(workspaceRoot, "planners-rect-overload-test")
+        val source =
+                "import \"planners.core\"\n\n" +
+                "fun selectWithoutOffset(finder: TargetFinder) {\n" +
+                "    return finder.rect(1, 3, 15)\n" +
+                "}\n\n" +
+                "fun selectWithOffset(finder: TargetFinder) {\n" +
+                "    return finder.rect(1, 3, 15, 0, 1.5, 7.5)\n" +
+                "}\n"
+        val virtual = SourceUnit(
+            "@planners/generated/target-finder-rect-overloads",
+            source,
+            workspaceRoot.resolve("skill/rect-overloads.yml"),
+            "action",
+            1,
+            ScriptManager.GENERATED_MODULE_OFFSET,
+            null
+        )
+        val host = WorkspaceHost { nova ->
+            nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
+        }
+        val workspace = RuntimeWorkspace(workspaceRoot.resolve("script/nova.config.yml"), host)
+        workspace.registerVirtualSource(virtual, true, false)
+        try {
+            workspace.load()
+        } finally {
+            workspace.dispose()
+        }
+    }
+
     /** 遍历项目通用默认资源，并验证所有脚本块都能通过 Nova 语法编译。 */
     @Test
     fun shouldCompileEveryDefaultYamlScript() {
