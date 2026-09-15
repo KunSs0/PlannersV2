@@ -30,6 +30,7 @@ taboolib {
             name("PlaceholderAPI").optional(true)
             name("NovaLang")
             name("Vault").optional(true)
+            name("Symphony").optional(true)
         }
     }
 

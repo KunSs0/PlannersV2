@@ -18,6 +18,11 @@ interface AttributeDriver {
             if (::INSTANCE.isInitialized) {
                 return
             }
+            if (SymphonyDriver.checkEnable()) {
+                INSTANCE = SymphonyDriver
+                info("AttributeDriver load driver: SymphonyDriver")
+                return
+            }
             if (AttributePlus3Driver.checkEnable()) {
                 INSTANCE = AttributePlus3Driver
                 info("AttributeDriver load driver: AttributePlus3Driver")
