@@ -133,7 +133,39 @@ class NovaWorkspaceIntegrationTest {
         }
     }
 
-    /** 遍历项目通用默认资源，并验证所有脚本块都能通过 Nova 语法编译。 */
+    /** Verifies Nova compilation of the multi-target MythicAPI threat call. */
+    @Test
+    fun shouldCompileMythicThreatGainApi() {
+        installDirectScheduler()
+        prepareAuditWorkspace(workspaceRoot, "planners-mythic-threat-api-test")
+        val source =
+            "import \"planners.core\"\n\n" +
+                "fun applyThreat(sender) {\n" +
+                "    var targets = TargetFinder(sender.getBukkitLocation(), sender.getInstance()).range(10).build()\n" +
+                "    return MythicAPI.threat.gain(sender.getInstance(), 100.0, targets)\n" +
+                "}\n"
+        val virtual = SourceUnit(
+            "@planners/generated/mythic-threat-api",
+            source,
+            workspaceRoot.resolve("skill/mythic-threat-api.yml"),
+            "action",
+            1,
+            ScriptManager.GENERATED_MODULE_OFFSET,
+            null
+        )
+        val host = WorkspaceHost { nova ->
+            nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
+        }
+        val workspace = RuntimeWorkspace(workspaceRoot.resolve("script/nova.config.yml"), host)
+        workspace.registerVirtualSource(virtual, true, false)
+        try {
+            workspace.load()
+        } finally {
+            workspace.dispose()
+        }
+    }
+
+    /** Verifies that all default YAML scripts compile in Nova. */
     @Test
     fun shouldCompileEveryDefaultYamlScript() {
         installDirectScheduler()

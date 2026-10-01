@@ -4,6 +4,8 @@ import com.gitee.planners.api.common.facing.EntityFacingProviders
 import com.gitee.planners.api.damage.DamageCause
 import com.gitee.planners.api.damage.ProxyDamage
 import com.gitee.planners.api.effect.EffectProviders
+import com.gitee.planners.api.job.target.ProxyTargetContainer
+import com.gitee.planners.api.mythic.MythicAPI
 import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.module.compat.attribute.AttributeDriver
 import com.gitee.planners.module.script.finder.TargetFinder
@@ -23,6 +25,9 @@ object PlannersCoreModule {
         DamageCause::class.java,
         ProxyDamage::class.java,
         EffectProviders::class.java,
+        ProxyTargetContainer::class.java,
+        MythicAPI::class.java,
+        MythicAPI.ThreatApi::class.java,
         Cooler::class.java,
         AttributeDriver::class.java,
         TargetFinder::class.java,
