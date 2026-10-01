@@ -6,6 +6,8 @@ import com.gitee.planners.api.directing.DirectingDefinition
 import com.gitee.planners.api.directing.DirectingResult
 import com.gitee.planners.api.directing.DirectingProviderRegistry
 import com.gitee.planners.core.skill.context.SkillExecutionContext
+import com.gitee.planners.core.skill.condition.CastCostTiming
+import com.gitee.planners.core.skill.condition.SkillCastConditionConfig
 import com.gitee.planners.core.skill.directing.DirectingConfigSection
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
@@ -30,6 +32,8 @@ class ImmutableSkill(config: Configuration) : Unique {
     val name: String = config.getString("__option__.name", id)!!
 
     private val option = config.getOption()
+
+    val castConditions: List<SkillCastConditionConfig> = parseCastConditions()
 
     /**
      * 指向性技能定义。
@@ -114,6 +118,48 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     /** 最高等级 */
     val maxLevel = option.getInt("max-level", 10)
+
+    private fun parseCastConditions(): List<SkillCastConditionConfig> {
+        val section = option.getConfigurationSection("condition.consume.cast")
+        if (section == null) {
+            return emptyList()
+        }
+        val result = ArrayList<SkillCastConditionConfig>()
+        for (id in section.getKeys(false)) {
+            if (id.contains('.')) {
+                throw IllegalArgumentException("Skill '${this@ImmutableSkill.id}' cast condition id must not contain '.'")
+            }
+            val conditionSection = section.getConfigurationSection(id)
+            if (conditionSection == null) {
+                throw IllegalArgumentException("Skill '$id' cast condition must be a configuration section")
+            }
+            val propsSection = conditionSection.getConfigurationSection("props")
+            val props = LinkedHashMap<String, Any>()
+            if (propsSection != null) {
+                for ((propId, propValue) in propsSection.getValues(false)) {
+                    if (propValue != null) {
+                        props[propId] = propValue
+                    }
+                }
+            }
+            val costSection = conditionSection.getConfigurationSection("cost")
+            val timing = if (costSection == null) {
+                null
+            } else {
+                val rawTiming = costSection.getString("timing")
+                if (rawTiming == null) {
+                    throw IllegalArgumentException("Skill '${this@ImmutableSkill.id}' cast condition '$id' cost is missing timing")
+                }
+                try {
+                    CastCostTiming.valueOf(rawTiming.uppercase())
+                } catch (exception: IllegalArgumentException) {
+                    throw IllegalArgumentException("Skill '${this@ImmutableSkill.id}' cast condition '$id' cost timing is invalid: $rawTiming")
+                }
+            }
+            result.add(SkillCastConditionConfig(id, props, timing))
+        }
+        return result
+    }
 
     val immutableVariables = option.mapValueWithId("variables") { id: String, value: Any ->
         ImmutableVariable.parse(id, value)

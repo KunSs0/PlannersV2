@@ -10,6 +10,9 @@ import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import com.gitee.planners.core.skill.context.SkillExecutionContext
+import com.gitee.planners.core.skill.condition.CastCostTiming
+import com.gitee.planners.core.skill.condition.SkillCastCondition
+import com.gitee.planners.core.skill.condition.SkillCastConditionRegistry
 import com.gitee.planners.core.skill.directing.DirectingSessionManager
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionFeedback
@@ -49,6 +52,10 @@ object PlannersAPI {
      */
     fun registerCastPreCondition(condition: CastPreCondition) {
         castPreConditions.add(condition)
+    }
+
+    fun registerCastCondition(id: String, condition: SkillCastCondition) {
+        SkillCastConditionRegistry.register(id, condition)
     }
 
     /**
@@ -175,6 +182,11 @@ object PlannersAPI {
             return ExecutableResult.cancelledWithEvent()
         }
         val execution = newExecution(player, skill)
+        val castConditionFailure = SkillCastConditionRegistry.verify(player, skill, execution, skill.immutable.castConditions)
+        if (castConditionFailure != null) {
+            player.sendMessage(castConditionFailure)
+            return ExecutableResult.cancelledWithEvent()
+        }
         val sortedConditions = castPreConditions.sortedBy { it.priority }
         for (condition in sortedConditions) {
             val result = condition.verify(player, skill, execution)
@@ -183,6 +195,7 @@ object PlannersAPI {
                 return ExecutableResult.preConditionFailed(result)
             }
         }
+        SkillCastConditionRegistry.consume(player, skill, execution, skill.immutable.castConditions, CastCostTiming.START)
         val directing = skill.immutable.directing
         if (directing != null) {
             if (sourceKey.isEmpty()) {
@@ -246,6 +259,11 @@ object PlannersAPI {
      * @return 最终释放结果。
      */
     private fun continueCast(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+        val castConditionFailure = SkillCastConditionRegistry.verify(player, skill, execution, skill.immutable.castConditions)
+        if (castConditionFailure != null) {
+            player.sendMessage(castConditionFailure)
+            return ExecutableResult.cancelledWithEvent()
+        }
         for (condition in sortedConditions) {
             val result = condition.verify(player, skill, execution)
             if (result is CastPreConditionResult.Failure) {
@@ -256,6 +274,7 @@ object PlannersAPI {
         for (condition in sortedConditions) {
             condition.consume(player, skill, execution)
         }
+        SkillCastConditionRegistry.consume(player, skill, execution, skill.immutable.castConditions, CastCostTiming.COMMIT)
         if (directing != null) {
             execution.context.directing = directing
             execution.setVariable("directing", directing)
