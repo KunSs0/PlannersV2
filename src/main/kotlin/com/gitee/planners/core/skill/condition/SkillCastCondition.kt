@@ -12,11 +12,10 @@ interface SkillCastCondition {
         props: Map<String, Any>
     ): String?
 
-    fun consume(
+    fun prepareConsume(
         player: Player,
         skill: PlayerSkill,
         execution: SkillExecutionContext,
         props: Map<String, Any>
-    ) {
-    }
+    ): CastCostReservation?
 }

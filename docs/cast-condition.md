@@ -36,4 +36,4 @@ __option__:
 PlannersAPI.registerCastCondition("fightcore_player_state", condition)
 ```
 
-当前实现仍有以下限制：多个条件的消耗还没有统一事务回滚；`resume()` 的一次性提交保护尚未完成；OR 条件组和技能执行成功后的结果条件不属于本版本配置范围。
+`COMMIT` 消耗使用准备与提交两阶段：所有条件先生成消费句柄，任一条件准备失败时全部回滚；全部准备成功后才统一提交。条件实现需要提供 `prepareConsume`，并返回支持 `commit`/`rollback` 的消费句柄。OR 条件组和技能执行成功后的结果条件不属于本版本配置范围。

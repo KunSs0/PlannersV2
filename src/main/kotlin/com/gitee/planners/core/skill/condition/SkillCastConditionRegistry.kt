@@ -49,15 +49,36 @@ object SkillCastConditionRegistry {
         configs: List<SkillCastConditionConfig>,
         timing: CastCostTiming
     ) {
-        for (config in configs) {
-            if (config.costTiming != timing) {
-                continue
+        val reservations = ArrayList<CastCostReservation>()
+        try {
+            for (config in configs) {
+                if (config.costTiming != timing) {
+                    continue
+                }
+                val condition = conditions[config.id]
+                if (condition == null) {
+                    throw IllegalStateException("未注册技能释放条件：${config.id}")
+                }
+                val reservation = condition.prepareConsume(player, skill, execution, config.props)
+                if (reservation != null) {
+                    reservations.add(reservation)
+                }
             }
-            val condition = conditions[config.id]
-            if (condition == null) {
-                throw IllegalStateException("未注册技能释放条件：${config.id}")
+        } catch (exception: Throwable) {
+            for (reservation in reservations) {
+                reservation.rollback()
             }
-            condition.consume(player, skill, execution, config.props)
+            throw exception
+        }
+        try {
+            for (reservation in reservations) {
+                reservation.commit()
+            }
+        } catch (exception: Throwable) {
+            for (reservation in reservations) {
+                reservation.rollback()
+            }
+            throw exception
         }
     }
 }
