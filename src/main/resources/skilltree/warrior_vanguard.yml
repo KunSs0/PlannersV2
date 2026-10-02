@@ -60,14 +60,31 @@ warrior_vanguard:
         3: { player_lv: { min: 14 }, consume_sp: { amount: 2 } }
 
   graph:
-    slash: []
+    slash:
+      groups:
+        root:
+          mode: ALL
+          requirements: {}
     strength_1:
-      - node: slash
-        minLevel: 1
+      groups:
+        root:
+          mode: ALL
+          requirements:
+            slash: 1
     charge:
-      - node: strength_1
-        minLevel: 2
-    passive_toughness: []
+      groups:
+        root:
+          mode: ALL
+          requirements:
+            strength_1: 2
+    passive_toughness:
+      groups:
+        root:
+          mode: ALL
+          requirements: {}
     passive_rage:
-      - node: passive_toughness
-        minLevel: 1
+      groups:
+        root:
+          mode: ALL
+          requirements:
+            passive_toughness: 1

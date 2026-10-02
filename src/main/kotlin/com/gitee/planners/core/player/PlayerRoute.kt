@@ -177,15 +177,9 @@ class PlayerRoute(
         if (currentLevel >= node.maxLevel) {
             return ConditionEvaluator.VerifyResult(false, listOf("节点已满级"))
         }
-        val requirements = tree.graph[nodeId] ?: emptyList()
-        for (requirement in requirements) {
-            val actualLevel = getNodeLevel(treeId, requirement.nodeId)
-            if (actualLevel < requirement.minLevel) {
-                return ConditionEvaluator.VerifyResult(
-                    false,
-                    listOf("前置节点 ${requirement.nodeId} 需要 Lv${requirement.minLevel}")
-                )
-            }
+        val graphResult = verifyGraph(tree, treeId, nodeId)
+        if (!graphResult.passed) {
+            return graphResult
         }
         val targetLevel = currentLevel + 1
         val conditions = node.levels[targetLevel]
@@ -231,20 +225,10 @@ class PlayerRoute(
                     continue
                 }
                 val graphCheckStart = System.nanoTime()
-                val requirements = tree.graph[nodeId] ?: emptyList()
-                var requirementHint: String? = null
-                for (requirement in requirements) {
-                    val requirementStateReadStart = System.nanoTime()
-                    val actualLevel = getNodeLevel(treeId, requirement.nodeId)
-                    profiling.nodeStateReadNanos += System.nanoTime() - requirementStateReadStart
-                    if (actualLevel < requirement.minLevel) {
-                        requirementHint = "前置节点 ${requirement.nodeId} 需要 Lv${requirement.minLevel}"
-                        break
-                    }
-                }
+                val graphResult = verifyGraph(tree, treeId, nodeId)
                 profiling.graphCheckNanos += System.nanoTime() - graphCheckStart
-                if (requirementHint != null) {
-                    treeResults[nodeId] = ConditionEvaluator.VerifyResult(false, listOf(requirementHint))
+                if (!graphResult.passed) {
+                    treeResults[nodeId] = graphResult
                     continue
                 }
                 val targetLevel = currentLevel + 1
@@ -373,6 +357,48 @@ class PlayerRoute(
         result["nodeId"] = nodeId
         result["nodeLevel"] = targetLevel
         return result
+    }
+
+    private fun verifyGraph(tree: ImmutableSkillTree, treeId: String, nodeId: String): ConditionEvaluator.VerifyResult {
+        val graph = tree.graph[nodeId]
+        if (graph == null) {
+            return ConditionEvaluator.VerifyResult(true, emptyList())
+        }
+        var firstHint: String? = null
+        for (group in graph.groups.values) {
+            var passed = false
+            if (group.mode == ImmutableSkillTree.Graph.Mode.ALL) {
+                passed = true
+                for ((requirementNodeId, minLevel) in group.requirements) {
+                    val actualLevel = getNodeLevel(treeId, requirementNodeId)
+                    if (actualLevel < minLevel) {
+                        passed = false
+                        if (firstHint == null) {
+                            firstHint = "前置节点 $requirementNodeId 需要 Lv$minLevel"
+                        }
+                        break
+                    }
+                }
+            } else {
+                for ((requirementNodeId, minLevel) in group.requirements) {
+                    val actualLevel = getNodeLevel(treeId, requirementNodeId)
+                    if (actualLevel >= minLevel) {
+                        passed = true
+                        break
+                    }
+                    if (firstHint == null) {
+                        firstHint = "前置节点 $requirementNodeId 需要 Lv$minLevel"
+                    }
+                }
+            }
+            if (passed) {
+                return ConditionEvaluator.VerifyResult(true, emptyList())
+            }
+        }
+        if (firstHint == null) {
+            return ConditionEvaluator.VerifyResult(false, listOf("前置条件未满足"))
+        }
+        return ConditionEvaluator.VerifyResult(false, listOf(firstHint))
     }
 
     private fun nodeStateKey(treeId: String, nodeId: String): String {

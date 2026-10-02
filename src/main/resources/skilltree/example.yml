@@ -28,7 +28,14 @@ example_tree:
           consume_sp: { amount: 1 }
 
   graph:
-    example0: []
+    example0:
+      groups:
+        root:
+          mode: ALL
+          requirements: {}
     strength_1:
-      - node: example0
-        minLevel: 1
+      groups:
+        root:
+          mode: ALL
+          requirements:
+            example0: 1

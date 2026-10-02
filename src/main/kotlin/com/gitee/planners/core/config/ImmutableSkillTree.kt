@@ -9,8 +9,29 @@ class ImmutableSkillTree(
     val clazz: String,
     val type: TreeType,
     val nodes: Map<String, SkillTreeNode>,
-    val graph: Map<String, List<SkillTreeNodeRequirement>>
+    val graph: Map<String, Graph>
 ) {
+
+    class Graph(
+        val groups: Map<String, Group>,
+        val edges: List<Edge>
+    ) {
+        class Group(
+            val id: String,
+            val mode: Mode,
+            val requirements: Map<String, Int>
+        )
+
+        class Edge(
+            val nodeId: String,
+            val minLevel: Int
+        )
+
+        enum class Mode {
+            ALL,
+            ANY
+        }
+    }
 
     fun getActiveAndAttributeNodes(): List<SkillTreeNode> {
         val result = ArrayList<SkillTreeNode>()
@@ -163,12 +184,12 @@ class ImmutableSkillTree(
             treeId: String,
             config: ConfigurationSection,
             nodes: Map<String, SkillTreeNode>
-        ): Map<String, List<SkillTreeNodeRequirement>> {
+        ): Map<String, Graph> {
             val section = config.getConfigurationSection("graph")
             if (section == null) {
                 error("SkillTree '$treeId' 缺少 graph 节点")
             }
-            val graph = LinkedHashMap<String, List<SkillTreeNodeRequirement>>()
+            val graph = LinkedHashMap<String, Graph>()
             for (nodeId in nodes.keys) {
                 if (!section.contains(nodeId)) {
                     error("SkillTree '$treeId' 的 graph 缺少节点 '$nodeId'")
@@ -178,55 +199,71 @@ class ImmutableSkillTree(
                 if (!nodes.containsKey(nodeId)) {
                     error("SkillTree '$treeId' 的 graph 包含未知节点 '$nodeId'")
                 }
-                graph[nodeId] = parseRequirements(treeId, nodeId, section, nodes)
+                graph[nodeId] = parseNodeGraph(treeId, nodeId, section, nodes)
             }
             validateAcyclic(treeId, graph)
             return graph
         }
 
-        private fun parseRequirements(
+        private fun parseNodeGraph(
             treeId: String,
             nodeId: String,
             graphSection: ConfigurationSection,
             nodes: Map<String, SkillTreeNode>
-        ): List<SkillTreeNodeRequirement> {
-            val rawRequirements = graphSection.getList(nodeId) ?: emptyList<Any>()
-            val requirements = ArrayList<SkillTreeNodeRequirement>()
-            for (rawRequirement in rawRequirements) {
-                if (rawRequirement == null) {
-                    error("SkillTree '$treeId' 的节点 '$nodeId' 包含空前置定义")
+        ): Graph {
+            val nodeSection = graphSection.getConfigurationSection(nodeId)
+            if (nodeSection == null) {
+                error("SkillTree '$treeId' 的节点 '$nodeId' graph 必须使用配置节")
+            }
+            val groupsSection = nodeSection.getConfigurationSection("groups")
+            if (groupsSection == null || groupsSection.getKeys(false).isEmpty()) {
+                error("SkillTree '$treeId' 的节点 '$nodeId' 缺少 graph.groups")
+            }
+            val groups = LinkedHashMap<String, Graph.Group>()
+            val edges = ArrayList<Graph.Edge>()
+            for (groupId in groupsSection.getKeys(false)) {
+                val groupSection = groupsSection.getConfigurationSection(groupId)
+                if (groupSection == null) {
+                    error("SkillTree '$treeId' 的节点 '$nodeId' 分支 '$groupId' 必须使用配置节")
                 }
-                val requirement = parseRequirement(treeId, nodeId, rawRequirement)
-                val target = nodes[requirement.nodeId]
-                if (target == null) {
-                    error("SkillTree '$treeId' 的节点 '$nodeId' 引用了未知前置 '${requirement.nodeId}'")
+                val rawMode = groupSection.getString("mode")
+                if (rawMode == null) {
+                    error("SkillTree '$treeId' 的节点 '$nodeId' 分支 '$groupId' 缺少 mode")
                 }
-                if (requirement.minLevel > target.maxLevel) {
-                    error("SkillTree '$treeId' 的节点 '$nodeId' 前置 '${requirement.nodeId}' 的 minLevel 超过节点上限")
+                val mode = try {
+                    Graph.Mode.valueOf(rawMode.uppercase())
+                } catch (exception: IllegalArgumentException) {
+                    error("SkillTree '$treeId' 的节点 '$nodeId' 分支 '$groupId' mode 无效: $rawMode")
                 }
-                requirements.add(requirement)
+                val requirementSection = groupSection.getConfigurationSection("requirements")
+                if (requirementSection == null) {
+                    error("SkillTree '$treeId' 的节点 '$nodeId' 分支 '$groupId' 缺少 requirements")
+                }
+                if (requirementSection.getKeys(false).isEmpty() && mode == Graph.Mode.ANY) {
+                    error("SkillTree '$treeId' 的节点 '$nodeId' 分支 '$groupId' 的 ANY 分支不能为空")
+                }
+                val requirements = LinkedHashMap<String, Int>()
+                for (requirementNodeId in requirementSection.getKeys(false)) {
+                    val minLevel = requirementSection.getInt(requirementNodeId)
+                    if (minLevel <= 0) {
+                        error("SkillTree '$treeId' 的节点 '$nodeId' 前置 '$requirementNodeId' 等级必须大于 0")
+                    }
+                    val target = nodes[requirementNodeId]
+                    if (target == null) {
+                        error("SkillTree '$treeId' 的节点 '$nodeId' 引用了未知前置 '$requirementNodeId'")
+                    }
+                    if (minLevel > target.maxLevel) {
+                        error("SkillTree '$treeId' 的节点 '$nodeId' 前置 '$requirementNodeId' 的 minLevel 超过节点上限")
+                    }
+                    if (requirements.containsKey(requirementNodeId)) {
+                        error("SkillTree '$treeId' 的节点 '$nodeId' 分支 '$groupId' 重复前置 '$requirementNodeId'")
+                    }
+                    requirements[requirementNodeId] = minLevel
+                    edges.add(Graph.Edge(requirementNodeId, minLevel))
+                }
+                groups[groupId] = Graph.Group(groupId, mode, requirements)
             }
-            return requirements
-        }
-
-        private fun parseRequirement(treeId: String, nodeId: String, rawRequirement: Any): SkillTreeNodeRequirement {
-            if (rawRequirement !is Map<*, *>) {
-                error("SkillTree '$treeId' 的节点 '$nodeId' 前置必须使用 node/minLevel 对象")
-            }
-            val rawNodeId = rawRequirement["node"]
-            if (rawNodeId == null || rawNodeId.toString().isBlank()) {
-                error("SkillTree '$treeId' 的节点 '$nodeId' 前置缺少 node")
-            }
-            val rawMinLevel = rawRequirement["minLevel"]
-            val minLevel = if (rawMinLevel == null) {
-                1
-            } else {
-                rawMinLevel.toString().toIntOrNull() ?: error("SkillTree '$treeId' 的节点 '$nodeId' 前置 minLevel 无效")
-            }
-            if (minLevel <= 0) {
-                error("SkillTree '$treeId' 的节点 '$nodeId' 前置 minLevel 必须大于 0")
-            }
-            return SkillTreeNodeRequirement(rawNodeId.toString(), minLevel)
+            return Graph(groups, edges)
         }
 
         private fun validateNodeLevels(treeId: String, nodes: Map<String, SkillTreeNode>) {
@@ -239,7 +276,7 @@ class ImmutableSkillTree(
             }
         }
 
-        private fun validateAcyclic(treeId: String, graph: Map<String, List<SkillTreeNodeRequirement>>) {
+        private fun validateAcyclic(treeId: String, graph: Map<String, Graph>) {
             val visiting = mutableSetOf<String>()
             val visited = mutableSetOf<String>()
             for (nodeId in graph.keys) {
@@ -250,7 +287,7 @@ class ImmutableSkillTree(
         private fun validateNodeAcyclic(
             treeId: String,
             nodeId: String,
-            graph: Map<String, List<SkillTreeNodeRequirement>>,
+            graph: Map<String, Graph>,
             visiting: MutableSet<String>,
             visited: MutableSet<String>
         ) {
@@ -260,9 +297,11 @@ class ImmutableSkillTree(
             if (!visiting.add(nodeId)) {
                 error("SkillTree '$treeId' 的 graph 存在循环，节点 '$nodeId' 重复进入")
             }
-            val requirements = graph[nodeId] ?: emptyList()
-            for (requirement in requirements) {
-                validateNodeAcyclic(treeId, requirement.nodeId, graph, visiting, visited)
+            val nodeGraph = graph[nodeId]
+            if (nodeGraph != null) {
+                for (edge in nodeGraph.edges) {
+                    validateNodeAcyclic(treeId, edge.nodeId, graph, visiting, visited)
+                }
             }
             visiting.remove(nodeId)
             visited.add(nodeId)
