@@ -84,6 +84,7 @@ class DatabaseLocal : Database {
 
     init {
         migrateLegacyRouterSchema()
+        migrateSkillTreeChoiceColumn()
         tableUser.createTable(dataSource)
         tableRoute.createTable(dataSource)
         tableMetadata.createTable(dataSource)
@@ -318,6 +319,24 @@ class DatabaseLocal : Database {
                 getLong("id"), getString("node"), getInt("level"),
                 getInt("equipped") != 0, getString("backpack_page"), getString("backpack_slot")
             )
+        }
+    }
+
+    private fun migrateSkillTreeChoiceColumn() {
+        val connection = dataSource.connection
+        try {
+            val columns = getTableColumns(connection, "planners_skill_tree_node")
+            if (columns.isEmpty() || columns.contains("choice")) {
+                return
+            }
+            val statement = connection.createStatement()
+            try {
+                statement.executeUpdate("ALTER TABLE planners_skill_tree_node ADD COLUMN choice TEXT")
+            } finally {
+                statement.close()
+            }
+        } finally {
+            connection.close()
         }
     }
 
