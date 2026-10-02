@@ -66,6 +66,9 @@ finder().sector(8, 45, 180).build()
 
 // 配合类型过滤
 finder().sector(12, 120).type("ZOMBIE,SKELETON").limit(5).build()
+
+// 扇形中心偏移：右 1、上 0.5、前 3 格
+finder().sector(10, 90, null, 1, 0.5, 3).build()
 ```
 
 | 参数 | 类型 | 说明 |

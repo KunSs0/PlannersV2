@@ -150,8 +150,8 @@ val apiJar by tasks.registering(Jar::class) {
     from(sourceSets.main.get().output.classesDirs)
 }
 
-tasks.named("taboolibBuildApi") {
-    finalizedBy(apiJar)
+tasks.named("taboolibMainTask") {
+	dependsOn(apiJar)
 }
 
 java {

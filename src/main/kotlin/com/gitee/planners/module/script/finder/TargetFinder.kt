@@ -131,6 +131,20 @@ class TargetFinder @JvmOverloads constructor(
      */
     @JvmOverloads
     fun sector(radius: Double, angle: Double, yaw: Float? = null): TargetFinder {
+        return sector(radius, angle, yaw, 0.0, 0.0, 0.0)
+    }
+
+    /**
+     * 以当前原点为基准，按朝向偏移后创建扇形选择区域。
+     */
+    fun sector(
+        radius: Double,
+        angle: Double,
+        yaw: Float? = null,
+        offsetX: Double,
+        offsetY: Double,
+        offsetZ: Double
+    ): TargetFinder {
         val found = runSync {
             val world = origin.world
             if (world == null) {
@@ -138,7 +152,18 @@ class TargetFinder @JvmOverloads constructor(
             }
             val loc = origin.clone()
             val directionYaw = yaw ?: facingYaw ?: loc.yaw
-            val sampling = world.getNearbyEntities(loc, radius, radius, radius)
+            val radians = Math.toRadians(directionYaw.toDouble())
+            val forwardX = -kotlin.math.sin(radians)
+            val forwardZ = kotlin.math.cos(radians)
+            val rightX = kotlin.math.cos(radians)
+            val rightZ = kotlin.math.sin(radians)
+            loc.add(
+                offsetZ * forwardX + offsetX * rightX,
+                offsetY,
+                offsetZ * forwardZ + offsetX * rightZ
+            )
+            val preRadius = radius + kotlin.math.hypot(offsetX, offsetZ)
+            val sampling = world.getNearbyEntities(loc, preRadius, preRadius, preRadius)
                 .filter { it is LivingEntity && (includeSelf || sender == null || it.uniqueId != sender!!.uniqueId) }
             val result = SectorNearestEntityFinder(loc, angle, radius, directionYaw, sampling).request()
                 .filterIsInstance<LivingEntity>()
