@@ -54,7 +54,8 @@ interface Database {
         route: PlayerRoute,
         treeId: String,
         nodeId: String,
-        level: Int
+        level: Int,
+        choice: String? = null
     ): CompletableFuture<PlayerSkillTreeNodeState>
 
     fun updateSkillTreeNodeState(state: PlayerSkillTreeNodeState)

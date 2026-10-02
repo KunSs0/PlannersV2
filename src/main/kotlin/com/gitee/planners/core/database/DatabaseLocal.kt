@@ -68,6 +68,7 @@ class DatabaseLocal : Database {
         add("tree") { type(ColumnTypeSQLite.TEXT) }
         add("node") { type(ColumnTypeSQLite.TEXT) }
         add("level") { type(ColumnTypeSQLite.INTEGER) }
+        add("choice") { type(ColumnTypeSQLite.TEXT) }
     }
 
     val tableRouter = Table("planners_router", host) {
@@ -323,7 +324,7 @@ class DatabaseLocal : Database {
     private fun getSkillTreeNodeStates(route: Long): List<PlayerSkillTreeNodeState> {
         return tableSkillTreeNode.select(dataSource) {
             where { "route" eq route }
-            rows("id", "tree", "node", "level")
+            rows("id", "tree", "node", "level", "choice")
         }.map {
             PlayerSkillTreeNodeState(
                 getLong("id"),
@@ -418,14 +419,15 @@ class DatabaseLocal : Database {
         route: PlayerRoute,
         treeId: String,
         nodeId: String,
-        level: Int
+        level: Int,
+        choice: String?
     ): CompletableFuture<PlayerSkillTreeNodeState> {
         val future = CompletableFuture<PlayerSkillTreeNodeState>()
-        tableSkillTreeNode.insert(dataSource, "route", "tree", "node", "level") {
-            value(route.bindingId, treeId, nodeId, level)
+        tableSkillTreeNode.insert(dataSource, "route", "tree", "node", "level", "choice") {
+            value(route.bindingId, treeId, nodeId, level, choice)
             onFinally {
                 val index = getId(generatedKeys)
-                future.complete(PlayerSkillTreeNodeState(index, treeId, nodeId, level))
+                future.complete(PlayerSkillTreeNodeState(index, treeId, nodeId, level, choice))
             }
         }
         return future
@@ -435,6 +437,7 @@ class DatabaseLocal : Database {
         tableSkillTreeNode.update(dataSource) {
             where { "id" eq state.index }
             set("level", state.level)
+            set("choice", state.choice)
         }
     }
 

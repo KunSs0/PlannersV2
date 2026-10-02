@@ -120,6 +120,7 @@ class ImmutableSkillTree(
             return when (type) {
                 SkillTreeNodeType.SKILL -> parseSkillNode(treeId, nodeId, config, maxLevel, levels, position)
                 SkillTreeNodeType.ATTRIBUTE -> parseAttributeNode(treeId, nodeId, config, maxLevel, levels, position)
+                SkillTreeNodeType.CHOICE -> parseChoiceNode(treeId, nodeId, config, maxLevel, levels, position)
             }
         }
 
@@ -178,6 +179,40 @@ class ImmutableSkillTree(
                 values[attributeId] = value
             }
             return SkillTreeAttributeNode(nodeId, providerId, values, maxLevel, levels, position)
+        }
+
+        private fun parseChoiceNode(
+            treeId: String,
+            nodeId: String,
+            config: ConfigurationSection,
+            maxLevel: Int,
+            levels: Map<Int, Map<String, Map<String, Any>>>,
+            position: SkillTreeNodePosition
+        ): ChoiceNode {
+            val optionsSection = config.getConfigurationSection("options")
+            if (optionsSection == null || optionsSection.getKeys(false).isEmpty()) {
+                error("SkillTree '$treeId' choice node '$nodeId' requires options")
+            }
+            val options = LinkedHashMap<String, ChoiceNode.Option>()
+            for (optionId in optionsSection.getKeys(false)) {
+                val optionSection = optionsSection.getConfigurationSection(optionId)
+                if (optionSection == null) {
+                    error("SkillTree '$treeId' choice node '$nodeId' option '$optionId' must be section")
+                }
+                val name = optionSection.getString("name") ?: optionId
+                val providerId = optionSection.getString("provider")
+                val propertiesSection = optionSection.getConfigurationSection("properties")
+                val properties = LinkedHashMap<String, Any>()
+                if (propertiesSection != null) {
+                    for ((key, value) in propertiesSection.getValues(false)) {
+                        if (value != null) {
+                            properties[key] = value
+                        }
+                    }
+                }
+                options[optionId] = ChoiceNode.Option(optionId, name, providerId, properties)
+            }
+            return ChoiceNode(nodeId, maxLevel, levels, position, options)
         }
 
         private fun parseGraph(
