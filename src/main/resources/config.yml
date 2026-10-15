@@ -17,8 +17,13 @@ settings:
         particle: END_ROD
         step: 0.5
         y-offset: 0.15
-  # 条件定义（供技能树/转职/EC等引用）
+  # 技能树学习条件模板
   condition:
+    # weapon/min 在节点 levels 中填写；武器 ID 直接引用 HaiderCore 配置。
+    weapon_mastery:
+      type: weapon_mastery
+      hint: "需要武器 {props.weapon} 熟练度 Lv{props.min}"
+
     player_lv:
       exper: "profile.getLevel() >= props.min"
       props:

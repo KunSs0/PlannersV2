@@ -80,6 +80,7 @@ dependencies {
     testImplementation("com.novalang:nova-runtime-workspace:0.2.0")
     testImplementation("com.novalang:nova-bukkit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation(files("libs/HaiderCore-2.0.0-api.jar"))
     testImplementation("org.mockito:mockito-core:5.14.2")
     testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.91.1") {
         exclude(group = "io.papermc.paper", module = "paper-api")

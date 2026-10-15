@@ -4,7 +4,7 @@ import com.gitee.planners.api.Registries
 import com.gitee.planners.api.attribute.AttributeRegistryEntry
 import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.attribute.source.HookAttributeSource
-import com.gitee.planners.core.condition.ConditionConfig
+import com.gitee.planners.core.condition.ConditionFactory
 import com.gitee.planners.core.condition.ConditionEvaluator
 import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.core.config.SkillCategorySpec
@@ -116,24 +116,7 @@ object Planners : Plugin() {
 
     @ConfigNode("settings.condition")
     val conditions = configNodeToMap { key, value ->
-        val cfg = value as ConfigurationSection
-        val exper = cfg.getString("exper") ?: error("Condition '$key' missing 'exper'")
-        val hint = cfg.getString("hint") ?: error("Condition '$key' missing 'hint'")
-        val propsSection = cfg.getConfigurationSection("props")
-        val props: Map<String, Any>
-        if (propsSection != null) {
-            props = propsSection.getValues(false).mapValues { it.value ?: "" }
-        } else {
-            props = emptyMap()
-        }
-        val consumeStr = cfg.getString("consume")
-        val consume: String?
-        if (consumeStr != null && consumeStr.isNotEmpty()) {
-            consume = consumeStr
-        } else {
-            consume = null
-        }
-        ConditionConfig(key, exper, props, hint, consume)
+        ConditionFactory.create(key, value as ConfigurationSection)
     }
 
     @ConfigNode("settings.attribute.registry")

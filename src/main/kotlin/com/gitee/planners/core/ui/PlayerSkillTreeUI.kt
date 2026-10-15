@@ -6,6 +6,7 @@ import com.gitee.planners.core.config.SkillTreeAttributeNode
 import com.gitee.planners.core.config.SkillTreeNode
 import com.gitee.planners.core.config.SkillTreeSkillNode
 import com.gitee.planners.core.player.PlayerRoute
+import com.gitee.planners.core.condition.ConditionMainThread
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -94,13 +95,14 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
 
     private fun advanceNode(player: Player, route: PlayerRoute, entry: NodeEntry) {
         try {
-            route.advanceNode(player, entry.tree.id, entry.node.id).thenAccept {
-                open(player)
-            }.exceptionally { exception ->
-                val message = exception.message ?: "Unknown error"
-                player.sendLang("skill-tree-failed", message)
-                null
-            }
+            route.advanceNode(player, entry.tree.id, entry.node.id).whenCompleteAsync({ _, exception ->
+                if (exception == null) {
+                    open(player)
+                } else {
+                    val message = exception.message ?: "Unknown error"
+                    player.sendLang("skill-tree-failed", message)
+                }
+            }, ConditionMainThread)
         } catch (exception: Exception) {
             val message = exception.message ?: "Unknown error"
             player.sendLang("skill-tree-failed", message)

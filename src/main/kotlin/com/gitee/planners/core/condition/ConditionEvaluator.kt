@@ -8,13 +8,19 @@ import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.module.script.NovaScriptUnit
 import org.bukkit.entity.Player
+import org.bukkit.Bukkit
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 条件执行器。
  * 集中定义在 config.yml 的条件模板通过 key 引用 + 传参覆盖后，由本类执行。
+ * @param configurations 本次配置查询入口；异步准备只解析实际引用的模板。
  */
-class ConditionEvaluator {
+class ConditionEvaluator(
+    private val configurations: () -> Map<String, ConditionConfig> = { Planners.conditions.get() }
+) {
 
     companion object {
 
@@ -24,6 +30,9 @@ class ConditionEvaluator {
         /** 在 Workspace load 前登记条件默认 props 中的 Nova 表达式。 */
         fun prepareConfiguredProperties(configurations: Collection<ConditionConfig>) {
             for (configuration in configurations) {
+                if (!configuration.expressionProperties) {
+                    continue
+                }
                 for (propertyValue in configuration.props.values) {
                     if (propertyValue is String) {
                         if (propertyValue.isNotBlank() && propertyValue.toDoubleOrNull() == null) {
@@ -58,6 +67,48 @@ class ConditionEvaluator {
     }
 
     /**
+     * 准备本次请求实际引用的条件，同一数据源只调用一次。
+     * 不在此方法访问玩家的 Bukkit 状态，所有外部查询异常原样传播。
+     */
+    fun prepare(keys: Set<String>, playerId: UUID): CompletableFuture<ConditionSession> {
+        val sources = LinkedHashMap<String, CompletableFuture<ConditionExecution>>()
+        val executions = LinkedHashMap<String, CompletableFuture<ConditionExecution>>()
+        try {
+            val templates = configurations()
+            for (key in keys) {
+                val config = templates[key]
+                require(config != null) { "未知条件：$key" }
+                var future = sources[config.preparationKey]
+                if (future == null) {
+                    future = config.prepare(playerId)
+                    sources[config.preparationKey] = future
+                }
+                executions[key] = future
+            }
+        } catch (exception: Exception) {
+            return CompletableFuture.failedFuture(exception)
+        }
+        return CompletableFuture.allOf(*sources.values.toTypedArray()).thenApply {
+            val prepared = LinkedHashMap<String, ConditionExecution>()
+            for ((key, future) in executions) {
+                // allOf 成功后所有查询已结束，此处不会阻塞。
+                prepared[key] = future.join()
+            }
+            ConditionSession(prepared)
+        }
+    }
+
+    /**
+     * 为同步展示接口准备数据，仅允许后台快照线程等待尚未结束的查询。
+     * 主线程调用含异步条件的接口会明确报错，应改用先 prepare 后执行。
+     */
+    fun prepareBlocking(keys: Set<String>, player: Player): ConditionSession {
+        val future = prepare(keys, player.uniqueId)
+        check(future.isDone || !Bukkit.isPrimaryThread()) { "主线程不能等待异步条件，请先 prepare 条件数据" }
+        return future.join()
+    }
+
+    /**
      * 批量校验的单个条件请求。
      *
      * @property id 调用方用于关联结果的唯一标识。
@@ -85,13 +136,15 @@ class ConditionEvaluator {
     fun verify(
         conditions: Map<String, Map<String, Any>>,
         player: Player,
-        contextVars: Map<String, Any> = emptyMap()
+        contextVars: Map<String, Any> = emptyMap(),
+        session: ConditionSession? = null
     ): VerifyResult {
         val conditionConfigs = collectConditionConfigs(listOf(VerifyRequest("verify", conditions, contextVars)))
         for (conditionConfig in conditionConfigs) {
             conditionConfig.registerSources()
         }
-        return verifyInternal(conditions, player, contextVars)
+        val prepared = session ?: prepareBlocking(conditions.keys, player)
+        return verifyInternal(conditions, player, contextVars, prepared)
     }
 
     /**
@@ -237,12 +290,17 @@ class ConditionEvaluator {
      * @param player 当前玩家。
      * @return 条件校验结果与分段性能统计。
      */
-    fun verifyAllProfiled(requests: List<VerifyRequest>, player: Player): BatchVerification {
+    fun verifyAllProfiled(requests: List<VerifyRequest>, player: Player, session: ConditionSession? = null): BatchVerification {
         val result = LinkedHashMap<String, VerifyResult>()
         val profiling = BatchProfiling()
         if (requests.isEmpty()) {
             return BatchVerification(result, profiling)
         }
+        val keys = LinkedHashSet<String>()
+        for (request in requests) {
+            keys.addAll(request.conditions.keys)
+        }
+        val preparedSession = session ?: prepareBlocking(keys, player)
         val profile = player.plannersTemplate
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
@@ -254,13 +312,13 @@ class ConditionEvaluator {
             val prepared = ArrayList<PreparedCondition>()
             preparedRequests.add(prepared)
             for ((key, overrideProps) in request.conditions) {
-                val config = Planners.conditions.get()[key]
+                val config = configurations()[key]
                 if (config == null) {
                     error("Unknown condition key: $key")
                 }
                 val resolveStart = System.nanoTime()
                 val resolvedProps = resolveProps(
-                    config.props,
+                    config,
                     overrideProps,
                     player,
                     profile,
@@ -283,7 +341,6 @@ class ConditionEvaluator {
         }
         for ((key, group) in groupedConditions) {
             val inputBuildStart = System.nanoTime()
-            val config = group[0].config
             val inputs = ArrayList<Map<String, Any>>()
             for (preparedCondition in group) {
                 val input = LinkedHashMap<String, Any>()
@@ -293,19 +350,22 @@ class ConditionEvaluator {
             }
             profiling.groupInputBuildNanos += System.nanoTime() - inputBuildStart
             val invocationStart = System.nanoTime()
-            val evaluation: ConditionConfig.BatchEvaluation
+            val evaluation: ConditionExecution.BatchEvaluation
             try {
-                evaluation = config.evaluateBatchPersistent(player, profile, router, route, inputs)
+                evaluation = preparedSession.execution(key).evaluateBatchPersistent(player, profile, router, route, inputs)
             } catch (exception: Exception) {
                 profiling.recordConditionInvokeFailure(exception)
-                throw IllegalStateException("Failed to evaluate Nova condition batch: $key", exception)
+                throw IllegalStateException("Failed to evaluate condition batch: $key", exception)
             }
             profiling.conditionInvokeNanos += System.nanoTime() - invocationStart
             val encoded = evaluation.encoded
-            profiling.recordConditionInvocation(key, group.size, evaluation.invocation)
+            val invocation = evaluation.invocation
+            if (invocation != null) {
+                profiling.recordConditionInvocation(key, group.size, invocation)
+            }
             val resultApplyStart = System.nanoTime()
             if (encoded.length != group.size) {
-                throw IllegalStateException("Nova condition batch returned an invalid result length: $key")
+                throw IllegalStateException("Condition batch returned an invalid result length: $key")
             } else {
                 for (index in group.indices) {
                     group[index].passed = encoded[index] == '1'
@@ -336,20 +396,21 @@ class ConditionEvaluator {
     private fun verifyInternal(
         conditions: Map<String, Map<String, Any>>,
         player: Player,
-        contextVars: Map<String, Any>
+        contextVars: Map<String, Any>,
+        session: ConditionSession
     ): VerifyResult {
         val profile = player.plannersTemplate
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
         val hints = mutableListOf<String>()
         for ((key, overrideProps) in conditions) {
-            val cfg = Planners.conditions.get()[key]
+            val cfg = configurations()[key]
             if (cfg == null) {
                 error("Unknown condition key: $key")
             }
-            val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
+            val resolvedProps = resolveProps(cfg, overrideProps, player, profile, router, route, contextVars)
             val props = resolvedProps.values
-            val passed = cfg.evaluate(player, profile, router, route, props)
+            val passed = session.execution(key).evaluate(player, profile, router, route, props)
             if (!passed) {
                 hints.add(interpolate(cfg.hint, props))
                 return VerifyResult(false, hints)
@@ -368,14 +429,16 @@ class ConditionEvaluator {
     fun consume(
         conditions: Map<String, Map<String, Any>>,
         player: Player,
-        contextVars: Map<String, Any> = emptyMap()
+        contextVars: Map<String, Any> = emptyMap(),
+        session: ConditionSession? = null
     ) {
+        val preparedSession = session ?: prepareBlocking(conditions.keys, player)
         val profile = player.plannersTemplate
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
 
         for ((key, overrideProps) in conditions) {
-            val cfg = Planners.conditions.get()[key]
+            val cfg = configurations()[key]
             if (cfg == null) {
                 error("Unknown condition key: $key")
             }
@@ -383,8 +446,8 @@ class ConditionEvaluator {
                 continue
             }
             cfg.registerSources()
-            val resolvedProps = resolveProps(cfg.props, overrideProps, player, profile, router, route, contextVars)
-            cfg.consume(player, profile, router, route, resolvedProps.values)
+            val resolvedProps = resolveProps(cfg, overrideProps, player, profile, router, route, contextVars)
+            preparedSession.execution(key).consume(player, profile, router, route, resolvedProps.values)
         }
     }
 
@@ -394,7 +457,7 @@ class ConditionEvaluator {
      * 合并默认 props 与调用处覆盖值，并将 String 值通过预编译函数计算为实际值。
      */
     private fun resolveProps(
-        defaultProps: Map<String, Any>,
+        configuration: ConditionConfig,
         overrideProps: Map<String, Any>,
         player: Player,
         profile: PlayerTemplate,
@@ -403,8 +466,12 @@ class ConditionEvaluator {
         contextVars: Map<String, Any>,
         profiling: BatchProfiling? = null
     ): ResolvedProps {
-        val merged = defaultProps.toMutableMap()
+        val merged = configuration.props.toMutableMap()
         merged.putAll(overrideProps)
+        configuration.validateProperties(merged)
+        if (!configuration.expressionProperties) {
+            return ResolvedProps(merged)
+        }
 
         val resolved = LinkedHashMap<String, Any>()
         for ((k, v) in merged) {
@@ -508,7 +575,7 @@ class ConditionEvaluator {
      * 同一个条件即使被多个节点引用也只编译一次。
      */
     private fun collectConditionConfigs(requests: List<VerifyRequest>): List<ConditionConfig> {
-        val allConfigs = Planners.conditions.get()
+        val allConfigs = configurations()
         val result = LinkedHashMap<String, ConditionConfig>()
         for (request in requests) {
             for (key in request.conditions.keys) {
