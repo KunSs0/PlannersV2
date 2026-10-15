@@ -10,6 +10,7 @@ import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.core.config.SkillCategorySpec
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
+import com.gitee.planners.core.skill.timing.SkillTimingPolicy
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.PlannersCoreModule
 import com.gitee.planners.module.script.YamlNovaSourceCollector
@@ -162,6 +163,8 @@ object Planners : Plugin() {
     }
 
     override fun onEnable() {
+        // 时间策略必须在技能可被释放前明确配置，不能在缺项时沿用原时间。
+        SkillTimingPolicy.parse(config.getConfigurationSection("settings.skill.timing"))
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
         ScriptManager.prepare()

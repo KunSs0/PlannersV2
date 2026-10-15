@@ -9,6 +9,7 @@ __option__:
         - "&7等级 &fLv{{level}}"
         - "&7反伤 &c{{reflect}}%"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 80
     reflect: 20 * level + 40
   max-level: 4
@@ -17,5 +18,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&e反击 Lv" + level)
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

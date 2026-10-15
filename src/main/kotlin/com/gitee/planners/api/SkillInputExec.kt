@@ -4,6 +4,7 @@ import com.gitee.planners.api.directing.DirectingResult
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import org.bukkit.entity.Player
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 技能输入执行上下文。
@@ -13,12 +14,29 @@ import org.bukkit.entity.Player
  */
 class SkillInputExec private constructor() {
 
+    /**
+     * 动画或输入Hook持有的一次性释放续体。
+     *
+     * @property player 本次施放者。
+     * @property skill 当前玩家技能。
+     * @param continuation 完成Hook后进入最终校验与资源提交的操作。
+     */
     class Context(
         val player: Player,
         val skill: PlayerSkill,
         private val continuation: (DirectingResult?) -> ExecutableResult
     ) {
+        private val resumed = AtomicBoolean(false)
+
+        /**
+         * 恢复本次释放且只允许执行一次。
+         *
+         * @return 最终释放结果。
+         * @throws IllegalStateException Hook重复恢复同一次释放时抛出。
+         */
         fun resume(): ExecutableResult {
+            // 多个动画或输入回调不能重复提交同一份冷却和资源。
+            check(resumed.compareAndSet(false, true)) { "同一次技能释放只能恢复一次。" }
             return continuation(null)
         }
 
@@ -29,6 +47,8 @@ class SkillInputExec private constructor() {
          * @return 当前释放结果。
          */
         fun resume(directing: DirectingResult): ExecutableResult {
+            // 与无指向版本共享同一个消费标记。
+            check(resumed.compareAndSet(false, true)) { "同一次技能释放只能恢复一次。" }
             return continuation(directing)
         }
     }

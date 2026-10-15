@@ -91,6 +91,9 @@ object Registries {
         // 先完整销毁旧资源树，确保旧调度任务与业务作用域不进入新配置代次。
         ScriptManager.dispose()
         Planners.config.reload()
+        // 重载直接入口也必须清除旧施法续体，并严格校验新时间策略。
+        com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()
+        com.gitee.planners.core.skill.timing.SkillTimingPolicy.parse(Planners.config.getConfigurationSection("settings.skill.timing"))
         ScriptManager.prepare()
         ConditionEvaluator.resetConfiguredProperties()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())

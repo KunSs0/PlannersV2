@@ -10,6 +10,7 @@ __option__:
         - "&7范围 &a{{range}}&7格"
         - "&7伤害 &a{{damage}}"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 90
     range: level + 2
     damage: 18 * level + 40
@@ -19,5 +20,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&a旋风斩 Lv" + level)
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

@@ -10,6 +10,7 @@ __option__:
         - "&7伤害 &8{{damage}}"
         - "&7击退 &8{{knockback}}&7格"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 150
     damage: 40 * level + 100
     knockback: 2 * level
@@ -19,5 +20,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&8裂地 Lv" + level)
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

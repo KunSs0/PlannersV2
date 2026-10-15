@@ -64,6 +64,10 @@ settings:
 
   # 技能分类规格
   skill:
+    # 时间修正来源与tick取整均为必填；unmodified显式关闭属性时间修正。
+    timing:
+      provider: unmodified
+      tick-rounding: ceil
     categories:
       active:
         name: "主动技能"

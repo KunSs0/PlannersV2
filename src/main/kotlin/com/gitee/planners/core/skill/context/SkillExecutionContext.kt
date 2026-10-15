@@ -4,6 +4,7 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerTemplate
+import com.gitee.planners.core.skill.timing.SkillTimingSnapshot
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 
@@ -23,6 +24,12 @@ class SkillExecutionContext private constructor(
 ) {
 
     private val variables = LinkedHashMap<String, Any?>()
+
+    /**
+     * 本次释放的唯一最终时间快照，由时间服务在主线程准备。
+     */
+    var timing: SkillTimingSnapshot? = null
+        internal set
 
     /** 写入本次技能执行的业务变量。 */
     fun setVariable(id: String, value: Any?) {

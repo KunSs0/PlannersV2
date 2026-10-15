@@ -9,6 +9,7 @@ __option__:
         - "&7等级 &fLv{{level}}"
         - "&7伤害 &c{{damage}}"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 60
     damage: 20 * level + 50
   max-level: 3
@@ -18,5 +19,4 @@ action: |
   fun main() {
     sender.sendMessage("&a释放斩击 Lv" + level)
     ProxyDamage.Companion.builder().source(sender.getInstance()).target(target.getInstance()).damage(damage).cause(DamageCause.Companion.of("SKILL")).build().execute()
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

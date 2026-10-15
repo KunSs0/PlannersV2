@@ -10,6 +10,7 @@ __option__:
         - "&7眩晕 &c{{stun}}&7秒"
         - "&7伤害 &c{{damage}}"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 100
     stun: 1 + level
     damage: 10 * level + 30
@@ -19,5 +20,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&a盾击 Lv" + level)
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

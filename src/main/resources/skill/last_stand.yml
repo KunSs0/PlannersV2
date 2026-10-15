@@ -10,6 +10,7 @@ __option__:
         - "&7血量低于&c30%&7时触发"
         - "&7恢复 &c{{heal}} &7生命"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 600
     heal: 50 * level + 100
   max-level: 1
@@ -18,5 +19,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&6绝境求生触发")
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

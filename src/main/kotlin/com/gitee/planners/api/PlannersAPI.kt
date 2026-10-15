@@ -13,6 +13,8 @@ import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skill.condition.CastCostTiming
 import com.gitee.planners.core.skill.condition.SkillCastCondition
 import com.gitee.planners.core.skill.condition.SkillCastConditionRegistry
+import com.gitee.planners.core.skill.timing.SkillCastingSessions
+import com.gitee.planners.core.skill.timing.SkillTimingService
 import com.gitee.planners.core.skill.directing.DirectingSessionManager
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionFeedback
@@ -172,16 +174,26 @@ object PlannersAPI {
     /**
      * 以物理按键来源释放玩家技能。
      *
+     * 在主线程捕获唯一时间快照；施法等待与动画Hook结束后再次校验资源并统一提交。
+     *
      * @param player 当前施法者。
      * @param skill 当前玩家技能。
      * @param sourceKey 触发本次释放的物理按键标识；非按键调用传入空字符串。
      * @return 当前释放结果。
+     * @throws IllegalArgumentException 时间配置或基础变量非法时抛出。
+     * @throws IllegalStateException 非主线程或外部时间Provider缺失时抛出。
      */
     fun cast(player: Player, skill: PlayerSkill, sourceKey: String): ExecutableResult {
+        // 等待施法完成期间禁止再次发起技能，避免重复安排资源提交。
+        if (SkillCastingSessions.isCasting(player)) {
+            return ExecutableResult.cancelledWithEvent()
+        }
         if (!Check(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
         val execution = newExecution(player, skill)
+        // 在条件读取最终时间前准备快照，后续延迟和最终校验不会重复应用急速。
+        SkillTimingService.prepare(player, execution)
         val castConditionFailure = SkillCastConditionRegistry.verify(player, skill, execution, skill.immutable.castConditions)
         if (castConditionFailure != null) {
             player.sendMessage(castConditionFailure)
@@ -212,15 +224,7 @@ object PlannersAPI {
         if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
-        val interceptor = skillInputExecHooks.firstOrNull()
-        if (interceptor != null) {
-            val context = SkillInputExec.Context(player, skill) { _ ->
-                continueCast(player, skill, execution, sortedConditions, null)
-            }
-            interceptor.intercept(context)
-            return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
-        }
-        return continueCast(player, skill, execution, sortedConditions, null)
+        return beginCasting(player, skill, execution, sortedConditions, null)
     }
 
     /**
@@ -228,7 +232,7 @@ object PlannersAPI {
      *
      * @param player 当前施法者。
      * @param skill 当前玩家技能。
-     * @param options 已在按下时计算的技能选项。
+     * @param execution 已在按下时计算变量和时间快照的执行上下文。
      * @param sortedConditions 已排序的释放前条件。
      * @param directing 已确认的指向性结果。
      * @return 最终释放结果。
@@ -237,6 +241,40 @@ object PlannersAPI {
         if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
+        return beginCasting(player, skill, execution, sortedConditions, directing)
+    }
+
+    /**
+     * 在指向确认与Pre事件通过后，先完成独立施法等待，再进入既有动画Hook。
+     *
+     * @param player 当前施放者。
+     * @param skill 当前玩家技能。
+     * @param execution 已捕获最终时间的执行上下文。
+     * @param sortedConditions 已排序的最终资源条件。
+     * @param directing 本次指向结果，非指向技能为null。
+     * @return 瞬发、等待或Hook接管的释放结果。
+     */
+    private fun beginCasting(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+        // 不缩短招式动画；施法等待与动画衔接是两个独立阶段。
+        val timing = execution.timing
+        check(timing != null) { "技能时间尚未准备：${skill.id}" }
+        return SkillCastingSessions.begin(player, timing.castTimeTicks) {
+            executeInputHook(player, skill, execution, sortedConditions, directing)
+        }
+    }
+
+    /**
+     * 施法等待完成后进入原有输入Hook与最终提交链。
+     *
+     * @param player 当前施放者。
+     * @param skill 当前玩家技能。
+     * @param execution 已准备时间的执行上下文。
+     * @param sortedConditions 已排序的资源条件。
+     * @param directing 本次指向结果。
+     * @return Hook拦截结果或最终释放结果。
+     */
+    private fun executeInputHook(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+        // 每个释放入口均复用原执行上下文，Hook恢复不重新计算变量和急速。
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
             val context = SkillInputExec.Context(player, skill) { _ ->
@@ -253,7 +291,7 @@ object PlannersAPI {
      *
      * @param player 当前施法者。
      * @param skill 当前玩家技能。
-     * @param options 技能选项。
+     * @param execution 已准备变量和唯一时间快照的执行上下文。
      * @param sortedConditions 已排序的释放前条件。
      * @param directing 已确认的指向性结果；普通技能为 null。
      * @return 最终释放结果。

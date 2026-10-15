@@ -10,6 +10,7 @@ __option__:
         - "&7伤害 &e{{damage}}"
         - "&7麻痹 &e{{stun_duration}}&7秒"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 120
     damage: 25 * level + 50
     stun_duration: 1 + level / 3
@@ -19,5 +20,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&e雷霆一击 Lv" + level)
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

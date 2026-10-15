@@ -10,6 +10,7 @@ __option__:
         - "技能等级 {{level}}"
         - "技能伤害 {{damage}}"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 100
     damage: 32 * level + 100
   hook:
@@ -19,7 +20,6 @@ action: |
   import "planners.core"
 
   fun main() {
-    Cooler.INSTANCE.set(sender.getInstance(), skill, 200)
     sender.sendMessage("技能释放成功")
   }
 

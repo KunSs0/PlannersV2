@@ -10,6 +10,7 @@ __option__:
         - "&7攻击 &6+{{power}}"
         - "&7被动"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     power: 3 * level + 2
   max-level: 5
 action: ""

@@ -9,6 +9,7 @@ __option__:
         - "&7等级 &fLv{{level}}"
         - "&7速度 &b{{speed}}%"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 80
     speed: 15 * level + 80
   max-level: 3
@@ -17,5 +18,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&a冲锋 Lv" + level)
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

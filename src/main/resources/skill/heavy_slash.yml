@@ -9,6 +9,7 @@ __option__:
         - "&7等级 &fLv{{level}}"
         - "&7伤害 &c{{damage}}"
   variables:
+    castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 100
     damage: 35 * level + 80
   max-level: 15
@@ -17,5 +18,4 @@ action: |
 
   fun main() {
     sender.sendMessage("&c释放重斩 Lv" + level)
-    Cooler.INSTANCE.set(sender.getInstance(), skill, cooldown)
   }

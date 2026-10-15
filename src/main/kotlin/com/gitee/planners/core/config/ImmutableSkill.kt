@@ -165,6 +165,11 @@ class ImmutableSkill(config: Configuration) : Unique {
         ImmutableVariable.parse(id, value)
     }
 
+    init {
+        // 所有技能必须明确声明施法时间；旧配置缺项不能静默当作瞬发。
+        require(immutableVariables.containsKey("castTime")) { "技能${id}缺少__option__.variables.castTime；瞬发技能须显式配置0。" }
+    }
+
     /**
      * 图标显示变量的单次批处理函数。
      *
