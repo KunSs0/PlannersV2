@@ -1,4 +1,15 @@
 import io.izzel.taboolib.gradle.*
+import me.lucko.jarrelocator.JarRelocator
+import me.lucko.jarrelocator.Relocation
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("me.lucko:jar-relocator:1.7")
+    }
+}
 
 plugins {
     java
@@ -45,7 +56,41 @@ repositories {
     maven("https://repo.tabooproject.org/repository/releases")
     maven("https://repo.papermc.io/repository/maven-public/")
 }
+
+// 单元测试不经过 TabooLib 启动器，显式提供配置模块所需的重定位依赖。
+val taboolibTestLibraries = configurations.create("taboolibTestLibraries") {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+val taboolibTestLibraryDirectory = layout.buildDirectory.dir("taboolib-test-libraries")
+val relocatedTaboolibTestLibraries = providers.provider {
+    val jars = ArrayList<File>()
+    for (library in taboolibTestLibraries) {
+        jars.add(taboolibTestLibraryDirectory.get().file(library.name).asFile)
+    }
+    jars
+}
+val relocateTaboolibTestLibraries by tasks.registering {
+    inputs.files(taboolibTestLibraries)
+    outputs.files(relocatedTaboolibTestLibraries)
+    doLast {
+        val directory = taboolibTestLibraryDirectory.get().asFile
+        directory.mkdirs()
+        val relocations = listOf(
+            Relocation("com.electronwill.nightconfig", "com.electronwill.nightconfig_3_6_7"),
+            Relocation("org.yaml.snakeyaml", "org.yaml.snakeyaml_2_6")
+        )
+        for (library in taboolibTestLibraries) {
+            JarRelocator(library, File(directory, library.name), relocations).run()
+        }
+    }
+}
+
 dependencies {
+
+    add(taboolibTestLibraries.name, "com.electronwill.night-config:core:3.6.7")
+    add(taboolibTestLibraries.name, "org.yaml:snakeyaml:2.6")
+    testRuntimeOnly(files(relocatedTaboolibTestLibraries).builtBy(relocateTaboolibTestLibraries))
 
     compileOnly("ink.ptms:nms-all:1.0.0")
     compileOnly("ink.ptms.core:v12004:12004:mapped")
