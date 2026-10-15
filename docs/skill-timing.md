@@ -34,7 +34,7 @@ __option__:
 
 释放顺序：Check → 基础变量与时间快照 → 初次资源校验 → 指向确认（若有） → Pre → 最终施法tick等待 → 原动画Hook → 最终资源校验 → 冷却和资源消耗 → action → Post。缩短施法时间不会改变动作动画速度。
 
-等待期间重复释放被拒绝。取消、退出、死亡、配置重载及计时宿主关闭后，旧回调不会继续提交资源。显式0施法立即继续，不额外等待一个tick。没有新增移动或受伤自动打断规则，也没有新增客户端读条UI。业务可调用 `SkillCastingSessions.cancel(player)` 执行明确的中断规则。
+第三方释放条件在初次校验后按显式START配置支付开始成本；COMMIT成本与自动冷却仍在施法等待、Hook及最终校验后提交。取消不会退还已支付的START成本。等待期间重复释放被拒绝。取消、退出、死亡、配置重载及计时宿主关闭后，旧回调不会继续提交COMMIT成本或自动冷却。显式0施法立即继续，不额外等待一个tick。没有新增移动或受伤自动打断规则，也没有新增客户端读条UI。业务可调用 `SkillCastingSessions.cancel(player)` 执行明确的中断规则。
 
 `SkillInputExec.Context.resume()`同次释放只能执行一次。action绑定的cooldown和castTime均为本次最终tick，普通技能action不要重复调用Cooler.set重置自动冷却；底层Cooler.set仍接受最终tick供管理重置等用途，不再次应用属性收益。图标与基础变量查询仍表示基础时间。
 
