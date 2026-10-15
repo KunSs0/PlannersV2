@@ -23,6 +23,42 @@ import java.util.concurrent.CompletionException
 
 /** 直接验证真实学习入口在外部查询等待期间的重入锁、状态重检与消耗顺序。 */
 class WeaponMasteryLearningTest {
+    /** 武器树挂在祖先阶段时，转职后仍进入真实学习条件校验。 */
+    @Test
+    fun allowsAncestorRouteAfterTransferWithoutBypassingConditions() {
+        val fixture = Fixture()
+        val branch = Mockito.mock(PlayerRoute::class.java)
+        Mockito.`when`(fixture.router.currentRoute).thenReturn(branch)
+        Mockito.`when`(fixture.router.routeLine).thenReturn(listOf(fixture.route, branch))
+        fixture.gate.passed = false
+        fixture.execute {
+            val learning = fixture.route.advanceNode(fixture.player, "combat", "root")
+            assertFalse(learning.isDone)
+            fixture.pending.complete(mapOf("sword" to 3))
+            val failure = assertThrows(CompletionException::class.java) { learning.join() }
+            val cause = failure.cause
+            assertNotNull(cause)
+            assertEquals("技能点不足", cause!!.message)
+            assertEquals(0, fixture.gate.consumptions)
+        }
+    }
+
+    /** 查询期间转职，即使原阶段仍在祖先链中，也拒绝旧请求。 */
+    @Test
+    fun rejectsTransferWhileAncestorLearningIsPending() {
+        val fixture = Fixture()
+        fixture.execute {
+            val learning = fixture.route.advanceNode(fixture.player, "combat", "root")
+            val branch = Mockito.mock(PlayerRoute::class.java)
+            Mockito.`when`(fixture.router.currentRoute).thenReturn(branch)
+            Mockito.`when`(fixture.router.routeLine).thenReturn(listOf(fixture.route, branch))
+            fixture.pending.complete(mapOf("sword" to 3))
+            val failure = assertThrows(CompletionException::class.java) { learning.join() }
+            assertEquals("当前职业已经改变", failure.cause!!.message)
+            assertEquals(0, fixture.gate.consumptions)
+        }
+    }
+
     /** 异步等待不阻塞调用方，第二次点击被拒绝；失败后可发起新查询。 */
     @Test
     fun preventsRepeatedClicksAndUnlocksAfterFailedQuery() {
@@ -98,6 +134,7 @@ class WeaponMasteryLearningTest {
             Mockito.`when`(player.isOnline).thenReturn(true)
             Mockito.`when`(profile.playerRouter).thenReturn(router)
             Mockito.`when`(router.currentRoute).thenReturn(route)
+            Mockito.`when`(router.routeLine).thenReturn(listOf(route))
             val mastery = WeaponMasteryCondition("mastery", emptyMap(), "熟练度不足", WeaponMasteryReader {
                 reads += 1
                 pending

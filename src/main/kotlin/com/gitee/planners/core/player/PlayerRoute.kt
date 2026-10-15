@@ -325,6 +325,9 @@ class PlayerRoute(
             val stateKey = nodeStateKey(treeId, nodeId)
             check(pendingNodeAdvancements.add(stateKey)) { "该技能树节点正在升级" }
             try {
+                val expectedRouter = player.plannersTemplate.playerRouter
+                check(expectedRouter != null && expectedRouter.routeLine.contains(this)) { "职业阶段不属于当前职业线" }
+                val expectedCurrentRoute = expectedRouter.currentRoute
                 val level = getNodeLevel(treeId, nodeId)
                 val conditions = node.levels[level + 1]
                 require(conditions != null) { "节点已满级或未定义下一级条件" }
@@ -332,7 +335,7 @@ class PlayerRoute(
                     // 等待查库期间玩家可能切换职业、断线、重载配置或由其他操作修改节点。
                     check(player.isOnline) { "玩家已离线" }
                     val router = player.plannersTemplate.playerRouter
-                    check(router != null && router.currentRoute === this) { "当前职业已经改变" }
+                    check(router === expectedRouter && router.currentRoute === expectedCurrentRoute && router.routeLine.contains(this)) { "当前职业已经改变" }
                     check(getTree(treeId) === tree && getNode(tree, nodeId) === node) { "技能树配置已经改变" }
                     check(getNodeLevel(treeId, nodeId) == level) { "节点等级已经改变，请重新学习" }
                     advanceNodeInternal(player, tree, node, session)
