@@ -167,20 +167,20 @@ object Planners : Plugin() {
     }
 
     /**
-     * 在全部配置 Registry 完成 ACTIVE 加载后预编译并激活 Nova Workspace。
+     * 在全部配置 Registry 完成 ACTIVE 加载后预编译并激活 Nova 编译程序。
      */
     override fun onActive() {
         // load 会解析全部物理入口与配置构造阶段登记的虚拟 SourceUnit。
         ScriptManager.load()
-        info("[Planners Nova] Workspace is active")
+        info("[Planners Nova] Program is active")
     }
 
     /**
-     * 插件停止时销毁 Workspace 资源树。
+     * 插件停止时销毁编译程序资源。
      */
     override fun onDisable() {
-        // 业务作用域和持久作用域均由 Workspace 一次性释放。
-        ScriptManager.dispose()
+        // 全部回调与任务由编译程序一次性释放。
+        ScriptManager.close()
         PlannersCoreModule.unregister()
     }
 

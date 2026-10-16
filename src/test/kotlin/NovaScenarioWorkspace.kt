@@ -1,142 +1,109 @@
-import com.novalang.runtime.Nova
 import com.novalang.runtime.NovaScheduler
 import com.novalang.runtime.SchedulerHolder
-import com.novalang.workspace.ExecutionPolicy
-import com.novalang.workspace.ResourceScope
-import com.novalang.workspace.RuntimeWorkspace
-import com.novalang.workspace.ScopeType
-import com.novalang.workspace.SourceUnit
-import com.novalang.workspace.WorkspaceHost
+import com.gitee.planners.module.script.NovaScriptUnit
+import com.gitee.planners.module.script.PlannersScriptProgram
+import com.novalang.runtime.compilation.SourceUnit
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.LinkedHashMap
 import java.util.concurrent.Executor
 
 /**
- * 业务场景测试共用的最小 Nova RuntimeWorkspace 夹具。
+ * 业务场景测试共用的最小 Nova 编译程序夹具。
  *
  * 该夹具只提供配置、虚拟 SourceUnit、绑定与调用机制，不包含任何 Planners 业务规则。
  */
 class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
 
-    private val workspace: RuntimeWorkspace
-    private var pureScope: ResourceScope? = null
-    private var loaded = false
+    private val sources = ArrayList<SourceUnit>()
+    private var program: PlannersScriptProgram? = null
 
     init {
         installDirectScheduler()
-        write(
-            "script/nova.config.yml",
-            "version: 1\n" +
-                "name: planners-scenario-test\n" +
-                "aliases:\n" +
-                "  \"@planners\": \"planners\"\n" +
-                "sources:\n" +
-                "  - \"planners\"\n" +
-                "entries:\n" +
-                "  - \"@planners/bootstrap\"\n" +
-                "runtime:\n" +
-                "  security: trusted-server\n" +
-                "  thread: main\n"
-        )
-        write(
-            "script/planners/bootstrap.nova",
-            "fun main() { }\n"
-        )
-        val host = WorkspaceHost { nova: Nova ->
-            nova.setScriptClassLoader(NovaScenarioWorkspace::class.java.classLoader)
-        }
-        workspace = RuntimeWorkspace(root.resolve("script/nova.config.yml"), host)
+        write("script/nova.config.yml", "version: 1\nname: planners-test\naliases:\n  \"@planners\": \"planners\"\n")
+        write("script/planners/bootstrap.nova", "fun main() { }\n")
     }
 
     /**
-     * 在 Workspace 加载前登记一个测试业务模块。
+     * 在程序加载前登记一个测试业务模块。
      *
      * @param moduleId 必须以 `@planners/` 开头的模块标识。
      * @param source 完整 Nova 源码。
      */
     fun register(moduleId: String, source: String) {
-        if (loaded) {
-            throw IllegalStateException("Nova test modules must be registered before Workspace load")
+        if (program != null) {
+            throw IllegalStateException("Nova test modules must be registered before program load")
         }
         val unit = SourceUnit(moduleId, source, root.resolve("scenario.yml"), moduleId, 1, 0, null)
-        workspace.registerVirtualSource(unit, true)
-    }
-
-    /** 完成全部测试模块的统一预编译。 */
-    fun load() {
-        workspace.load()
-        pureScope = workspace.openScope(null, ScopeType.PERSISTENT_REGISTRATION, "scenario:pure")
-        loaded = true
-    }
-
-    /** 使用显式参数调用预编译纯函数，不创建调用级上下文或业务绑定。 */
-    fun invokePure(
-        moduleId: String,
-        functionName: String,
-        vararg arguments: Any?
-    ): Any? {
-        if (!loaded) {
-            throw IllegalStateException("The Nova test Workspace has not been loaded")
-        }
-        val scope = pureScope
-        if (scope == null) {
-            throw IllegalStateException("The Nova test pure scope is not active")
-        }
-        return workspace.invoke(
-            moduleId,
-            functionName,
-            emptyMap(),
-            scope,
-            ExecutionPolicy.SERIAL_SCOPE,
-            *arguments
-        )
+        sources.add(unit)
     }
 
     /**
-     * 调用已预编译的 Nova 测试函数。
+     * 登记保留原始来源的测试模块。
      *
-     * @param moduleId 模块标识。
-     * @param functionName 导出函数名。
-     * @param bindings 隔离绑定。
-     * @param arguments 函数参数。
-     * @return Nova 返回值。
+     * @param source 测试源码单元。
      */
-    fun invoke(
-        moduleId: String,
-        functionName: String,
-        bindings: Map<String, Any> = emptyMap(),
-        vararg arguments: Any?
-    ): Any? {
-        if (!loaded) {
-            throw IllegalStateException("The Nova test Workspace has not been loaded")
-        }
-        val scope = workspace.openScope(null, ScopeType.INVOCATION, "scenario:$moduleId:$functionName")
-        try {
-            val safeBindings = LinkedHashMap<String, Any>()
-            safeBindings.putAll(bindings)
-            return workspace.invoke(
-                moduleId,
-                functionName,
-                safeBindings,
-                scope,
-                ExecutionPolicy.MAIN_THREAD,
-                *arguments
-            )
-        } finally {
-            scope.dispose()
-        }
+    fun register(source: SourceUnit) {
+        check(program == null) { "Test program is already loaded" }
+        sources.add(source)
     }
 
-    /** 销毁 Workspace 资源树并释放进程级测试调度器。 */
+    /**
+     * 使用真实生产编译入口加载合成测试模块。
+     */
+    fun load() {
+        check(program == null) { "Test program is already loaded" }
+        val candidate = PlannersScriptProgram.compile(root.resolve("script/nova.config.yml"), sources) { nova ->
+            nova.setScriptClassLoader(NovaScenarioWorkspace::class.java.classLoader)
+        }
+        candidate.initialize()
+        program = candidate
+    }
+
+    /**
+     * 调用带显式参数的纯函数。
+     *
+     * @param moduleId 模块标识。
+     * @param functionName 函数名。
+     * @param arguments 显式参数。
+     * @return 脚本返回值。
+     */
+    fun invokePure(moduleId: String, functionName: String, vararg arguments: Any?): Any? {
+        val active = program
+        check(active != null) { "Test program is not loaded" }
+        return active.invoke(NovaScriptUnit(moduleId, functionName), emptyMap(), *arguments)
+    }
+
+    /**
+     * 在主线程边界执行隔离业务调用。
+     *
+     * @param moduleId 模块标识。
+     * @param functionName 函数名。
+     * @param bindings 本次业务绑定。
+     * @param arguments 显式参数。
+     * @return 脚本返回值。
+     */
+    fun invoke(moduleId: String, functionName: String, bindings: Map<String, Any> = emptyMap(), vararg arguments: Any?): Any? {
+        val active = program
+        check(active != null) { "Test program is not loaded" }
+        return active.invokeBusiness(NovaScriptUnit(moduleId, functionName), bindings, *arguments)
+    }
+
+    /**
+     * 关闭程序并清理测试拥有的调度器。
+     */
     override fun close() {
-        pureScope = null
-        workspace.dispose()
+        val active = program
+        program = null
+        if (active != null) {
+            active.close()
+        }
         SchedulerHolder.clear()
     }
 
-    /** 将 Workspace 物理文件以 UTF-8 写入临时目录。 */
+    /**
+     * 将 程序 物理文件以 UTF-8 写入临时目录。
+     */
     private fun write(relative: String, content: String) {
         val target = root.resolve(relative)
         val parent = target.parent
@@ -146,7 +113,9 @@ class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
         Files.writeString(target, content, StandardCharsets.UTF_8)
     }
 
-    /** 安装同步直执行调度器，验证 MAIN_THREAD 策略而不引入服务器线程。 */
+    /**
+     * 安装同步直执行调度器，验证 MAIN_THREAD 策略而不引入服务器线程。
+     */
     private fun installDirectScheduler() {
         SchedulerHolder.clear()
         val owner = Thread.currentThread()

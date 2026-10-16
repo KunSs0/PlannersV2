@@ -3,13 +3,3 @@ name: planners
 
 aliases:
   "@planners": "planners"
-
-sources:
-  - "planners"
-
-entries:
-  - "@planners/bootstrap"
-
-runtime:
-  security: trusted-server
-  thread: main

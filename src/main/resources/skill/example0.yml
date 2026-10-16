@@ -19,10 +19,10 @@ __option__:
 action: |
   import "planners.core"
 
-  fun main() {
-    sender.sendMessage("技能释放成功")
+  fun execute() {
+    this.sender.sendMessage("技能释放成功")
   }
 
   fun handleHit() {
-    sender.sendMessage("on hit " + target)
+    this.sender.sendMessage("on hit " + this.target)
   }

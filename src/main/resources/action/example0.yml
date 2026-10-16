@@ -9,4 +9,4 @@ __option__:
       default: 100
 
 action: |-
-  sender.sendMessage(type + ":" + uuid + " title = " + title + " tick = " + tick)
+  this.sender.sendMessage(this.type + ":" + this.uuid + " title = " + this.title + " tick = " + this.tick)

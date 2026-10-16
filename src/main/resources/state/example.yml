@@ -9,17 +9,17 @@ state0:
       // 状态加载时执行一次，可自行注册 listener
     }
     fun onStateAttach() {
-      sender.sendMessage("眩晕层数增加")
+      this.sender.sendMessage("眩晕层数增加")
     }
     fun onStateDetach() {
-      sender.sendMessage("眩晕层数减少")
+      this.sender.sendMessage("眩晕层数减少")
     }
     fun onStateMount() {
-      sender.sendMessage("首次获得眩晕")
+      this.sender.sendMessage("首次获得眩晕")
     }
     fun onStateClose() {
-      sender.sendMessage("完全解除眩晕")
+      this.sender.sendMessage("完全解除眩晕")
     }
     fun onStateEnd() {
-      sender.sendMessage("眩晕自然结束")
+      this.sender.sendMessage("眩晕自然结束")
     }

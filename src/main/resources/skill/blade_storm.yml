@@ -18,6 +18,6 @@ __option__:
 action: |
   import "planners.core"
 
-  fun main() {
-    sender.sendMessage("&b剑刃风暴 Lv" + level)
+  fun execute() {
+    this.sender.sendMessage("&b剑刃风暴 Lv" + this.level)
   }

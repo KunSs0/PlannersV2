@@ -2,11 +2,7 @@ import com.novalang.runtime.NovaScheduler
 import com.novalang.runtime.SchedulerHolder
 import com.gitee.planners.module.script.PlannersCoreModule
 import com.gitee.planners.module.script.ScriptManager
-import com.novalang.workspace.ExecutionPolicy
-import com.novalang.workspace.RuntimeWorkspace
-import com.novalang.workspace.ScopeType
-import com.novalang.workspace.SourceUnit
-import com.novalang.workspace.WorkspaceHost
+import com.novalang.runtime.compilation.SourceUnit
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -17,7 +13,6 @@ import org.yaml.snakeyaml.Yaml
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Collections
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -29,41 +24,29 @@ class NovaWorkspaceIntegrationTest {
     @TempDir
     lateinit var workspaceRoot: Path
 
-    /** 每个 Workspace 测试前注册 Planners 进程级共享模块。 */
+    /**
+     * 每个 Workspace 测试前注册 Planners 进程级共享模块。
+     */
     @BeforeEach
     fun registerCoreModule() {
         PlannersCoreModule.register()
     }
 
-    /** 每个测试后释放进程级测试调度器。 */
+    /**
+     * 每个测试后释放进程级测试调度器。
+     */
     @AfterEach
     fun clearScheduler() {
         SchedulerHolder.clear()
         PlannersCoreModule.unregister()
     }
 
-    /** 验证 Planners 核心模块可由虚拟入口显式导入并执行。 */
+    /**
+     * 验证 Planners 核心模块可由虚拟入口显式导入并执行。
+     */
     @Test
     fun shouldLoadWorkspaceAndInvokeVirtualExpression() {
         installDirectScheduler()
-        write(
-            "script/nova.config.yml",
-            "version: 1\n" +
-                "name: planners-test\n" +
-                "aliases:\n" +
-                "  \"@planners\": \"planners\"\n" +
-                "sources:\n" +
-                "  - \"planners\"\n" +
-                "entries:\n" +
-                "  - \"@planners/bootstrap\"\n" +
-                "runtime:\n" +
-                "  security: trusted-server\n" +
-                "  thread: main\n"
-        )
-        write(
-            "script/planners/bootstrap.nova",
-            "fun main() { }\n"
-        )
         val virtual = SourceUnit(
             "@planners/generated/test-expression",
             "import \"planners.core\"\n\nfun evaluate(level) {\n    return level * 2\n}\n",
@@ -73,37 +56,23 @@ class NovaWorkspaceIntegrationTest {
             3,
             null
         )
-        val host = WorkspaceHost { nova ->
-            nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
-        }
-        val workspace = RuntimeWorkspace(workspaceRoot.resolve("script/nova.config.yml"), host)
-        workspace.registerVirtualSource(virtual, true, false)
+        val workspace = NovaScenarioWorkspace(workspaceRoot)
+        workspace.register(virtual)
         try {
             workspace.load()
-            val scope = workspace.openScope(null, ScopeType.INVOCATION, "test-expression")
-            try {
-                val result = workspace.invoke(
-                    virtual.moduleId,
-                    "evaluate",
-                    Collections.emptyMap<String, Any>(),
-                    scope,
-                    ExecutionPolicy.MAIN_THREAD,
-                    4
-                )
-                assertEquals(8L, (result as Number).toLong())
-            } finally {
-                scope.dispose()
-            }
+            val result = workspace.invokePure(virtual.moduleId, "evaluate", 4)
+            assertEquals(8L, (result as Number).toLong())
         } finally {
-            workspace.dispose()
+            workspace.close()
         }
     }
 
-    /** 验证 Nova 能按参数数量解析 TargetFinder 的三参数与六参数 rect 重载。 */
+    /**
+     * 验证 Nova 能按参数数量解析 TargetFinder 的三参数与六参数 rect 重载。
+     */
     @Test
     fun shouldCompileTargetFinderRectOverloads() {
         installDirectScheduler()
-        prepareAuditWorkspace(workspaceRoot, "planners-rect-overload-test")
         val source =
                 "import \"planners.core\"\n\n" +
                 "fun selectWithoutOffset(finder: TargetFinder) {\n" +
@@ -121,23 +90,21 @@ class NovaWorkspaceIntegrationTest {
             ScriptManager.GENERATED_MODULE_OFFSET,
             null
         )
-        val host = WorkspaceHost { nova ->
-            nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
-        }
-        val workspace = RuntimeWorkspace(workspaceRoot.resolve("script/nova.config.yml"), host)
-        workspace.registerVirtualSource(virtual, true, false)
+        val workspace = NovaScenarioWorkspace(workspaceRoot)
+        workspace.register(virtual)
         try {
             workspace.load()
         } finally {
-            workspace.dispose()
+            workspace.close()
         }
     }
 
-    /** Verifies Nova compilation of the multi-target MythicAPI threat call. */
+    /**
+     * Verifies Nova compilation of the multi-target MythicAPI threat call.
+     */
     @Test
     fun shouldCompileMythicThreatGainApi() {
         installDirectScheduler()
-        prepareAuditWorkspace(workspaceRoot, "planners-mythic-threat-api-test")
         val source =
             "import \"planners.core\"\n\n" +
                 "fun applyThreat(sender) {\n" +
@@ -153,19 +120,18 @@ class NovaWorkspaceIntegrationTest {
             ScriptManager.GENERATED_MODULE_OFFSET,
             null
         )
-        val host = WorkspaceHost { nova ->
-            nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
-        }
-        val workspace = RuntimeWorkspace(workspaceRoot.resolve("script/nova.config.yml"), host)
-        workspace.registerVirtualSource(virtual, true, false)
+        val workspace = NovaScenarioWorkspace(workspaceRoot)
+        workspace.register(virtual)
         try {
             workspace.load()
         } finally {
-            workspace.dispose()
+            workspace.close()
         }
     }
 
-    /** Verifies that all default YAML scripts compile in Nova. */
+    /**
+     * Verifies that all default YAML scripts compile in Nova.
+     */
     @Test
     fun shouldCompileEveryDefaultYamlScript() {
         installDirectScheduler()
@@ -183,14 +149,12 @@ class NovaWorkspaceIntegrationTest {
         assertTrue(sourceStats.sourceUnits > 0, "No default Nova SourceUnit was compiled")
     }
 
-    /** 遍历一个配置根目录并编译其中全部 YAML 脚本节点。 */
+    /**
+     * 遍历一个配置根目录并编译其中全部 YAML 脚本节点。
+     */
     private fun compileYamlRoot(root: Path, workspaceName: String): CompilationStats {
         val auditRoot = workspaceRoot.resolve(workspaceName)
-        prepareAuditWorkspace(auditRoot, workspaceName)
-        val host = WorkspaceHost { nova ->
-            nova.setScriptClassLoader(NovaWorkspaceIntegrationTest::class.java.classLoader)
-        }
-        val workspace = RuntimeWorkspace(auditRoot.resolve("script/nova.config.yml"), host)
+        val workspace = NovaScenarioWorkspace(auditRoot)
         val stats = CompilationStats()
         val sequence = AtomicInteger(0)
         val files = Files.walk(root)
@@ -218,14 +182,16 @@ class NovaWorkspaceIntegrationTest {
         try {
             workspace.load()
         } finally {
-            workspace.dispose()
+            workspace.close()
         }
         return stats
     }
 
-    /** 解析并递归编译一个现网 YAML。 */
+    /**
+     * 解析并递归编译一个现网 YAML。
+     */
     private fun compileYamlFile(
-        workspace: RuntimeWorkspace,
+        workspace: NovaScenarioWorkspace,
         root: Path,
         file: Path,
         stats: CompilationStats,
@@ -237,9 +203,11 @@ class NovaWorkspaceIntegrationTest {
         compileValue(workspace, file, relative, emptyList(), decoded, false, stats, sequence)
     }
 
-    /** 按生产收集器的节点语义递归生成并编译 Nova 源码。 */
+    /**
+     * 按生产收集器的节点语义递归生成并编译 Nova 源码。
+     */
     private fun compileValue(
-        workspace: RuntimeWorkspace,
+        workspace: NovaScenarioWorkspace,
         originFile: Path,
         file: String,
         path: List<String>,
@@ -332,7 +300,9 @@ class NovaWorkspaceIntegrationTest {
         }
     }
 
-    /** 判断空 scalar 是否属于业务解析器认可的脚本键。 */
+    /**
+     * 判断空 scalar 是否属于业务解析器认可的脚本键。
+     */
     private fun isSemanticCandidate(path: List<String>, insideVariables: Boolean): Boolean {
         if (path.isEmpty()) {
             return false
@@ -355,9 +325,11 @@ class NovaWorkspaceIntegrationTest {
             key == "consume" || key == "action" || key == "script"
     }
 
-    /** 将表达式包装成独立 SourceUnit 并登记到 RuntimeWorkspace。 */
+    /**
+     * 将表达式包装成独立 SourceUnit 并登记到 编译程序。
+     */
     private fun registerExpression(
-        workspace: RuntimeWorkspace,
+        workspace: NovaScenarioWorkspace,
         originFile: Path,
         id: String,
         expression: String,
@@ -367,9 +339,11 @@ class NovaWorkspaceIntegrationTest {
         registerSource(workspace, originFile, id, source, ScriptManager.GENERATED_EXPRESSION_OFFSET, sequence)
     }
 
-    /** 将语句包装成独立 SourceUnit 并登记到 RuntimeWorkspace。 */
+    /**
+     * 将语句包装成独立 SourceUnit 并登记到 编译程序。
+     */
     private fun registerAction(
-        workspace: RuntimeWorkspace,
+        workspace: NovaScenarioWorkspace,
         originFile: Path,
         id: String,
         action: String,
@@ -379,9 +353,11 @@ class NovaWorkspaceIntegrationTest {
         registerSource(workspace, originFile, id, source, ScriptManager.GENERATED_ACTION_OFFSET, sequence)
     }
 
-    /** 将完整业务模块登记到 RuntimeWorkspace。 */
+    /**
+     * 将完整业务模块登记到 编译程序。
+     */
     private fun registerModule(
-        workspace: RuntimeWorkspace,
+        workspace: NovaScenarioWorkspace,
         originFile: Path,
         id: String,
         action: String,
@@ -390,12 +366,14 @@ class NovaWorkspaceIntegrationTest {
         val moduleId = createAuditModuleId(sequence, id)
         val source = ScriptManager.createModuleSource(action)
         val unit = SourceUnit(moduleId, source, originFile, id, 1, ScriptManager.GENERATED_MODULE_OFFSET, null)
-        workspace.registerVirtualSource(unit, true, false)
+        workspace.register(unit)
     }
 
-    /** 登记一个表达式或语句虚拟源。 */
+    /**
+     * 登记一个表达式或语句虚拟源。
+     */
     private fun registerSource(
-        workspace: RuntimeWorkspace,
+        workspace: NovaScenarioWorkspace,
         originFile: Path,
         id: String,
         source: String,
@@ -404,62 +382,20 @@ class NovaWorkspaceIntegrationTest {
     ) {
         val moduleId = createAuditModuleId(sequence, id)
         val unit = SourceUnit(moduleId, source, originFile, id, 1, generatedLineOffset, null)
-        workspace.registerVirtualSource(unit, true, false)
+        workspace.register(unit)
     }
 
-    /** 生成一次测试 Workspace 内不冲突的虚拟模块 ID。 */
+    /**
+     * 生成一次测试 Workspace 内不冲突的虚拟模块 ID。
+     */
     private fun createAuditModuleId(sequence: AtomicInteger, id: String): String {
         val suffix = id.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
         return "@planners/generated/audit-${sequence.incrementAndGet()}-$suffix"
     }
 
-    /** 写入仅包含 Planners 本体模块的审计 Workspace 配置。 */
-    private fun prepareAuditWorkspace(root: Path, workspaceName: String) {
-        writeAt(
-            root,
-            "script/planners/bootstrap.nova",
-            "fun main() { }\n"
-        )
-        writeAt(
-            root,
-            "script/nova.config.yml",
-            "version: 1\n" +
-                "name: $workspaceName\n" +
-                "aliases:\n" +
-                "  \"@planners\": \"planners\"\n" +
-                "sources:\n" +
-                "  - \"planners\"\n" +
-                "entries:\n" +
-                "  - \"@planners/bootstrap\"\n" +
-                "runtime:\n" +
-                "  security: trusted-server\n" +
-                "  thread: main\n"
-        )
-    }
-
-    /** 在指定测试 Workspace 根目录写入 UTF-8 文件。 */
-    private fun writeAt(root: Path, relative: String, content: String): Path {
-        val target = root.resolve(relative)
-        val parent = target.parent
-        if (parent != null) {
-            Files.createDirectories(parent)
-        }
-        Files.writeString(target, content, StandardCharsets.UTF_8)
-        return target
-    }
-
-    /** 将测试资源以 UTF-8 写入临时 Workspace。 */
-    private fun write(relative: String, content: String): Path {
-        val target = workspaceRoot.resolve(relative)
-        val parent = target.parent
-        if (parent != null) {
-            Files.createDirectories(parent)
-        }
-        Files.writeString(target, content, StandardCharsets.UTF_8)
-        return target
-    }
-
-    /** 安装只在当前线程直接执行的 Nova 测试调度器。 */
+    /**
+     * 安装只在当前线程直接执行的 Nova 测试调度器。
+     */
     private fun installDirectScheduler() {
         val owner = Thread.currentThread()
         val executor = Executor { command ->
@@ -494,7 +430,9 @@ class NovaWorkspaceIntegrationTest {
         SchedulerHolder.set(scheduler)
     }
 
-    /** 单个 YAML 根目录的 Nova 业务源码审计计数。 */
+    /**
+     * 单个 YAML 根目录的 Nova 业务源码审计计数。
+     */
     private class CompilationStats {
 
         var scannedFiles: Int = 0
@@ -507,7 +445,9 @@ class NovaWorkspaceIntegrationTest {
         val semanticCategories = LinkedHashMap<String, Int>()
         val excludedReasons = LinkedHashMap<String, Int>()
 
-        /** 记录一个语义节点虚拟 SourceUnit。 */
+        /**
+     * 记录一个语义节点虚拟 SourceUnit。
+     */
         fun recordSemantic(category: String, source: String) {
             candidateUnits += 1
             semanticUnits += 1
@@ -520,14 +460,18 @@ class NovaWorkspaceIntegrationTest {
             record(source)
         }
 
-        /** 记录一个模板表达式虚拟 SourceUnit。 */
+        /**
+     * 记录一个模板表达式虚拟 SourceUnit。
+     */
         fun recordTemplate(source: String) {
             candidateUnits += 1
             templateUnits += 1
             record(source)
         }
 
-        /** 记录一个脚本形态候选未进入 Workspace 的结构原因。 */
+        /**
+     * 记录一个脚本形态候选未进入 Workspace 的结构原因。
+     */
         fun recordExcluded(reason: String) {
             candidateUnits += 1
             val previous = excludedReasons[reason]
@@ -538,7 +482,9 @@ class NovaWorkspaceIntegrationTest {
             }
         }
 
-        /** 记录一个虚拟 SourceUnit 及其中非空业务源码行。 */
+        /**
+     * 记录一个虚拟 SourceUnit 及其中非空业务源码行。
+     */
         private fun record(source: String) {
             sourceUnits += 1
             val lines = source.lines()

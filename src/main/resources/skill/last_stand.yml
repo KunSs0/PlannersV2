@@ -17,6 +17,6 @@ __option__:
 action: |
   import "planners.core"
 
-  fun main() {
-    sender.sendMessage("&6绝境求生触发")
+  fun execute() {
+    this.sender.sendMessage("&6绝境求生触发")
   }

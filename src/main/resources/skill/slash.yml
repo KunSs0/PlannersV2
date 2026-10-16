@@ -16,7 +16,7 @@ __option__:
 action: |
   import "planners.core"
 
-  fun main() {
-    sender.sendMessage("&a释放斩击 Lv" + level)
-    ProxyDamage.Companion.builder().source(sender.getInstance()).target(target.getInstance()).damage(damage).cause(DamageCause.Companion.of("SKILL")).build().execute()
+  fun execute() {
+    this.sender.sendMessage("&a释放斩击 Lv" + this.level)
+    ProxyDamage.Companion.builder().source(this.sender.getInstance()).target(this.target.getInstance()).damage(this.damage).cause(DamageCause.Companion.of("SKILL")).build().execute()
   }

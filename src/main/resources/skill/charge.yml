@@ -16,6 +16,6 @@ __option__:
 action: |
   import "planners.core"
 
-  fun main() {
-    sender.sendMessage("&a冲锋 Lv" + level)
+  fun execute() {
+    this.sender.sendMessage("&a冲锋 Lv" + this.level)
   }

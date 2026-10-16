@@ -261,7 +261,7 @@ class ImmutableSkill(config: Configuration) : Unique {
         }
 
         val task = {
-            // 全部 YAML variable 表达式先由同一 Workspace 的预编译 Nova 批处理入口计算。
+            // 全部 YAML variable 表达式先由同一编译程序的预编译 Nova 批处理入口计算。
             val resolvedVariables = evaluateDisplayVariables(execution)
             for ((variableId, variableValue) in resolvedVariables) {
                 execution.setVariable(variableId, variableValue)
@@ -270,7 +270,7 @@ class ImmutableSkill(config: Configuration) : Unique {
             if (module == null) {
                 null
             } else {
-                ScriptManager.invokeBusiness(module, "main", execution.actionBindings())
+                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
             }
         }
 
@@ -330,7 +330,7 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
     /**
-     * 使用 RuntimeWorkspace 预编译入口计算一个 `{{expression}}`。
+     * 使用编译程序入口计算一个 `{{expression}}`。
      *
      * @param expression 模板中的原始 Nova 表达式。
      * @param execution 已完成技能变量计算的执行上下文。
@@ -345,7 +345,7 @@ class ImmutableSkill(config: Configuration) : Unique {
         return ScriptManager.invokePure(script, *evaluationArguments(execution))
     }
 
-    /** 扫描一项显示文本，并在 Workspace load 前登记其中全部 Nova 模板表达式。 */
+    /** 扫描一项显示文本，并在 程序加载 前登记其中全部 Nova 模板表达式。 */
     private fun registerDisplayTemplate(path: String, text: String?) {
         if (text == null) {
             return
@@ -396,7 +396,7 @@ class ImmutableSkill(config: Configuration) : Unique {
             if (module == null) {
                 null
             } else {
-                ScriptManager.invokeBusiness(module, "main", execution.actionBindings())
+                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
             }
         }
         if (async) {

@@ -120,9 +120,9 @@ dependencies {
     compileOnly(fileTree("libs") {
         exclude("nova-runtime-*.jar")
     })
-    compileOnly("com.novalang:nova-runtime-workspace:0.2.0")
+    compileOnly("com.novalang:nova-runtime:0.2.0")
     compileOnly("com.novalang:nova-bukkit:0.2.0")
-    testImplementation("com.novalang:nova-runtime-workspace:0.2.0")
+    testImplementation("com.novalang:nova-runtime:0.2.0")
     testImplementation("com.novalang:nova-bukkit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(files("libs/HaiderCore-2.0.0-api.jar"))

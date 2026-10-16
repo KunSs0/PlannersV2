@@ -1,24 +1,20 @@
 package com.gitee.planners.module.script
 
-import com.novalang.workspace.ExecutionPolicy
-import com.novalang.workspace.ResourceScope
-import com.novalang.workspace.RuntimeWorkspace
-import com.novalang.workspace.ScopeType
-import com.novalang.workspace.SourceUnit
+import com.novalang.bukkit.NovaBukkit
+import com.novalang.runtime.compilation.SourceUnit
+import taboolib.platform.BukkitPlugin
 import taboolib.common.platform.function.getDataFolder
 import taboolib.common.platform.function.releaseResourceFile
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
-import java.util.Collections
-import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Planners 插件级 Nova Workspace 的唯一生命周期所有者。
+ * Planners 插件级 Nova 编译程序的唯一生命周期所有者。
  *
  * 所有 YAML 表达式和 action 都必须先登记为虚拟 [SourceUnit]，再由 [load] 一次性
- * 构建模块图并预编译。Workspace 不存在 reload 中间态；业务重载只能先 [dispose]
+ * 构建模块图并预编译。编译程序不存在 reload 中间态；业务重载只能先 [close]
  * 旧实例，再准备并加载一个新实例。
  */
 object ScriptManager {
@@ -27,33 +23,34 @@ object ScriptManager {
     private val sources = LinkedHashMap<String, SourceUnit>()
     private val expressionUnits = LinkedHashMap<String, NovaScriptUnit>()
     private val skillExpressionUnits = LinkedHashMap<String, NovaScriptUnit>()
-    private val invocationSequence = AtomicLong(0L)
-    private var workspace: RuntimeWorkspace? = null
-    private var persistentScope: ResourceScope? = null
+    @Volatile
+    private var program: PlannersScriptProgram? = null
+    private var configFile: Path? = null
+    @Volatile
     private var loaded = false
 
     /**
-     * 创建尚未加载的新 Workspace 实例。
+     * 创建尚未加载的新编译程序。
      *
-     * 调用方必须先显式 [dispose] 旧实例；本方法拒绝覆盖已有实例。
+     * 调用方必须先显式 [close] 旧实例；本方法拒绝覆盖已有实例。
      */
     @JvmStatic
     fun prepare() {
         synchronized(lifecycleLock) {
-            if (workspace != null) {
-                throw IllegalStateException("The Planners Nova Workspace has already been prepared")
+            if (configFile != null) {
+                throw IllegalStateException("The Planners Nova program has already been prepared")
             }
             releaseResourceFile("script/nova.config.yml", false)
             releaseResourceFile("script/planners/bootstrap.nova", false)
-            val configFile = getDataFolder().toPath().resolve("script/nova.config.yml")
-            val candidate = RuntimeWorkspace(configFile, PlannersWorkspaceHost)
-            workspace = candidate
+            configFile = getDataFolder().toPath().resolve("script/nova.config.yml")
             loaded = false
         }
     }
 
     /**
-     * 预编译全部已登记物理与虚拟入口，并发布持久资源作用域。
+     * 统一预编译并初始化全部模块，成功后发布当前程序。
+     *
+     * @throws IllegalStateException 未准备编译配置时抛出。
      */
     @JvmStatic
     fun load() {
@@ -61,42 +58,33 @@ object ScriptManager {
             if (loaded) {
                 return
             }
-            val candidate = workspace
-            if (candidate == null) {
-                throw IllegalStateException("The Planners Nova Workspace must be prepared before load")
+            val file = configFile
+            check(file != null) { "The Planners Nova program must be prepared before load" }
+            val candidate = PlannersScriptProgram.compile(file, sources.values) { nova ->
+                nova.setScriptClassLoader(ScriptManager::class.java.classLoader)
+                NovaBukkit.install(nova, BukkitPlugin.getInstance())
             }
-            try {
-                for (source in sources.values) {
-                    candidate.registerVirtualSource(source, true, false)
-                }
-                candidate.load()
-                persistentScope = candidate.openScope(null, ScopeType.PERSISTENT_REGISTRATION, "planners:persistent")
-                loaded = true
-            } catch (exception: RuntimeException) {
-                workspace = null
-                persistentScope = null
-                loaded = false
-                candidate.dispose()
-                throw exception
-            }
+            candidate.initialize()
+            program = candidate
+            loaded = true
         }
     }
 
     /**
-     * 销毁当前 Workspace 以及其下所有调度任务、业务实例与调用资源。
+     * 关闭当前程序及其持有的所有任务、监听器和业务回调。
      */
     @JvmStatic
-    fun dispose() {
+    fun close() {
         synchronized(lifecycleLock) {
-            val current = workspace
-            workspace = null
-            persistentScope = null
+            val current = program
+            program = null
+            configFile = null
             loaded = false
             sources.clear()
             expressionUnits.clear()
             skillExpressionUnits.clear()
             if (current != null) {
-                current.dispose()
+                current.close()
             }
         }
     }
@@ -158,13 +146,13 @@ object ScriptManager {
      *
      * @param id 业务入口的稳定来源标识。
      * @param source 完整 Nova 业务模块正文。
-     * @return 以 main 为默认导出函数的入口描述。
+     * @return 以 execute 为默认导出函数的入口描述。
      */
     @JvmStatic
     fun compileModule(id: String, source: String): NovaScriptUnit {
         val moduleId = createModuleId(id, source)
         val body = createModuleSource(source)
-        return registerResolved(id, moduleId, "main", body, source)
+        return registerResolved(id, moduleId, "execute", body, source)
     }
 
     /**
@@ -185,7 +173,9 @@ object ScriptManager {
         }
     }
 
-    /** 按真实 YAML 来源登记只接收强类型技能执行上下文的表达式。 */
+    /**
+     * 按真实 YAML 来源登记只接收强类型技能执行上下文的表达式。
+     */
     fun registerYamlSkillExpression(file: Path, yamlPath: String, originLine: Int, expression: String) {
         val source = createExpressionSource(listOf("execution"), expression)
         val unit = registerYaml(file, yamlPath, originLine, "evaluate", source, GENERATED_EXPRESSION_OFFSET)
@@ -216,7 +206,9 @@ object ScriptManager {
         }
     }
 
-    /** 取得 YAML 收集阶段已经登记的强类型技能表达式入口。 */
+    /**
+     * 取得 YAML 收集阶段已经登记的强类型技能表达式入口。
+     */
     @JvmStatic
     fun requirePrecompiledSkillExpression(expression: String): NovaScriptUnit {
         synchronized(lifecycleLock) {
@@ -253,22 +245,21 @@ object ScriptManager {
         val id = createYamlSourceId(file, yamlPath)
         val moduleId = createModuleId(id, source)
         val body = createModuleSource(source)
-        registerYaml(file, yamlPath, originLine, "main", body, GENERATED_MODULE_OFFSET, moduleId)
+        registerYaml(file, yamlPath, originLine, "execute", body, GENERATED_MODULE_OFFSET, moduleId)
     }
 
-    /** 在持久作用域内执行只接收显式参数的纯函数入口。 */
+    /**
+     * 在程序串行上下文中执行只接收显式参数的纯函数入口。
+     */
     @JvmStatic
     fun invokePure(unit: NovaScriptUnit, vararg args: Any?): Any? {
         ensureLoaded()
-        val activeWorkspace = requireWorkspace()
-        val scope = persistentScope
-        if (scope == null) {
-            throw IllegalStateException("The Planners persistent Nova scope is not active")
-        }
-        return invoke(activeWorkspace, scope, unit, emptyMap(), ExecutionPolicy.SERIAL_SCOPE, args)
+        return requireProgram().invoke(unit, emptyMap(), *args)
     }
 
-    /** 执行纯函数入口并记录完整宿主调用耗时。 */
+    /**
+     * 执行纯函数入口并记录完整宿主调用耗时。
+     */
     @JvmStatic
     fun invokePureProfiled(unit: NovaScriptUnit, vararg args: Any?): PureInvocation {
         val started = System.nanoTime()
@@ -277,43 +268,27 @@ object ScriptManager {
         return PureInvocation(value, elapsed)
     }
 
-    /** 在独立业务资源作用域内执行可创建任务或回调的入口。 */
+    /**
+     * 使用隔离绑定执行业务入口，创建的任务和回调归属当前程序。
+     */
     @JvmStatic
-    fun invokeBusiness(
-        unit: NovaScriptUnit,
-        functionName: String,
-        bindings: Map<String, Any?>,
-        vararg args: Any?
-    ): Any? {
+    fun invokeBusiness(unit: NovaScriptUnit, functionName: String, bindings: Map<String, Any?>, vararg args: Any?): Any? {
         ensureLoaded()
-        val activeWorkspace = requireWorkspace()
-        val ownerId = "business#${invocationSequence.incrementAndGet()}"
-        val scope = activeWorkspace.openScope(null, ScopeType.BUSINESS_INSTANCE, ownerId)
-        try {
-            val selected = NovaScriptUnit(unit.moduleId, functionName)
-            return invoke(activeWorkspace, scope, selected, bindings, ExecutionPolicy.MAIN_THREAD, args)
-        } finally {
-            if (scope.resourceCount == 0) {
-                scope.dispose()
-            }
-        }
+        val selected = NovaScriptUnit(unit.moduleId, functionName)
+        return requireProgram().invokeBusiness(selected, bindings, *args)
     }
 
-    /** 注册虚拟源码并拒绝加载后的运行期编译。 */
-    private fun register(
-        id: String,
-        functionName: String,
-        source: String,
-        originSource: String,
-        generatedLineOffset: Int
-    ): NovaScriptUnit {
+    /**
+     * 注册虚拟源码并拒绝加载后的运行期编译。
+     */
+    private fun register(id: String, functionName: String, source: String, originSource: String, generatedLineOffset: Int): NovaScriptUnit {
         synchronized(lifecycleLock) {
             val moduleId = createModuleId(id, source)
             if (sources.containsKey(moduleId)) {
                 return NovaScriptUnit(moduleId, functionName)
             }
             if (loaded) {
-                throw IllegalStateException("Nova sources must be registered before the Planners Workspace is loaded: $id")
+                throw IllegalStateException("Nova sources must be registered before the Planners program is loaded: $id")
             }
             val origin = locateOrigin(id, originSource)
             val sourceUnit = SourceUnit(moduleId, source, origin.file, id, origin.line, generatedLineOffset, null)
@@ -322,20 +297,16 @@ object ScriptManager {
         }
     }
 
-    /** 登记已确定模块 ID 的完整 Nova 业务模块。 */
-    private fun registerResolved(
-        id: String,
-        moduleId: String,
-        functionName: String,
-        source: String,
-        originSource: String
-    ): NovaScriptUnit {
+    /**
+     * 登记已确定模块 ID 的完整 Nova 业务模块。
+     */
+    private fun registerResolved(id: String, moduleId: String, functionName: String, source: String, originSource: String): NovaScriptUnit {
         synchronized(lifecycleLock) {
             if (sources.containsKey(moduleId)) {
                 return NovaScriptUnit(moduleId, functionName)
             }
             if (loaded) {
-                throw IllegalStateException("Nova sources must be registered before the Planners Workspace is loaded: $id")
+                throw IllegalStateException("Nova sources must be registered before the Planners program is loaded: $id")
             }
             val origin = locateOrigin(id, originSource)
             val sourceUnit = SourceUnit(moduleId, source, origin.file, id, origin.line, GENERATED_MODULE_OFFSET, null)
@@ -344,7 +315,9 @@ object ScriptManager {
         }
     }
 
-    /** 登记带精确 YAML SourceMap 的虚拟源码。 */
+    /**
+     * 登记带精确 YAML SourceMap 的虚拟源码。
+     */
     private fun registerYaml(
         file: Path,
         yamlPath: String,
@@ -366,7 +339,7 @@ object ScriptManager {
                 return NovaScriptUnit(moduleId, functionName)
             }
             if (loaded) {
-                throw IllegalStateException("Nova YAML sources must be registered before Workspace load: $id")
+                throw IllegalStateException("Nova YAML sources must be registered before program load: $id")
             }
             val sourceUnit = SourceUnit(
                 moduleId,
@@ -382,7 +355,9 @@ object ScriptManager {
         }
     }
 
-    /** 创建数据目录内 YAML 节点的稳定来源标识。 */
+    /**
+     * 创建数据目录内 YAML 节点的稳定来源标识。
+     */
     private fun createYamlSourceId(file: Path, yamlPath: String): String {
         val root = getDataFolder().toPath().toAbsolutePath().normalize()
         val normalizedFile = file.toAbsolutePath().normalize()
@@ -391,20 +366,6 @@ object ScriptManager {
         }
         val relativeFile = root.relativize(normalizedFile).toString().replace('\\', '/')
         return "$relativeFile:$yamlPath"
-    }
-
-    /** 调用 Workspace，并把业务绑定直接交给 Nova 执行上下文。 */
-    private fun invoke(
-        activeWorkspace: RuntimeWorkspace,
-        scope: ResourceScope,
-        unit: NovaScriptUnit,
-        bindings: Map<String, Any?>,
-        policy: ExecutionPolicy,
-        args: Array<out Any?>
-    ): Any? {
-        @Suppress("UNCHECKED_CAST")
-        val safeBindings = bindings as Map<String, Any>
-        return activeWorkspace.invoke(unit.moduleId, unit.functionName, safeBindings, scope, policy, *args)
     }
 
     /**
@@ -445,12 +406,16 @@ object ScriptManager {
         return body.toString()
     }
 
-    /** 完整业务模块直接使用 YAML 正文，保留其中显式声明的 import。 */
+    /**
+     * 完整业务模块直接使用 YAML 正文，保留其中显式声明的 import。
+     */
     internal fun createModuleSource(source: String): String {
         return source
     }
 
-    /** 按声明顺序写入 Nova 函数参数。 */
+    /**
+     * 按声明顺序写入 Nova 函数参数。
+     */
     private fun appendParameters(body: StringBuilder, parameters: List<String>) {
         for (index in parameters.indices) {
             if (index > 0) {
@@ -460,32 +425,45 @@ object ScriptManager {
         }
     }
 
-    /** 表达式包装中正文所在的生成行偏移。 */
+    /**
+     * 表达式包装中正文所在的生成行偏移。
+     */
     internal const val GENERATED_EXPRESSION_OFFSET = 2
 
-    /** 语句包装中正文所在的生成行偏移。 */
+    /**
+     * 语句包装中正文所在的生成行偏移。
+     */
     internal const val GENERATED_ACTION_OFFSET = 1
 
-    /** 完整模块不产生前置源码行。 */
+    /**
+     * 完整模块不产生前置源码行。
+     */
     internal const val GENERATED_MODULE_OFFSET = 0
 
-    /** 确保业务调用前已完成启动期预编译，禁止运行期隐式加载。 */
+    /**
+     * 确保业务调用前已完成启动期预编译，禁止运行期隐式加载。
+     */
     private fun ensureLoaded() {
         if (!loaded) {
-            throw IllegalStateException("The Planners Nova Workspace has not completed startup loading")
+            throw IllegalStateException("The Planners Nova program has not completed startup loading")
         }
     }
 
-    /** 获取当前活跃 Workspace。 */
-    private fun requireWorkspace(): RuntimeWorkspace {
-        val active = workspace
-        if (active == null) {
-            throw IllegalStateException("The Planners Nova Workspace is not active")
-        }
+    /**
+     * 获取当前活跃编译程序。
+     *
+     * @return 当前程序。
+     * @throws IllegalStateException 当前程序未加载时抛出。
+     */
+    private fun requireProgram(): PlannersScriptProgram {
+        val active = program
+        check(active != null) { "The Planners Nova program is not active" }
         return active
     }
 
-    /** 生成稳定且满足 Alias 约束的虚拟模块名。 */
+    /**
+     * 生成稳定且满足 Alias 约束的虚拟模块名。
+     */
     private fun createModuleId(id: String, source: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
         val bytes = digest.digest((id + "\u0000" + source).toByteArray(StandardCharsets.UTF_8))
@@ -500,7 +478,7 @@ object ScriptManager {
      *
      * @param id 业务虚拟源标识。
      * @param source 原始表达式、语句或模块文本。
-     * @return 可供 Workspace 异常映射使用的来源位置。
+     * @return 可供 编译程序 异常映射使用的来源位置。
      */
     private fun locateOrigin(id: String, source: String): SourceOrigin {
         val root = getDataFolder().toPath().toAbsolutePath().normalize()
@@ -554,15 +532,13 @@ object ScriptManager {
         throw IllegalStateException("Cannot locate the YAML origin for Nova source: $id")
     }
 
-    /** 虚拟源码对应的真实 YAML 位置。 */
-    private class SourceOrigin(
-        val file: Path,
-        val line: Int
-    )
+    /**
+     * 虚拟源码对应的真实 YAML 位置。
+     */
+    private class SourceOrigin(val file: Path, val line: Int)
 
-    /** 一次预编译纯函数调用的宿主侧统计。 */
-    class PureInvocation(
-        val value: Any?,
-        val elapsedNanos: Long
-    )
+    /**
+     * 一次预编译纯函数调用的宿主侧统计。
+     */
+    class PureInvocation(val value: Any?, val elapsedNanos: Long)
 }

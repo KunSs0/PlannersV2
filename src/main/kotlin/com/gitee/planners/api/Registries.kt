@@ -82,14 +82,14 @@ object Registries {
         get() = Planners.backpackConfig.get()
 
     /**
-     * 重新读取业务配置，并以销毁旧实例、创建新实例的方式重建 Nova Workspace。
+     * 重新读取业务配置，并以销毁旧实例、创建新实例的方式重建 Nova 编译程序。
      *
-     * 此方法是 Planners 重载命令的上层编排入口。Workspace 本身没有 reload 状态，
-     * 任一新源码都只能在新 Workspace 加载前登记。
+     * 此方法是 Planners 重载命令的上层编排入口。编译程序本身没有 reload 状态，
+     * 任一新源码都只能在新程序加载前登记。
      */
     fun handleReload() {
         // 先完整销毁旧资源树，确保旧调度任务与业务作用域不进入新配置代次。
-        ScriptManager.dispose()
+        ScriptManager.close()
         Planners.config.reload()
         // 重载直接入口也必须清除旧施法续体，并严格校验新时间策略。
         com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()
@@ -102,7 +102,7 @@ object Registries {
             condition.registerSources()
         }
         ConditionEvaluator.prepareConfiguredProperties(configuredConditions.values)
-        // Registry 重读会构造业务对象，并在 Workspace load 前登记其虚拟 SourceUnit。
+        // Registry 重读会构造业务对象，并在 程序加载 前登记其虚拟 SourceUnit。
         AutoReloadable.onReload()
         SkillPointsManager.prepareSources()
         DefaultMagicPointProvider.expressionUpperLimit.get()
@@ -114,7 +114,7 @@ object Registries {
      * 按业务依赖顺序加载所有注册表，使构造阶段发现的 Nova 源码进入启动模块图。
      */
     fun init() {
-        // 按业务依赖顺序加载完整配置快照，使全部 Nova 虚拟源在 Workspace load 前登记。
+        // 按业务依赖顺序加载完整配置快照，使全部 Nova 虚拟源在 程序加载 前登记。
         JOB.load()
         SKILL.load()
         SKILL_TREE.load()
