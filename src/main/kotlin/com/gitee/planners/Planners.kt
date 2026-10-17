@@ -53,6 +53,14 @@ object Planners : Plugin() {
     lateinit var config: Configuration
         private set
 
+    /**
+     * 技能时间策略，在配置加载和重载时解析，技能释放只读取已校验缓存。
+     */
+    @ConfigNode("settings.skill.timing")
+    val skillTimingPolicy = ConfigNodeTransfer<ConfigurationSection, SkillTimingPolicy> {
+        SkillTimingPolicy.parse(this)
+    }
+
     @ConfigNode("settings.bukkit-launch.unimpeded-types")
     val unimpededTypes = ConfigNodeTransfer<List<String>, List<Material>> {
         this.mapNotNull {
@@ -147,7 +155,7 @@ object Planners : Plugin() {
 
     override fun onEnable() {
         // 时间策略必须在技能可被释放前明确配置，不能在缺项时沿用原时间。
-        SkillTimingPolicy.parse(config.getConfigurationSection("settings.skill.timing"))
+        skillTimingPolicy.get()
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
         ScriptManager.prepare()

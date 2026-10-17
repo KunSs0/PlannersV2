@@ -23,7 +23,8 @@ object SkillTimingService {
     fun prepare(player: Player, execution: SkillExecutionContext): SkillTimingSnapshot {
         // 外部属性容器可能读取实体状态，必须在技能发起线程完成快照。
         check(Bukkit.isPrimaryThread()) { "技能时间必须在Bukkit主线程准备。" }
-        return prepare(player, execution, SkillTimingPolicy.parse(Planners.config.getConfigurationSection("settings.skill.timing")))
+        // 策略由配置节点统一重载，技能热路径不再遍历配置树或重复解析。
+        return prepare(player, execution, Planners.skillTimingPolicy.get())
     }
 
     /**

@@ -4,7 +4,6 @@ import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersLoaded
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
-import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.module.script.SingletonScript
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
@@ -23,10 +22,13 @@ import taboolib.platform.util.onlinePlayers
 class DefaultMagicPointProvider : MagicPointProvider {
 
     var enabled = true
+        private set
 
     var taskUpperLimit: PlatformExecutor.PlatformTask? = null
+        private set
 
     var taskResume: PlatformExecutor.PlatformTask? = null
+        private set
 
     override fun getPoint(player: Player): Int {
         return player.plannersTemplate["magic.point"]?.asInt() ?: 0
@@ -40,10 +42,16 @@ class DefaultMagicPointProvider : MagicPointProvider {
         return player.plannersTemplate["magic.point.max"]?.asInt() ?: 0
     }
 
-    fun close() {
+    /**
+     * 先关闭任务入口，再取消两类任务；已关闭实例不会因配置重载复活。
+     */
+    override fun close() {
+        // 取消后可能仍有宿主已取出的回调，入口处也以 enabled 拒绝执行。
+        enabled = false
         this.taskUpperLimit?.cancel()
         this.taskResume?.cancel()
-        enabled = false
+        taskUpperLimit = null
+        taskResume = null
     }
 
     fun setPointInUpperLimit(player: Player, magicPoint: Int) {
@@ -79,35 +87,55 @@ class DefaultMagicPointProvider : MagicPointProvider {
         }
     }
 
+    /**
+     * 原生提供器仍启用时，为在线玩家执行一次回复。
+     */
     fun executeUpdateTask() {
+        // 防止宿主已取出的旧回调在接管后继续访问当前提供器。
+        if (!enabled) {
+            return
+        }
         for (player in onlinePlayers) {
             executeUpdateTask(player)
         }
     }
 
+    /**
+     * 为档案已就绪的玩家更新原生整数法力，不转发到接管后的外部提供器。
+     *
+     * @param player 需要回复的玩家。
+     */
     fun executeUpdateTask(player: Player) {
-        if (!player.plannersLoaded) {
+        if (!enabled || !player.plannersLoaded) {
             return
         }
         val data = expressionResume.get().eval(player, player.plannersTemplate)
         if (data == null) {
             throw IllegalStateException("The magic point resume expression returned null")
         }
-        val template = player.plannersTemplate
-        template.magicPoint += data.cint
+        // 原生任务只操作自己的存储，绝不通过全局 INSTANCE 读改写外部法力。
+        changePoint(player, data.cint)
     }
 
     /**
      * 执行更新任务
      */
     fun executeUpdateTaskInUpperLimit() {
+        if (!enabled) {
+            return
+        }
         for (player in onlinePlayers) {
             executeUpdateTaskInUpperLimit(player)
         }
     }
 
+    /**
+     * 为就绪玩家计算原生上限，关闭后不执行表达式或修改元数据。
+     *
+     * @param player 待更新容量的玩家。
+     */
     fun executeUpdateTaskInUpperLimit(player: Player) {
-        if (!player.plannersLoaded) {
+        if (!enabled || !player.plannersLoaded) {
             return
         }
         val data = expressionUpperLimit.get().eval(player, player.plannersTemplate)

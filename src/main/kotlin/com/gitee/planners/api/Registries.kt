@@ -93,7 +93,7 @@ object Registries {
         Planners.config.reload()
         // 重载直接入口也必须清除旧施法续体，并严格校验新时间策略。
         com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()
-        com.gitee.planners.core.skill.timing.SkillTimingPolicy.parse(Planners.config.getConfigurationSection("settings.skill.timing"))
+        Planners.skillTimingPolicy.get()
         ScriptManager.prepare()
         ConditionEvaluator.resetConfiguredProperties()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())

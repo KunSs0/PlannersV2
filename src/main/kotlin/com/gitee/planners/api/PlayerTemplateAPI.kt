@@ -11,6 +11,7 @@ import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPoint
 import com.gitee.planners.core.player.magic.MagicPointProvider.Companion.magicPointInUpperLimit
+import com.gitee.planners.core.player.magic.MagicPointProvider
 import com.gitee.planners.util.builtin.MutableRegistryInMap
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerJoinEvent
@@ -80,7 +81,8 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     fun addMagicPoint(player: Player, amount: Int) {
         val event = PlayerMagicPointEvent.Increase(player.plannersTemplate, amount)
         if (event.call()) {
-            player.plannersTemplate.magicPoint += amount
+            // 相对变更交给提供器，不能将外部 Double 余额的整数投影写回。
+            MagicPointProvider.INSTANCE.changePoint(player, event.amount)
         }
     }
 
@@ -93,7 +95,8 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     fun takeMagicPoint(player: Player, amount: Int) {
         val event = PlayerMagicPointEvent.Decrease(player.plannersTemplate, amount)
         if (event.call()) {
-            player.plannersTemplate.magicPoint -= amount
+            // 保留原有相对减少语义，由资源系统统一裁剪容量。
+            MagicPointProvider.INSTANCE.changePoint(player, Math.negateExact(event.amount))
         }
     }
 
