@@ -4,6 +4,7 @@ import com.gitee.planners.Planners
 import com.gitee.planners.api.attribute.AttributeSource
 import com.gitee.planners.module.compat.attribute.AttributeDriver
 import org.bukkit.entity.LivingEntity
+import java.math.BigDecimal
 
 /**
  * 属性代理中心。
@@ -71,7 +72,7 @@ object AttributeProxy {
      * ① 收集各来源属性 → 按 registry 分流（逻辑 / 物理直通）
      * ② 逻辑属性走 [AttributeConversion.convert] 转换
      * ③ 转换结果与物理直通合并
-     * ④ 推送 [AttributeDriver.set]
+     * ④ 推送 [AttributeDriver.setValues]，由驱动选择原生数值 API 或通用文本协议。
      */
     fun sync(entity: LivingEntity) {
         val registry = Planners.attributeRegistry.get()
@@ -113,9 +114,29 @@ object AttributeProxy {
         }
 
         // ④ 推送
-        val list = physical.map { (k, v) ->
-            "$k: +${v.toInt()}"
+        AttributeDriver.setValues(entity, "planners-proxy", physical, -1)
+    }
+
+    /**
+     * 将物理属性转换为保留小数的通用 token，不在输出层取整。
+     *
+     * @param physical 已完成转换与汇总的物理属性。
+     * @return 使用普通十进制及单一正负号的属性 token。
+     * @throws IllegalArgumentException 属性包含非有限数值时抛出。
+     */
+    internal fun createTokens(physical: Map<String, Double>): List<String> {
+        // 禁止科学计数法干扰属性解析；负值直接携带负号，不生成 +-。
+        val tokens = ArrayList<String>()
+        for ((key, value) in physical) {
+            require(value.isFinite()) { "属性 $key 必须是有限数值，实际为 $value" }
+            val decimal = BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
+            val sign = if (value >= 0.0) {
+                "+"
+            } else {
+                ""
+            }
+            tokens.add("$key: $sign$decimal")
         }
-        AttributeDriver.set(entity, "planners-proxy", list, -1)
+        return tokens
     }
 }
