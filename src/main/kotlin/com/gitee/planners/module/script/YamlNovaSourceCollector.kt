@@ -1,5 +1,6 @@
 package com.gitee.planners.module.script
 
+import com.gitee.planners.core.config.ImmutableVariable
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
 import java.nio.charset.StandardCharsets
@@ -82,6 +83,14 @@ object YamlNovaSourceCollector {
         path: List<String>,
         insideVariables: Boolean
     ) {
+        // 普通常量不进入源码图，其中的引号、插值标记或代码片段均保持原始值。
+        val variableIndex = path.indexOf("variables")
+        if (insideVariables && variableIndex >= 0 && path.size - variableIndex == 2 && value != null) {
+            val variable = ImmutableVariable.parse(path.last(), value)
+            if (variable is ImmutableVariable.Literal) {
+                return
+            }
+        }
         if (value is ConfigurationSection) {
             visitSection(file, lines, value, path, insideVariables)
             return

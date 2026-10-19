@@ -12,8 +12,10 @@ __option__:
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 200
-    damage_buff: 6 * level + 20
-    damage_taken: 3 * level + 10
+    damage_buff:
+      expression: 6 * level + 20
+    damage_taken:
+      expression: 3 * level + 10
   max-level: 18
 action: |
   import "planners.core"

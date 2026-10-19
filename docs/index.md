@@ -1,5 +1,7 @@
 # Planners V2 文档入口
 
+3.7.0 的变量配置请先阅读[常量与显式表达式](variable-values.md)：普通字符串按原值传递，公式使用 `expression` 字段。下方历史 SE 示例中的变量公式也需要按该格式迁移。
+
 Planners V2 是基于 TabooLib 的职业、技能、状态和脚本化战斗系统。当前版本统一使用 SE（ScriptEngine）执行标准 JavaScript 脚本，不再使用 Kether 作为 Planners 的配置脚本语法。
 
 ## 当前脚本口径

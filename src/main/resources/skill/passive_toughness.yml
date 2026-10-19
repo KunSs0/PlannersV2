@@ -11,6 +11,7 @@ __option__:
         - "&7被动"
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
-    defense: 4 * level + 5
+    defense:
+      expression: 4 * level + 5
   max-level: 6
 action: ""

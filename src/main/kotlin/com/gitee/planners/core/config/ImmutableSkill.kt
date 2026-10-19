@@ -312,7 +312,8 @@ class ImmutableSkill(config: Configuration) : Unique {
             execution.level,
             execution.context,
             execution.skill,
-            execution.profile
+            execution.profile,
+            ImmutableVariable.literalBindings(immutableVariables)
         )
         if (values !is List<*>) {
             throw IllegalStateException("Skill '$id' display variable batch returned an invalid type")
@@ -381,7 +382,7 @@ class ImmutableSkill(config: Configuration) : Unique {
         body.append("]\n")
         return ScriptManager.compileAction(
             "skill:$id:display-variables",
-            listOf("sender", "level", "ctx", "skill", "profile"),
+            listOf("sender", "level", "ctx", "skill", "profile", ImmutableVariable.LITERALS_PARAMETER),
             body.toString()
         )
     }

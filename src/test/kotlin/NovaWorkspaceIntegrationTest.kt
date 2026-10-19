@@ -1,3 +1,4 @@
+import com.gitee.planners.core.config.ImmutableVariable
 import com.novalang.runtime.NovaScheduler
 import com.novalang.runtime.SchedulerHolder
 import com.gitee.planners.module.script.PlannersCoreModule
@@ -216,6 +217,12 @@ class NovaWorkspaceIntegrationTest {
         stats: CompilationStats,
         sequence: AtomicInteger
     ) {
+        val variableIndexInPath = path.indexOf("variables")
+        if (insideVariables && variableIndexInPath >= 0 && path.size - variableIndexInPath == 2 && value != null) {
+            if (ImmutableVariable.parse(path.last(), value) is ImmutableVariable.Literal) {
+                return
+            }
+        }
         if (value is Map<*, *>) {
             for ((mapKey, mapValue) in value) {
                 val childPath = ArrayList(path)

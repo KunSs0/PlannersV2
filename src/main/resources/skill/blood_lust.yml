@@ -12,8 +12,10 @@ __option__:
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     cooldown: 180
-    lifesteal: 15 * level + 25
-    duration: 5 * level
+    lifesteal:
+      expression: 15 * level + 25
+    duration:
+      expression: 5 * level
   max-level: 2
 action: |
   import "planners.core"

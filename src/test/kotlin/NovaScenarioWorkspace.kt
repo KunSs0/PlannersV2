@@ -83,7 +83,7 @@ class NovaScenarioWorkspace(private val root: Path) : AutoCloseable {
      * @param arguments 显式参数。
      * @return 脚本返回值。
      */
-    fun invoke(moduleId: String, functionName: String, bindings: Map<String, Any> = emptyMap(), vararg arguments: Any?): Any? {
+    fun invoke(moduleId: String, functionName: String, bindings: Map<String, Any?> = emptyMap(), vararg arguments: Any?): Any? {
         val active = program
         check(active != null) { "Test program is not loaded" }
         return active.invokeBusiness(NovaScriptUnit(moduleId, functionName), bindings, *arguments)
