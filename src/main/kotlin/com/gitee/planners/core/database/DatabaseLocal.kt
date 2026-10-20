@@ -68,7 +68,6 @@ class DatabaseLocal : Database {
         add("tree") { type(ColumnTypeSQLite.TEXT) }
         add("node") { type(ColumnTypeSQLite.TEXT) }
         add("level") { type(ColumnTypeSQLite.INTEGER) }
-        add("choice") { type(ColumnTypeSQLite.TEXT) }
     }
 
     val tableRouter = Table("planners_router", host) {
@@ -84,7 +83,6 @@ class DatabaseLocal : Database {
 
     init {
         migrateLegacyRouterSchema()
-        migrateSkillTreeChoiceColumn()
         tableUser.createTable(dataSource)
         tableRoute.createTable(dataSource)
         tableMetadata.createTable(dataSource)
@@ -322,28 +320,10 @@ class DatabaseLocal : Database {
         }
     }
 
-    private fun migrateSkillTreeChoiceColumn() {
-        val connection = dataSource.connection
-        try {
-            val columns = getTableColumns(connection, "planners_skill_tree_node")
-            if (columns.isEmpty() || columns.contains("choice")) {
-                return
-            }
-            val statement = connection.createStatement()
-            try {
-                statement.executeUpdate("ALTER TABLE planners_skill_tree_node ADD COLUMN choice TEXT")
-            } finally {
-                statement.close()
-            }
-        } finally {
-            connection.close()
-        }
-    }
-
     private fun getSkillTreeNodeStates(route: Long): List<PlayerSkillTreeNodeState> {
         return tableSkillTreeNode.select(dataSource) {
             where { "route" eq route }
-            rows("id", "tree", "node", "level", "choice")
+            rows("id", "tree", "node", "level")
         }.map {
             PlayerSkillTreeNodeState(
                 getLong("id"),
@@ -434,29 +414,32 @@ class DatabaseLocal : Database {
         }
     }
 
-    override fun createSkillTreeNodeState(
+    /** 同一 JDBC 事务保存节点、技能点和首次技能记录，提交后才发布内存。 */
+    override fun purchaseSkillTreeNode(
+        router: PlayerRouter,
         route: PlayerRoute,
         treeId: String,
         nodeId: String,
         level: Int,
-        choice: String?
-    ): CompletableFuture<PlayerSkillTreeNodeState> {
-        val future = CompletableFuture<PlayerSkillTreeNodeState>()
-        tableSkillTreeNode.insert(dataSource, "route", "tree", "node", "level", "choice") {
-            value(route.bindingId, treeId, nodeId, level, choice)
-            onFinally {
-                val index = getId(generatedKeys)
-                future.complete(PlayerSkillTreeNodeState(index, treeId, nodeId, level, choice))
+        costs: com.gitee.planners.core.condition.LearningCosts,
+        skill: ImmutableSkill?,
+        onCommitted: (SkillTreePurchaseStore.Result, Int) -> Unit
+    ) {
+        // 与职业线后台保存共用对象锁，避免旧技能点在本次事务后覆盖已提交数据。
+        synchronized(router) {
+            dataSource.connection.use { connection ->
+                var points = 0
+                val result = costs.purchase { amount, commit ->
+                    points = amount
+                    SkillTreePurchaseStore("planners").purchase(
+                        connection, router.bindingId, route.bindingId, treeId, nodeId, level,
+                        router.skillPointsCurrent, router.skillPointsUsed, amount,
+                        skill?.id, skill?.startedLevel ?: 0, commit
+                    )
+                }
+                // 已过提交边界，通知或连接关闭失败不会触发资源退款。
+                onCommitted(result, points)
             }
-        }
-        return future
-    }
-
-    override fun updateSkillTreeNodeState(state: PlayerSkillTreeNodeState) {
-        tableSkillTreeNode.update(dataSource) {
-            where { "id" eq state.index }
-            set("level", state.level)
-            set("choice", state.choice)
         }
     }
 
@@ -519,13 +502,15 @@ class DatabaseLocal : Database {
     }
 
     override fun updatePlayerRouter(router: PlayerRouter) {
-        tableRouter.update(dataSource) {
-            where { "id" eq router.bindingId }
-            set("level", router.level)
-            set("experience", router.experience)
-            set("current_route", router.currentRouteId)
-            set("sp_current", router.skillPointsCurrent)
-            set("sp_used", router.skillPointsUsed)
+        synchronized(router) {
+            tableRouter.update(dataSource) {
+                where { "id" eq router.bindingId }
+                set("level", router.level)
+                set("experience", router.experience)
+                set("current_route", router.currentRouteId)
+                set("sp_current", router.skillPointsCurrent)
+                set("sp_used", router.skillPointsUsed)
+            }
         }
     }
 

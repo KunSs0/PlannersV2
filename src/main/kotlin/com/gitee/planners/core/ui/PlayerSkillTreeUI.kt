@@ -4,6 +4,7 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.core.config.ImmutableSkillTree
 import com.gitee.planners.core.config.SkillTreeAttributeNode
 import com.gitee.planners.core.config.SkillTreeNode
+import com.gitee.planners.core.config.SkillTreeUnlockNode
 import com.gitee.planners.core.config.SkillTreeSkillNode
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.condition.ConditionMainThread
@@ -86,9 +87,18 @@ object PlayerSkillTreeUI : AutomationBaseUI("skilltree.yml") {
         return item
     }
 
+    /**
+     * 读取节点名称，独立解锁节点使用配置中声明的业务名称。
+     *
+     * @param node 待展示的真实节点。
+     * @return 菜单标题使用的节点名称。
+     */
     private fun getNodeName(node: SkillTreeNode): String {
         if (node is SkillTreeSkillNode) {
             return node.skillId
+        }
+        if (node is SkillTreeUnlockNode) {
+            return node.name
         }
         return node.id
     }

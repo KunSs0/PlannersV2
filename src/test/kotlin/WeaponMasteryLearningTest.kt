@@ -160,15 +160,12 @@ class WeaponMasteryLearningTest {
     }
 
     /** 可变技能点门槛，记录是否发生消耗，验证所有条件通过前绝不提交。 */
-    private class GateCondition : ConditionConfig("gate", emptyMap(), "技能点不足", "marker"), ConditionExecution {
+    private class GateCondition : ConditionConfig("gate", emptyMap(), "技能点不足", true), ConditionExecution {
         var passed: Boolean = true
         var consumptions: Int = 0
-        override val expressionProperties: Boolean = false
         override val preparationKey: String = "test:gate"
 
         /** 测试原生门槛没有脚本源码。 */
-        override fun registerSources() {
-        }
 
         /** 同步准备可变点数条件的执行器，在正式执行时读取最新状态。 */
         override fun prepare(playerId: UUID): CompletableFuture<ConditionExecution> {
@@ -186,8 +183,9 @@ class WeaponMasteryLearningTest {
         }
 
         /** 记录真实执行器发起的消耗次数。 */
-        override fun consume(player: Player, profile: PlayerTemplate, router: PlayerRouter?, route: PlayerRoute?, conditionProps: Map<String, Any>) {
+        override fun prepareConsume(player: Player, profile: PlayerTemplate, router: PlayerRouter?, route: PlayerRoute?, conditionProps: Map<String, Any>): com.gitee.planners.core.condition.LearningCost? {
             consumptions += 1
+            return com.gitee.planners.core.condition.SkillPointLearningCost(0)
         }
     }
 }

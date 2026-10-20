@@ -212,19 +212,44 @@ class PlayerRouter(
         }
     }
 
+    /**
+     * 调整职业线可用技能点并安排保存，与学习事务共用对象锁。
+     * @param amount 要增加的点数，减少时沿用现有非负余额规则。
+     */
     fun addSkillPoints(amount: Int) {
-        skillPointsCurrent = maxOf(0, skillPointsCurrent + amount)
-        save()
+        // 后台保存不能在学习事务发布新余额之前读取旧值。
+        synchronized(this) {
+            skillPointsCurrent = maxOf(0, skillPointsCurrent + amount)
+            save()
+        }
     }
 
+    /**
+     * 直接消费职业线技能点并安排保存；节点学习改由数据库事务统一消费。
+     * @param amount 需要扣除的技能点。
+     * @return 当前余额是否足够完成扣除。
+     */
     fun takeSkillPoints(amount: Int): Boolean {
-        if (skillPointsCurrent < amount) {
-            return false
+        // 非节点业务也必须与学习事务串行修改技能点。
+        synchronized(this) {
+            if (skillPointsCurrent < amount) {
+                return false
+            }
+            skillPointsCurrent -= amount
+            skillPointsUsed += amount
+            save()
+            return true
         }
+    }
+
+    /**
+     * 发布已与节点共同提交的技能点；只修改内存，不重复调度数据库保存。
+     * @param amount 本次已提交的非负成本。
+     */
+    internal fun publishLearningPoints(amount: Int) {
+        // 调用方持有职业线对象锁，数据库已经检查余额与 used 的一致性。
         skillPointsCurrent -= amount
         skillPointsUsed += amount
-        save()
-        return true
     }
 
     fun getExperienceMax(player: Player): Int {

@@ -25,47 +25,48 @@ settings:
       hint: "需要武器 {props.weapon} 熟练度 Lv{props.min}"
 
     player_lv:
-      exper: "profile.getLevel() >= props.min"
+      type: level
       props:
         min: 1
       hint: "需要等级{props.min}"
 
     need_skill:
-      exper: "router != null && router.getSkillOrNull(props.skillId) != null && router.getSkillOrNull(props.skillId).getLevel() >= props.lv"
+      type: skill
       props:
         skillId: ""
-        lv: 1
-      hint: "需要{props.skillId} Lv{props.lv}"
+        min: 1
+      hint: "需要{props.skillId} Lv{props.min}"
 
     consume_sp:
-      exper: "router != null && router.getSkillPointsCurrent() >= props.amount"
+      type: skill_points
       props:
         amount: 0
       hint: "技能点不足"
-      consume: "router.takeSkillPoints(props.amount)"
+      consume: true
 
     is_warrior:
-      exper: 'router != null && router.getCurrentJob().getId() == "warrior"'
-      props: {}
+      type: job
+      props: { id: warrior }
       hint: "需要战士职业"
 
     is_mage:
-      exper: 'router != null && router.getCurrentJob().getId() == "mage"'
-      props: {}
+      type: job
+      props: { id: mage }
       hint: "需要法师职业"
 
     need_coin:
-      exper: "false"
+      type: level
       props:
-        amount: 0
-      hint: "金币条件未实现"
+        min: 0
+      hint: "金币条件未配置"
 
     need_item:
-      exper: "false"
+      type: item
       props:
-        itemId: ""
-        count: 1
-      hint: "物品条件未实现"
+        matcher: "zap:class_function_unlock_token"
+        amount: 1
+      hint: "物品不足"
+      consume: true
 
   # 技能分类规格
   skill:

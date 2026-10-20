@@ -2,6 +2,7 @@ package com.gitee.planners.core.skilltree
 
 import com.gitee.planners.core.config.SkillTreeAttributeNode
 import com.gitee.planners.core.config.SkillTreeNode
+import com.gitee.planners.core.config.SkillTreeUnlockNode
 import com.gitee.planners.core.config.SkillTreeSkillNode
 import com.gitee.planners.core.player.PlayerTemplate
 
@@ -40,6 +41,12 @@ object SkillTreeNodeEffectService {
         return result
     }
 
+    /**
+     * 收集职业继承链的属性与技能贡献，独立解锁记录由业务自行读取。
+     *
+     * @param template 玩家档案。
+     * @return 已学习且拥有贡献 Provider 的节点效果。
+     */
     private fun collect(template: PlayerTemplate): List<SkillTreeNodeContribution> {
         val router = template.playerRouter
         if (router == null) {
@@ -51,6 +58,10 @@ object SkillTreeNodeEffectService {
                 for (node in tree.nodes.values) {
                     val state = route.getNodeStateOrNull(tree.id, node.id)
                     if (state == null || state.level <= 0) {
+                        continue
+                    }
+                    // 解锁节点的效果由业务按等级读取，不产生属性或技能等级贡献。
+                    if (node is SkillTreeUnlockNode) {
                         continue
                     }
                     val provider = findProvider(node)

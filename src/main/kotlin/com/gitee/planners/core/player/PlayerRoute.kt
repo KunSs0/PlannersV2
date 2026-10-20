@@ -22,7 +22,6 @@ import com.gitee.planners.core.script.proxy.ProxyTreeDefinitionView
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 
 class PlayerRoute(
     val bindingId: Long,
@@ -45,7 +44,6 @@ class PlayerRoute(
 
     private val skillsById = LinkedHashMap<String, PlayerSkill>()
     private val nodeStatesByKey = LinkedHashMap<String, PlayerSkillTreeNodeState>()
-    private val pendingNodeAdvancements = ConcurrentHashMap.newKeySet<String>()
     private val evaluator = ConditionEvaluator()
 
     init {
@@ -315,15 +313,20 @@ class PlayerRoute(
     }
 
     /**
-     * 主线程锁定本节点，异步准备外部数据，回主线程再次校验后才消耗与升级。
-     * 等待期间重复点击会失败；任意成功或失败路径都释放本节点的请求锁。
+     * 主线程锁定玩家学习请求，异步准备外部数据，回主线程再次校验后才消耗与升级。
+     * 等待期间不同节点也不能并发提交；任意成功或失败路径都释放玩家请求锁。
+     *
+     * @param player 发起学习的在线玩家。
+     * @param treeId 当前阶段绑定的技能树。
+     * @param nodeId 本次购买或升级的实际节点。
+     * @return 完成持久化及学习事件后结束的请求。
      */
     fun advanceNode(player: Player, treeId: String, nodeId: String): CompletableFuture<Void> {
         return CompletableFuture.completedFuture(Unit).thenComposeAsync({
             val tree = getTree(treeId)
             val node = getNode(tree, nodeId)
-            val stateKey = nodeStateKey(treeId, nodeId)
-            check(pendingNodeAdvancements.add(stateKey)) { "该技能树节点正在升级" }
+            val playerId = player.uniqueId
+            check(SkillTreeLearningLock.acquire(playerId)) { "该玩家已有技能树学习请求正在处理" }
             try {
                 val expectedRouter = player.plannersTemplate.playerRouter
                 check(expectedRouter != null && expectedRouter.routeLine.contains(this)) { "职业阶段不属于当前职业线" }
@@ -341,16 +344,24 @@ class PlayerRoute(
                     advanceNodeInternal(player, tree, node, session)
                 }, ConditionMainThread)
                 future.whenComplete { _, _ ->
-                    pendingNodeAdvancements.remove(stateKey)
+                    SkillTreeLearningLock.release(playerId)
                 }
             } catch (exception: Exception) {
-                pendingNodeAdvancements.remove(stateKey)
+                SkillTreeLearningLock.release(playerId)
                 CompletableFuture.failedFuture<Void>(exception)
             }
         }, ConditionMainThread)
     }
 
-    /** 已回到主线程，在同一请求快照上重检条件并执行一次消耗。 */
+    /**
+     * 在主线程重检请求，准备成本并同步提交，再发布节点状态和通知。
+     *
+     * @param player 发起请求的在线玩家。
+     * @param tree 准备条件时捕获的技能树。
+     * @param node 本次学习的真实节点。
+     * @param session 已准备完成的外部条件。
+     * @return 节点记录、技能记录和学习事件完成后的请求。
+     */
     private fun advanceNodeInternal(
         player: Player,
         tree: ImmutableSkillTree,
@@ -369,36 +380,27 @@ class PlayerRoute(
         if (conditions == null) {
             throw IllegalStateException("The skill-tree node does not define conditions for level $targetLevel")
         }
-        evaluator.consume(conditions, player, createConditionContext(treeId, nodeId, targetLevel), session)
-        val existingState = getNodeStateOrNull(treeId, nodeId)
-        if (existingState != null) {
-            existingState.level = targetLevel
-            Database.INSTANCE.updateSkillTreeNodeState(existingState)
-            val future = ensureSkillRecord(player, node).thenApplyAsync<Void>({
-                PlayerSkillTreeNodeEvent(player.plannersTemplate, this, tree, node, currentLevel, targetLevel).call()
-                null
-            }, ConditionMainThread)
-            return future
+        val router = player.plannersTemplate.playerRouter
+        check(router != null) { "玩家尚未选择职业线" }
+        var newSkill: ImmutableSkill? = null
+        if (node is SkillTreeSkillNode && getSkillOrNull(node.skillId) == null) {
+            newSkill = getImmutableSkill(node.skillId)
+            check(newSkill != null) { "节点对应技能不存在：${node.skillId}" }
         }
-        val future = Database.INSTANCE.createSkillTreeNodeState(this, treeId, nodeId, targetLevel).thenComposeAsync({ createdState ->
-            nodeStatesByKey[nodeStateKey(treeId, nodeId)] = createdState
-            ensureSkillRecord(player, node).thenApplyAsync<Void>({
-                PlayerSkillTreeNodeEvent(player.plannersTemplate, this, tree, node, currentLevel, targetLevel).call()
-                null
-            }, ConditionMainThread)
-        }, ConditionMainThread)
-        return future
-    }
-
-    private fun ensureSkillRecord(player: Player, node: SkillTreeNode): CompletableFuture<PlayerSkill?> {
-        if (node !is SkillTreeSkillNode) {
-            return CompletableFuture.completedFuture(null)
+        // 准备不扣费；数据库及外部成本提交期间不让出主线程。
+        val costs = evaluator.prepareConsume(conditions, player, createConditionContext(treeId, nodeId, targetLevel), session)
+        Database.INSTANCE.purchaseSkillTreeNode(router, this, treeId, nodeId, currentLevel, costs, newSkill) { result, points ->
+            router.publishLearningPoints(points)
+            nodeStatesByKey[nodeStateKey(treeId, nodeId)] = result.state
+            val skill = result.skill
+            if (skill != null) {
+                registerSkill(skill)
+                router.updateEquippedIndex(skill)
+            }
         }
-        val existing = getSkillOrNull(node.skillId)
-        if (existing != null) {
-            return CompletableFuture.completedFuture(existing)
-        }
-        return player.plannersTemplate.getSkill(node.skillId).thenApply { it }
+        // 提交后事件异常继续传播，但不能退款或撤销已提交节点。
+        PlayerSkillTreeNodeEvent(player.plannersTemplate, this, tree, node, currentLevel, targetLevel).call()
+        return CompletableFuture.completedFuture(null)
     }
 
     private fun getTree(treeId: String): ImmutableSkillTree {
@@ -417,10 +419,24 @@ class PlayerRoute(
         return result
     }
 
+    /**
+     * 先检查排斥节点，再按 OR 分支评估 ALL 或 ANY 前置。
+     *
+     * @param tree 当前技能树配置。
+     * @param treeId 同阶段技能树标识。
+     * @param nodeId 本次学习节点。
+     * @return 是否允许学习及首个拒绝原因。
+     */
     private fun verifyGraph(tree: ImmutableSkillTree, treeId: String, nodeId: String): ConditionEvaluator.VerifyResult {
         val graph = tree.graph[nodeId]
         if (graph == null) {
             return ConditionEvaluator.VerifyResult(true, emptyList())
+        }
+        // 排斥约束独立于 ALL/ANY 前置分支，任何分支都不能绕过。
+        for (excluded in graph.excludes) {
+            if (getNodeLevel(treeId, excluded) > 0) {
+                return ConditionEvaluator.VerifyResult(false, listOf("互斥节点 $excluded 已学习"))
+            }
         }
         var firstHint: String? = null
         for (group in graph.groups.values) {

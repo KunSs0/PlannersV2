@@ -37,10 +37,9 @@ class WeaponMasteryConditionTest {
             mapOf("props" to props("sword", 3)), mapOf("props" to props("axe", 1))
         ))
         assertEquals("10", result.encoded)
-        assertNull(result.invocation)
-        execution.consume(player, profile, null, null, props("sword", 3))
+        execution.prepareConsume(player, profile, null, null, props("sword", 3))
         assertTrue(execution.evaluate(player, profile, null, null, props("sword", 3)))
-        assertNull(config.consume)
+        assertFalse(config.consumable)
     }
 
     /** 未知武器不得作为零级参与门槛判断。 */
@@ -134,7 +133,6 @@ class WeaponMasteryConditionTest {
         val section = Configuration.loadFromString("type: weapon_mastery\n")
         val config = ConditionFactory.create("weapon_mastery", section)
         assertInstanceOf(WeaponMasteryCondition::class.java, config)
-        assertFalse(config.expressionProperties)
         val node = Configuration.loadFromString("levels:\n  1:\n    weapon_mastery:\n      weapon: long-sword\n      min: 3\n")
         val levels = SkillNode.parseLevels(node, mapOf(config.key to config))
         assertEquals("long-sword", levels.getValue(1).getValue(config.key)["weapon"])

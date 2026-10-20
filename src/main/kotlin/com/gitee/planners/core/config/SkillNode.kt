@@ -1,14 +1,13 @@
 package com.gitee.planners.core.config
 
-import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.Planners
 import com.gitee.planners.core.condition.ConditionConfig
 import taboolib.library.configuration.ConfigurationSection
 
-/** 解码技能树节点等级条件，并在 Workspace 加载前登记脚本属性。 */
+/** 解码技能树节点等级条件，并在加载期校验内部类型参数。 */
 object SkillNode {
 
-    /** 原生模板按字面量校验，Nova 模板才编译字符串表达式。 */
+    /** 所有学习条件均按内部类型解码，节点只提供字面量覆盖参数。 */
     fun parseLevels(config: ConfigurationSection, templates: Map<String, ConditionConfig> = Planners.conditions.get()): Map<Int, Map<String, Map<String, Any>>> {
         val levelsSection = config.getConfigurationSection("levels")
         if (levelsSection == null) {
@@ -36,14 +35,6 @@ object SkillNode {
                     for ((propertyId, propertyValue) in conditionSection.getValues(false)) {
                         if (propertyValue != null) {
                             values[propertyId] = propertyValue
-                            if (template.expressionProperties && propertyValue is String && propertyValue.toDoubleOrNull() == null) {
-                                // 条件覆盖表达式必须在 Workspace load 前登记，运行期禁止动态编译。
-                                ScriptManager.compileExpression(
-                                    "skill-tree:${config.name}:level:$level:$conditionId:$propertyId",
-                                    listOf("player", "profile", "router", "route", "treeId", "nodeId", "nodeLevel"),
-                                    propertyValue
-                                )
-                            }
                         }
                     }
                     conditions[conditionId] = values

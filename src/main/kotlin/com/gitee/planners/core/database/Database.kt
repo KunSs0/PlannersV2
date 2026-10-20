@@ -50,15 +50,29 @@ interface Database {
     /** 更新技能等级、装备状态、背包位置 */
     fun updateSkill(skill: PlayerSkill)
 
-    fun createSkillTreeNodeState(
+    /**
+     * 同步提交学习成本、节点及初次技能记录，成功后立即回调发布内存状态。
+     * 外部资源只由 LearningCosts 处理；存储不依赖任何道具或经济插件。
+     *
+     * @param router 被学习锁保护的职业线。
+     * @param route 目标职业阶段。
+     * @param treeId 技能树标识。
+     * @param nodeId 真实节点标识。
+     * @param level 提交前等级。
+     * @param costs 已准备成本。
+     * @param skill 需要初次创建的技能定义，不需要时为 null。
+     * @param onCommitted 数据库成功提交后立即发布状态；回调失败不得退款。
+     */
+    fun purchaseSkillTreeNode(
+        router: PlayerRouter,
         route: PlayerRoute,
         treeId: String,
         nodeId: String,
         level: Int,
-        choice: String? = null
-    ): CompletableFuture<PlayerSkillTreeNodeState>
-
-    fun updateSkillTreeNodeState(state: PlayerSkillTreeNodeState)
+        costs: com.gitee.planners.core.condition.LearningCosts,
+        skill: ImmutableSkill?,
+        onCommitted: (SkillTreePurchaseStore.Result, Int) -> Unit
+    )
 
     /** 为已激活的技能节点创建运行时技能记录。 */
     fun createPlayerSkill(template: PlayerTemplate, route: PlayerRoute, skill: ImmutableSkill): CompletableFuture<PlayerSkill>

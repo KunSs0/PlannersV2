@@ -95,13 +95,7 @@ object Registries {
         com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()
         Planners.skillTimingPolicy.get()
         ScriptManager.prepare()
-        ConditionEvaluator.resetConfiguredProperties()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())
-        val configuredConditions = Planners.conditions.get()
-        for (condition in configuredConditions.values) {
-            condition.registerSources()
-        }
-        ConditionEvaluator.prepareConfiguredProperties(configuredConditions.values)
         // Registry 重读会构造业务对象，并在 程序加载 前登记其虚拟 SourceUnit。
         AutoReloadable.onReload()
         SkillPointsManager.prepareSources()

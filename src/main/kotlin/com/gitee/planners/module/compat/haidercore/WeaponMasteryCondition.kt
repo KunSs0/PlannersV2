@@ -19,13 +19,8 @@ class WeaponMasteryCondition(
     props: Map<String, Any>,
     hint: String,
     private val reader: WeaponMasteryReader = HaiderCoreCompat
-) : ConditionConfig(key, props, hint, null) {
-    override val expressionProperties: Boolean = false
+) : ConditionConfig(key, props, hint, false) {
     override val preparationKey: String = "haidercore:weapon_mastery"
-
-    /** 原生条件无需登记 Nova 源码。 */
-    override fun registerSources() {
-    }
 
     /** 加载期严格检查合并后的字面量参数。 */
     override fun validateProperties(properties: Map<String, Any>) {
@@ -85,11 +80,12 @@ class WeaponMasteryCondition(
                     encoded.append('0')
                 }
             }
-            return ConditionExecution.BatchEvaluation(encoded.toString(), null)
+            return ConditionExecution.BatchEvaluation(encoded.toString())
         }
 
         /** 熟练度等级只作门槛，不执行消耗。 */
-        override fun consume(player: Player, profile: PlayerTemplate, router: PlayerRouter?, route: PlayerRoute?, conditionProps: Map<String, Any>) {
+        override fun prepareConsume(player: Player, profile: PlayerTemplate, router: PlayerRouter?, route: PlayerRoute?, conditionProps: Map<String, Any>): com.gitee.planners.core.condition.LearningCost? {
+            return null
         }
     }
 }

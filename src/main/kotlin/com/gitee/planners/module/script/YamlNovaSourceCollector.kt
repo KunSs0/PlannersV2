@@ -174,7 +174,7 @@ object YamlNovaSourceCollector {
             ScriptManager.registerYamlSkillExpression(file, yamlPath, originLine, source)
             return
         }
-        if (key == "consume") {
+        if (key == "consume" || (key == "prepare" && path.contains("condition"))) {
             ScriptManager.registerYamlAction(file, yamlPath, originLine, source)
             return
         }

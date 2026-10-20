@@ -12,9 +12,17 @@ class ImmutableSkillTree(
     val graph: Map<String, Graph>
 ) {
 
+    /**
+     * 节点的前置和排斥关系。
+     *
+     * @property groups 正向前置分支。
+     * @property edges 供连线和循环检查使用的正向边。
+     * @property excludes 与本节点双向互斥的真实节点 ID。
+     */
     class Graph(
         val groups: Map<String, Group>,
-        val edges: List<Edge>
+        val edges: List<Edge>,
+        val excludes: Set<String>
     ) {
         class Group(
             val id: String,
@@ -118,9 +126,15 @@ class ImmutableSkillTree(
             val position = parsePosition(treeId, nodeId, config)
             val levels = SkillNode.parseLevels(config)
             return when (type) {
-                SkillTreeNodeType.SKILL -> parseSkillNode(treeId, nodeId, config, maxLevel, levels, position)
-                SkillTreeNodeType.ATTRIBUTE -> parseAttributeNode(treeId, nodeId, config, maxLevel, levels, position)
-                SkillTreeNodeType.CHOICE -> parseChoiceNode(treeId, nodeId, config, maxLevel, levels, position)
+                SkillTreeNodeType.SKILL -> {
+                    parseSkillNode(treeId, nodeId, config, maxLevel, levels, position)
+                }
+                SkillTreeNodeType.ATTRIBUTE -> {
+                    parseAttributeNode(treeId, nodeId, config, maxLevel, levels, position)
+                }
+                SkillTreeNodeType.UNLOCK -> {
+                    parseUnlockNode(treeId, nodeId, config, maxLevel, levels, position)
+                }
             }
         }
 
@@ -181,40 +195,39 @@ class ImmutableSkillTree(
             return SkillTreeAttributeNode(nodeId, providerId, values, maxLevel, levels, position)
         }
 
-        private fun parseChoiceNode(
+        /**
+         * 读取独立解锁节点，名称缺失时拒绝加载。
+         *
+         * @param treeId 所属技能树。
+         * @param nodeId 实际学习节点。
+         * @param config 节点配置。
+         * @param maxLevel 最高等级。
+         * @param levels 各等级条件。
+         * @param position 布局位置。
+         * @return 不附带虚拟技能或属性的解锁节点。
+         */
+        private fun parseUnlockNode(
             treeId: String,
             nodeId: String,
             config: ConfigurationSection,
             maxLevel: Int,
             levels: Map<Int, Map<String, Map<String, Any>>>,
             position: SkillTreeNodePosition
-        ): ChoiceNode {
-            val optionsSection = config.getConfigurationSection("options")
-            if (optionsSection == null || optionsSection.getKeys(false).isEmpty()) {
-                error("SkillTree '$treeId' choice node '$nodeId' requires options")
-            }
-            val options = LinkedHashMap<String, ChoiceNode.Option>()
-            for (optionId in optionsSection.getKeys(false)) {
-                val optionSection = optionsSection.getConfigurationSection(optionId)
-                if (optionSection == null) {
-                    error("SkillTree '$treeId' choice node '$nodeId' option '$optionId' must be section")
-                }
-                val name = optionSection.getString("name") ?: optionId
-                val providerId = optionSection.getString("provider")
-                val propertiesSection = optionSection.getConfigurationSection("properties")
-                val properties = LinkedHashMap<String, Any>()
-                if (propertiesSection != null) {
-                    for ((key, value) in propertiesSection.getValues(false)) {
-                        if (value != null) {
-                            properties[key] = value
-                        }
-                    }
-                }
-                options[optionId] = ChoiceNode.Option(optionId, name, providerId, properties)
-            }
-            return ChoiceNode(nodeId, maxLevel, levels, position, options)
+        ): SkillTreeUnlockNode {
+            // 解锁名称来自配置，不能从节点 ID 猜测业务含义。
+            val name = config.getString("name")
+            require(name != null && name.isNotBlank()) { "SkillTree '$treeId' nodes.$nodeId.name 必须非空" }
+            return SkillTreeUnlockNode(nodeId, name, maxLevel, levels, position)
         }
 
+        /**
+         * 解析同树全部关系，随后校验互斥配置和有向前置循环。
+         *
+         * @param treeId 技能树标识。
+         * @param config 技能树完整配置。
+         * @param nodes 已解析的真实节点。
+         * @return 以真实节点 ID 索引的关系表。
+         */
         private fun parseGraph(
             treeId: String,
             config: ConfigurationSection,
@@ -236,10 +249,20 @@ class ImmutableSkillTree(
                 }
                 graph[nodeId] = parseNodeGraph(treeId, nodeId, section, nodes)
             }
+            validateExclusions(treeId, graph)
             validateAcyclic(treeId, graph)
             return graph
         }
 
+        /**
+         * 读取单节点前置分组与显式排斥列表，排斥不生成连线边。
+         *
+         * @param treeId 技能树标识。
+         * @param nodeId 当前真实节点。
+         * @param graphSection 全部 graph 配置。
+         * @param nodes 同树合法节点。
+         * @return 当前节点的前置和排斥关系。
+         */
         private fun parseNodeGraph(
             treeId: String,
             nodeId: String,
@@ -298,7 +321,58 @@ class ImmutableSkillTree(
                 }
                 groups[groupId] = Graph.Group(groupId, mode, requirements)
             }
-            return Graph(groups, edges)
+            // 排斥只保存为学习约束，不混入前置依赖和循环判定。
+            val excludes = LinkedHashSet<String>()
+            if (nodeSection.contains("excludes")) {
+                val rawExcludes = nodeSection.get("excludes")
+                require(rawExcludes is List<*>) { "SkillTree '$treeId' graph.$nodeId.excludes 必须为列表" }
+                for (excluded in rawExcludes) {
+                    require(excluded is String && nodes.containsKey(excluded)) { "SkillTree '$treeId' graph.$nodeId.excludes 引用了未知节点: $excluded" }
+                    require(excluded != nodeId) { "SkillTree '$treeId' graph.$nodeId.excludes 不允许排斥自身" }
+                    require(excludes.add(excluded)) { "SkillTree '$treeId' graph.$nodeId.excludes 重复节点: $excluded" }
+                }
+            }
+            return Graph(groups, edges, excludes)
+        }
+
+        /**
+         * 校验双向互斥与直接前置矛盾，不把排斥边加入前置循环检测。
+         *
+         * @param treeId 被加载的技能树。
+         * @param graph 已解析的全部节点关系。
+         */
+        private fun validateExclusions(treeId: String, graph: Map<String, Graph>) {
+            // 双向关系必须由配置明确给出，不在加载时补写。
+            for ((nodeId, relation) in graph) {
+                for (excluded in relation.excludes) {
+                    require(graph.getValue(excluded).excludes.contains(nodeId)) {
+                        "SkillTree '$treeId' graph.$excluded.excludes 缺少反向互斥 '$nodeId'"
+                    }
+                }
+                for (group in relation.groups.values) {
+                    var possible = false
+                    if (group.mode == Graph.Mode.ANY) {
+                        for (required in group.requirements.keys) {
+                            if (!relation.excludes.contains(required)) {
+                                possible = true
+                            }
+                        }
+                    } else {
+                        possible = true
+                        for (required in group.requirements.keys) {
+                            if (relation.excludes.contains(required)) {
+                                possible = false
+                            }
+                            for (other in group.requirements.keys) {
+                                if (graph.getValue(required).excludes.contains(other)) {
+                                    possible = false
+                                }
+                            }
+                        }
+                    }
+                    require(possible) { "SkillTree '$treeId' graph.$nodeId.groups.${group.id} 前置与互斥关系矛盾" }
+                }
+            }
         }
 
         private fun validateNodeLevels(treeId: String, nodes: Map<String, SkillTreeNode>) {

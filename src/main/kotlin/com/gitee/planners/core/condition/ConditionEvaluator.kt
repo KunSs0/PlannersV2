@@ -2,16 +2,13 @@ package com.gitee.planners.core.condition
 
 import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
-import com.gitee.planners.module.script.NovaScriptUnit
 import org.bukkit.entity.Player
 import org.bukkit.Bukkit
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 条件执行器。
@@ -24,45 +21,12 @@ class ConditionEvaluator(
 
     companion object {
 
-        private val propExpressions = ConcurrentHashMap<String, NovaScriptUnit>()
-        private val propExpressionParameters = listOf("player", "profile", "router", "route", "treeId", "nodeId", "nodeLevel")
-
-        /** 在 Workspace load 前登记条件默认 props 中的 Nova 表达式。 */
+        /** 原生条件不需要预编译配置属性；保留空入口以便重载流程保持顺序稳定。 */
         fun prepareConfiguredProperties(configurations: Collection<ConditionConfig>) {
-            for (configuration in configurations) {
-                if (!configuration.expressionProperties) {
-                    continue
-                }
-                for (propertyValue in configuration.props.values) {
-                    if (propertyValue is String) {
-                        if (propertyValue.isNotBlank() && propertyValue.toDoubleOrNull() == null) {
-                            getPropExpression(propertyValue)
-                        }
-                    }
-                }
-            }
         }
 
         /** 每次 Workspace 重建前清除上一代函数句柄，避免旧模块 ID 被复用。 */
         fun resetConfiguredProperties() {
-            propExpressions.clear()
-        }
-
-        private fun getPropExpression(source: String): NovaScriptUnit {
-            val cached = propExpressions[source]
-            if (cached != null) {
-                return cached
-            }
-            val compiled = ScriptManager.compileExpression(
-                "condition-prop",
-                propExpressionParameters,
-                source
-            )
-            val raced = propExpressions.putIfAbsent(source, compiled)
-            if (raced != null) {
-                return raced
-            }
-            return compiled
         }
     }
 
@@ -140,9 +104,6 @@ class ConditionEvaluator(
         session: ConditionSession? = null
     ): VerifyResult {
         val conditionConfigs = collectConditionConfigs(listOf(VerifyRequest("verify", conditions, contextVars)))
-        for (conditionConfig in conditionConfigs) {
-            conditionConfig.registerSources()
-        }
         val prepared = session ?: prepareBlocking(conditions.keys, player)
         return verifyInternal(conditions, player, contextVars, prepared)
     }
@@ -172,7 +133,6 @@ class ConditionEvaluator(
         var groupInputBuildNanos: Long = 0L
         var conditionInvokeNanos: Long = 0L
         var resultApplyNanos: Long = 0L
-        var novaInvokeNanos: Long = 0L
         var propertyExpressionCount: Int = 0
         var conditionInvokeCount: Int = 0
         var conditionInvokeFailureCount: Int = 0
@@ -181,25 +141,6 @@ class ConditionEvaluator(
         private val groups = LinkedHashMap<String, GroupProfiling>()
 
         /** 累加一次属性表达式的预编译纯函数调用耗时。 */
-        fun recordPropertyInvocation(invocation: ScriptManager.PureInvocation) {
-            propertyExpressionCount += 1
-            novaInvokeNanos += invocation.elapsedNanos
-        }
-
-        /** 累加一次按条件 key 批量执行的脚本调用。 */
-        fun recordConditionInvocation(key: String, inputCount: Int, invocation: ScriptManager.PureInvocation) {
-            conditionInvokeCount += 1
-            novaInvokeNanos += invocation.elapsedNanos
-            var group = groups[key]
-            if (group == null) {
-                group = GroupProfiling()
-                groups[key] = group
-            }
-            group.inputCount += inputCount
-            group.invokeCount += 1
-            group.totalNanos += invocation.elapsedNanos
-        }
-
         /** 记录批处理调用在脚本执行前后抛出的异常。 */
         fun recordConditionInvokeFailure(exception: Exception) {
             conditionInvokeFailureCount += 1
@@ -229,8 +170,6 @@ class ConditionEvaluator(
             text.append(conditionInvokeFailureCount)
             text.append(",apply=")
             text.append(formatMicros(resultApplyNanos))
-            text.append(",novaInvoke=")
-            text.append(formatMicros(novaInvokeNanos))
             text.append("}")
             if (firstConditionInvokeFailure != null) {
                 text.append(" error=")
@@ -359,10 +298,6 @@ class ConditionEvaluator(
             }
             profiling.conditionInvokeNanos += System.nanoTime() - invocationStart
             val encoded = evaluation.encoded
-            val invocation = evaluation.invocation
-            if (invocation != null) {
-                profiling.recordConditionInvocation(key, group.size, invocation)
-            }
             val resultApplyStart = System.nanoTime()
             if (encoded.length != group.size) {
                 throw IllegalStateException("Condition batch returned an invalid result length: $key")
@@ -420,42 +355,48 @@ class ConditionEvaluator(
     }
 
     /**
-     * 执行消耗（校验通过后调用）。
+     * 准备可回滚成本（校验通过后调用），准备失败时释放此前所有句柄。
      *
      * @param conditions 条件引用：key → override props
      * @param player     Bukkit Player
      * @param contextVars 额外上下文变量（供 props 公式引用）
      */
-    fun consume(
+    fun prepareConsume(
         conditions: Map<String, Map<String, Any>>,
         player: Player,
         contextVars: Map<String, Any> = emptyMap(),
         session: ConditionSession? = null
-    ) {
+    ): LearningCosts {
         val preparedSession = session ?: prepareBlocking(conditions.keys, player)
         val profile = player.plannersTemplate
         val router = profile.playerRouter
         val route = if (router != null) router.currentRoute else null
 
-        for ((key, overrideProps) in conditions) {
-            val cfg = configurations()[key]
-            if (cfg == null) {
-                error("Unknown condition key: $key")
+        val costs = ArrayList<LearningCost>()
+        try {
+            for ((key, overrideProps) in conditions) {
+                val cfg = configurations()[key]
+                if (cfg == null) {
+                    error("Unknown condition key: $key")
+                }
+                if (!cfg.consumable) {
+                    continue
+                }
+                val resolvedProps = resolveProps(cfg, overrideProps, player, profile, router, route, contextVars)
+                val cost = preparedSession.execution(key).prepareConsume(player, profile, router, route, resolvedProps.values)
+                check(cost != null) { "消费条件 $key 必须返回 LearningCost" }
+                costs.add(cost)
             }
-            if (cfg.consume == null) {
-                continue
-            }
-            cfg.registerSources()
-            val resolvedProps = resolveProps(cfg, overrideProps, player, profile, router, route, contextVars)
-            preparedSession.execution(key).consume(player, profile, router, route, resolvedProps.values)
+        } catch (failure: Throwable) {
+            LearningCosts(costs).rollback(failure)
+            throw failure
         }
+        return LearningCosts(costs)
     }
 
     // ---- 内部 ----
 
-    /**
-     * 合并默认 props 与调用处覆盖值，并将 String 值通过预编译函数计算为实际值。
-     */
+    /** 合并条件模板默认参数与节点覆盖参数，并校验类型参数。 */
     private fun resolveProps(
         configuration: ConditionConfig,
         overrideProps: Map<String, Any>,
@@ -469,54 +410,7 @@ class ConditionEvaluator(
         val merged = configuration.props.toMutableMap()
         merged.putAll(overrideProps)
         configuration.validateProperties(merged)
-        if (!configuration.expressionProperties) {
-            return ResolvedProps(merged)
-        }
-
-        val resolved = LinkedHashMap<String, Any>()
-        for ((k, v) in merged) {
-            resolved[k] = when (v) {
-                is String -> {
-                    evalValue(v, player, profile, router, route, contextVars, profiling)
-                }
-                else -> v
-            }
-        }
-        return ResolvedProps(resolved)
-    }
-
-    /**
-     * 对 String 值尝试求值：
-     * 1. 纯数字 → 转为 Int/Double
-     * 2. Nova 公式 → 调用预编译函数并返回结果
-     */
-    private fun evalValue(
-        expr: String,
-        player: Player,
-        profile: PlayerTemplate,
-        router: PlayerRouter?,
-        route: PlayerRoute?,
-        contextVars: Map<String, Any>,
-        profiling: BatchProfiling?
-    ): Any {
-        // 纯数字字符串
-        val doubleValue = expr.toDoubleOrNull()
-        if (doubleValue != null) {
-            if (doubleValue % 1 == 0.0) {
-                return doubleValue.toInt()
-            } else {
-                return doubleValue
-            }
-        }
-        val expressionStart = System.nanoTime()
-        val result = invokeExpression(expr, player, profile, router, route, contextVars, profiling)
-        if (profiling != null) {
-            profiling.propertyExpressionNanos += System.nanoTime() - expressionStart
-        }
-        if (result == null) {
-            error("Condition property expression returned null: $expr")
-        }
-        return result
+        return ResolvedProps(merged)
     }
 
     /**
@@ -528,46 +422,6 @@ class ConditionEvaluator(
             result = result.replace("{props.$key}", value.toString())
         }
         return result
-    }
-
-    private fun invokeExpression(
-        source: String,
-        player: Player,
-        profile: PlayerTemplate,
-        router: PlayerRouter?,
-        route: PlayerRoute?,
-        contextVars: Map<String, Any>,
-        profiling: BatchProfiling?
-    ): Any? {
-        val function = getPropExpression(source)
-        if (profiling != null) {
-            val invocation = ScriptManager.invokePureProfiled(
-                function,
-                player,
-                profile,
-                router,
-                route,
-                contextVars["treeId"],
-                contextVars["nodeId"],
-                contextVars["nodeLevel"]
-            )
-            profiling.recordPropertyInvocation(invocation)
-            return invocation.value
-        }
-        return ScriptManager.invokePure(
-            function,
-            player,
-            profile,
-            router,
-            route,
-            contextVars["treeId"],
-            contextVars["nodeId"],
-            contextVars["nodeLevel"]
-        )
-    }
-
-    private fun getPropExpression(source: String): NovaScriptUnit {
-        return Companion.getPropExpression(source)
     }
 
     /**
