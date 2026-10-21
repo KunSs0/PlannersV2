@@ -51,5 +51,15 @@ class SkillInputExec private constructor() {
             check(resumed.compareAndSet(false, true)) { "同一次技能释放只能恢复一次。" }
             return continuation(directing)
         }
+
+        /**
+         * 放弃本次释放，不再执行最终校验、资源提交和技能脚本。
+         *
+         * 与 [resume] 共享同一个一次性标记；两者只能有一个生效。
+         */
+        fun cancel() {
+            // 客户端拒绝或播放请求失效时，不能把未执行的技能继续交给最终提交链。
+            check(resumed.compareAndSet(false, true)) { "同一次技能释放只能恢复或取消一次。" }
+        }
     }
 }
