@@ -29,8 +29,7 @@ object ConditionFactory {
         val consumeValue = section["consume"]
         require(consumeValue == null || consumeValue is Boolean) { "条件 $key 的 consume 必须是 Boolean" }
         val consume = section.getBoolean("consume", false)
-        val config = NativeConditionConfig(key, type, props, hint, consume)
-        config.validateProperties(props)
-        return config
+        // 模板只提供默认参数，缺项由节点 levels 覆盖，合并后由 SkillNode 校验完整参数。
+        return NativeConditionConfig(key, type, props, hint, consume)
     }
 }

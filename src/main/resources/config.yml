@@ -18,10 +18,14 @@ settings:
         step: 0.5
         y-offset: 0.15
   # 技能树学习条件模板
+  # props 为默认值，节点 levels.<等级> 中的同名字段覆盖；unset 为占位值，节点必须覆盖。
   condition:
     # weapon/min 在节点 levels 中填写；武器 ID 直接引用 HaiderCore 配置。
     weapon_mastery:
       type: weapon_mastery
+      props:
+        weapon: unset
+        min: 0
       hint: "需要武器 {props.weapon} 熟练度 Lv{props.min}"
 
     player_lv:
@@ -33,7 +37,7 @@ settings:
     need_skill:
       type: skill
       props:
-        skillId: ""
+        skillId: unset
         min: 1
       hint: "需要{props.skillId} Lv{props.min}"
 
