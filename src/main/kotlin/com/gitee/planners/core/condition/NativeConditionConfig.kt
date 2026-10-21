@@ -5,10 +5,12 @@ import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
-import com.gitee.haidercore.common.item.ItemBind
-import com.gitee.haidercore.common.item.ItemProviderRegistry
-import org.bukkit.entity.Player
+import com.gitee.planners.api.item.ItemProviders
 import org.bukkit.Bukkit
+import org.bukkit.Material
+import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
+import taboolib.common.platform.function.warning
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
@@ -156,30 +158,58 @@ class NativeConditionConfig(
     }
 
     /** 物品 matcher，支持 provider:item-id 和 Minecraft 材质 ID。 */
-    private class ItemMatcher private constructor(private val raw: String) {
-        private val bind: ItemBind? = if (raw.startsWith("zap:")) ItemBind.parse(raw, "zap") else null
+    private class ItemMatcher private constructor(
+        private val raw: String,
+        private val material: Material?,
+        private val providerId: String?,
+        private val itemId: String?
+    ) {
 
-        fun matches(item: org.bukkit.inventory.ItemStack): Boolean {
+        fun matches(item: ItemStack): Boolean {
             if (item.type.isAir) {
                 return false
             }
-            if (bind != null) {
-                val provider = ItemProviderRegistry.get(bind.providerId)
-                return provider.matches(item, bind.itemId)
+            val expected = material
+            if (expected != null) {
+                return item.type == expected
             }
-            return item.type.key.toString() == raw
+            val provider = providerId!!
+            if (provider == VANILLA_PROVIDER) {
+                return item.type.key.toString() == raw
+            }
+            val library = ItemProviders.getOrNull(provider) ?: return missingProvider(provider)
+            return library.matches(item, itemId!!)
         }
 
         companion object {
+
+            /** 原版命名空间，其余 provider 段一律按物品库适配器处理。 */
+            private const val VANILLA_PROVIDER = "minecraft"
+
+            private val REFERENCE = Regex("[a-z0-9_.-]+:[a-z0-9_./-]+")
+
+            /** 已告警的缺失物品库，避免每次求值重复刷屏。 */
+            private val missingProviders = HashSet<String>()
+
             fun parse(raw: String): ItemMatcher {
                 val value = raw.trim()
                 require(value.isNotEmpty()) { "item matcher 不能为空" }
-                if (value.startsWith("zap:")) {
-                    ItemBind.parse(value, "zap")
-                } else {
-                    require(value.matches(Regex("[a-z0-9_.-]+:[a-z0-9_./-]+"))) { "item matcher 必须是 provider:item-id 或 Minecraft 材质 ID" }
+                val separator = value.indexOf(':')
+                if (separator <= 0 || separator >= value.length - 1) {
+                    val material = Material.matchMaterial(value)
+                    require(material != null) { "item matcher 必须是 provider:item-id 或 Minecraft 材质 ID：$value" }
+                    return ItemMatcher(value, material, null, null)
                 }
-                return ItemMatcher(value)
+                require(REFERENCE.matches(value)) { "item matcher 必须是 provider:item-id 或 Minecraft 材质 ID：$value" }
+                return ItemMatcher(value, null, value.substring(0, separator), value.substring(separator + 1))
+            }
+
+            /** 物品库未注册属于配置与本服插件不匹配，条件按不满足处理并告警一次。 */
+            private fun missingProvider(id: String): Boolean {
+                if (missingProviders.add(id)) {
+                    warning("物品库未注册：$id，引用该物品库的学习条件始终不满足")
+                }
+                return false
             }
 
             fun count(player: Player, raw: String): Int {

@@ -12,6 +12,7 @@ import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.core.skill.timing.SkillTimingPolicy
 import com.gitee.planners.module.script.ScriptManager
+import com.gitee.planners.module.compat.zaphkiel.ZaphkielItemProvider
 import com.gitee.planners.module.script.PlannersCoreModule
 import com.gitee.planners.module.script.YamlNovaSourceCollector
 import com.gitee.planners.util.configNodeToMap
@@ -160,12 +161,31 @@ object Planners : Plugin() {
         LOGO.forEach(::info)
         ScriptManager.prepare()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())
+        // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
+        registerItemProviders()
         Registries.init()
         SkillPointsManager.prepareSources()
         DefaultMagicPointProvider.expressionUpperLimit.get()
         DefaultMagicPointProvider.expressionResume.get()
         AttributeProxy.register(HookAttributeSource())
 
+    }
+
+    /**
+     * 注册可选物品库适配器。
+     *
+     * 适配器只在对应物品库插件已启用时注册，避免在未安装时触发类链接错误；
+     * 未注册的物品库引用由条件求值阶段按不满足处理。
+     */
+    private fun registerItemProviders() {
+        if (!Bukkit.getPluginManager().isPluginEnabled("Zaphkiel")) {
+            return
+        }
+        try {
+            ZaphkielItemProvider.register()
+        } catch (error: LinkageError) {
+            warning("Zaphkiel 物品库 API 缺失或不匹配，zap: 物品条件将始终不满足", error)
+        }
     }
 
     /**
