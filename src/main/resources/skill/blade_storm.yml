@@ -18,8 +18,6 @@ __option__:
       expression: 15 * level + 60
   max-level: 18
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&b剑刃风暴 Lv" + this.level)
   }

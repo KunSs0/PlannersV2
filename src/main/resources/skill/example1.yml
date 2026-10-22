@@ -13,8 +13,6 @@ __option__:
     rectZ: [2, 4, 3, 3]
 
 action: |
-  import "planners.core"
-
   fun execute() {
     // 获取当前状态索引，默认为 0
     var idx = if (this.sender.hasMetadata("x1.status")) this.sender.getMetadata("x1.status") else 0

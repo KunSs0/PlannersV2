@@ -16,8 +16,6 @@ __option__:
       expression: 50 * level + 100
   max-level: 1
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&6绝境求生触发")
   }

@@ -15,8 +15,6 @@ __option__:
       expression: 20 * level + 40
   max-level: 4
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&e反击 Lv" + this.level)
   }

@@ -15,8 +15,6 @@ __option__:
       expression: 15 * level + 80
   max-level: 3
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&a冲锋 Lv" + this.level)
   }

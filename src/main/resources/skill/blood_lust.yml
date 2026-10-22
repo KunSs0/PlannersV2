@@ -18,8 +18,6 @@ __option__:
       expression: 5 * level
   max-level: 2
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&4嗜血 Lv" + this.level)
   }

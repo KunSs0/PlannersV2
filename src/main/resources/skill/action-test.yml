@@ -5,8 +5,6 @@ __option__:
   category: [active]
 
 action: |
-  import "planners.core"
-
   fun execute() {
     // 测试默认 sender (不传 targets，使用 LeastType.SENDER)
     ProxyDamage.Companion.of(this.sender.getInstance(), 10).execute()

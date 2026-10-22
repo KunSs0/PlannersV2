@@ -18,8 +18,6 @@ __option__:
       expression: 18 * level + 40
   max-level: 10
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&a旋风斩 Lv" + this.level)
   }

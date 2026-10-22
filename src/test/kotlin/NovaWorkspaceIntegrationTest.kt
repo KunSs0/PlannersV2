@@ -1,7 +1,6 @@
 import com.gitee.planners.core.config.ImmutableVariable
 import com.novalang.runtime.NovaScheduler
 import com.novalang.runtime.SchedulerHolder
-import com.gitee.planners.module.script.PlannersCoreModule
 import com.gitee.planners.module.script.ScriptManager
 import com.novalang.runtime.compilation.SourceUnit
 import org.junit.jupiter.api.AfterEach
@@ -30,7 +29,6 @@ class NovaWorkspaceIntegrationTest {
      */
     @BeforeEach
     fun registerCoreModule() {
-        PlannersCoreModule.register()
     }
 
     /**
@@ -39,7 +37,6 @@ class NovaWorkspaceIntegrationTest {
     @AfterEach
     fun clearScheduler() {
         SchedulerHolder.clear()
-        PlannersCoreModule.unregister()
     }
 
     /**

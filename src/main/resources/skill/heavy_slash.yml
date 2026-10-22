@@ -15,8 +15,6 @@ __option__:
       expression: 35 * level + 80
   max-level: 15
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&c释放重斩 Lv" + this.level)
   }

@@ -18,8 +18,6 @@ __option__:
     attributes:
       - "攻击力 +${10 * level}"
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("技能释放成功")
   }

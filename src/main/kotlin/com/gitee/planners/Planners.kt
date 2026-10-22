@@ -13,7 +13,6 @@ import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.core.skill.timing.SkillTimingPolicy
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.compat.zaphkiel.ZaphkielItemProvider
-import com.gitee.planners.module.script.PlannersCoreModule
 import com.gitee.planners.module.script.YamlNovaSourceCollector
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
@@ -151,7 +150,6 @@ object Planners : Plugin() {
      *  |_|    |_|\__,_|_| |_|_| |_|\___|_|  |___/     \/  |____/
      */
     override fun onLoad() {
-        PlannersCoreModule.register()
     }
 
     override fun onEnable() {
@@ -203,7 +201,6 @@ object Planners : Plugin() {
     override fun onDisable() {
         // 全部回调与任务由编译程序一次性释放。
         ScriptManager.close()
-        PlannersCoreModule.unregister()
     }
 
 }

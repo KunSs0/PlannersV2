@@ -15,8 +15,6 @@ __option__:
       expression: 20 * level + 50
   max-level: 3
 action: |
-  import "planners.core"
-
   fun execute() {
     this.sender.sendMessage("&a释放斩击 Lv" + this.level)
     ProxyDamage.Companion.builder().source(this.sender.getInstance()).target(this.target.getInstance()).damage(this.damage).cause(DamageCause.Companion.of("SKILL")).build().execute()
