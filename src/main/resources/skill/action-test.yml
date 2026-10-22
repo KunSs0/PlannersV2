@@ -5,6 +5,9 @@ __option__:
   category: [active]
 
 action: |
+  import java com.gitee.planners.api.damage.ProxyDamage
+  import java com.gitee.planners.module.script.finder.TargetFinder
+
   fun execute() {
     // 测试默认 sender (不传 targets，使用 LeastType.SENDER)
     ProxyDamage.Companion.of(this.sender.getInstance(), 10).execute()

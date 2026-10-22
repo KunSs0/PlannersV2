@@ -4,7 +4,6 @@ import com.novalang.runtime.SchedulerHolder
 import com.gitee.planners.module.script.ScriptManager
 import com.novalang.runtime.compilation.SourceUnit
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -25,13 +24,6 @@ class NovaWorkspaceIntegrationTest {
     lateinit var workspaceRoot: Path
 
     /**
-     * 每个 Workspace 测试前注册 Planners 进程级共享模块。
-     */
-    @BeforeEach
-    fun registerCoreModule() {
-    }
-
-    /**
      * 每个测试后释放进程级测试调度器。
      */
     @AfterEach
@@ -40,14 +32,14 @@ class NovaWorkspaceIntegrationTest {
     }
 
     /**
-     * 验证 Planners 核心模块可由虚拟入口显式导入并执行。
+     * 验证虚拟入口可加载并执行纯表达式模块。
      */
     @Test
     fun shouldLoadWorkspaceAndInvokeVirtualExpression() {
         installDirectScheduler()
         val virtual = SourceUnit(
             "@planners/generated/test-expression",
-            "import \"planners.core\"\n\nfun evaluate(level) {\n    return level * 2\n}\n",
+            "fun evaluate(level) {\n    return level * 2\n}\n",
             workspaceRoot.resolve("config.yml"),
             "settings.test.expression",
             1,
@@ -72,7 +64,7 @@ class NovaWorkspaceIntegrationTest {
     fun shouldCompileTargetFinderRectOverloads() {
         installDirectScheduler()
         val source =
-                "import \"planners.core\"\n\n" +
+                "import java com.gitee.planners.module.script.finder.TargetFinder\n\n" +
                 "fun selectWithoutOffset(finder: TargetFinder) {\n" +
                 "    return finder.rect(1, 3, 15)\n" +
                 "}\n\n" +
@@ -104,7 +96,8 @@ class NovaWorkspaceIntegrationTest {
     fun shouldCompileMythicThreatGainApi() {
         installDirectScheduler()
         val source =
-            "import \"planners.core\"\n\n" +
+            "import java com.gitee.planners.api.mythic.MythicAPI\n" +
+                "import java com.gitee.planners.module.script.finder.TargetFinder\n\n" +
                 "fun applyThreat(sender) {\n" +
                 "    var targets = TargetFinder(sender.getBukkitLocation(), sender.getInstance()).range(10).build()\n" +
                 "    return MythicAPI.threat.gain(sender.getInstance(), 100.0, targets)\n" +

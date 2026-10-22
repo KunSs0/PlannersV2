@@ -6,11 +6,9 @@ Planners 使用新版 `nova-runtime` 的 `NovaCompiler`、`CompiledNova` 和程�
 
 `script/nova.config.yml` 只维护 `version`、`name`、`aliases` 等编译元数据。公共启动入口由宿主明确指定为 `@planners/bootstrap`。旧的根级 `sources`、`entries`、`runtime` 配置必须删除；需要跨插件库时显式添加 `@nova` 别名。
 
-技能 YAML 的完整 `action` 模块统一声明 `fun execute()`。`main` 保留给公共模块初始化；YAML 动作中声明 `main` 会拒绝加载并指出原始 YAML 来源，不提供旧入口兼容。
+技能 YAML 的完整 `action` 模块统一声明 `fun execute()`。`main` 保留给公共模块初始化；YAML 动作中声明 `main` 会拒绝加载并指出原始 YAML 来源，不提供旧入口兼容。访问 Planners Java API 时，在模块头部按全限定类名显式声明 `import java`。
 
 ```nova
-import "planners.core"
-
 fun execute() {
     this.sender.sendMessage("技能等级 " + this.level)
 }
