@@ -9,12 +9,14 @@ import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.script.YamlNovaSourceCollector
+import com.gitee.planners.util.PhaseProfiler
 import com.gitee.planners.util.builtin.AutoReloadable
 import com.gitee.planners.util.builtin.createConfigSectionBuiltin
 import com.gitee.planners.util.builtin.createDeepMultiBuiltin
 import com.gitee.planners.util.builtin.createDeepSingleBuiltin
 import taboolib.module.configuration.Configuration
 import taboolib.common.platform.function.getDataFolder
+import taboolib.common.platform.function.info
 
 object Registries {
 
@@ -88,35 +90,43 @@ object Registries {
      * 任一新源码都只能在新程序加载前登记。
      */
     fun handleReload() {
+        val profiler = PhaseProfiler("Reload profile")
         // 先完整销毁旧资源树，确保旧调度任务与业务作用域不进入新配置代次。
-        ScriptManager.close()
-        Planners.config.reload()
+        profiler.measure("close") { ScriptManager.close() }
+        profiler.measure("config") { Planners.config.reload() }
         // 重载直接入口也必须清除旧施法续体，并严格校验新时间策略。
-        com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()
-        Planners.skillTimingPolicy.get()
-        ScriptManager.prepare()
-        YamlNovaSourceCollector.collect(getDataFolder().toPath())
+        profiler.measure("sessions") {
+            com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()
+        }
+        profiler.measure("timing") { Planners.skillTimingPolicy.get() }
+        profiler.measure("prepare") { ScriptManager.prepare() }
+        profiler.measure("collect") { YamlNovaSourceCollector.collect(getDataFolder().toPath()) }
         // Registry 重读会构造业务对象，并在 程序加载 前登记其虚拟 SourceUnit。
-        AutoReloadable.onReload()
-        SkillPointsManager.prepareSources()
-        DefaultMagicPointProvider.expressionUpperLimit.get()
-        DefaultMagicPointProvider.expressionResume.get()
-        ScriptManager.load()
+        profiler.measure("registries") { AutoReloadable.onReload() }
+        profiler.measure("points") { SkillPointsManager.prepareSources() }
+        profiler.measure("magic") {
+            DefaultMagicPointProvider.expressionUpperLimit.get()
+            DefaultMagicPointProvider.expressionResume.get()
+        }
+        profiler.measure("nova") { ScriptManager.load() }
+        info(profiler.summary(ScriptManager.diagnostics().toString()))
     }
 
     /**
      * 按业务依赖顺序加载所有注册表，使构造阶段发现的 Nova 源码进入启动模块图。
      */
     fun init() {
+        val profiler = PhaseProfiler("Startup profile")
         // 按业务依赖顺序加载完整配置快照，使全部 Nova 虚拟源在 程序加载 前登记。
-        JOB.load()
-        SKILL.load()
-        SKILL_TREE.load()
-        ROUTER.load()
-        CURRENCY.load()
-        LEVEL.load()
-        STATE.load()
-        KEYBINDING.load()
+        profiler.measure("job") { JOB.load() }
+        profiler.measure("skill") { SKILL.load() }
+        profiler.measure("skilltree") { SKILL_TREE.load() }
+        profiler.measure("router") { ROUTER.load() }
+        profiler.measure("currency") { CURRENCY.load() }
+        profiler.measure("level") { LEVEL.load() }
+        profiler.measure("state") { STATE.load() }
+        profiler.measure("keybinding") { KEYBINDING.load() }
+        info(profiler.summary(ScriptManager.diagnostics().toString()))
     }
 
 }

@@ -28,6 +28,19 @@ fun onHit(payload) {
 
 单次加载独占一个编译程序。业务调用绑定互相隔离，公共模块状态在当前程序内共享；Bukkit 业务入口由 Nova 宿主主线程执行。重载先关闭旧程序，再读取配置和编译新程序；关闭会取消其任务、注销资源并使旧回调失效。编译失败直接报告，不回滚旧程序。
 
+## 重载耗时诊断
+
+启动与 `/pl reload` 会分别输出一行阶段耗时：
+
+```text
+Startup profile: total=...ms, job=...ms, skill=...ms, ...
+Reload profile: total=...ms, close=...ms, config=...ms, collect=...ms, registries=...ms, nova=...ms; novaSources=..., origin(...)
+```
+
+`registries` 阶段构造业务对象并登记虚拟源码；`nova` 阶段一次性编译并初始化新程序。`origin` 统计 YAML 来源定位：`content` 为 YAML 收集阶段正文索引命中，`file` 为按业务 ID 文件名命中，`scan` 为最后回退的全目录扫描。正常情况下 `scan` 应为 0，重复出现说明新增的合成源码缺少可推导的 ID 或来源。
+
+`novaCache` 是跨重载复用的模块字节码组数量。Nova 按模块源码指纹缓存不可变字节码，每次加载仍创建独立类加载器；未变更模块在重载时直接复用，变更模块只重新编译自身。缓存超过 4096 组或插件停用时清空。
+
 ## 验证
 
 JDK 21 下执行 `./gradlew.bat --no-daemon build`。源码合成测试覆盖真实 Planners 编译入口的初始化、程序状态隔离、调用绑定隔离、主线程切换、任务取消、回调失效与旧 main 拒绝加载；默认资源测试保留全部 YAML 脚本的编译检查。

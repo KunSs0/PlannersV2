@@ -14,6 +14,7 @@ import com.gitee.planners.core.skill.timing.SkillTimingPolicy
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.compat.zaphkiel.ZaphkielItemProvider
 import com.gitee.planners.module.script.YamlNovaSourceCollector
+import com.gitee.planners.util.PhaseProfiler
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -191,7 +192,9 @@ object Planners : Plugin() {
      */
     override fun onActive() {
         // load 会解析全部物理入口与配置构造阶段登记的虚拟 SourceUnit。
-        ScriptManager.load()
+        val profiler = PhaseProfiler("Nova startup profile")
+        profiler.measure("load") { ScriptManager.load() }
+        info(profiler.summary(ScriptManager.diagnostics().toString()))
         info("[Planners Nova] Program is active")
     }
 
@@ -201,6 +204,8 @@ object Planners : Plugin() {
     override fun onDisable() {
         // 全部回调与任务由编译程序一次性释放。
         ScriptManager.close()
+        // 插件卸载后不再需要跨重载字节码缓存。
+        ScriptManager.clearCompilationCache()
     }
 
 }

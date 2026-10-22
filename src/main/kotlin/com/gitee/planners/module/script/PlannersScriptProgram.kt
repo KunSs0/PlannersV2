@@ -86,11 +86,17 @@ class PlannersScriptProgram private constructor(private val program: CompiledNov
          *
          * @param configFile 编译别名与诊断配置。
          * @param sources 具有原始 YAML 来源映射的虚拟模块。
+         * @param cache 跨程序复用的字节码产物缓存；只共享不可变字节码，不共享脚本类。
          * @param configure 安装宿主类加载器与类型能力。
          * @return 尚未初始化的独立程序。
          * @throws IllegalArgumentException 动作仍声明保留入口 main 时抛出。
          */
-        fun compile(configFile: Path, sources: Collection<SourceUnit>, configure: (Nova) -> Unit): PlannersScriptProgram {
+        fun compile(
+            configFile: Path,
+            sources: Collection<SourceUnit>,
+            cache: BytecodeArtifactCache = BytecodeArtifactCache(),
+            configure: (Nova) -> Unit
+        ): PlannersScriptProgram {
             val imports = StringBuilder("import \"@planners/bootstrap\"\n")
             for (source in sources) {
                 imports.append("import \"").append(source.moduleId).append("\"\n")
@@ -99,10 +105,14 @@ class PlannersScriptProgram private constructor(private val program: CompiledNov
             configure(nova)
             val metadata = CompilationConfigLoader().load(configFile)
             val entry = SourceUnit("planners.program", imports.toString(), configFile, null, 1, 0, null)
-            val program = NovaCompiler().compile(nova, entry, metadata, sources, BytecodeArtifactCache())
+            val program = NovaCompiler().compile(nova, entry, metadata, sources, cache)
             try {
                 // 编译器先完成语法检查和来源映射，再拒绝保留入口。
                 for (source in sources) {
+                    // 绝大多数模块不包含 main，先用正文预筛，避免每次重载重复解析全部源码。
+                    if (!source.sourceText.contains("main")) {
+                        continue
+                    }
                     val parsed = Parser(Lexer(source.sourceText, source.moduleId), source.moduleId).parse()
                     for (declaration in parsed.declarations) {
                         require(declaration !is FunDecl || declaration.name != "main") {
