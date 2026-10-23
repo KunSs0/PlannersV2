@@ -225,6 +225,27 @@ class PlayerRouter(
     }
 
     /**
+     * 将当前等级应得的累计技能点与已发放总量对齐。
+     *
+     * 已发放总量由可用余额与累计消耗推导，重复调用不会重复补发；
+     * 已消费点数保持不变，只补足目标累计值与已发放总量之间的差额。
+     *
+     * @param targetTotal 当前等级对应的累计技能点。
+     * @return 本次实际补发的点数。
+     */
+    fun reconcileSkillPoints(targetTotal: Int): Int {
+        synchronized(this) {
+            val delta = targetTotal - skillPointsCurrent - skillPointsUsed
+            if (delta <= 0) {
+                return 0
+            }
+            skillPointsCurrent += delta
+            save()
+            return delta
+        }
+    }
+
+    /**
      * 直接消费职业线技能点并安排保存；节点学习改由数据库事务统一消费。
      * @param amount 需要扣除的技能点。
      * @return 当前余额是否足够完成扣除。

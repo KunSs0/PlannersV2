@@ -428,12 +428,24 @@ settings:
 
 降级时增量可能为负，current 最低为 0。
 
+初始化与重载校正：
+
+```
+档案加载 / 首次选择职业 / 插件重载
+  → target = 累计点数(当前等级)
+  → granted = skillPointsCurrent + skillPointsUsed
+  → delta = target - granted
+  → delta > 0 时补发到 skillPointsCurrent，保留 skillPointsUsed
+```
+
+校正只补足差额，不追回已发放或已消费点数；重复加载、重连和重载不会重复发放。
+
 #### 3.4.4 SkillPointsManager
 
 ```kotlin
 object SkillPointsManager {
     init()                                 // Planners.onEnable() 调用，加载配置
-    reloadConfig()                         // PluginReloadEvents 时重新加载，清除缓存
+    reloadConfig()                         // PluginReloadEvents 时清除缓存并校正在线玩家
 
     fun getAvailable(route: PlayerRoute): Int       // → route.skillPointsCurrent
     fun takePoints(route: PlayerRoute, n: Int): Boolean  // → route.takeSkillPoints(n)
@@ -441,7 +453,7 @@ object SkillPointsManager {
 }
 ```
 
-`addPoints` 由 `PlayerLevelChangeEvent` 监听器内部调用 `route.addSkillPoints()`。
+`addPoints` 由 `PlayerLevelChangeEvent` 监听器内部调用 `route.addSkillPoints()`；档案加载、首次选职业和重载由 `reconcile` 调用 `route.reconcileSkillPoints()` 补足差额。
 
 #### 3.4.5 JS 上下文
 
@@ -485,11 +497,11 @@ object SkillPointsManager {
 |---------|------|
 | `ImmutableSkill` | 不存在，node key 即其 id |
 | `PlayerSkill` | 不变，已有 `level` 字段即技能树等级 |
-| `PlayerRoute` | 已新增 `skillPointsCurrent` / `skillPointsUsed` + `addSkillPoints()` / `takeSkillPoints()` + 内部类 `SkillTree`（learn/upgrade/getLevel/canLearn/canUpgrade） |
+| `PlayerRoute` | 已新增 `skillPointsCurrent` / `skillPointsUsed` + `addSkillPoints()` / `takeSkillPoints()` / `reconcileSkillPoints()` + 内部类 `SkillTree`（learn/upgrade/getLevel/canLearn/canUpgrade） |
 | `PlayerTemplate` | 不变 |
 | `Database` | 已新增 `updateSkillPoints()` 接口方法 |
 | `DatabaseLocal` / `DatabaseSQL` | `planners_route` 表已新增 `sp_current` / `sp_used` 列 + 迁移 + `updateSkillPoints()` |
-| `SkillPointsManager` | ✅ 已完成 — 配置加载、等级事件监听、累计计算（带缓存） |
+| `SkillPointsManager` | ✅ 已完成 — 配置加载、等级事件监听、累计计算（带缓存）、初始化与重载差额校正 |
 | `SkillPointsFunctions` | ✅ 已完成 — JS 全局函数 `availablePoints()` / `takePoints()` |
 | `ConditionConfig` | ✅ 已完成 — 条件配置数据类（exper/props/hint/consume） |
 | `ConditionRegistry` | ✅ 已完成 — 加载 `settings.condition` + PluginReloadEvents 重载 |
