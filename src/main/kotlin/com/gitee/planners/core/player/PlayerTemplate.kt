@@ -7,10 +7,27 @@ import com.gitee.planners.core.config.Leveling
 import com.gitee.planners.core.config.level.AlgorithmLevel
 import com.gitee.planners.core.database.Database
 import com.gitee.planners.api.event.player.PlayerLevelChangedEvent
+import com.gitee.planners.api.PlayerTemplateAPI
+import com.gitee.planners.api.event.player.PlayerRouteClearedEvent
+import com.gitee.planners.core.attribute.AttributeProxy
+import com.gitee.planners.core.skill.directing.DirectingSessionManager
+import com.gitee.planners.core.skill.timing.SkillCastingSessions
+import com.gitee.planners.module.compat.attribute.AttributeDriver
+import com.gitee.planners.module.compat.attribute.AttributeProvider
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submitAsync
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Level
 
+/**
+ * 玩家在线档案及其当前职业线的统一访问入口。
+ *
+ * @property id 玩家档案的持久化 ID。
+ * @property onlinePlayer 档案所属的在线玩家。
+ * @param initialPlayerRouter 加载时绑定的职业线，无职业时为 null。
+ * @param map 加载的档案元数据。
+ */
 class PlayerTemplate(
     val id: Long,
     val onlinePlayer: Player,
@@ -20,14 +37,50 @@ class PlayerTemplate(
 
     var playerRouter = initialPlayerRouter
 
+    /**
+     * 在主线程提交职业清空、取消未完成释放并重算属性，随后异步持久化。
+     *
+     * 完成事件表示内存和属性已经提交，不等待数据库删除；持久化失败独立记录，
+     * 不恢复旧职业。重复清空不再次通知或删除数据。
+     *
+     * @throws IllegalStateException 调用线程、档案身份或属性系统未就绪时抛出。
+     */
     fun clearPlayerRouter() {
+        // 在任何状态变更前拒绝异步调用、退出玩家和已经被替换的档案。
+        check(Bukkit.isPrimaryThread()) { "清空职业必须在 Bukkit 主线程执行" }
+        check(onlinePlayer.isOnline && PlayerTemplateAPI.getOrNull(onlinePlayer.uniqueId) === this) {
+            "清空职业需要当前在线且已就绪的玩家档案"
+        }
         val router = playerRouter
         if (router == null) {
             return
         }
+        check(!AttributeProvider.reloading) { "属性系统重载期间不能清空职业" }
+        checkNotNull(AttributeDriver.current()) { "清空职业前必须注册属性驱动" }
+        // 先断开有效技能入口，再取消持有旧技能续体的会话。
         playerRouter = null
-        submitAsync {
-            Database.INSTANCE.deletePlayerRouter(router)
+        SkillCastingSessions.cancel(onlinePlayer)
+        DirectingSessionManager.cancel(onlinePlayer)
+        // 只替换 Planners 的聚合来源，装备等其他来源继续由属性系统保留。
+        AttributeProxy.sync(onlinePlayer)
+        PlayerRouteClearedEvent(this, router.bindingId, router.routerId).call()
+        // 持久化是独立异步业务，只捕获旧身份，不再读写当前内存路由。
+        val playerId = onlinePlayer.uniqueId
+        try {
+            submitAsync {
+                try {
+                    Database.INSTANCE.deletePlayerRouter(router)
+                } catch (failure: Throwable) {
+                    Bukkit.getLogger().log(Level.SEVERE,
+                        "[Planners] 职业已从内存清空，但持久化删除失败: player=$playerId, router=${router.bindingId}",
+                        failure)
+                }
+            }
+        } catch (failure: Throwable) {
+            // 调度失败也属于独立持久化故障，不能改变内存提交的结果。
+            Bukkit.getLogger().log(Level.SEVERE,
+                "[Planners] 职业已从内存清空，但无法提交持久化删除任务: player=$playerId, router=${router.bindingId}",
+                failure)
         }
     }
 

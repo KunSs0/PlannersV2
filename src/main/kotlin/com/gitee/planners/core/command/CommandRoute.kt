@@ -37,8 +37,12 @@ object CommandRoute {
         PlayerRouteTransferUI.openTo(player)
     }
 
+    /**
+     * 统一入口完成内存与属性提交后立即反馈，不等待异步持久化。
+     */
     @CommandBody
     val clear = with { player ->
+        // 清空入口返回即表示内存完成，持久化异常由独立异步任务记录。
         player.plannersTemplate.clearPlayerRouter()
         player.sendLang("player-route-clear")
     }

@@ -24,8 +24,12 @@ object AttributeProvider {
 
     private val generation = AtomicLong()
 
+    /**
+     * 属性配置重载期间禁止提交需要立即生效的职业清空。
+     */
     @Volatile
-    private var reloading = false
+    var reloading = false
+        private set
 
     /**
      * 使已提交任务失效，重载失败时也不允许旧配置写回。

@@ -514,9 +514,17 @@ class DatabaseLocal : Database {
         }
     }
 
+    /**
+     * 只删除已清空职业线的记录，避免迟到任务删除重新选职创建的数据。
+     *
+     * @param router 清空时捕获的旧职业线实例。
+     */
     override fun deletePlayerRouter(router: PlayerRouter) {
-        val routes = getPlayerRoutes(router.userId, router.routerId)
-        val routeIds = routes.map { it.bindingId }
+        // 使用旧实例中的记录身份，不按玩家和职业配置重新查询当前职业线。
+        val routeIds = ArrayList<Long>()
+        for (route in router.getRoutes()) {
+            routeIds.add(route.bindingId)
+        }
         if (routeIds.isNotEmpty()) {
             tableSkill.delete(dataSource) {
                 where { "route" inside routeIds.toTypedArray() }
@@ -524,11 +532,8 @@ class DatabaseLocal : Database {
             tableSkillTreeNode.delete(dataSource) {
                 where { "route" inside routeIds.toTypedArray() }
             }
-        }
-        tableRoute.delete(dataSource) {
-            where {
-                "user" eq router.userId
-                "router" eq router.routerId
+            tableRoute.delete(dataSource) {
+                where { "id" inside routeIds.toTypedArray() }
             }
         }
         tableRouter.delete(dataSource) {
