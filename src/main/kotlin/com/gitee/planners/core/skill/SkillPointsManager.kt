@@ -90,7 +90,7 @@ object SkillPointsManager {
         if (router == null) {
             return
         }
-        if (router.currentRouteId < 0) {
+        if (router.currentRouteId == -1L) {
             return
         }
         val level = router.level

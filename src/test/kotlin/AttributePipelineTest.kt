@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture
  * 执行真实属性汇总、驱动注册及事件刷新，仅模拟 Bukkit、调度与等级算法边界。
  */
 class AttributePipelineTest {
+    private val persistence = PersistenceTestScope()
 
     private val pending = ArrayList<PlatformExecutor.PlatformRunnable>()
     private val services = HashMap<String, Any?>()
@@ -104,6 +105,7 @@ class AttributePipelineTest {
      */
     @AfterEach
     fun cleanup() {
+        persistence.close()
         // 先失效排队任务，再移除测试档案与来源。
         AttributeDriver.unregister(driver)
         AttributeProvider.invalidate()

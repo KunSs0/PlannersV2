@@ -13,7 +13,8 @@ import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.ImmutableSkillTree
 import com.gitee.planners.core.config.SkillTreeNode
 import com.gitee.planners.core.config.SkillTreeSkillNode
-import com.gitee.planners.core.database.Database
+import com.gitee.planners.core.database.ProfilePersistence
+import com.gitee.planners.core.database.RecordIdentity
 import com.gitee.planners.core.script.proxy.ProxyPlayerRoute
 import com.gitee.planners.core.script.proxy.ProxyNodeInfo
 import com.gitee.planners.core.script.proxy.ProxyRouteTarget
@@ -23,6 +24,15 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.util.concurrent.CompletableFuture
 
+/**
+ * 玩家单个职业阶段，主线程拥有学习状态，持久化仅消费字段快照。
+ * @property bindingId 稳定阶段身份，不随后台生成主键改变。
+ * @property routerId 职业线配置标识。
+ * @property parentId 父阶段运行时身份，-1 表示无父阶段。
+ * @property jobId 职业阶段配置标识。
+ * @param skills 已加载的技能。
+ * @param nodeStates 已加载的学习节点。
+ */
 class PlayerRoute(
     val bindingId: Long,
     val routerId: String,
@@ -31,6 +41,9 @@ class PlayerRoute(
     skills: List<PlayerSkill>,
     nodeStates: List<PlayerSkillTreeNodeState>
 ) : ProxyRouteTarget<Player> {
+
+    /** 数据库身份由后台插入绑定，运行时阶段身份始终不变。 */
+    val persistenceId = RecordIdentity(bindingId)
 
     val router: ImmutableRouter
         get() = Registries.ROUTER.getOrNull(routerId) ?: error("Could not find router with id '$routerId'")
@@ -319,7 +332,7 @@ class PlayerRoute(
      * @param player 发起学习的在线玩家。
      * @param treeId 当前阶段绑定的技能树。
      * @param nodeId 本次购买或升级的实际节点。
-     * @return 完成持久化及学习事件后结束的请求。
+     * @return 完成内存扣费、节点发布和学习事件的请求，不等待数据库。
      */
     fun advanceNode(player: Player, treeId: String, nodeId: String): CompletableFuture<Void> {
         return CompletableFuture.completedFuture(Unit).thenComposeAsync({
@@ -354,13 +367,13 @@ class PlayerRoute(
     }
 
     /**
-     * 在主线程重检请求，准备成本并同步提交，再发布节点状态和通知。
+     * 在主线程重检请求，提交外部成本与内存，再发布通知并异步持久化。
      *
      * @param player 发起请求的在线玩家。
      * @param tree 准备条件时捕获的技能树。
      * @param node 本次学习的真实节点。
      * @param session 已准备完成的外部条件。
-     * @return 节点记录、技能记录和学习事件完成后的请求。
+     * @return 内存和事件完成后的请求，数据库失败不退款。
      */
     private fun advanceNodeInternal(
         player: Player,
@@ -387,19 +400,31 @@ class PlayerRoute(
             newSkill = getImmutableSkill(node.skillId)
             check(newSkill != null) { "节点对应技能不存在：${node.skillId}" }
         }
-        // 准备不扣费；数据库及外部成本提交期间不让出主线程。
+        // 准备不扣费；全部校验和外部扣除仅在主线程完成，不执行 SQL。
         val costs = evaluator.prepareConsume(conditions, player, createConditionContext(treeId, nodeId, targetLevel), session)
-        Database.INSTANCE.purchaseSkillTreeNode(router, this, treeId, nodeId, currentLevel, costs, newSkill) { result, points ->
-            router.publishLearningPoints(points)
-            nodeStatesByKey[nodeStateKey(treeId, nodeId)] = result.state
-            val skill = result.skill
-            if (skill != null) {
-                registerSkill(skill)
-                router.updateEquippedIndex(skill)
-            }
+        val points = costs.skillPoints()
+        require(router.skillPointsCurrent >= points) { "技能点不足" }
+        Math.addExact(router.skillPointsUsed, points)
+        var state = nodeStatesByKey[nodeStateKey(treeId, nodeId)]
+        if (state == null) {
+            state = PlayerSkillTreeNodeState(RecordIdentity.next(), treeId, nodeId, currentLevel)
         }
-        // 提交后事件异常继续传播，但不能退款或撤销已提交节点。
-        PlayerSkillTreeNodeEvent(player.plannersTemplate, this, tree, node, currentLevel, targetLevel).call()
+        var skill: PlayerSkill? = null
+        if (newSkill != null) {
+            skill = PlayerSkill(RecordIdentity.next(), newSkill.id, newSkill.startedLevel)
+        }
+        // 扣费本身失败仍按逆序恢复外部资源；数据库不进入该回滚边界。
+        costs.commit()
+        router.publishLearningPoints(points)
+        state.level = targetLevel
+        nodeStatesByKey[nodeStateKey(treeId, nodeId)] = state
+        if (skill != null) {
+            registerSkill(skill)
+            router.updateEquippedIndex(skill)
+        }
+        ProfilePersistence.saveLearning(router, this, state, skill) {
+            PlayerSkillTreeNodeEvent(player.plannersTemplate, this, tree, node, currentLevel, targetLevel).call()
+        }
         return CompletableFuture.completedFuture(null)
     }
 

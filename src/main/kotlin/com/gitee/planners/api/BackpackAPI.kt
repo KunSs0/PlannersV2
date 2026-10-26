@@ -1,15 +1,12 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
 import com.gitee.planners.api.event.player.BackpackEquipEvent
 import com.gitee.planners.api.event.player.BackpackPageSwitchEvent
-import com.gitee.planners.core.database.Database
+import com.gitee.planners.core.database.ProfilePersistence
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
-import org.bukkit.entity.Player
-import taboolib.common.platform.function.submitAsync
 
 object BackpackAPI {
 
@@ -55,8 +52,12 @@ object BackpackAPI {
         if (playerRouter != null) {
             playerRouter.updateEquippedIndex(skill)
         }
-        BackpackEquipEvent.Post(template, skill, page, slot).call()
-        submitAsync { Database.INSTANCE.updateSkill(skill) }
+        try {
+            BackpackEquipEvent.Post(template, skill, page, slot).call()
+        } finally {
+            // 内存与索引已完成，后台只读取此时捕获的固定字段。
+            ProfilePersistence.saveSkill(skill)
+        }
     }
 
     /**
@@ -96,7 +97,8 @@ object BackpackAPI {
         if (playerRouter != null) {
             playerRouter.updateEquippedIndex(skill)
         }
-        submitAsync { Database.INSTANCE.updateSkill(skill) }
+        // 不将可变技能对象交给异步线程读取。
+        ProfilePersistence.saveSkill(skill)
     }
 
     /** 按按键 ID 查找技能（用于释放链路） */

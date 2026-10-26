@@ -9,7 +9,7 @@ import taboolib.platform.type.BukkitProxyEvent
  * 数据库删除仍异步执行，监听器不能将此事件视为持久化成功通知。
  *
  * @property template 已提交清空的当前玩家档案。
- * @property previousBindingId 被清空的旧路由记录 ID。
+ * @property previousBindingId 被清空的旧路由运行时身份，新建后尚未重新加载时可为负数。
  * @property previousRouterId 被清空的职业线配置 ID。
  */
 class PlayerRouteClearedEvent(

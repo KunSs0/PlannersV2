@@ -5,7 +5,7 @@ package com.gitee.planners.core.condition
  * commit 部分失败也必须允许 rollback，且两个方法均须支持重复调用。
  */
 interface LearningCost {
-    /** 返回交由节点数据库事务统一扣除的技能点数量；外部资源返回零。 */
+    /** 返回主线程节点编排统一扣除的技能点数量；外部资源返回零。 */
     fun skillPoints(): Int
 
     /** 提交已准备资源；不得异步调度实际扣除。 */

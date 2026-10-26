@@ -1,11 +1,12 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.player.*
-import com.gitee.planners.api.job.KeyBinding
 import com.gitee.planners.api.template.ProfileOperatorImpl
 import com.gitee.planners.core.config.ImmutableRoute
 import com.gitee.planners.core.database.Database
+import com.gitee.planners.core.database.ProfilePersistence
+import com.gitee.planners.core.condition.ConditionMainThread
+import org.bukkit.event.player.PlayerQuitEvent
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerSkill
@@ -18,8 +19,6 @@ import org.bukkit.event.player.PlayerJoinEvent
 import taboolib.common.platform.Schedule
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.info
-import taboolib.common.platform.function.submitAsync
-import taboolib.common5.util.startsWithAny
 import taboolib.platform.util.onlinePlayers
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -27,6 +26,9 @@ import java.util.concurrent.CompletableFuture
 object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
 
     val OPERATOR = ProfileOperatorImpl()
+
+    /** 主线程拥有的登录代际，退出或再次登录使旧查询结果失效。 */
+    private val loading = HashMap<UUID, Any>()
 
     val Player.plannersLoaded: Boolean
         get() = containsKey(uniqueId)
@@ -61,15 +63,15 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
      * @return CompletableFuture<PlayerRoute>
      */
     fun setPlayerRoute(player: Player, route: ImmutableRoute): CompletableFuture<PlayerRoute> {
-        val template = player.plannersTemplate
-        if (PlayerSetRouteEvent.Pre(template, route).call()) {
-            return PlayerTemplateAPI.OPERATOR.createPlayerRoute(template, route).thenApply {
-                PlayerSetRouteEvent.Post(template, it).call()
-                it
+        // 主线程完成可取消前置事件；内存提交完成后返回，不绑定数据库阶段。
+        return CompletableFuture.supplyAsync({
+            val template = player.plannersTemplate
+            if (PlayerSetRouteEvent.Pre(template, route).call()) {
+                OPERATOR.createPlayerRoute(template, route)
+            } else {
+                CompletableFuture.completedFuture<PlayerRoute>(null)
             }
-        }
-
-        return CompletableFuture.completedFuture(null)
+        }, ConditionMainThread).thenCompose { result -> result }
     }
 
     /**
@@ -268,49 +270,65 @@ object PlayerTemplateAPI : MutableRegistryInMap<UUID, PlayerTemplate>() {
     }
 
     /**
-     * 加载
+     * 后台串行读取档案，回主线程验证登录代际后发布内存与加载事件。
+     * @param e 本次登录事件。
      */
     @SubscribeEvent
     private fun handleProfileLinked(e: PlayerJoinEvent) {
-        submitAsync(delay = 5) {
-            if (e.player.isOnline) {
-                val template = Database.INSTANCE.getPlayerProfile(e.player)
-//                 更新到玩家默认技能实例
-                template.executeUpdatedDefaultSkill().thenAccept {
-                    this@PlayerTemplateAPI[e.player.uniqueId] = template
-                    info("Loaded player profile for ${e.player.name} (${e.player.uniqueId})")
-                    PlayerProfileLoadedEvent(template).call()
-                }
+        val player = e.player
+        val playerId = player.uniqueId
+        val ticket = Any()
+        loading[playerId] = ticket
+        ProfilePersistence.read("加载档案 player=$playerId") {
+            Database.INSTANCE.getPlayerProfile(player)
+        }.thenAcceptAsync({ template ->
+            // SQL 完成不代表玩家仍处于同一登录会话。
+            if (player.isOnline && loading[playerId] === ticket) {
+                loading.remove(playerId)
+                this@PlayerTemplateAPI[playerId] = template
+                info("Loaded player profile for ${player.name} ($playerId)")
+                PlayerProfileLoadedEvent(template).call()
             }
+        }, ConditionMainThread).exceptionally { failure ->
+            org.bukkit.Bukkit.getLogger().log(java.util.logging.Level.SEVERE, "[Planners] 发布档案失败: player=$playerId", failure)
+            null
         }
     }
 
     /**
-     * 同步更新配置节能
+     * 主线程最后捕获元数据并注销档案，防止迟到加载覆盖下次登录。
+     * @param e 退出事件。
      */
     @SubscribeEvent
-    fun e(e: PluginReloadEvents.Post) {
-        submitAsync {
-            this@PlayerTemplateAPI.values().forEach { it.executeUpdatedDefaultSkill() }
+    private fun handleProfileUnlinked(e: PlayerQuitEvent) {
+        val playerId = e.player.uniqueId
+        loading.remove(playerId)
+        val template = remove(playerId)
+        if (template != null) {
+            saveMetadata(template)
         }
     }
 
-    /**
-     * 保存 metadata 资源
-     */
-    @Schedule(async = true, period = 20)
+    /** 周期性在主线程释放变更集合，后台只保存已捕获字段。 */
+    @Schedule(period = 20)
     private fun handleMetadataUpdater() {
-        onlinePlayers.forEach { player ->
-            val template = this.getOrNull(player.uniqueId) ?: return@forEach
-            template.release().forEach inner@{ (key, data) ->
-                // 内置字段不保存
-                if (key.startsWith("__")) {
-                    return@inner
-                }
-                Database.INSTANCE.updateMetadata(template, key, data)
+        for (player in onlinePlayers) {
+            val template = getOrNull(player.uniqueId)
+            if (template != null) {
+                saveMetadata(template)
             }
         }
     }
 
-
+    /**
+     * 捕获一个档案的元数据变更，不在后台遍历可变集合。
+     * @param template 已加载的在线或刚退出档案。
+     */
+    private fun saveMetadata(template: PlayerTemplate) {
+        for ((key, data) in template.release()) {
+            if (!key.startsWith("__")) {
+                ProfilePersistence.saveMetadata(template.id, key, data)
+            }
+        }
+    }
 }

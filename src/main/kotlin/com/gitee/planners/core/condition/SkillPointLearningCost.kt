@@ -1,7 +1,7 @@
 package com.gitee.planners.core.condition
 
 /**
- * 技能点成本声明，由学习存储事务扣除，句柄本身不修改档案。
+ * 技能点成本声明，由主线程学习编排器扣除，句柄本身不修改档案。
  * @property amount 非负技能点数量。
  */
 class SkillPointLearningCost(private val amount: Int) : LearningCost {
@@ -14,12 +14,12 @@ class SkillPointLearningCost(private val amount: Int) : LearningCost {
         return amount
     }
 
-    /** 技能点与节点由数据库统一提交，不在资源阶段修改。 */
+    /** 技能点与节点由主线程统一提交，不在外部资源阶段重复扣除。 */
     override fun commit() {
         // 无外部资源需要扣除。
     }
 
-    /** 数据库负责技能点回滚，内存直到成功后才发布。 */
+    /** 外部资源失败时技能点尚未发布，无需恢复；数据库失败不回滚内存。 */
     override fun rollback() {
         // 无外部资源需要恢复。
     }

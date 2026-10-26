@@ -16,10 +16,16 @@ class LearningCosts(private val costs: List<LearningCost>) {
         return total
     }
 
-    /** 按准备顺序同步扣除全部外部资源，异常交由事务入口统一处理。 */
+    /** 主线程按准备顺序扣除全部外部资源；仅扣费自身失败时恢复，不包含持久化。 */
     fun commit() {
-        for (cost in costs) {
-            cost.commit()
+        try {
+            for (cost in costs) {
+                cost.commit()
+            }
+        } catch (failure: Throwable) {
+            // 外部资源的同步提交失败属于业务失败，数据库失败不走此入口。
+            rollback(failure)
+            throw failure
         }
     }
 
@@ -37,17 +43,4 @@ class LearningCosts(private val costs: List<LearningCost>) {
         }
     }
 
-    /**
-     * 同步执行外部资源扣除和持久化；成功返回后不得因通知异常退款。
-     * @param persist 在同一主线程内完成提交的存储操作。
-     * @return 已提交的存储结果。
-     */
-    fun <T> purchase(persist: (Int, () -> Unit) -> T): T {
-        try {
-            return persist(skillPoints(), ::commit)
-        } catch (failure: Throwable) {
-            rollback(failure)
-            throw failure
-        }
-    }
 }

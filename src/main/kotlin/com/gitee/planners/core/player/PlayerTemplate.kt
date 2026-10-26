@@ -5,7 +5,9 @@ import com.gitee.planners.api.common.metadata.MetadataContainer
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.config.Leveling
 import com.gitee.planners.core.config.level.AlgorithmLevel
-import com.gitee.planners.core.database.Database
+import com.gitee.planners.core.database.ProfilePersistence
+import com.gitee.planners.core.database.RecordIdentity
+import com.gitee.planners.core.condition.ConditionMainThread
 import com.gitee.planners.api.event.player.PlayerLevelChangedEvent
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.event.player.PlayerRouteClearedEvent
@@ -16,9 +18,7 @@ import com.gitee.planners.module.compat.attribute.AttributeDriver
 import com.gitee.planners.module.compat.attribute.AttributeProvider
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import taboolib.common.platform.function.submitAsync
 import java.util.concurrent.CompletableFuture
-import java.util.logging.Level
 
 /**
  * 玩家在线档案及其当前职业线的统一访问入口。
@@ -63,24 +63,8 @@ class PlayerTemplate(
         DirectingSessionManager.cancel(onlinePlayer)
         // 只替换 Planners 的聚合来源，装备等其他来源继续由属性系统保留。
         AttributeProxy.sync(onlinePlayer)
-        PlayerRouteClearedEvent(this, router.bindingId, router.routerId).call()
-        // 持久化是独立异步业务，只捕获旧身份，不再读写当前内存路由。
-        val playerId = onlinePlayer.uniqueId
-        try {
-            submitAsync {
-                try {
-                    Database.INSTANCE.deletePlayerRouter(router)
-                } catch (failure: Throwable) {
-                    Bukkit.getLogger().log(Level.SEVERE,
-                        "[Planners] 职业已从内存清空，但持久化删除失败: player=$playerId, router=${router.bindingId}",
-                        failure)
-                }
-            }
-        } catch (failure: Throwable) {
-            // 调度失败也属于独立持久化故障，不能改变内存提交的结果。
-            Bukkit.getLogger().log(Level.SEVERE,
-                "[Planners] 职业已从内存清空，但无法提交持久化删除任务: player=$playerId, router=${router.bindingId}",
-                failure)
+        ProfilePersistence.deleteRouter(router) {
+            PlayerRouteClearedEvent(this, router.bindingId, router.routerId).call()
         }
     }
 
@@ -211,30 +195,30 @@ class PlayerTemplate(
         return getSkill(immutable.id)
     }
 
+    /**
+     * 在主线程复用或创建技能并立即注册，后台 INSERT 不决定业务完成时机。
+     * @param id 职业线中的技能配置 ID。
+     * @return 已注册的运行时技能，不等待生成数据库主键。
+     */
     fun getSkill(id: String): CompletableFuture<PlayerSkill> {
-        val router = playerRouter
-        if (router == null) {
-            error("You must specify a player router")
-        }
-        val route = router.getRouteForSkill(id)
-        if (route == null) {
-            error("The skill $id does not exist in router ${router.routerId}")
-        }
-        val existing = router.getSkillOrNull(id)
-        if (existing != null) {
-            return CompletableFuture.completedFuture(existing)
-        }
-        val immutableSkill = route.getImmutableSkill(id)
-        if (immutableSkill == null) {
-            error("The skill $id does not exist in route ${route.jobId}")
-        }
-        return Database.INSTANCE.createPlayerSkill(this, route, immutableSkill).thenApply { playerSkill ->
-            route.registerSkill(playerSkill)
-            router.updateEquippedIndex(playerSkill)
-            playerSkill
-        }
+        return CompletableFuture.supplyAsync({
+            check(onlinePlayer.isOnline && PlayerTemplateAPI.getOrNull(onlinePlayer.uniqueId) === this) { "玩家档案已经失效" }
+            val router = checkNotNull(playerRouter) { "玩家尚未选择职业线" }
+            val route = checkNotNull(router.getRouteForSkill(id)) { "技能 $id 不属于当前职业线" }
+            val existing = router.getSkillOrNull(id)
+            if (existing != null) {
+                existing
+            } else {
+                val immutable = checkNotNull(route.getImmutableSkill(id)) { "职业阶段没有技能 $id" }
+                val skill = PlayerSkill(RecordIdentity.next(), immutable.id, immutable.startedLevel)
+                // 先注册，重复请求立即复用同一实例，后台不回填在线集合。
+                route.registerSkill(skill)
+                router.updateEquippedIndex(skill)
+                ProfilePersistence.createSkill(route, skill)
+                skill
+            }
+        }, ConditionMainThread)
     }
-
     fun getRegisteredSkillOrNull(id: String): PlayerSkill? {
         val router = playerRouter
         if (router == null) {
@@ -261,10 +245,6 @@ class PlayerTemplate(
             result[slotId] = getEquippedSkillByBackpackSlot(page, slotId)
         }
         return result
-    }
-
-    fun executeUpdatedDefaultSkill(): CompletableFuture<Void> {
-        return CompletableFuture.completedFuture(null)
     }
 
     fun getRegisteredSkill(): Map<String, PlayerSkill> {

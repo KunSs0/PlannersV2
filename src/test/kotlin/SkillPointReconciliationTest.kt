@@ -18,12 +18,14 @@ class SkillPointReconciliationTest {
     private val services = LinkedHashMap<String, Any?>()
     private val executorState = LinkedHashMap<Field, Any?>()
     private lateinit var executorDelegate: Any
+    private lateinit var persistence: PersistenceTestScope
 
     /**
      * 安装只入队不执行的调度器，避免校正触发真实数据库保存。
      */
     @BeforeEach
     fun prepare() {
+        persistence = PersistenceTestScope()
         val executorField = Class.forName("taboolib.common.platform.function.ExecutorKt").getDeclaredField("executorService\$delegate")
         executorField.isAccessible = true
         executorDelegate = executorField.get(null)
@@ -46,6 +48,7 @@ class SkillPointReconciliationTest {
      */
     @AfterEach
     fun cleanup() {
+        persistence.close()
         pending.clear()
         for ((field, value) in executorState) {
             field.set(executorDelegate, value)

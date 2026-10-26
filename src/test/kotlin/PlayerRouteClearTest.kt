@@ -5,6 +5,9 @@ import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.player.PlayerRouteClearedEvent
 import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.database.Database
+import com.gitee.planners.core.database.ProfileStore
+import com.gitee.planners.core.database.ProfileSnapshot
+import com.gitee.planners.core.database.RecordIdentity
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.skill.ExecutableResult
@@ -47,6 +50,8 @@ class PlayerRouteClearTest {
     private lateinit var router: PlayerRouter
     private lateinit var driver: AttributeDriver
     private lateinit var database: Database
+    private lateinit var store: ProfileStore
+    private lateinit var persistence: PersistenceTestScope
     private lateinit var source: AttributeSource
     private lateinit var logger: Logger
     private var rejectAsync = false
@@ -57,6 +62,9 @@ class PlayerRouteClearTest {
      */
     @BeforeEach
     fun prepare() {
+        persistence = PersistenceTestScope { task ->
+            taboolib.common.platform.function.submitAsync { task.run() }
+        }
         // 还原全部懒加载状态，避免测试向其他用例泄漏数据库或调度器。
         val executorField = Class.forName("taboolib.common.platform.function.ExecutorKt")
             .getDeclaredField("executorService\$delegate")
@@ -91,6 +99,8 @@ class PlayerRouteClearTest {
         router = Mockito.mock(PlayerRouter::class.java)
         Mockito.`when`(router.bindingId).thenReturn(42L)
         Mockito.`when`(router.routerId).thenReturn("synthetic-job")
+        Mockito.`when`(router.persistenceId).thenReturn(RecordIdentity(42L))
+        Mockito.`when`(router.getRoutes()).thenReturn(emptyList())
         template = PlayerTemplate(1L, player, router, emptyMap())
         PlayerTemplateAPI[player.uniqueId] = template
         Mockito.doAnswer { call ->
@@ -108,6 +118,8 @@ class PlayerRouteClearTest {
             null
         }.`when`(manager).callEvent(Mockito.any())
         database = Mockito.mock(Database::class.java)
+        store = Mockito.mock(ProfileStore::class.java)
+        Mockito.`when`(database.store).thenReturn(store)
         val databaseField = Database.Companion::class.java.getDeclaredField("INSTANCE\$delegate")
         databaseField.isAccessible = true
         val delegate = databaseField.get(null)
@@ -155,6 +167,7 @@ class PlayerRouteClearTest {
      */
     @AfterEach
     fun cleanup() {
+        persistence.close()
         // 先取消续体和驱动，再恢复全局依赖。
         SkillCastingSessions.cancel(player)
         AttributeDriver.unregister(driver)
@@ -195,7 +208,127 @@ class PlayerRouteClearTest {
         assertEquals(1, events.size)
         assertEquals(1, pending.size)
         runTask(pending.removeAt(0))
-        Mockito.verify(database).deletePlayerRouter(router)
+        val deletion = ProfileSnapshot.Deletion(router.persistenceId, emptyList())
+        Mockito.verify(store).deleteRouter(deletion)
+    }
+
+    /** 新选职在数据库未执行时已经完成；监听器追加保存不能抢在创建之前。 */
+    @Test
+    fun routeCreationPublishesMemoryBeforeDatabaseAndOrdersReentrantWrites() {
+        template.playerRouter = null
+        val definition = Mockito.mock(com.gitee.planners.core.config.ImmutableRoute::class.java)
+        Mockito.`when`(definition.routerId).thenReturn("synthetic-job")
+        Mockito.`when`(definition.id).thenReturn("stage")
+        val request = PlayerTemplateAPI.setPlayerRoute(player, definition)
+        assertTrue(request.isDone)
+        val stage = request.join()
+        val selected = checkNotNull(template.playerRouter)
+        assertSame(stage, selected.currentRoute)
+        assertTrue(stage.bindingId < -1)
+        assertEquals(listOf(stage), selected.routeLine)
+        Mockito.verifyNoInteractions(database)
+        assertEquals(1, pending.size)
+        // 数据库尚未启动时仍允许改变内存点数，固定快照保留各自值。
+        selected.addSkillPoints(3)
+        assertEquals(3, selected.skillPointsCurrent)
+        runTask(pending.removeAt(0))
+        val calls = Mockito.mockingDetails(store).invocations.toList()
+        assertEquals(listOf("createRoute", "saveRouter"), calls.map { it.method.name })
+        val initial = calls[0].arguments[0] as ProfileSnapshot.Router
+        val saved = calls[1].arguments[0] as ProfileSnapshot.Router
+        assertEquals(0, initial.points)
+        assertEquals(3, saved.points)
+    }
+
+    /** 成功学习立即更新节点和技能点，SQL 异常不撤销，也不遗留学习所有权。 */
+    @Test
+    fun learningPublishesImmediatelyAndDatabaseFailureDoesNotHoldLearningOwnership() {
+        val state = com.gitee.planners.core.player.PlayerSkillTreeNodeState(21L, "tree", "node", 0)
+        val route = Mockito.spy(com.gitee.planners.core.player.PlayerRoute(11L, "synthetic-job", -1L, "stage", emptyList(), listOf(state)))
+        val conditions = mapOf("points" to mapOf<String, Any>("amount" to 1))
+        val node = com.gitee.planners.core.config.SkillTreeUnlockNode("node", "node", 2,
+            mapOf(1 to conditions, 2 to conditions), com.gitee.planners.core.config.SkillTreeNodePosition(0, 0))
+        val tree = com.gitee.planners.core.config.ImmutableSkillTree("tree", "tree", "none",
+            com.gitee.planners.core.config.TreeType.BASE, mapOf("node" to node), emptyMap())
+        Mockito.doReturn(tree).`when`(route).getSkillTreeOrNull("tree")
+        val evaluator = com.gitee.planners.core.player.PlayerRoute::class.java.getDeclaredField("evaluator")
+        evaluator.isAccessible = true
+        val cost = com.gitee.planners.core.condition.NativeConditionConfig("points", "skill_points", emptyMap(), "点数不足", true)
+        evaluator.set(route, com.gitee.planners.core.condition.ConditionEvaluator { mapOf("points" to cost) })
+        val selected = PlayerRouter(42L, 1L, "synthetic-job", 1, 0, 11L, 5, 0, listOf(route))
+        template.playerRouter = selected
+        val failure = IllegalStateException("SQL stopped")
+        val snapshot = com.gitee.planners.core.database.ProfilePersistence.routerSnapshot(selected).copy(points = 4, used = 1)
+        val routeId = route.persistenceId
+        val nodeData = ProfileSnapshot.Node(state.persistenceId, "tree", "node", 1)
+        Mockito.doThrow(failure).`when`(store).saveLearning(snapshot, routeId, nodeData, null)
+        val first = route.advanceNode(player, "tree", "node")
+        assertTrue(first.isDone)
+        assertFalse(first.isCompletedExceptionally)
+        assertEquals(1, state.level)
+        assertEquals(4, selected.skillPointsCurrent)
+        assertEquals(1, selected.skillPointsUsed)
+        Mockito.verifyNoInteractions(database)
+        // 第一个 SQL 尚未执行，下一次合法学习已经可以继续提交。
+        val second = route.advanceNode(player, "tree", "node")
+        assertTrue(second.isDone)
+        assertFalse(second.isCompletedExceptionally)
+        assertEquals(2, state.level)
+        runTask(pending.removeAt(0))
+        assertSame(failure, persistence.failures.single())
+        assertEquals(2, state.level)
+        assertEquals(3, selected.skillPointsCurrent)
+        assertEquals(2, selected.skillPointsUsed)
+    }
+
+    /** 主线程清空事件重入选择新职业时，旧删除仍排在新创建之前。 */
+    @Test
+    fun notificationReentryKeepsDeletionAheadOfNewCreation() {
+        val replacement = PlayerRouter(RecordIdentity.next(), 1, "synthetic-job", 1, 0, -1, 0, 0, emptyList())
+        val stage = com.gitee.planners.core.player.PlayerRoute(RecordIdentity.next(), "synthetic-job", -1, "stage", emptyList(), emptyList())
+        replacement.registerRoute(stage)
+        replacement.setCurrentRoute(stage)
+        com.gitee.planners.core.database.ProfilePersistence.deleteRouter(router) {
+            // 真实事件边界中再次选职，嵌套完成事件也先发布再调度 SQL。
+            com.gitee.planners.core.database.ProfilePersistence.createRoute(replacement, stage, true) {
+                assertTrue(pending.isEmpty())
+                replacement.addSkillPoints(2)
+            }
+            Mockito.verifyNoInteractions(database)
+        }
+        runTask(pending.removeAt(0))
+        val methods = Mockito.mockingDetails(store).invocations.map { it.method.name }
+        assertEquals(listOf("deleteRouter", "createRoute", "saveRouter"), methods)
+    }
+
+    /** 退出后再次登录，前一次后台加载结果不得覆盖新会话。 */
+    @Test
+    fun lateProfileReadCannotPublishIntoNewLoginSession() {
+        PlayerTemplateAPI.remove(player.uniqueId)
+        val stale = PlayerTemplate(10, player, null, emptyMap())
+        val current = PlayerTemplate(20, player, null, emptyMap())
+        Mockito.`when`(database.getPlayerProfile(player)).thenReturn(stale, current)
+        val join = PlayerTemplateAPI::class.java.getDeclaredMethod("handleProfileLinked", org.bukkit.event.player.PlayerJoinEvent::class.java)
+        val quit = PlayerTemplateAPI::class.java.getDeclaredMethod("handleProfileUnlinked", org.bukkit.event.player.PlayerQuitEvent::class.java)
+        join.isAccessible = true
+        quit.isAccessible = true
+        join.invoke(PlayerTemplateAPI, org.bukkit.event.player.PlayerJoinEvent(player, null as String?))
+        quit.invoke(PlayerTemplateAPI, org.bukkit.event.player.PlayerQuitEvent(player, null as String?))
+        join.invoke(PlayerTemplateAPI, org.bukkit.event.player.PlayerJoinEvent(player, null as String?))
+        assertNull(PlayerTemplateAPI.getOrNull(player.uniqueId))
+        assertEquals(1, pending.size)
+        runTask(pending.removeAt(0))
+        assertSame(current, PlayerTemplateAPI.getOrNull(player.uniqueId))
+        assertTrue(persistence.failures.isEmpty())
+    }
+
+    /** 后端读取接口显式拒绝主线程，不能因外部误用绕开异步提交边界。 */
+    @Test
+    fun backendProfileReadRejectsPrimaryThreadBeforeOpeningConnection() {
+        val local = Mockito.mock(com.gitee.planners.core.database.DatabaseLocal::class.java, Mockito.CALLS_REAL_METHODS)
+        val sql = Mockito.mock(com.gitee.planners.core.database.DatabaseSQL::class.java, Mockito.CALLS_REAL_METHODS)
+        assertThrows(IllegalStateException::class.java) { local.getPlayerProfile(player) }
+        assertThrows(IllegalStateException::class.java) { sql.getPlayerProfile(player) }
     }
 
     /**
@@ -222,14 +355,15 @@ class PlayerRouteClearTest {
     @Test
     fun persistenceFailureDoesNotChangeCommittedMemoryOrNewProfession() {
         val failure = IllegalStateException("synthetic persistence failure")
-        Mockito.doThrow(failure).`when`(database).deletePlayerRouter(router)
+        val deletion = ProfileSnapshot.Deletion(router.persistenceId, emptyList())
+        Mockito.doThrow(failure).`when`(store).deleteRouter(deletion)
         template.clearPlayerRouter()
         val replacement = Mockito.mock(PlayerRouter::class.java)
         template.playerRouter = replacement
         runTask(pending.removeAt(0))
         assertSame(replacement, template.playerRouter)
         assertEquals(1, events.size)
-        Mockito.verify(logger).log(Mockito.eq(Level.SEVERE), Mockito.contains("router=42"), Mockito.same(failure))
+        assertSame(failure, persistence.failures.single())
     }
 
     /**
@@ -244,8 +378,7 @@ class PlayerRouteClearTest {
         assertEquals(1, events.size)
         assertTrue(pending.isEmpty())
         Mockito.verifyNoInteractions(database)
-        Mockito.verify(logger).log(Mockito.eq(Level.SEVERE), Mockito.contains("无法提交持久化删除任务"),
-            Mockito.isA(IllegalStateException::class.java))
+        assertTrue(persistence.failures.single() is IllegalStateException)
     }
 
     /**

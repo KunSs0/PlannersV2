@@ -1,9 +1,6 @@
 package com.gitee.planners.core.database
 
 import com.gitee.planners.api.common.metadata.Metadata
-import com.gitee.planners.api.common.metadata.MetadataTypeToken
-import com.gitee.planners.core.config.ImmutableRoute
-import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerTemplate
 import com.gitee.planners.core.player.PlayerRoute
 import com.gitee.planners.core.player.PlayerRouter
@@ -14,7 +11,6 @@ import taboolib.common.util.unsafeLazy
 import taboolib.module.database.*
 import java.sql.ResultSet
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
 
 class DatabaseSQL : Database {
 
@@ -22,6 +18,10 @@ class DatabaseSQL : Database {
 
     val prefix: String
         get() = Database.option.get().sql!!.getString("table", "planners_v2")!!
+
+    /** 写入器只由数据库队列读取，初始化不会发生在业务主线程。 */
+    override val store: ProfileStore
+        get() = ProfileStore(dataSource, prefix)
 
     val cachedId = mutableMapOf<UUID, Long>()
 
@@ -92,6 +92,7 @@ class DatabaseSQL : Database {
 
     // 该方法最好运行在异步 否则向数据库插入数据时会耗时
     override fun getPlayerProfile(player: Player): PlayerTemplate {
+        check(!org.bukkit.Bukkit.isPrimaryThread()) { "主线程禁止读取数据库档案" }
         val playerRouter = getPlayerRouter(player)
         val metadataMap = getMetadataMap(player)
         return PlayerTemplate(getUserId(player).id, player, playerRouter, metadataMap)
@@ -130,19 +131,19 @@ class DatabaseSQL : Database {
         }
         // 新建用户id
         else {
-            Id(createUserId(player).get(), true)
+            Id(createUserId(player), true)
         }
     }
 
-    private fun createUserId(player: Player): CompletableFuture<Long> {
-        val future = CompletableFuture<Long>()
+    private fun createUserId(player: Player): Long {
+        var createdId: Long? = null
         tableUser.insert(dataSource, "user") {
             value(player.uniqueId.toString())
             onFinally {
-                future.complete(getId(generatedKeys))
+                createdId = getId(generatedKeys)
             }
         }
-        return future
+        return checkNotNull(createdId) { "用户插入未返回生成主键" }
     }
 
     private fun getPlayerRouter(player: Player): PlayerRouter? {
@@ -212,117 +213,7 @@ class DatabaseSQL : Database {
         }
     }
 
-    override fun updateMetadata(template: PlayerTemplate, id: String, metadata: Metadata) {
-
-        // 虚空节点 || 节点超时 删除
-        if (metadata is MetadataTypeToken.Void || metadata.isTimeout()) {
-            tableMetadata.delete(dataSource) { whereWithMetadata(template, id) }
-        }
-        // 更新节点
-        else if (tableMetadata.find(dataSource) { whereWithMetadata(template, id) }) {
-            tableMetadata.update(dataSource) {
-                whereWithMetadata(template, id)
-                set("type", metadata.clazz.name)
-                set("token", Metadata.Loader.toJson(metadata))
-                set("stop_time", metadata.timeoutTick)
-            }
-        }
-        // 插入节点
-        else {
-            tableMetadata.nullableInsert(dataSource) {
-                set("user", template.id)
-                set("node", id)
-                set("type", metadata.clazz.name)
-                set("token", Metadata.Loader.toJson(metadata))
-                set("stop_time", metadata.timeoutTick)
-            }
-        }
-    }
-
-    fun ActionFilterable.whereWithMetadata(template: PlayerTemplate, id: String) {
-        return where {
-            "user" eq template.id
-            "node" eq id
-        }
-    }
-
-    override fun createPlayerSkill(
-        template: PlayerTemplate,
-        route: PlayerRoute,
-        skill: ImmutableSkill
-    ): CompletableFuture<PlayerSkill> {
-        val future = CompletableFuture<PlayerSkill>()
-        tableSkill.insert(dataSource, "route", "node", "level") {
-            value(route.bindingId, skill.id, skill.startedLevel)
-            onFinally {
-                val id = getId(generatedKeys)
-                future.complete(PlayerSkill(id, skill.id, skill.startedLevel))
-            }
-        }
-        return future
-    }
-
-    override fun deleteSkill(vararg skill: PlayerSkill) {
-        tableSkill.delete(dataSource) {
-            where { "id" inside skill.map { it.index }.toTypedArray() }
-        }
-    }
-
-    override fun updateSkill(skill: PlayerSkill) {
-        tableSkill.update(dataSource) {
-            where { "id" eq skill.index }
-            set("level", skill.level)
-            set("equipped", if (skill.equipped) 1 else 0)
-            set("backpack_page", skill.backpackPage)
-            set("backpack_slot", skill.backpackSlot)
-        }
-    }
-
-    /** 同一 JDBC 事务保存节点、技能点和首次技能记录，提交后才发布内存。 */
-    override fun purchaseSkillTreeNode(
-        router: PlayerRouter,
-        route: PlayerRoute,
-        treeId: String,
-        nodeId: String,
-        level: Int,
-        costs: com.gitee.planners.core.condition.LearningCosts,
-        skill: ImmutableSkill?,
-        onCommitted: (SkillTreePurchaseStore.Result, Int) -> Unit
-    ) {
-        // 与职业线后台保存共用对象锁，避免旧技能点在本次事务后覆盖已提交数据。
-        synchronized(router) {
-            dataSource.connection.use { connection ->
-                var points = 0
-                val result = costs.purchase { amount, commit ->
-                    points = amount
-                    SkillTreePurchaseStore(prefix).purchase(
-                        connection, router.bindingId, route.bindingId, treeId, nodeId, level,
-                        router.skillPointsCurrent, router.skillPointsUsed, amount,
-                        skill?.id, skill?.startedLevel ?: 0, commit
-                    )
-                }
-                // 已过提交边界，通知或连接关闭失败不会触发资源退款。
-                onCommitted(result, points)
-            }
-        }
-    }
-
-    override fun createPlayerRoute(
-        router: PlayerRouter,
-        parentId: Long,
-        route: ImmutableRoute
-    ): CompletableFuture<PlayerRoute> {
-        val future = CompletableFuture<PlayerRoute>()
-        tableRoute.insert(dataSource, "user", "router", "parent", "route") {
-            value(router.userId, route.routerId, parentId, route.id)
-            onFinally {
-                future.complete(PlayerRoute(getId(generatedKeys), route.routerId, parentId, route.id, emptyList(), emptyList()))
-            }
-        }
-        return future
-    }
-
-    override fun loadPlayerRouter(userId: Long, routerId: String): PlayerRouter? {
+    private fun loadPlayerRouter(userId: Long, routerId: String): PlayerRouter? {
         return tableRouter.select(dataSource) {
             where {
                 "user" eq userId
@@ -341,67 +232,6 @@ class DatabaseSQL : Database {
                 getInt("sp_used"),
                 getPlayerRoutes(userId, routerId)
             )
-        }
-    }
-
-    override fun createPlayerRouter(userId: Long, routerId: String, initialLevel: Int): PlayerRouter {
-        val future = CompletableFuture<PlayerRouter>()
-        tableRouter.insert(
-            dataSource,
-            "user",
-            "router",
-            "level",
-            "experience",
-            "current_route",
-            "sp_current",
-            "sp_used"
-        ) {
-            value(userId, routerId, initialLevel, 0, -1L, 0, 0)
-            onFinally {
-                val id = getId(generatedKeys)
-                future.complete(PlayerRouter(id, userId, routerId, initialLevel, 0, -1L, 0, 0, emptyList()))
-            }
-        }
-        return future.get()
-    }
-
-    override fun updatePlayerRouter(router: PlayerRouter) {
-        synchronized(router) {
-            tableRouter.update(dataSource) {
-                where { "id" eq router.bindingId }
-                set("level", router.level)
-                set("experience", router.experience)
-                set("current_route", router.currentRouteId)
-                set("sp_current", router.skillPointsCurrent)
-                set("sp_used", router.skillPointsUsed)
-            }
-        }
-    }
-
-    /**
-     * 只删除已清空职业线的记录，避免迟到任务删除重新选职创建的数据。
-     *
-     * @param router 清空时捕获的旧职业线实例。
-     */
-    override fun deletePlayerRouter(router: PlayerRouter) {
-        // 使用旧实例中的记录身份，不按玩家和职业配置重新查询当前职业线。
-        val routeIds = ArrayList<Long>()
-        for (route in router.getRoutes()) {
-            routeIds.add(route.bindingId)
-        }
-        if (routeIds.isNotEmpty()) {
-            tableSkill.delete(dataSource) {
-                where { "route" inside routeIds.toTypedArray() }
-            }
-            tableSkillTreeNode.delete(dataSource) {
-                where { "route" inside routeIds.toTypedArray() }
-            }
-            tableRoute.delete(dataSource) {
-                where { "id" inside routeIds.toTypedArray() }
-            }
-        }
-        tableRouter.delete(dataSource) {
-            where { "id" eq router.bindingId }
         }
     }
 
