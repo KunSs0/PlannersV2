@@ -369,7 +369,7 @@ class PlayerRoute {
 **核心特征**：
 - **职业线路隔离**：点数归属于 `PlayerRoute`，不同线路独立
 - **两级存储**：`current`（当前可用）+ `used`（累计消耗）
-- **公共整数规格**：per-level 和 bonuses 均使用 IntValueSpec，支持有序修正与 level 等级条件
+- **Planners 自有整数规格**：per-level 和 bonuses 均使用 `com.gitee.planners.core.value.IntValueSpec`，支持有序修正与 level 等级条件
 - **无 Provider 层**：点数来源仅等级，直接由 `SkillPointsManager` 在升级事件中计算
 
 #### 3.4.1 存储
@@ -546,7 +546,7 @@ Phase C → PlayerRoute.SkillTree ✅ 已完成
           ├── canLearn / canUpgrade：预览校验（仅校验不消耗）
           └── getLevel / getLearnedSkills
 Phase D → SkillPoints 技能点模块 ✅ 已完成
-          ├── config.yml 加载 per-level / bonuses 公共整数规格
+          ├── config.yml 加载 per-level / bonuses 整数规格
           ├── PlayerRoute 新增 skillPointsCurrent / skillPointsUsed + addSkillPoints / takeSkillPoints
           ├── Database 新增 planners_route.sp_current / sp_used 列 + 迁移
           ├── SkillPointsManager（监听 PlayerLevelChangeEvent、calcAccumulated 带缓存）

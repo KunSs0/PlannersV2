@@ -48,7 +48,6 @@ taboolib {
     version { taboolib = "6.3.0-9ccc4c3" }
 
     relocate("ink.ptms.um", "com.gitee.module.um")
-    relocate("com.gitee.fightcore.common.value", "com.gitee.planners.library.value")
 }
 
 repositories {
@@ -59,10 +58,6 @@ repositories {
 }
 
 // 单元测试不经过 TabooLib 启动器，显式提供配置模块所需的重定位依赖。
-val modifierValueLibrary = configurations.create("modifierValueLibrary") {
-    isTransitive = false
-}
-
 val taboolibTestLibraries = configurations.create("taboolibTestLibraries") {
     isCanBeConsumed = false
     isTransitive = false
@@ -92,10 +87,6 @@ val relocateTaboolibTestLibraries by tasks.registering {
 }
 
 dependencies {
-    compileOnly("com.gitee.fightcore:common:1.0.0")
-    testImplementation("com.gitee.fightcore:common:1.0.0")
-    add(modifierValueLibrary.name, "com.gitee.fightcore:common:1.0.0")
-
     add(taboolibTestLibraries.name, "com.electronwill.night-config:core:3.6.7")
     add(taboolibTestLibraries.name, "org.yaml:snakeyaml:2.6")
     testRuntimeOnly(files(relocatedTaboolibTestLibraries).builtBy(relocateTaboolibTestLibraries))
@@ -195,12 +186,6 @@ tasks.test {
     })
     testLogging {
         showStandardStreams = true
-    }
-}
-
-tasks.jar {
-    from({ modifierValueLibrary.map { zipTree(it) } }) {
-        include("com/gitee/fightcore/common/value/**")
     }
 }
 

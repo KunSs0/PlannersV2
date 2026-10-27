@@ -1,18 +1,17 @@
 package com.gitee.planners.core.skill
 
-import com.gitee.fightcore.common.value.ConditionProps
-import com.gitee.fightcore.common.value.ConditionRef
-import com.gitee.fightcore.common.value.IntValueSpec
-import com.gitee.fightcore.common.value.ModifierValueSpec
-import com.gitee.fightcore.common.value.ValueConditionRegistry
+import com.gitee.planners.core.value.IntValueSpec
 import taboolib.library.configuration.ConfigurationSection
 
 /**
- * 技能点发放规则，数值与条件结构统一由公共 ModifierValueSpec 解析。
+ * 技能点发放规则，数值与条件结构由 Planners 自有的 [IntValueSpec] 解析。
  *
  * 每一级发放与指定等级的一次性奖励由本规则独立持有。
  */
-class SkillPointsPolicy private constructor(private val perLevel: ModifierValueSpec<Int, ConditionRef>, private val bonuses: Map<Int, ModifierValueSpec<Int, ConditionRef>>) {
+class SkillPointsPolicy private constructor(
+    private val perLevel: IntValueSpec,
+    private val bonuses: Map<Int, IntValueSpec>,
+) {
 
     /**
      * 从 Lv1 开始逐级累计，并叠加已经达到等级的阶段奖励。
@@ -42,9 +41,9 @@ class SkillPointsPolicy private constructor(private val perLevel: ModifierValueS
      * @param path 配置路径。
      * @return 非负技能点数量。
      */
-    private fun resolve(value: ModifierValueSpec<Int, ConditionRef>, level: Int, path: String): Int {
+    private fun resolve(value: IntValueSpec, level: Int, path: String): Int {
         try {
-            val result = value.resolve(level) { condition, context -> conditions.matches(condition, context) }
+            val result = value.resolve(level) { condition, context -> condition.matches(context) }
             require(result >= 0) { "技能点不能为负数" }
             return result
         } catch (error: IllegalArgumentException) {
@@ -65,19 +64,11 @@ class SkillPointsPolicy private constructor(private val perLevel: ModifierValueS
     }
 
     companion object {
-        private const val PATH = "settings.skill-points"
-        private val conditions = ValueConditionRegistry<Int>()
 
-        init {
-            conditions.register("level") { level, props ->
-                val minimum = props.getInt("min")
-                val maximum = props.getInt("max")
-                level >= minimum && level <= maximum
-            }
-        }
+        private const val PATH = "settings.skill-points"
 
         /**
-         * 加载每级发放与阶段奖励，拒绝脚本和非等级依赖。
+         * 加载每级发放与阶段奖励，只接受等级条件且不声明动态刷新。
          *
          * @param section 技能点配置节。
          * @return 完整校验后的发放规则。
@@ -90,7 +81,7 @@ class SkillPointsPolicy private constructor(private val perLevel: ModifierValueS
             val perLevel = parseValue(section.get("per-level"), "$PATH.per-level")
             val rawBonuses = section.getConfigurationSection("bonuses")
             require(rawBonuses != null) { "$PATH.bonuses 必须是等级到整数规格的映射，可显式配置为空对象" }
-            val bonuses = LinkedHashMap<Int, ModifierValueSpec<Int, ConditionRef>>()
+            val bonuses = LinkedHashMap<Int, IntValueSpec>()
             for (key in rawBonuses.getKeys(false)) {
                 val level = key.toIntOrNull()
                 require(level != null && level > 0) { "$PATH.bonuses.$key 必须是正整数等级" }
@@ -101,13 +92,13 @@ class SkillPointsPolicy private constructor(private val perLevel: ModifierValueS
         }
 
         /**
-         * 复用公共整数解析器，并限制技能点只能使用等级条件。
+         * 复用整数规格解析器，并限制技能点的取值范围与刷新声明。
          *
          * @param raw 原始配置。
          * @param path 配置路径。
-         * @return 已校验的公共整数规格。
+         * @return 已校验的整数规格。
          */
-        private fun parseValue(raw: Any?, path: String): ModifierValueSpec<Int, ConditionRef> {
+        private fun parseValue(raw: Any?, path: String): IntValueSpec {
             val value = if (raw is ConfigurationSection) {
                 raw.toMap()
             } else {
@@ -116,25 +107,6 @@ class SkillPointsPolicy private constructor(private val perLevel: ModifierValueS
             val spec = IntValueSpec.parse(value, path)
             require(spec.base >= 0) { "$path.base 的技能点不能为负数" }
             require(spec.update.isEmpty()) { "$path.update 不支持动态刷新，技能点仅随等级和配置重载重新计算" }
-            for (modifier in spec.modifiers) {
-                val condition = modifier.condition
-                if (condition != null) {
-                    val conditionPath = "$path.modifiers.${modifier.id}.condition"
-                    require(condition.script == null) { "$conditionPath 不支持脚本条件" }
-                    require(conditions.contains(condition.type)) { "$conditionPath 未注册条件类型 '${condition.type}'，仅支持 level" }
-                    for (key in condition.props.keys) {
-                        require(key == "min" || key == "max") { "$conditionPath.props 包含未知字段 '$key'" }
-                    }
-                    try {
-                        val props = ConditionProps(condition.props)
-                        val minimum = props.getInt("min")
-                        val maximum = props.getInt("max")
-                        require(minimum > 0 && maximum >= minimum) { "必须声明有效的正整数 min/max 等级区间" }
-                    } catch (error: IllegalArgumentException) {
-                        throw IllegalArgumentException("$conditionPath.props 无效：${error.message}", error)
-                    }
-                }
-            }
             return spec
         }
     }
