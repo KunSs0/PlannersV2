@@ -10,6 +10,7 @@ import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.core.config.SkillCategorySpec
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
+import com.gitee.planners.core.skill.SkillPointsPolicy
 import com.gitee.planners.core.skill.timing.SkillTimingPolicy
 import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.compat.zaphkiel.ZaphkielItemProvider
@@ -74,9 +75,9 @@ object Planners : Plugin() {
         }
     }
 
-    @ConfigNode("settings.skill-points.per-level")
-    val skillPointsPerLevel = ConfigNodeTransfer<String, String> {
-        this
+    @ConfigNode("settings.skill-points")
+    val skillPointsPolicy = ConfigNodeTransfer<ConfigurationSection, SkillPointsPolicy> {
+        SkillPointsPolicy.parse(this)
     }
 
     @ConfigNode("settings.damage-causes")
@@ -102,11 +103,6 @@ object Planners : Plugin() {
 
     @ConfigNode("settings.debug.selector.sector.y-offset")
     val sectorSelectorDebugYOffset = 0.15
-
-    @ConfigNode("settings.skill-points.bonuses")
-    val skillPointsBonuses = configNodeToMap { key, value ->
-        Pair(key.toInt(), value as String)
-    }
 
     @ConfigNode("settings.skill.categories")
     val skillCategorySpecs = configNodeToMap { key, value ->
@@ -163,7 +159,7 @@ object Planners : Plugin() {
         // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
         registerItemProviders()
         Registries.init()
-        SkillPointsManager.prepareSources()
+        SkillPointsManager.prepare()
         DefaultMagicPointProvider.expressionUpperLimit.get()
         DefaultMagicPointProvider.expressionResume.get()
         AttributeProxy.register(HookAttributeSource())

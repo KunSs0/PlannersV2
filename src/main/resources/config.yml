@@ -86,14 +86,27 @@ settings:
 
   # 技能点配置
   skill-points:
-    # 每级获得点数，Nova 表达式，变量: level
-    per-level: "if (level <= 30) 3 else 2"
-    # 关键等级额外奖励，Nova 表达式，变量: level
+    # 每级发放整数规格；level 条件按正在累计的等级判断
+    per-level:
+      base: 2
+      modifiers:
+        early-level:
+          condition:
+            type: level
+            props:
+              min: 1
+              max: 30
+          operation: "+1"
+    # 关键等级一次性奖励，同样使用 base/modifiers 规格
     bonuses:
-      10: "5"
-      20: "5"
-      30: "10"
-      50: "15"
+      10:
+        base: 5
+      20:
+        base: 5
+      30:
+        base: 10
+      50:
+        base: 15
   attribute:
     # 逻辑属性 → 物理属性的转换映射表
     registry:

@@ -103,7 +103,7 @@ object Registries {
         profiler.measure("collect") { YamlNovaSourceCollector.collect(getDataFolder().toPath()) }
         // Registry 重读会构造业务对象，并在 程序加载 前登记其虚拟 SourceUnit。
         profiler.measure("registries") { AutoReloadable.onReload() }
-        profiler.measure("points") { SkillPointsManager.prepareSources() }
+        profiler.measure("points") { SkillPointsManager.prepare() }
         profiler.measure("magic") {
             DefaultMagicPointProvider.expressionUpperLimit.get()
             DefaultMagicPointProvider.expressionResume.get()

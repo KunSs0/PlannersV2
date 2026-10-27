@@ -8,28 +8,20 @@ import com.gitee.planners.api.event.player.PlayerProfileLoadedEvent
 import com.gitee.planners.api.event.player.PlayerSetRouteEvent
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerTemplate
-import com.gitee.planners.module.script.SingletonScript
 import taboolib.common.platform.event.SubscribeEvent
 
 object SkillPointsManager {
 
     private val calculationLock = Any()
     private val accumulatedCache = mutableMapOf<Int, Int>()
-    private val expressions = LinkedHashMap<String, SingletonScript>()
 
     /**
-     * 在 Workspace 加载前登记技能点公式的全部 Nova SourceUnit。
+     * 校验技能点数值规格，并清理上一代配置的累计缓存。
      */
-    fun prepareSources() {
+    fun prepare() {
         synchronized(calculationLock) {
-            expressions.clear()
-            // 配置代次变化后，旧等级缓存不能参与新公式计算。
+            Planners.skillPointsPolicy.get()
             accumulatedCache.clear()
-            registerExpression(Planners.skillPointsPerLevel.get())
-            val bonuses = Planners.skillPointsBonuses.get()
-            for ((_, bonusPair) in bonuses) {
-                registerExpression(bonusPair.second)
-            }
         }
     }
 
@@ -115,44 +107,10 @@ object SkillPointsManager {
                 return cached
             }
 
-            var total = 0
-            val perLevelExpr = Planners.skillPointsPerLevel.get()
-            for (lv in 1..level) {
-                total += evalExpr(perLevelExpr, lv)
-            }
-            val bonuses = Planners.skillPointsBonuses.get()
-            for ((bonusKey, bonusPair) in bonuses) {
-                val bonusLv = bonusPair.first
-                val expr = bonusPair.second
-                if (level >= bonusLv) {
-                    total += evalExpr(expr, bonusLv)
-                }
-            }
+            val total = Planners.skillPointsPolicy.get().accumulated(level)
             accumulatedCache[level] = total
             return total
         }
     }
 
-    private fun evalExpr(expr: String, level: Int): Int {
-        val script = expressions[expr]
-        if (script == null) {
-            throw IllegalStateException("The skill-points expression was not precompiled: $expr")
-        }
-        val result = script.eval(level)
-        if (result == null) {
-            throw IllegalStateException("The skill-points expression returned null: $expr")
-        }
-        return result.toString().toDouble().toInt()
-    }
-
-    /** 登记一条去重后的技能点公式。 */
-    private fun registerExpression(expression: String) {
-        if (!expressions.containsKey(expression)) {
-            expressions[expression] = SingletonScript(
-                expression,
-                "config:skill-points:${expression.hashCode()}",
-                listOf("level")
-            )
-        }
-    }
 }

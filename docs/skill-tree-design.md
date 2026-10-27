@@ -369,7 +369,7 @@ class PlayerRoute {
 **核心特征**：
 - **职业线路隔离**：点数归属于 `PlayerRoute`，不同线路独立
 - **两级存储**：`current`（当前可用）+ `used`（累计消耗）
-- **JS 驱动**：per-level 和 bonuses 均为 JS 表达式
+- **公共整数规格**：per-level 和 bonuses 均使用 IntValueSpec，支持有序修正与 level 等级条件
 - **无 Provider 层**：点数来源仅等级，直接由 `SkillPointsManager` 在升级事件中计算
 
 #### 3.4.1 存储
@@ -403,14 +403,21 @@ class PlayerRoute {
 ```yaml
 settings:
   skill-points:
-    # 每级获得点数，JS 表达式，变量: level
-    per-level: "level <= 30 ? 3 : 2"
-    # 关键等级额外奖励，JS 表达式，变量: level
+    # 每级发放：1至30级为3点，其后为2点
+    per-level:
+      base: 2
+      modifiers:
+        early-level:
+          condition:
+            type: level
+            props: {min: 1, max: 30}
+          operation: "+1"
+    # 关键等级一次性奖励
     bonuses:
-      10: "5"
-      20: "5"
-      30: "10"
-      50: "15"
+      "10": {base: 5}
+      "20": {base: 5}
+      "30": {base: 10}
+      "50": {base: 15}
 ```
 
 #### 3.4.3 计算逻辑
@@ -539,7 +546,7 @@ Phase C → PlayerRoute.SkillTree ✅ 已完成
           ├── canLearn / canUpgrade：预览校验（仅校验不消耗）
           └── getLevel / getLearnedSkills
 Phase D → SkillPoints 技能点模块 ✅ 已完成
-          ├── config.yml 加载 per-level / bonuses JS
+          ├── config.yml 加载 per-level / bonuses 公共整数规格
           ├── PlayerRoute 新增 skillPointsCurrent / skillPointsUsed + addSkillPoints / takeSkillPoints
           ├── Database 新增 planners_route.sp_current / sp_used 列 + 迁移
           ├── SkillPointsManager（监听 PlayerLevelChangeEvent、calcAccumulated 带缓存）
