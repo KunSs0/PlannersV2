@@ -91,6 +91,11 @@ object Registries {
      */
     fun handleReload() {
         val profiler = PhaseProfiler("Reload profile")
+        // 递增动作代际，取消上一代定时器与延迟任务，避免旧技能继续执行。
+        profiler.measure("actions") {
+            com.gitee.planners.module.action.ActionTimerService.stop()
+            com.gitee.planners.module.action.ActionScheduler.nextGeneration()
+        }
         // 先完整销毁旧资源树，确保旧调度任务与业务作用域不进入新配置代次。
         profiler.measure("close") { ScriptManager.close() }
         profiler.measure("config") { Planners.config.reload() }
@@ -109,7 +114,27 @@ object Registries {
             DefaultMagicPointProvider.expressionResume.get()
         }
         profiler.measure("nova") { ScriptManager.load() }
+        profiler.measure("actions") { rebuildActionIndex() }
         info(profiler.summary(ScriptManager.diagnostics().toString()))
+    }
+
+    /**
+     * 用当前已加载技能重建 Action 触发器索引、加载期流程与定时任务。
+     *
+     * 只收集写成结构化 `action` 的技能；旧脚本写法的技能不参与，
+     * 因此迁移期间两种写法可以共存。
+     */
+    fun rebuildActionIndex() {
+        val specs = ArrayList<com.gitee.planners.module.action.ActionSpec>()
+        for (skill in SKILL.values()) {
+            val spec = skill.actionSpec
+            if (spec != null) {
+                specs.add(spec)
+            }
+        }
+        com.gitee.planners.module.action.ActionTriggerRegistry.rebuild(specs)
+        com.gitee.planners.module.action.ActionServerFlows.runAll(specs)
+        com.gitee.planners.module.action.ActionTimerService.restart(specs)
     }
 
     /**
@@ -126,6 +151,7 @@ object Registries {
         profiler.measure("level") { LEVEL.load() }
         profiler.measure("state") { STATE.load() }
         profiler.measure("keybinding") { KEYBINDING.load() }
+        profiler.measure("actions") { rebuildActionIndex() }
         info(profiler.summary(ScriptManager.diagnostics().toString()))
     }
 

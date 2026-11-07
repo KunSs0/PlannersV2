@@ -154,6 +154,8 @@ object Planners : Plugin() {
         skillTimingPolicy.get()
         Metrics(15573, BukkitPlugin.getInstance().description.version, Platform.BUKKIT)
         LOGO.forEach(::info)
+        // 动作调度器必须在注册表加载前安装，否则 server 流程与定时器无法开工。
+        com.gitee.planners.module.action.BukkitActionDispatcher.install()
         ScriptManager.prepare()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())
         // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
@@ -198,6 +200,9 @@ object Planners : Plugin() {
      * 插件停止时销毁编译程序资源。
      */
     override fun onDisable() {
+        // 先停定时器与调度器，避免技能卸载后仍有动作在跑。
+        com.gitee.planners.module.action.ActionTimerService.stop()
+        com.gitee.planners.module.action.BukkitActionDispatcher.uninstall()
         // 全部回调与任务由编译程序一次性释放。
         ScriptManager.close()
         // 插件卸载后不再需要跨重载字节码缓存。

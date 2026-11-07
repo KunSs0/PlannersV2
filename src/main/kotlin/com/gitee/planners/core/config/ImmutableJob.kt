@@ -63,21 +63,10 @@ class ImmutableJob(private val config: Configuration) {
     /**
      * 职业提供的属性。
      * key = 属性键（在 registry 中为逻辑属性，否则为物理直通）
-     * value = Nova 表达式字符串或数字
+     * value = 查询表达式，例如 `10 + (profile.level - 1) * 1`
      */
-    val attributes: Map<String, String>
-        get() {
-            val section = option.getConfigurationSection("hook.attributes")
-            if (section == null) {
-                return emptyMap()
-            }
-            return section.getValues(false).mapValues { it.value.toString() }
-        }
-
-    /** 启动期预编译的职业属性 Nova 表达式。 */
-    val attributeScripts: Map<String, SingletonScript> = attributes.mapValues { entry ->
-        SingletonScript(entry.value, "job:$id:attribute:${entry.key}", listOf("sender", "profile", "level"))
-    }
+    val attributeExpressions: Map<String, com.gitee.planners.module.action.query.QueryRef> =
+        com.gitee.planners.module.action.AttributeExpressions.compileSection(option, "job:$id")
 
     fun hasSkill(id: String): Boolean {
         return skillIds.contains(id)

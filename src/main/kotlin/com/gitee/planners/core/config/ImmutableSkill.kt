@@ -11,9 +11,12 @@ import com.gitee.planners.core.skill.condition.SkillCastConditionConfig
 import com.gitee.planners.core.skill.directing.DirectingConfigSection
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
+import com.gitee.planners.module.action.ActionParser
+import com.gitee.planners.module.action.ActionRunner
+import com.gitee.planners.module.action.ActionScopeFactory
+import com.gitee.planners.module.action.ActionSpec
 import com.gitee.planners.module.script.NovaScriptUnit
 import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.library.xseries.getItemStack
@@ -96,22 +99,37 @@ class ImmutableSkill(config: Configuration) : Unique {
     /** 技能是否异步运行 */
     val async = option.getBoolean("async", true)
 
-    /** 脚本源代码 */
-    val action = config.getString("action", config.getString("run", ""))!!
+    /**
+     * 结构化动作配置节点；旧写法为字符串时该值为 null。
+     */
+    private val actionSection = config.getConfigurationSection("action")
+
+    /**
+     * 结构化的 Action 定义。
+     *
+     * 配置写成映射时按流程解析；写成字符串时视为旧脚本源码，此处保持 null，
+     * 由 [action] 走既有编译路径。两种写法互斥，不并存。
+     */
+    val actionSpec: ActionSpec? = if (actionSection == null) {
+        null
+    } else {
+        ActionParser.parse(id, actionSection, "skill:$id.action")
+    }
+
+    /** 脚本源代码；结构化配置下为空串 */
+    val action = if (actionSection == null) {
+        config.getString("action", config.getString("run", ""))!!
+    } else {
+        ""
+    }
 
     /**
      * 技能提供的属性。
      * key = 属性键（在 registry 中为逻辑属性，否则为物理直通）
-     * value = Nova 表达式字符串或数字
+     * value = 查询表达式，例如 `10 + (skill.level - 1) * 1`
      */
-    val attributes: Map<String, String>
-        get() {
-            val section = option.getConfigurationSection("hook.attributes")
-            if (section == null) {
-                return emptyMap()
-            }
-            return section.getValues(false).mapValues { it.value.toString() }
-        }
+    val attributeExpressions: Map<String, com.gitee.planners.module.action.query.QueryRef> =
+        com.gitee.planners.module.action.AttributeExpressions.compileSection(option, "skill:$id")
 
     /** 开始等级 */
     val startedLevel = option.getInt("started-level", 0)
@@ -175,7 +193,11 @@ class ImmutableSkill(config: Configuration) : Unique {
      *
      * 所有值在函数局部作用域按 YAML 声明顺序计算，避免向长期 Context 写入玩家变量。
      */
-    private val displayVariablesFunction: NovaScriptUnit = createDisplayVariablesFunction()
+    private val displayVariablesFunction: NovaScriptUnit? = if (actionSpec == null) {
+        createDisplayVariablesFunction()
+    } else {
+        null
+    }
 
     /** 技能 action 对应的启动期预编译 Nova 模块。 */
     private val actionModule: NovaScriptUnit?
@@ -187,10 +209,6 @@ class ImmutableSkill(config: Configuration) : Unique {
         }
     }
 
-    /** 启动期预编译的技能属性 Nova 表达式。 */
-    val attributeScripts: Map<String, SingletonScript> = attributes.mapValues { entry ->
-        SingletonScript(entry.value, "skill:$id:attribute:${entry.key}", templateParameterNames())
-    }
 
     /** 显示模板表达式到启动期预编译 Nova SourceUnit 的映射。 */
     private val templateScripts = ConcurrentHashMap<String, NovaScriptUnit>()
@@ -249,7 +267,8 @@ class ImmutableSkill(config: Configuration) : Unique {
         level: Int = 0,
         variables: Map<String, Any?> = emptyMap()
     ): CompletableFuture<Any?> {
-        if (action.isEmpty()) {
+        val structured = actionSpec
+        if (structured == null && action.isEmpty()) {
             return CompletableFuture.completedFuture(null)
         }
 
@@ -261,16 +280,21 @@ class ImmutableSkill(config: Configuration) : Unique {
         }
 
         val task = {
-            // 全部 YAML variable 表达式先由同一编译程序的预编译 Nova 批处理入口计算。
-            val resolvedVariables = evaluateDisplayVariables(execution)
-            for ((variableId, variableValue) in resolvedVariables) {
-                execution.setVariable(variableId, variableValue)
-            }
-            val module = actionModule
-            if (module == null) {
+            if (structured != null) {
+                runStructuredFlow(structured, ActionSpec.FIRE, execution)
                 null
             } else {
-                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
+                // 全部 YAML variable 表达式先由同一编译程序的预编译 Nova 批处理入口计算。
+                val resolvedVariables = evaluateDisplayVariables(execution)
+                for ((variableId, variableValue) in resolvedVariables) {
+                    execution.setVariable(variableId, variableValue)
+                }
+                val module = actionModule
+                if (module == null) {
+                    null
+                } else {
+                    ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
+                }
             }
         }
 
@@ -290,6 +314,15 @@ class ImmutableSkill(config: Configuration) : Unique {
      * @return Nova 回调返回值；技能未声明 action 时返回 null。
      */
     fun invokeActionFunction(functionName: String, execution: SkillExecutionContext, payload: Map<String, Any>): Any? {
+        val structured = actionSpec
+        if (structured != null) {
+            // 结构化配置里回调名就是流程名，未声明该流程即视为不处理。
+            if (!structured.hasFlow(functionName)) {
+                return null
+            }
+            runStructuredFlow(structured, functionName, execution, payload)
+            return true
+        }
         val module = actionModule
         if (module == null) {
             return null
@@ -306,8 +339,15 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
     fun evaluateDisplayVariables(execution: SkillExecutionContext): Map<String, Any?> {
+        if (actionSpec != null) {
+            return evaluateStructuredVariables(execution)
+        }
+        val function = displayVariablesFunction
+        if (function == null) {
+            return emptyMap()
+        }
         val values = ScriptManager.invokePure(
-            displayVariablesFunction,
+            function,
             execution.sender,
             execution.level,
             execution.context,
@@ -363,6 +403,57 @@ class ImmutableSkill(config: Configuration) : Unique {
             templateScripts[expression] = script
             expressionIndex += 1
         }
+    }
+
+    /**
+     * 执行结构化流程。
+     *
+     * 变量按声明顺序求值，后声明的变量可以引用先声明的结果；求值完成后同步写入
+     * 执行上下文，供技能结束或后续回调读取。
+     *
+     * @param spec 当前技能的结构化定义。
+     * @param flowId 要执行的流程名。
+     * @param execution 本次技能执行上下文。
+     * @param payload 回调载荷，供流程读取播放句柄等外部数据。
+     */
+    private fun runStructuredFlow(
+        spec: ActionSpec,
+        flowId: String,
+        execution: SkillExecutionContext,
+        payload: Map<String, Any?> = emptyMap(),
+    ) {
+        val accumulated = LinkedHashMap<String, Any?>()
+        val scope = ActionScopeFactory.forExecution(execution, accumulated, payload)
+        for (entry in immutableVariables) {
+            accumulated[entry.key] = entry.value.evaluate(scope)
+        }
+        // 指向结果由运行时注入，覆盖同名变量，供 `<skill.directing>` 读取。
+        val directing = execution.context.directing
+        if (directing != null) {
+            accumulated["directing"] = directing
+        }
+        for (entry in accumulated) {
+            execution.setVariable(entry.key, entry.value)
+        }
+        if (!spec.hasFlow(flowId)) {
+            return
+        }
+        ActionRunner.run(spec, flowId, scope)
+    }
+
+    /**
+     * 用查询引擎按声明顺序求值全部技能变量。
+     *
+     * @param execution 本次技能执行上下文。
+     * @return 变量名到值的映射。
+     */
+    private fun evaluateStructuredVariables(execution: SkillExecutionContext): Map<String, Any?> {
+        val accumulated = LinkedHashMap<String, Any?>()
+        val scope = ActionScopeFactory.forExecution(execution, accumulated)
+        for (entry in immutableVariables) {
+            accumulated[entry.key] = entry.value.evaluate(scope)
+        }
+        return accumulated
     }
 
     private fun createDisplayVariablesFunction(): NovaScriptUnit {

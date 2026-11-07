@@ -78,12 +78,13 @@ class ImmutableVariableTest {
     }
 
     /**
-     * 普通字符串永远是数据；显式表达式结构错误立即拒绝。
+     * 标量按内容自动判定；显式表达式结构错误立即拒绝。
      */
     @Test
     fun expressionSyntaxIsExplicitAndRejectsUnknownFields() {
-        assertTrue(ImmutableVariable.parse("text", "level + 1") is ImmutableVariable.Literal)
-        assertTrue(ImmutableVariable.parse("text", "\"hurt1\"") is ImmutableVariable.Literal)
+        // 公式不再需要 expression 包装，写标量即可由查询引擎判定。
+        assertTrue(ImmutableVariable.parse("text", "level + 1") is ImmutableVariable.Auto)
+        assertTrue(ImmutableVariable.parse("text", "\"hurt1\"") is ImmutableVariable.Auto)
         assertTrue(ImmutableVariable.parse("amount", mapOf("expression" to "level + 1")) is ImmutableVariable.Expression)
         for (value in listOf(emptyMap<String, Any>(), mapOf("expr" to "level"), mapOf("expression" to ""), mapOf("expression" to 1), mapOf("expression" to "level", "extra" to true))) {
             assertThrows(IllegalArgumentException::class.java) {

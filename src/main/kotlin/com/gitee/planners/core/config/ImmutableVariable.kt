@@ -1,6 +1,8 @@
 package com.gitee.planners.core.config
 
 import com.gitee.planners.api.job.Variable
+import com.gitee.planners.module.action.query.QueryRef
+import com.gitee.planners.module.action.query.QueryScope
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
 
@@ -14,6 +16,16 @@ interface ImmutableVariable : Variable {
      * @param builder 技能变量批处理函数正文。
      */
     fun appendDisplayEvaluation(builder: StringBuilder)
+
+    /**
+     * 用查询表达式求值本变量。
+     *
+     * 供结构化动作使用：常量直接返回原值，表达式与条件分支交给查询引擎。
+     *
+     * @param scope 查询上下文，已包含此前声明的变量。
+     * @return 变量值。
+     */
+    fun evaluate(scope: QueryScope): Any?
 
     companion object {
         const val LITERALS_PARAMETER = "__plannersVariableLiterals"
@@ -52,6 +64,10 @@ interface ImmutableVariable : Variable {
             require(value is String || value is Boolean || value is Number) {
                 "变量 '$id' 不支持配置类型 ${value::class.java.name}。"
             }
+            if (value is String) {
+                // 字符串统一交给查询引擎判定：路径 / 表达式 / 模板 / 文本，无需 expression 包装。
+                return Auto(id, value)
+            }
             return Literal(id, value)
         }
 
@@ -71,6 +87,11 @@ interface ImmutableVariable : Variable {
                     } else {
                         result[id] = value
                     }
+                    continue
+                }
+                // 文本变量在旧脚本写法里按原始文本参与绑定，保持原有插值与取值语义。
+                if (variable is Auto) {
+                    result[id] = variable.rawText()
                 }
             }
             return result
@@ -139,15 +160,103 @@ interface ImmutableVariable : Variable {
             builder.append(id)
             builder.append("\"]\n")
         }
+
+        /**
+         * 常量直接返回配置值，列表返回副本避免调用方修改配置对象。
+         *
+         * @param scope 查询上下文。
+         * @return 常量值。
+         */
+        override fun evaluate(scope: QueryScope): Any? {
+            if (value is List<*>) {
+                return ArrayList(value)
+            }
+            return value
+        }
+    }
+
+    /**
+     * 由文本自动判定的变量。
+     *
+     * 配置直接写标量即可：数字、布尔按常量，`skill.level` 按路径，
+     * `10 * skill.level + 50` 按公式，`&a冲锋 Lv<skill.level>` 按模板，
+     * 其余解析不成的按普通文本。
+     *
+     * 判定推迟到首次结构化求值，因此旧脚本写法里的 Nova 表达式不会在加载期报错。
+     *
+     * @property id 变量名。
+     * @param source 配置中的原始文本。
+     */
+    class Auto(override val id: String, private val source: String) : ImmutableVariable {
+
+        @Volatile
+        private var compiledRef: QueryRef? = null
+
+        /**
+         * 旧脚本写法下常量按原始文本参与绑定。
+         *
+         * @param builder 变量批处理函数正文。
+         */
+        override fun appendDisplayEvaluation(builder: StringBuilder) {
+            builder.append("val ")
+            builder.append(id)
+            builder.append(" = ")
+            builder.append(LITERALS_PARAMETER)
+            builder.append("[\"")
+            builder.append(id)
+            builder.append("\"]\n")
+        }
+
+        /**
+         * 按查询引擎求值。
+         *
+         * @param scope 查询上下文。
+         * @return 变量值。
+         */
+        override fun evaluate(scope: QueryScope): Any? {
+            return resolveRef().resolve(scope)
+        }
+
+        /**
+         * 返回配置中的原始文本。
+         *
+         * @return 原始文本。
+         */
+        fun rawText(): String {
+            return source
+        }
+
+        /** 取已编译引用，未编译时编译并缓存。 */
+        private fun resolveRef(): QueryRef {
+            val cached = compiledRef
+            if (cached != null) {
+                return cached
+            }
+            val created = QueryRef.parse(source, "variable:$id")
+            compiledRef = created
+            return created
+        }
     }
 
     /**
      * 通过 expression 字段显式声明的计算表达式。
      *
+     * 保留旧写法兼容；新配置直接写标量即可由 [Auto] 判定。
+     *
      * @property id 变量名。
      * @property expression 待预编译的 Nova 表达式。
      */
     class Expression(override val id: String, private val expression: String) : ImmutableVariable {
+
+        /**
+         * 首次结构化求值时编译并缓存。
+         *
+         * 旧脚本写法的表达式是 Nova 语法，不能在任何技能加载时都按查询表达式解析，
+         * 因此编译推迟到真正用到结构化求值的时候。
+         */
+        @Volatile
+        private var compiledRef: QueryRef? = null
+
         /**
          * 保留表达式的原始计算语义与声明顺序。
          *
@@ -160,6 +269,27 @@ interface ImmutableVariable : Variable {
             builder.append(expression)
             builder.append(")\n")
         }
+
+        /**
+         * 用查询引擎求值表达式。
+         *
+         * @param scope 查询上下文。
+         * @return 表达式结果。
+         */
+        override fun evaluate(scope: QueryScope): Any? {
+            return resolveRef().resolve(scope)
+        }
+
+        /** 取已编译表达式，未编译时编译并缓存。 */
+        private fun resolveRef(): QueryRef {
+            val cached = compiledRef
+            if (cached != null) {
+                return cached
+            }
+            val created = QueryRef.parseExpression(expression, "variable:$id")
+            compiledRef = created
+            return created
+        }
     }
 
     /**
@@ -170,6 +300,15 @@ interface ImmutableVariable : Variable {
      */
     class When(override val id: String, values: List<ConfigurationSection>) : ImmutableVariable {
         private val expression = createExpression(values)
+
+        /** 原始分支配置，首次结构化求值时才编译。 */
+        private val rawValues = values
+
+        /**
+         * 首次结构化求值时编译并缓存；旧脚本写法不会触发编译。
+         */
+        @Volatile
+        private var compiledBranches: List<Branch>? = null
 
         /**
          * 写入原有条件分支表达式。
@@ -182,6 +321,32 @@ interface ImmutableVariable : Variable {
             builder.append(" = (")
             builder.append(expression)
             builder.append(")\n")
+        }
+
+        /**
+         * 按声明顺序求值，全部不匹配时返回 false。
+         *
+         * @param scope 查询上下文。
+         * @return 匹配分支的结果。
+         */
+        override fun evaluate(scope: QueryScope): Any? {
+            for (branch in resolveBranches()) {
+                if (branch.condition.resolveBoolean(scope)) {
+                    return branch.action.resolve(scope)
+                }
+            }
+            return false
+        }
+
+        /** 取已编译分支，未编译时编译并缓存。 */
+        private fun resolveBranches(): List<Branch> {
+            val cached = compiledBranches
+            if (cached != null) {
+                return cached
+            }
+            val created = createBranches(rawValues)
+            compiledBranches = created
+            return created
         }
 
         /**
@@ -204,5 +369,39 @@ interface ImmutableVariable : Variable {
             }
             return generated
         }
+
+        /**
+         * 把分支编译成求值表达式对。
+         *
+         * @param values 按配置顺序排列的分支。
+         * @return 已编译分支列表。
+         */
+        private fun createBranches(values: List<ConfigurationSection>): List<Branch> {
+            val result = ArrayList<Branch>()
+            var index = 0
+            for (section in values) {
+                val condition = section.getString("condition")
+                val action = section.getString("action")
+                if (condition == null || action == null) {
+                    throw IllegalArgumentException("变量 '$id' 的分支 $index 缺少 condition 或 action。")
+                }
+                result.add(
+                    Branch(
+                        QueryRef.parseExpression(condition, "variable:$id.branch[$index].condition"),
+                        QueryRef.parseExpression(action, "variable:$id.branch[$index].action"),
+                    ),
+                )
+                index += 1
+            }
+            return result
+        }
     }
+
+    /**
+     * 条件变量的一条已编译分支。
+     *
+     * @property condition 条件表达式。
+     * @property action 条件成立时的结果表达式。
+     */
+    class Branch(val condition: QueryRef, val action: QueryRef)
 }
