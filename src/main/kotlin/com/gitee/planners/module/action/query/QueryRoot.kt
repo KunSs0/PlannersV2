@@ -36,6 +36,14 @@ enum class QueryRoot(val id: String, val skillOnly: Boolean = false) {
     NODE("node", true),
 
     /**
+     * 施法者持有的货币余额。
+     *
+     * 需要 `<货币ID>`，ID 取自 `module/currency` 下的货币配置；
+     * 读取走货币实现自身的余额接口，未注册的货币返回缺失。
+     */
+    ECONOMY("economy"),
+
+    /**
      * 本次连招播放的变量。
      *
      * 由回调载荷里的播放上下文提供，随播放销毁，不跨施法保留。

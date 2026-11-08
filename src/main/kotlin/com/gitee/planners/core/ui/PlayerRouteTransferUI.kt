@@ -22,7 +22,11 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
 
     override fun onClick(event: ClickEvent, element: ImmutableRoute) {
         val player = event.clicker
-        // 转职条件校验由后续 ConditionEvaluator 接管
+        // 转职条件在提交前校验；不满足时只提示，不写入路线也不扣费。
+        if (!element.isConditionSatisfied(player)) {
+            player.sendLang("player-transfer-invalid")
+            return
+        }
         PlayerTemplateAPI.setPlayerRoute(player, element).thenAccept { newRoute ->
             if (newRoute != null) {
                 player.sendLang("player-transfer-success", element.getJob().name)
@@ -32,7 +36,13 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
 
     override fun onGenerate(player: Player, element: ImmutableRoute, index: Int, slot: Int): ItemStack {
         return (element.icon ?: XMaterial.STONE.parseItem())!!.replaceInfix("\$message") {
-            emptyList()  // 条件提示由后续 ConditionEvaluator 接管
+            // 条件原文直接展示，便于玩家知道自己差什么。
+            val condition = element.condition
+            if (condition == null) {
+                emptyList<String>()
+            } else {
+                listOf("&7条件: &f$condition")
+            }
         }
     }
 

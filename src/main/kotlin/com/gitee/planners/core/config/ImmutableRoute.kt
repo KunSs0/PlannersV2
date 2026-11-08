@@ -1,6 +1,10 @@
 package com.gitee.planners.core.config
 
+import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.Registries
+import com.gitee.planners.module.action.query.QueryRef
+import com.gitee.planners.module.action.query.QueryScope
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
@@ -11,6 +15,35 @@ class ImmutableRoute(private val parent: ImmutableRouter, private val config: Co
     val routerId = parent.id
 
     val id = config.name
+
+    /**
+     * 转职条件原文；为空表示无条件。
+     *
+     * 使用插值与求值表达式，例如 `economy.coin >= 500`。
+     */
+    val condition: String? = config.getString("condition")?.takeIf { it.isNotBlank() }
+
+    /** 转职条件的预编译引用；语法非法时在加载期报错。 */
+    private val conditionRef: QueryRef? = condition?.let {
+        QueryRef.parseVariableExpression(it, "route:$id:condition")
+    }
+
+    /**
+     * 判断该玩家是否满足转职条件。
+     *
+     * @param player 待转职的玩家。
+     * @return 无条件或条件成立时返回 true。
+     */
+    fun isConditionSatisfied(player: Player): Boolean {
+        val ref = conditionRef ?: return true
+        val template = PlayerTemplateAPI.getOrNull(player.uniqueId) ?: return false
+        val scope = QueryScope(
+            sender = player,
+            profile = template,
+            label = "route:$id:condition",
+        )
+        return ref.resolveBoolean(scope)
+    }
 
     /** 职业阶段图标的 namespaced ID。 */
     val iconItemId: String? = toItemId(config.getString("icon.material"))

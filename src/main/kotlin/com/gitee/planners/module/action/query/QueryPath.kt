@@ -39,8 +39,24 @@ class QueryPath private constructor(
             QueryRoot.ATTR -> queryAttr(scope)
             QueryRoot.NATURAL -> queryNatural(scope)
             QueryRoot.NODE -> queryNode(scope)
+            QueryRoot.ECONOMY -> queryEconomy(scope)
             QueryRoot.PLAYBACK -> queryPlayback(scope)
         }
+    }
+
+    /**
+     * 读取施法者的货币余额。
+     *
+     * 只认已注册的货币；未注册或施法者不是玩家时返回 null，让 `>=` 这类判断自然不成立。
+     *
+     * @param scope 查询上下文。
+     * @return 余额；无法读取时返回 null。
+     */
+    private fun queryEconomy(scope: QueryScope): Any? {
+        val currencyId = segments.firstOrNull() ?: return null
+        val player = scope.sender as? Player ?: return null
+        val currency = com.gitee.planners.api.Registries.CURRENCY.getOrNull(currencyId) ?: return null
+        return currency.get(player)
     }
 
     /**
