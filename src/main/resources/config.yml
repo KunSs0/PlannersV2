@@ -184,8 +184,8 @@ settings:
         - worldguard xxx
   magic-point:
     resume:
-      # 法力值的恢复的运算表达式
-      expression: "randomInt(2, 3)"
+      # 法力值的恢复的运算表达式；可用根与普通查询一致（如 profile.level），不支持函数调用
+      expression: "2"
       # 法力值的恢复的更新任务的轮询周期,单位tick
       update-tick: 20
     upper-limit:

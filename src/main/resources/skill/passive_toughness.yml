@@ -3,7 +3,7 @@ __option__:
   category: [passive]
   display:
     icon:
-      material: IRON_INGOT
+      material: IRON_CHESTPLATE
       name: "&7坚韧"
       lore:
         - "&7等级 &fLv{{skill.level}}"
@@ -13,4 +13,7 @@ __option__:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     defense: "4 * skill.level + 5"
   max-level: 6
-action: ""
+  # 未注册的属性键按物理属性直通；逻辑属性需先在 settings.attribute.registry 登记。
+  hook:
+    attributes:
+      DEF: "skill.defense"
