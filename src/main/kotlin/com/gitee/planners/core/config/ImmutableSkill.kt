@@ -196,11 +196,7 @@ class ImmutableSkill(config: Configuration) : Unique {
      *
      * 所有值在函数局部作用域按 YAML 声明顺序计算，避免向长期 Context 写入玩家变量。
      */
-    private val displayVariablesFunction: NovaScriptUnit? = if (actionSpec == null) {
-        createDisplayVariablesFunction()
-    } else {
-        null
-    }
+    
 
     /** 技能 action 对应的启动期预编译 Nova 模块。 */
     private val actionModule: NovaScriptUnit?
@@ -342,35 +338,8 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
     fun evaluateDisplayVariables(execution: SkillExecutionContext): Map<String, Any?> {
-        if (actionSpec != null) {
-            return evaluateStructuredVariables(execution)
-        }
-        val function = displayVariablesFunction
-        if (function == null) {
-            return emptyMap()
-        }
-        val values = ScriptManager.invokePure(
-            function,
-            execution.sender,
-            execution.level,
-            execution.context,
-            execution.skill,
-            execution.profile,
-            ImmutableVariable.literalBindings(immutableVariables)
-        )
-        if (values !is List<*>) {
-            throw IllegalStateException("Skill '$id' display variable batch returned an invalid type")
-        }
-        if (values.size != immutableVariables.size) {
-            throw IllegalStateException("Skill '$id' display variable batch returned an invalid value count")
-        }
-        val result = LinkedHashMap<String, Any?>()
-        var index = 0
-        for ((variableId, _) in immutableVariables) {
-            result[variableId] = values[index]
-            index += 1
-        }
-        return result
+        // 变量统一由查询引擎求值，不再为每个技能编译一份 Nova 批量函数。
+        return evaluateStructuredVariables(execution)
     }
 
     /**
@@ -516,27 +485,6 @@ class ImmutableSkill(config: Configuration) : Unique {
         return accumulated
     }
 
-    private fun createDisplayVariablesFunction(): NovaScriptUnit {
-        val body = StringBuilder()
-        for ((_, variable) in immutableVariables) {
-            variable.appendDisplayEvaluation(body)
-        }
-        body.append("return [")
-        var first = true
-        for ((variableId, _) in immutableVariables) {
-            if (!first) {
-                body.append(',')
-            }
-            body.append(variableId)
-            first = false
-        }
-        body.append("]\n")
-        return ScriptManager.compileAction(
-            "skill:$id:display-variables",
-            listOf("sender", "level", "ctx", "skill", "profile", ImmutableVariable.LITERALS_PARAMETER),
-            body.toString()
-        )
-    }
 
     /** 执行已经完成变量批处理的技能上下文。 */
     fun execute(execution: SkillExecutionContext): CompletableFuture<Any?> {

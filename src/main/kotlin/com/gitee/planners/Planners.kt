@@ -213,6 +213,16 @@ object Planners : Plugin() {
         val profiler = PhaseProfiler("Nova startup profile")
         profiler.measure("load") { ScriptManager.load() }
         info(profiler.summary(ScriptManager.diagnostics().toString()))
+        val categories = ScriptManager.categorySummary()
+        val text = StringBuilder()
+        for (entry in categories.entries) {
+            if (text.isNotEmpty()) {
+                text.append(", ")
+            }
+            text.append(entry.key).append('=').append(entry.value)
+        }
+        info("[Planners Nova] 源码分布(kinds=" + categories.size + "): " + text)
+        info("[Planners Nova] skill-samples: " + ScriptManager.categorySamples().joinToString(" | "))
         info("[Planners Nova] Program is active")
     }
 

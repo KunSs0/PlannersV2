@@ -31,6 +31,12 @@ object ScriptManager {
     private val sources = LinkedHashMap<String, SourceUnit>()
     private val expressionUnits = LinkedHashMap<String, NovaScriptUnit>()
     private val skillExpressionUnits = LinkedHashMap<String, NovaScriptUnit>()
+    /** 按 YAML 顶层目录统计的源码登记数，用于定位残留的 Nova 依赖。 */
+    private val categoryCounts = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>()
+
+    /** 登记标识取样，仅保留前 40 条，用于定位残留来源。 */
+    private val categorySamples = java.util.Collections.synchronizedList(ArrayList<String>())
+
     /** YAML 收集阶段得到的源码正文到原始位置的索引，避免重复扫描整个数据目录。 */
     private val yamlOrigins = ConcurrentHashMap<String, SourceOrigin>()
     /** 文件名到 YAML 路径的索引，仅在没有精确源码位置时按业务 ID 回退查找。 */
@@ -330,6 +336,7 @@ object ScriptManager {
      * 注册虚拟源码并拒绝加载后的运行期编译。
      */
     private fun register(id: String, functionName: String, source: String, originSource: String, generatedLineOffset: Int): NovaScriptUnit {
+        countCategory(id)
         synchronized(lifecycleLock) {
             val moduleId = createModuleId(id, source)
             if (sources.containsKey(moduleId)) {
@@ -349,6 +356,7 @@ object ScriptManager {
      * 登记已确定模块 ID 的完整 Nova 业务模块。
      */
     private fun registerResolved(id: String, moduleId: String, functionName: String, source: String, originSource: String): NovaScriptUnit {
+        countCategory(id)
         synchronized(lifecycleLock) {
             if (sources.containsKey(moduleId)) {
                 return NovaScriptUnit(moduleId, functionName)
@@ -376,6 +384,7 @@ object ScriptManager {
         resolvedModuleId: String? = null
     ): NovaScriptUnit {
         val id = createYamlSourceId(file, yamlPath)
+        countCategory(yamlPath)
         val normalizedFile = file.toAbsolutePath().normalize()
         synchronized(lifecycleLock) {
             val moduleId = if (resolvedModuleId == null) {
@@ -689,6 +698,44 @@ object ScriptManager {
      * 当前数据目录的 YAML 位置索引。
      */
     private class YamlFileIndex(val byName: Map<String, List<Path>>, val all: List<Path>)
+
+    /**
+     * 按配置顶层目录累加一条源码登记。
+     *
+     * @param yamlPath 配置路径，形如 `skill/xxx.action.fire`。
+     */
+    private fun countCategory(identity: String) {
+        val head = identity.substringBefore('[').trim()
+        val separator = head.indexOfFirst { it == ':' || it == '/' || it == '.' }
+        val category = if (separator > 0) head.substring(0, separator) else head.ifEmpty { "<blank>" }
+        categoryCounts.getOrPut(category) { java.util.concurrent.atomic.AtomicInteger() }.incrementAndGet()
+        if (category == "skill" && categorySamples.size < 40 && !categorySamples.contains(identity)) {
+            categorySamples.add(identity)
+        }
+    }
+
+    /**
+     * 返回按顶层目录统计的登记数，供启动日志定位残留 Nova 依赖。
+     *
+     * @return 目录名到登记数的映射，按数量降序。
+     */
+    /**
+     * 返回技能类登记的标识取样，用于定位残留 Nova 来源。
+     *
+     * @return 最多 40 条标识。
+     */
+    fun categorySamples(): List<String> {
+        return ArrayList(categorySamples)
+    }
+
+    fun categorySummary(): Map<String, Int> {
+        val ordered = categoryCounts.entries.sortedByDescending { entry -> entry.value.get() }
+        val result = LinkedHashMap<String, Int>()
+        for (entry in ordered) {
+            result[entry.key] = entry.value.get()
+        }
+        return result
+    }
 
     /**
      * 当前代际的虚拟源码与来源定位统计，用于启动、重载耗时诊断。
