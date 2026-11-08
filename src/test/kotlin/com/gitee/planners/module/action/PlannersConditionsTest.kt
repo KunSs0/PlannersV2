@@ -213,11 +213,11 @@ class PlannersConditionsTest {
         val expected = listOf(
             "self", "target", "range", "sector", "rect", "source", "target.finder", "crosshair",
             "enemy", "ally", "type", "exclude-type", "name", "world", "include-self", "alive",
-            "sort", "reverse", "shuffle", "limit",
+            "sort", "reverse", "shuffle", "limit", "online-players",
         )
         for (id in expected) {
             assertTrue(ids.contains(id), "missing targeter: $id")
         }
-        assertEquals(20, ids.size)
+        assertEquals(21, ids.size)
     }
 }

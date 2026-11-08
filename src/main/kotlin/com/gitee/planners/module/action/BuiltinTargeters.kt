@@ -685,6 +685,41 @@ object BuiltinTargeters {
     }
 
     /**
+     * 以全部在线玩家为容器。
+     *
+     * 供被动类流程使用：定时器触发时没有「当前目标」，需要自己遍历在线玩家。
+     *
+     * @property exclude-self 是否排除触发本次执行的玩家。
+     */
+    object OnlinePlayers : ActionTargeter {
+
+        override val id = "online-players"
+
+        override val aliases = listOf("online-players")
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.rejectUnknown("exclude-self")
+        }
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            val excludeSelf = arguments.boolean(scope, "exclude-self") ?: false
+            val sender = scope.sender
+            val result = ArrayList<ActionTarget>()
+            for (player in org.bukkit.Bukkit.getOnlinePlayers()) {
+                if (excludeSelf && player == sender) {
+                    continue
+                }
+                val target = toTarget(player)
+                if (target == null) {
+                    continue
+                }
+                result.add(target)
+            }
+            return result
+        }
+    }
+
+    /**
      * 按 `mode` 合并源目标器结果。
      *
      * @param scope 查询上下文。

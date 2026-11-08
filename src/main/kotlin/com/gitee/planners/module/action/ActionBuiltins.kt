@@ -58,6 +58,7 @@ object ActionBuiltins {
         ActionRegistry.register(BuiltinTargeters.Reverse)
         ActionRegistry.register(BuiltinTargeters.Shuffle)
         ActionRegistry.register(BuiltinTargeters.Limit)
+        ActionRegistry.register(BuiltinTargeters.OnlinePlayers)
     }
 
     /** 登记触发器。 */
