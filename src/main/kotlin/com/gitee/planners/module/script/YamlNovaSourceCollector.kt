@@ -202,6 +202,7 @@ object YamlNovaSourceCollector {
                 return index + 1
             }
         }
-        throw IllegalArgumentException("Cannot locate YAML Nova source: ${path.joinToString(".")}")
+        // 定位不到时只影响错误信息的行号，不能因此拒绝整个技能加载。
+        return 0
     }
 }

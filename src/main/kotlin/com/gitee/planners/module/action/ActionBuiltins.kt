@@ -60,6 +60,7 @@ object ActionBuiltins {
         ActionRegistry.register(BuiltinTargeters.Shuffle)
         ActionRegistry.register(BuiltinTargeters.Limit)
         ActionRegistry.register(BuiltinTargeters.OnlinePlayers)
+        ActionRegistry.register(BuiltinTargeters.Payload)
     }
 
     /** 登记触发器。 */

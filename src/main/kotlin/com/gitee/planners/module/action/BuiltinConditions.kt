@@ -30,7 +30,7 @@ object BuiltinConditions {
             if (source == null) {
                 throw IllegalArgumentException("${arguments.path} requires argument 'e'.")
             }
-            QueryEvaluator.validate(source, "${arguments.path}.e")
+            QueryEvaluator.validate(source, "${arguments.path}.e", true)
         }
 
         override fun compile(arguments: ActionArguments): Any? {
@@ -38,7 +38,8 @@ object BuiltinConditions {
             if (source == null) {
                 throw IllegalArgumentException("${arguments.path} requires argument 'e'.")
             }
-            return QueryRef.parseExpression(source, "${arguments.path}.e")
+            // 允许裸标识符：表达式里可以直接引用事件载荷变量（cause、damage）与技能字段（level）。
+            return QueryRef.parseVariableExpression(source, "${arguments.path}.e")
         }
 
         override fun test(scope: QueryScope, arguments: ActionArguments, compiled: Any?): Boolean {

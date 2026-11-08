@@ -720,6 +720,36 @@ object BuiltinTargeters {
     }
 
     /**
+     * 以事件载荷里的实体为容器。
+     *
+     * 触发器派发时会把事件相关实体放进载荷（例如 `defender` / `attacker`），
+     * 用这一项就能指到「本次事件的另一方」，不必为每种事件单开目标器。
+     *
+     * @property key 载荷键名。
+     */
+    object Payload : ActionTargeter {
+
+        override val id = "payload"
+
+        override val aliases = listOf("payload")
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.require("key")
+            arguments.rejectUnknown("key")
+        }
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            val key = arguments.requireText(scope, "key")
+            val value = scope.payload[key]
+            val target = toTarget(value)
+            if (target == null) {
+                return emptyList()
+            }
+            return listOf(target)
+        }
+    }
+
+    /**
      * 按 `mode` 合并源目标器结果。
      *
      * @param scope 查询上下文。
