@@ -61,6 +61,8 @@ object ActionBuiltins {
         ActionRegistry.register(BuiltinTargeters.Limit)
         ActionRegistry.register(BuiltinTargeters.OnlinePlayers)
         ActionRegistry.register(BuiltinTargeters.Payload)
+        ActionRegistry.register(BuiltinTargeters.Attacker)
+        ActionRegistry.register(BuiltinTargeters.Defender)
     }
 
     /** 登记触发器。 */

@@ -29,6 +29,19 @@ interface ActionTargeter {
         }
 
     /**
+     * 依赖的事件实体键名。
+     *
+     * 事件实体放在执行载荷里，由触发器声明自己能提供哪些键。
+     * 非空时加载期会校验该行的触发器确实提供了这个键。
+     *
+     * @return 载荷键名；不依赖事件实体时返回 null。
+     */
+    val payloadKey: String?
+        get() {
+            return null
+        }
+
+    /**
      * 加载期参数校验。
      *
      * @param arguments 目标器参数。

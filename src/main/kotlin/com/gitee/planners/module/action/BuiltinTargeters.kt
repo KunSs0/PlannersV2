@@ -740,13 +740,60 @@ object BuiltinTargeters {
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
             val key = arguments.requireText(scope, "key")
-            val value = scope.payload[key]
-            val target = toTarget(value)
-            if (target == null) {
-                return emptyList()
-            }
-            return listOf(target)
+            return payloadTarget(scope, key)
         }
+    }
+
+    /**
+     * 本次事件的攻击方。
+     *
+     * 只有声明了 `attacker` 的触发器能用；用错触发器在加载期就会报错。
+     */
+    object Attacker : ActionTargeter {
+
+        override val id = "attacker"
+
+        override val aliases = listOf("attacker")
+
+        override val payloadKey = "attacker"
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            return payloadTarget(scope, payloadKey)
+        }
+    }
+
+    /**
+     * 本次事件的承伤方。
+     *
+     * 只有声明了 `defender` 的触发器能用；用错触发器在加载期就会报错。
+     */
+    object Defender : ActionTargeter {
+
+        override val id = "defender"
+
+        override val aliases = listOf("defender")
+
+        override val payloadKey = "defender"
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            return payloadTarget(scope, payloadKey)
+        }
+    }
+
+    /**
+     * 取载荷里指定键对应的实体容器。
+     *
+     * @param scope 查询上下文。
+     * @param key 载荷键名。
+     * @return 单元素容器；载荷里没有可转换实体时返回空列表。
+     */
+    private fun payloadTarget(scope: QueryScope, key: String): List<ActionTarget> {
+        val value = scope.payload[key]
+        val target = toTarget(value)
+        if (target == null) {
+            return emptyList()
+        }
+        return listOf(target)
     }
 
     /**

@@ -401,6 +401,8 @@ object ActionParser {
             throw IllegalArgumentException("$path contains unsupported text '${text.substring(index)}'.")
         }
 
+        verifyPayloadTargeters(targeters, trigger, path)
+
         return ActionLine(
             action = action,
             arguments = arguments,
@@ -410,6 +412,41 @@ object ActionParser {
             path = path,
             source = raw,
         )
+    }
+
+    /**
+     * 校验事件实体选择器与触发器匹配。
+     *
+     * `@attacker` / `@defender` 这类选择器只能出现在声明了对应实体的触发器行上，
+     * 否则运行期永远取不到目标。没有触发器的行不参与校验（属于普通流程）。
+     *
+     * @param targeters 该行的目标器链。
+     * @param trigger 该行的触发器；没有触发器时为 null。
+     * @param path 配置路径，用于错误信息。
+     * @throws IllegalArgumentException 选择器不被该触发器提供时抛出。
+     */
+    private fun verifyPayloadTargeters(
+        targeters: List<ActionTargeterStep>,
+        trigger: ActionTrigger?,
+        path: String,
+    ) {
+        if (trigger == null) {
+            return
+        }
+        val provided = trigger.providedTargets
+        for (step in targeters) {
+            val key = step.payloadKey()
+            if (key == null) {
+                continue
+            }
+            if (provided.contains(key)) {
+                continue
+            }
+            throw IllegalArgumentException(
+                "$path uses '@$key' but trigger '${trigger.id}' does not provide it; " +
+                    "available: " + provided.toList().toString(),
+            )
+        }
     }
 
     /**

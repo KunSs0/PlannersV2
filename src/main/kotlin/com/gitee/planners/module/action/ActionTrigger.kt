@@ -30,6 +30,20 @@ interface ActionTrigger {
     }
 
     /**
+     * 该触发器派发时能提供的事件实体选择器。
+     *
+     * 事件实体放在执行载荷里，对应关系由触发器自己声明：例如伤害类触发器
+     * 同时提供 `attacker` 与 `defender`，Buff 类只提供 `target`。
+     * 加载期据此校验 `@attacker` 这类选择器是否用错触发器。
+     *
+     * @return 可用的选择器键名；定时器等无事件触发器返回空集合。
+     */
+    val providedTargets: Set<String>
+        get() {
+            return emptySet()
+        }
+
+    /**
      * 定时器标识，声明后可通过卸载入口注销。
      *
      * @param arguments 行上的触发器参数。

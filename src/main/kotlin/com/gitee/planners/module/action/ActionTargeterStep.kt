@@ -25,6 +25,15 @@ class ActionTargeterStep(
     }
 
     /**
+     * 返回步骤依赖的事件实体键名。
+     *
+     * @return 载荷键名；不依赖事件实体时返回 null。
+     */
+    fun payloadKey(): String? {
+        return targeter.payloadKey
+    }
+
+    /**
      * 返回步骤的稳定描述，用于诊断输出。
      *
      * @return 形如 `@sector{...}` 的文本。
