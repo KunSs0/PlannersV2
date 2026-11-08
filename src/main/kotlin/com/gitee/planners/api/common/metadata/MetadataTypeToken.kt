@@ -61,9 +61,8 @@ class MetadataTypeToken {
                 java.lang.Float::class.java -> asFloat() + value.cfloat
                 java.lang.Long::class.java -> asLong() + value.clong
 
-                else -> error("")
+                else -> error("Metadata increase is not supported for ${clazz.name}")
             }
-            println("increase ${this.any}")
         }
 
     }

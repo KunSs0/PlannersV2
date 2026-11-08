@@ -10,10 +10,11 @@ abstract class DefaultBuiltinReader<T>(val file: File, val sourceType: SourceTyp
 
     override fun load() {
         this.clear()
-        sourceType.load(file).forEach { (key, value) ->
+        val entries = sourceType.load(file)
+        entries.forEach { (key, value) ->
             this[key] = invoke(value)
-            info("Loaded $key from ${file.name} with source type $sourceType")
         }
+        info("Loaded ${entries.size} 项 from ${file.name} with source type $sourceType")
     }
 
     abstract fun invoke(config: ConfigurationSection): T

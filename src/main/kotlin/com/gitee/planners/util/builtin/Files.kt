@@ -121,10 +121,12 @@ fun <T> createConfigSectionBuiltin(provider: () -> ConfigurationSection?, invoke
         override fun load() {
             this.clear()
             val section = provider() ?: return
+            var count = 0
             section.mapSection { it }.forEach { (key, value) ->
                 this[key] = invoker(value)
-                info("Loaded $key from config section")
+                count += 1
             }
+            info("Loaded $count 项 from config section")
         }
     }
     return builtin

@@ -47,8 +47,7 @@ object LevelCallbackExecutor {
             try {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), replacePlaceholders(callback.command, player, level, e))
             } catch (ex: Throwable) {
-                warning("Level callback failed: player=${player.name}, level=$level")
-                ex.printStackTrace()
+                warning("等级回调执行失败: player=${player.name}, level=$level, command=${callback.command}", ex)
             }
         }
     }
