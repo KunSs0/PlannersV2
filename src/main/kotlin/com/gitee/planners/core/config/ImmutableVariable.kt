@@ -273,6 +273,9 @@ interface ImmutableVariable : Variable {
         /**
          * 用查询引擎求值表达式。
          *
+         * 允许裸标识符：变量按声明顺序求值，后声明的可以直接引用先声明的名字
+         * （例如 `castTime / 20.0`）。未声明的名字求值为空，不中断整个技能。
+         *
          * @param scope 查询上下文。
          * @return 表达式结果。
          */
@@ -286,7 +289,7 @@ interface ImmutableVariable : Variable {
             if (cached != null) {
                 return cached
             }
-            val created = QueryRef.parseExpression(expression, "variable:$id")
+            val created = QueryRef.parseVariableExpression(expression, "variable:$id")
             compiledRef = created
             return created
         }
