@@ -10,10 +10,13 @@ interface Cooler {
     companion object {
 
         /**
-         * 只在启动后第一次初始化,如果想重新初始化,必须要重启
+         * 冷却存储实现。
+         *
+         * 由 `settings.cooler.use` 选择 `memory`（重启清空）或 `persistence`（写入数据库）；
+         * 只在启动后第一次初始化，修改配置需要重启。
          */
         val INSTANCE by unsafeLazy {
-            when (Planners.config.getString("settings.cooler.memory", "memory")!!.lowercase()) {
+            when (Planners.config.getString("settings.cooler.use", "memory")!!.lowercase()) {
                 "memory" -> MemoryCooler()
                 "persistence" -> PersistenceCooler()
                 else -> error("Unknown cooler type.")

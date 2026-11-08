@@ -201,12 +201,7 @@ settings:
     synchronize: true
     # 原版经验求兼容
     original-hook: true
-    # 等级隔离
-    # all = 全职业统一
-    # router = 职业路线独立
-    # job = 职业独立
-    isolation: all
-    # 当 isolation 为 all 时,该选项生效
+    # 全职业统一使用的经验算法（引用 module/level/*.yml 的算法 ID）
     algorithm: def0
   cooler:
     use: memory
