@@ -19,6 +19,11 @@ import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.info
 import java.util.function.BiFunction
 
+/**
+ * 把 Planners 的实体元数据暴露为 MythicMobs 占位符，并在自定义伤害后同步威胁。
+ *
+ * MythicMobs 4 与 5 的 API 分离，两套实现按主版本号分派。
+ */
 object MythicMobDamageHandler {
 
     @Awake(LifeCycle.ENABLE)
@@ -37,27 +42,20 @@ object MythicMobDamageHandler {
     }
 
     private fun registerPlaceholder() {
-        val majorVersion = MythicMobsLoader.version.getOrNull(0)
-        if (majorVersion == 4) {
-            registerMythicMobs4Placeholder()
-            return
+        when (MythicMobsLoader.version.getOrNull(0)) {
+            4 -> registerMythicMobs4Placeholder()
+            5 -> registerMythicMobs5Placeholder()
+            else -> info(
+                "MythicMobDamageHandler: Unsupported MythicMobs version ${MythicMobsLoader.version.joinToString(".")}"
+            )
         }
-        if (majorVersion == 5) {
-            registerMythicMobs5Placeholder()
-            return
-        }
-        info("MythicMobDamageHandler: Unsupported MythicMobs version ${MythicMobsLoader.version.joinToString(".")}")
     }
 
     private fun registerMythicMobs4Placeholder() {
         val placeholder = Placeholder.meta(object : BiFunction<PlaceholderMeta, String, String> {
 
             override fun apply(metadata: PlaceholderMeta, args: String): String {
-                val target = ProxyTarget.of(metadata.caster.entity)
-                if (target !is ProxyTarget.Containerization) {
-                    return "null"
-                }
-                return target.getMetadata(args).toString()
+                return resolveMetadata(metadata.caster.entity, args)
             }
         })
         MythicMobs.inst().placeholderManager.register("caster.pl.metadata", placeholder)
@@ -71,74 +69,68 @@ object MythicMobDamageHandler {
                     metadata: io.lumine.mythic.core.skills.placeholders.PlaceholderMeta,
                     args: String
                 ): String {
-                    val target = ProxyTarget.of(metadata.caster.entity)
-                    if (target !is ProxyTarget.Containerization) {
-                        return "null"
-                    }
-                    return target.getMetadata(args).toString()
+                    return resolveMetadata(metadata.caster.entity, args)
                 }
             }
         )
         MythicBukkit.inst().placeholderManager.register("caster.pl.metadata", placeholder)
     }
 
+    /**
+     * 读取实体上的 Planners 元数据。
+     *
+     * @param source MythicMobs 提供的施法者实体（两版 API 的 AbstractEntity）。
+     * @param key 元数据键。
+     * @return 元数据文本；键不存在或目标不支持元数据时返回 `null` 字符串。
+     */
+    private fun resolveMetadata(source: Any, key: String): String {
+        val target = ProxyTarget.of(source)
+        if (target !is ProxyTarget.Containerization) {
+            return "null"
+        }
+        return target.getMetadata(key).toString()
+    }
+
     @SubscribeEvent
     fun e(e: PlayerDamageEntityEvent) {
-        info("MythicMobDamageHandler ")
-        info(" isEnable: $MythicMobsLoader.isEnable")
-        info(" damager: ${e.player}")
-        if (MythicMobsLoader.isEnable && e.cause == DamageCause.of(EntityDamageEvent.DamageCause.CUSTOM)) {
-            // v4
-            if (MythicMobsLoader.version[0] == 4) {
-                processThreatUpdateV4(e.player,e.entity,e.damage)
-            }
-            // v5
-            else if (MythicMobsLoader.version[0] == 5) {
-                processThreatUpdateV5(e.player,e.entity,e.damage)
-            } else {
-                info("MythicMobDamageHandler: Unsupported MythicMobs version ${MythicMobsLoader.version.joinToString(".")}")
-            }
+        if (!MythicMobsLoader.isEnable) {
+            return
+        }
+        if (e.cause != DamageCause.of(EntityDamageEvent.DamageCause.CUSTOM)) {
+            return
+        }
+        when (MythicMobsLoader.version.getOrNull(0)) {
+            4 -> processThreatUpdateV4(e.player, e.entity, e.damage)
+            5 -> processThreatUpdateV5(e.player, e.entity, e.damage)
+            else -> info(
+                "MythicMobDamageHandler: Unsupported MythicMobs version ${MythicMobsLoader.version.joinToString(".")}"
+            )
         }
     }
 
     /**
-     * 处理 MythicMob 的威胁更新
+     * 处理 MythicMobs 5 的威胁更新。
      *
-     * @param attacker 攻击者
-     * @param entity 被攻击的实体
-     * @param damage 伤害值
+     * @param attacker 攻击者。
+     * @param entity 被攻击的实体。
+     * @param damage 伤害值。
      */
     private fun processThreatUpdateV5(attacker: LivingEntity, entity: Entity, damage: Double) {
-        val instance = MythicBukkit.inst().mobManager.getMythicMobInstance(entity)
-        info(" instance: $instance")
-        if (instance == null) {
-            return
-        }
-        if (instance.threatTable == null) {
-            return
-        }
-        instance.threatTable.threatGain(io.lumine.mythic.bukkit.BukkitAdapter.adapt(attacker), damage)
-        info("Threat gain: ${damage} by ${attacker.name} to ${entity.name}")
+        val instance = MythicBukkit.inst().mobManager.getMythicMobInstance(entity) ?: return
+        val threatTable = instance.threatTable ?: return
+        threatTable.threatGain(io.lumine.mythic.bukkit.BukkitAdapter.adapt(attacker), damage)
     }
 
     /**
-     * 处理 MythicMob 的威胁更新
+     * 处理 MythicMobs 4 的威胁更新。
      *
-     * @param attacker 攻击者
-     * @param entity 被攻击的实体
-     * @param damage 伤害值
+     * @param attacker 攻击者。
+     * @param entity 被攻击的实体。
+     * @param damage 伤害值。
      */
-    private fun processThreatUpdateV4(attacker: LivingEntity,entity: Entity,damage: Double) {
-        val instance = MythicMobs.inst().mobManager.getMythicMobInstance(entity)
-        info(" instance: $instance")
-        if (instance == null) {
-            return
-        }
-        if (instance.threatTable == null) {
-            return
-        }
-        instance.threatTable.threatGain(BukkitAdapter.adapt(attacker), damage)
-        info("Threat gain: ${damage} by ${attacker.name} to ${entity.name}")
+    private fun processThreatUpdateV4(attacker: LivingEntity, entity: Entity, damage: Double) {
+        val instance = MythicMobs.inst().mobManager.getMythicMobInstance(entity) ?: return
+        val threatTable = instance.threatTable ?: return
+        threatTable.threatGain(BukkitAdapter.adapt(attacker), damage)
     }
-
 }
