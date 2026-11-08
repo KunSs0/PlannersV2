@@ -41,7 +41,6 @@ taboolib {
             name("PlaceholderAPI").optional(true)
             // 已无脚本依赖；保留软依赖只为维持与 NovaLang 的加载顺序。
             name("NovaLang").optional(true)
-            name("Vault").optional(true)
             name("Symphony").optional(true)
         }
     }
