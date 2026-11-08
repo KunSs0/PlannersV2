@@ -217,6 +217,55 @@ object PlannersActions {
     }
 
     /**
+     * 读取共享标记并写入执行变量。
+     *
+     * 标记不存在或已清除时写入 `default`，因此后续动作可以直接用
+     * `<skill.变量名>` 取值，不必为「读一次元数据」保留脚本。
+     */
+    object MetaGet : Action {
+
+        override val id = "meta.get"
+
+        override val aliases = listOf("meta.get")
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.require("key")
+            arguments.require("to")
+            arguments.rejectUnknown("key", "to", "default")
+        }
+
+        override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
+            val key = arguments.requireText(scope, "key")
+            val name = arguments.requireText(scope, "to")
+            val fallback = arguments.number(scope, "default") ?: arguments.boolean(scope, "default")
+            val variables = scope.variables
+            if (variables !is MutableMap<*, *>) {
+                throw IllegalStateException("${arguments.path} requires a mutable variable scope.")
+            }
+            var resolved: Any? = fallback
+            for (target in targets) {
+                val entity = target.bukkitEntity()
+                if (entity == null) {
+                    continue
+                }
+                val proxy = ProxyTarget.of(entity)
+                resolved = proxy.getMetadata(key)
+                if (resolved != null) {
+                    break
+                }
+            }
+            if (resolved is String && resolved.isEmpty()) {
+                resolved = fallback
+            }
+            if (resolved == null) {
+                resolved = fallback
+            }
+            @Suppress("UNCHECKED_CAST")
+            (variables as MutableMap<String, Any?>)[name] = resolved
+        }
+    }
+
+    /**
      * 清除共享标记。
      */
     object MetaClear : Action {

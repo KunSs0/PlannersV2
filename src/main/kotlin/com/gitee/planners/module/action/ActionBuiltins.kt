@@ -30,6 +30,7 @@ object ActionBuiltins {
         ActionRegistry.register(PlannersActions.StateAttach)
         ActionRegistry.register(PlannersActions.StateDetach)
         ActionRegistry.register(PlannersActions.MetaSet)
+        ActionRegistry.register(PlannersActions.MetaGet)
         ActionRegistry.register(PlannersActions.MetaClear)
         ActionRegistry.register(PlannersCurrencyActions.Currency)
         ActionRegistry.register(PlannersEffectActions.Spawn)
