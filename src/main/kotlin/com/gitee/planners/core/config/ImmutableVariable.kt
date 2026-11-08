@@ -7,15 +7,11 @@ import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
 
 /**
- * 技能变量定义：普通值通过参数绑定，只有显式 expression 和条件分支参与编译。
+ * 技能变量定义。
+ *
+ * 常量直接返回原值；字符串、表达式与条件分支统一交给查询引擎求值。
  */
 interface ImmutableVariable : Variable {
-    /**
-     * 按配置顺序声明变量，常量只读取宿主参数，不把配置文本作为代码。
-     *
-     * @param builder 技能变量批处理函数正文。
-     */
-    fun appendDisplayEvaluation(builder: StringBuilder)
 
     /**
      * 用查询表达式求值本变量。
@@ -28,7 +24,6 @@ interface ImmutableVariable : Variable {
     fun evaluate(scope: QueryScope): Any?
 
     companion object {
-        const val LITERALS_PARAMETER = "__plannersVariableLiterals"
         private val identifierPattern = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
 
         /**
@@ -40,7 +35,7 @@ interface ImmutableVariable : Variable {
          * @throws IllegalArgumentException 名称或表达式结构不合法时抛出。
          */
         fun parse(id: String, value: Any): ImmutableVariable {
-            require(identifierPattern.matches(id) && id != LITERALS_PARAMETER) {
+            require(identifierPattern.matches(id)) {
                 "变量 '$id' 必须是合法的变量标识符。"
             }
             if (value is ConfigurationSection) {
@@ -69,32 +64,6 @@ interface ImmutableVariable : Variable {
                 return Auto(id, value)
             }
             return Literal(id, value)
-        }
-
-        /**
-         * 提取原始常量绑定，不执行解析、插值或求值。
-         *
-         * @param variables 已解析的有序变量定义。
-         * @return 按名称保存原始常量值的绑定。
-         */
-        fun literalBindings(variables: Map<String, ImmutableVariable>): Map<String, Any> {
-            val result = LinkedHashMap<String, Any>()
-            for ((id, variable) in variables) {
-                if (variable is Literal) {
-                    val value = variable.value
-                    if (value is List<*>) {
-                        result[id] = copyLiteralList(value)
-                    } else {
-                        result[id] = value
-                    }
-                    continue
-                }
-                // 文本变量在旧脚本写法里按原始文本参与绑定，保持原有插值与取值语义。
-                if (variable is Auto) {
-                    result[id] = variable.rawText()
-                }
-            }
-            return result
         }
 
         /**
@@ -146,20 +115,6 @@ interface ImmutableVariable : Variable {
      * @property value YAML 原始常量值。
      */
     class Literal(override val id: String, val value: Any) : ImmutableVariable {
-        /**
-         * 从宿主参数读取常量，保留字符串中的引号、换行与插值符号。
-         *
-         * @param builder 变量批处理函数正文。
-         */
-        override fun appendDisplayEvaluation(builder: StringBuilder) {
-            builder.append("val ")
-            builder.append(id)
-            builder.append(" = ")
-            builder.append(LITERALS_PARAMETER)
-            builder.append("[\"")
-            builder.append(id)
-            builder.append("\"]\n")
-        }
 
         /**
          * 常量直接返回配置值，列表返回副本避免调用方修改配置对象。
@@ -192,20 +147,6 @@ interface ImmutableVariable : Variable {
         @Volatile
         private var compiledRef: QueryRef? = null
 
-        /**
-         * 旧脚本写法下常量按原始文本参与绑定。
-         *
-         * @param builder 变量批处理函数正文。
-         */
-        override fun appendDisplayEvaluation(builder: StringBuilder) {
-            builder.append("val ")
-            builder.append(id)
-            builder.append(" = ")
-            builder.append(LITERALS_PARAMETER)
-            builder.append("[\"")
-            builder.append(id)
-            builder.append("\"]\n")
-        }
 
         /**
          * 按查询引擎求值。
@@ -257,18 +198,6 @@ interface ImmutableVariable : Variable {
         @Volatile
         private var compiledRef: QueryRef? = null
 
-        /**
-         * 保留表达式的原始计算语义与声明顺序。
-         *
-         * @param builder 变量批处理函数正文。
-         */
-        override fun appendDisplayEvaluation(builder: StringBuilder) {
-            builder.append("val ")
-            builder.append(id)
-            builder.append(" = (")
-            builder.append(expression)
-            builder.append(")\n")
-        }
 
         /**
          * 用查询引擎求值表达式。
@@ -313,18 +242,6 @@ interface ImmutableVariable : Variable {
         @Volatile
         private var compiledBranches: List<Branch>? = null
 
-        /**
-         * 写入原有条件分支表达式。
-         *
-         * @param builder 变量批处理函数正文。
-         */
-        override fun appendDisplayEvaluation(builder: StringBuilder) {
-            builder.append("val ")
-            builder.append(id)
-            builder.append(" = (")
-            builder.append(expression)
-            builder.append(")\n")
-        }
 
         /**
          * 按声明顺序求值，全部不匹配时返回 false。

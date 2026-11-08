@@ -116,9 +116,7 @@ dependencies {
     compileOnly("com.mojang:datafixerupper:4.0.26")
 
     compileOnly(kotlin("stdlib"))
-    compileOnly(fileTree("libs") {
-        exclude("nova-runtime-*.jar")
-    })
+    compileOnly(fileTree("libs"))
     compileOnly(files("libs/HaiderCore-2.0.0-api.jar"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(files("libs/HaiderCore-2.0.0-api.jar"))
