@@ -12,7 +12,6 @@ import com.gitee.planners.core.config.State
 import com.gitee.planners.module.action.ActionRunner
 import com.gitee.planners.module.action.ActionScopeFactory
 import com.gitee.planners.module.action.query.QueryScope
-import com.gitee.planners.module.script.ScriptManager
 import org.bukkit.entity.Player
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
@@ -27,20 +26,7 @@ object States {
     @Awake(LifeCycle.ENABLE)
     fun init() {
         for (state in Registries.STATE.values()) {
-            if (state.flows != null) {
-                runFlow(state, null, null, State.FLOW_LOAD)
-                continue
-            }
-            val module = state.actionModule
-            if (module == null) {
-                continue
-            }
-            try {
-                ScriptManager.invokeBusiness(module, "onLoad", emptyMap())
-            } catch (e: Exception) {
-                warning("Failed to initialize state script: ${state.id}")
-                e.printStackTrace()
-            }
+            runFlow(state, null, null, State.FLOW_LOAD)
         }
     }
 
@@ -51,27 +37,27 @@ object States {
 
     @SubscribeEvent
     fun onStateAttach(e: EntityStateEvent.Attach.Post) {
-        invokeCallback(e.state, e.entity, e, State.FLOW_ATTACH, "onStateAttach")
+        invokeCallback(e.state, e.entity, e, State.FLOW_ATTACH)
     }
 
     @SubscribeEvent
     fun onStateDetach(e: EntityStateEvent.Detach.Pre) {
-        invokeCallback(e.state, e.entity, e, State.FLOW_DETACH, "onStateDetach")
+        invokeCallback(e.state, e.entity, e, State.FLOW_DETACH)
     }
 
     @SubscribeEvent
     fun onStateMount(e: EntityStateEvent.Mount.Post) {
-        invokeCallback(e.state, e.entity, e, State.FLOW_MOUNT, "onStateMount")
+        invokeCallback(e.state, e.entity, e, State.FLOW_MOUNT)
     }
 
     @SubscribeEvent
     fun onStateClose(e: EntityStateEvent.Close.Pre) {
-        invokeCallback(e.state, e.entity, e, State.FLOW_CLOSE, "onStateClose")
+        invokeCallback(e.state, e.entity, e, State.FLOW_CLOSE)
     }
 
     @SubscribeEvent
     fun onStateEnd(e: EntityStateEvent.End) {
-        invokeCallback(e.state, e.entity, e, State.FLOW_END, "onStateEnd")
+        invokeCallback(e.state, e.entity, e, State.FLOW_END)
     }
 
     @Schedule
@@ -109,7 +95,6 @@ object States {
         entity: ProxyTarget<*>,
         event: Any,
         flowName: String,
-        funcName: String,
     ) {
         val target = entity as? ProxyTarget.Entity<*>
         if (target == null) {
@@ -118,25 +103,7 @@ object States {
         if (!target.hasState(state)) {
             return
         }
-        if (state.flows != null) {
-            runFlow(state, target, event, flowName)
-            return
-        }
-        val module = state.actionModule
-        if (module == null) {
-            return
-        }
-
-        val bindings = LinkedHashMap<String, Any?>()
-        bindings["sender"] = target.instance
-        bindings["event"] = event
-        bindings["state"] = state
-
-        try {
-            ScriptManager.invokeBusiness(module, funcName, bindings)
-        } catch (exception: Exception) {
-            warning("Failed to invoke state callback '$funcName' for '${state.id}': ${exception.message}")
-        }
+        runFlow(state, target, event, flowName)
     }
 
     /**

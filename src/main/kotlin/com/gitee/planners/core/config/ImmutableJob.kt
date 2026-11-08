@@ -2,7 +2,6 @@ package com.gitee.planners.core.config
 
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.Variable
-import com.gitee.planners.module.script.SingletonScript
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import org.bukkit.inventory.ItemStack

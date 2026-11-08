@@ -18,8 +18,6 @@ import com.gitee.planners.module.action.query.QueryRef
 import com.gitee.planners.module.action.query.QueryScope
 import org.bukkit.entity.Player
 import com.gitee.planners.module.action.ActionSpec
-import com.gitee.planners.module.script.NovaScriptUnit
-import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
 import taboolib.library.xseries.getItemStack
@@ -103,27 +101,26 @@ class ImmutableSkill(config: Configuration) : Unique {
     val async = option.getBoolean("async", true)
 
     /**
-     * 结构化动作配置节点；旧写法为字符串时该值为 null。
+     * 结构化动作配置节点。
+     *
+     * 只接受映射写法（流程名到动作列表）；写成字符串属于已移除的脚本写法，
+     * 加载期直接报错，不再静默忽略。
      */
     private val actionSection = config.getConfigurationSection("action")
 
     /**
      * 结构化的 Action 定义。
-     *
-     * 配置写成映射时按流程解析；写成字符串时视为旧脚本源码，此处保持 null，
-     * 由 [action] 走既有编译路径。两种写法互斥，不并存。
      */
     val actionSpec: ActionSpec? = if (actionSection == null) {
+        val legacy = config.getString("action", config.getString("run", ""))
+        if (legacy != null && legacy.isNotBlank()) {
+            throw IllegalArgumentException(
+                "skill:$id.action 仍是脚本字符串写法；请改成按流程名组织的结构化动作列表。",
+            )
+        }
         null
     } else {
         ActionParser.parse(id, actionSection, "skill:$id.action")
-    }
-
-    /** 脚本源代码；结构化配置下为空串 */
-    val action = if (actionSection == null) {
-        config.getString("action", config.getString("run", ""))!!
-    } else {
-        ""
     }
 
     /**
@@ -198,18 +195,7 @@ class ImmutableSkill(config: Configuration) : Unique {
      */
     
 
-    /** 技能 action 对应的启动期预编译 Nova 模块。 */
-    private val actionModule: NovaScriptUnit?
-    init {
-        if (action.isBlank()) {
-            actionModule = null
-        } else {
-            actionModule = ScriptManager.compileModule("skill:$id:action", action)
-        }
-    }
-
-
-    /** 显示模板表达式到启动期预编译 Nova SourceUnit 的映射。 */
+    /** 显示模板表达式到启动期预编译条件引用的映射。 */
     private val templateRefs = ConcurrentHashMap<String, QueryRef>()
 
     init {
@@ -259,7 +245,9 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
     /**
-     * 执行技能脚本
+     * 执行技能的结构化动作流程。
+     *
+     * 只支持 `action` 结构化写法；历史脚本写法已随脚本运行时移除。
      */
     fun execute(
         sender: ProxyTarget<*>,
@@ -267,7 +255,7 @@ class ImmutableSkill(config: Configuration) : Unique {
         variables: Map<String, Any?> = emptyMap()
     ): CompletableFuture<Any?> {
         val structured = actionSpec
-        if (structured == null && action.isEmpty()) {
+        if (structured == null) {
             return CompletableFuture.completedFuture(null)
         }
 
@@ -279,22 +267,8 @@ class ImmutableSkill(config: Configuration) : Unique {
         }
 
         val task = {
-            if (structured != null) {
-                runStructuredFlow(structured, ActionSpec.FIRE, execution)
-                null
-            } else {
-                // 全部 YAML variable 表达式先由同一编译程序的预编译 Nova 批处理入口计算。
-                val resolvedVariables = evaluateDisplayVariables(execution)
-                for ((variableId, variableValue) in resolvedVariables) {
-                    execution.setVariable(variableId, variableValue)
-                }
-                val module = actionModule
-                if (module == null) {
-                    null
-                } else {
-                    ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
-                }
-            }
+            runStructuredFlow(structured, ActionSpec.FIRE, execution)
+            null
         }
 
         return if (async) {
@@ -305,28 +279,24 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
     /**
-     * 调用当前技能 action 模块中的业务回调。
+     * 执行技能里的一个命名流程。
      *
-     * @param functionName action 模块导出的函数名。
+     * @param functionName 流程名。
      * @param execution 本次技能执行上下文。
      * @param payload 回调负载。
-     * @return Nova 回调返回值；技能未声明 action 时返回 null。
+     * @return 已执行时返回 true；未声明该流程时返回 null。
      */
     fun invokeActionFunction(functionName: String, execution: SkillExecutionContext, payload: Map<String, Any>): Any? {
         val structured = actionSpec
-        if (structured != null) {
-            // 结构化配置里回调名就是流程名，未声明该流程即视为不处理。
-            if (!structured.hasFlow(functionName)) {
-                return null
-            }
-            runStructuredFlow(structured, functionName, execution, payload)
-            return true
-        }
-        val module = actionModule
-        if (module == null) {
+        if (structured == null) {
             return null
         }
-        return ScriptManager.invokeBusiness(module, functionName, execution.actionBindings(), payload)
+        // 结构化配置里回调名就是流程名，未声明该流程即视为不处理。
+        if (!structured.hasFlow(functionName)) {
+            return null
+        }
+        runStructuredFlow(structured, functionName, execution, payload)
+        return true
     }
 
     fun getVariableOrNull(id: String): Variable? {
@@ -486,51 +456,20 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
 
-    /** 执行已经完成变量批处理的技能上下文。 */
+    /** 在已完成变量准备的上下文里执行技能主流程。 */
     fun execute(execution: SkillExecutionContext): CompletableFuture<Any?> {
-        if (action.isEmpty()) {
+        val structured = actionSpec
+        if (structured == null) {
             return CompletableFuture.completedFuture(null)
         }
         val task = {
-            val module = actionModule
-            if (module == null) {
-                null
-            } else {
-                ScriptManager.invokeBusiness(module, "execute", execution.actionBindings())
-            }
+            runStructuredFlow(structured, ActionSpec.FIRE, execution)
+            null
         }
         if (async) {
             return CompletableFuture.supplyAsync(task)
         }
         return CompletableFuture.completedFuture(task())
-    }
-
-    /** 返回图标模板纯函数的稳定显式参数列表。 */
-    private fun templateParameterNames(): List<String> {
-        val parameters = ArrayList<String>()
-        parameters.add("sender")
-        parameters.add("level")
-        parameters.add("ctx")
-        parameters.add("skill")
-        parameters.add("profile")
-        for ((variableId, _) in immutableVariables) {
-            parameters.add(variableId)
-        }
-        return parameters
-    }
-
-    /** 返回技能纯函数统一使用的有序显式参数。 */
-    fun evaluationArguments(execution: SkillExecutionContext): Array<Any?> {
-        val arguments = ArrayList<Any?>()
-        arguments.add(execution.sender)
-        arguments.add(execution.level)
-        arguments.add(execution.context)
-        arguments.add(execution.skill)
-        arguments.add(execution.profile)
-        for ((variableId, _) in immutableVariables) {
-            arguments.add(execution.getVariable(variableId))
-        }
-        return arguments.toTypedArray()
     }
 
     /**
@@ -553,6 +492,6 @@ class ImmutableSkill(config: Configuration) : Unique {
         return "minecraft:" + normalized.lowercase(Locale.ROOT)
     }
 
-    override fun toString(): String = "ImmutableSkill(id='$id', action='$action', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
+    override fun toString(): String = "ImmutableSkill(id='$id', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
 
 }

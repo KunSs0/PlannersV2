@@ -88,7 +88,7 @@ interface Algorithm {
                 }
                 val callbacks = ArrayList<LevelCallback>()
                 for (source in sources) {
-                    val callback = LevelCallback.parse("level:$id:callback:$key", source)
+                    val callback = LevelCallback.parse(source)
                     if (callback != null) {
                         callbacks.add(callback)
                     }

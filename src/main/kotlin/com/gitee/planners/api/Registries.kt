@@ -7,8 +7,6 @@ import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.module.currency.OpenConvertibleCurrencyImpl
-import com.gitee.planners.module.script.ScriptManager
-import com.gitee.planners.module.script.YamlNovaSourceCollector
 import com.gitee.planners.util.PhaseProfiler
 import com.gitee.planners.util.builtin.AutoReloadable
 import com.gitee.planners.util.builtin.createConfigSectionBuiltin
@@ -83,25 +81,21 @@ object Registries {
             com.gitee.planners.module.action.ActionScheduler.nextGeneration()
         }
         // 先完整销毁旧资源树，确保旧调度任务与业务作用域不进入新配置代次。
-        profiler.measure("close") { ScriptManager.close() }
         profiler.measure("config") { Planners.config.reload() }
         // 重载直接入口也必须清除旧施法续体，并严格校验新时间策略。
         profiler.measure("sessions") {
             com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()
         }
         profiler.measure("timing") { Planners.skillTimingPolicy.get() }
-        profiler.measure("prepare") { ScriptManager.prepare() }
-        profiler.measure("collect") { YamlNovaSourceCollector.collect(getDataFolder().toPath()) }
-        // Registry 重读会构造业务对象，并在 程序加载 前登记其虚拟 SourceUnit。
+        // Registry 重读会重新构造业务对象。
         profiler.measure("registries") { AutoReloadable.onReload() }
         profiler.measure("points") { SkillPointsManager.prepare() }
         profiler.measure("magic") {
             DefaultMagicPointProvider.expressionUpperLimit.get()
             DefaultMagicPointProvider.expressionResume.get()
         }
-        profiler.measure("nova") { ScriptManager.load() }
         profiler.measure("actions") { rebuildActionIndex() }
-        info(profiler.summary(ScriptManager.diagnostics().toString()))
+        info(profiler.summary())
     }
 
     /**
@@ -124,11 +118,11 @@ object Registries {
     }
 
     /**
-     * 按业务依赖顺序加载所有注册表，使构造阶段发现的 Nova 源码进入启动模块图。
+     * 按业务依赖顺序加载所有注册表。
      */
     fun init() {
         val profiler = PhaseProfiler("Startup profile")
-        // 按业务依赖顺序加载完整配置快照，使全部 Nova 虚拟源在 程序加载 前登记。
+        // 按业务依赖顺序加载完整配置快照。
         profiler.measure("job") { JOB.load() }
         profiler.measure("skill") { SKILL.load() }
         profiler.measure("skilltree") { SKILL_TREE.load() }
@@ -138,7 +132,7 @@ object Registries {
         profiler.measure("state") { STATE.load() }
         profiler.measure("keybinding") { KEYBINDING.load() }
         profiler.measure("actions") { rebuildActionIndex() }
-        info(profiler.summary(ScriptManager.diagnostics().toString()))
+        info(profiler.summary())
     }
 
 }

@@ -13,9 +13,7 @@ import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.core.skill.SkillPointsPolicy
 import com.gitee.planners.core.skill.timing.SkillTimingPolicy
-import com.gitee.planners.module.script.ScriptManager
 import com.gitee.planners.module.compat.zaphkiel.ZaphkielItemProvider
-import com.gitee.planners.module.script.YamlNovaSourceCollector
 import com.gitee.planners.util.PhaseProfiler
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
@@ -157,9 +155,6 @@ object Planners : Plugin() {
         LOGO.forEach(::info)
         // 动作调度器必须在注册表加载前安装，否则 server 流程与定时器无法开工。
         com.gitee.planners.module.action.BukkitActionDispatcher.install()
-        ScriptManager.prepare()
-        YamlNovaSourceCollector.collect(getDataFolder().toPath())
-
     }
 
     /**
@@ -191,13 +186,14 @@ object Planners : Plugin() {
         }
         try {
             ZaphkielItemProvider.register()
-            com.gitee.planners.api.PlannersAPI.registerCastCondition(HolyEmblemCastCondition.ID, HolyEmblemCastCondition())        } catch (error: LinkageError) {
+            com.gitee.planners.api.PlannersAPI.registerCastCondition(HolyEmblemCastCondition.ID, HolyEmblemCastCondition())
+        } catch (error: LinkageError) {
             warning("Zaphkiel 物品库 API 缺失或不匹配，zap: 物品条件将始终不满足", error)
         }
     }
 
     /**
-     * 在全部配置 Registry 完成 ACTIVE 加载后预编译并激活 Nova 编译程序。
+     * 在全部配置 Registry 完成加载后收尾启动。
      */
     override fun onActive() {
         // 配置在下一 tick 加载：此时全部插件已完成 onEnable，跨插件动作与触发器都已注册，
@@ -210,34 +206,16 @@ object Planners : Plugin() {
         DefaultMagicPointProvider.expressionUpperLimit.get()
         DefaultMagicPointProvider.expressionResume.get()
         AttributeProxy.register(HookAttributeSource())
-        // load 会解析全部物理入口与配置构造阶段登记的虚拟 SourceUnit。
-        val profiler = PhaseProfiler("Nova startup profile")
-        profiler.measure("load") { ScriptManager.load() }
-        info(profiler.summary(ScriptManager.diagnostics().toString()))
-        val categories = ScriptManager.categorySummary()
-        val text = StringBuilder()
-        for (entry in categories.entries) {
-            if (text.isNotEmpty()) {
-                text.append(", ")
-            }
-            text.append(entry.key).append('=').append(entry.value)
-        }
-        info("[Planners Nova] 源码分布(kinds=" + categories.size + "): " + text)
-        info("[Planners Nova] skill-samples: " + ScriptManager.categorySamples().joinToString(" | "))
-        info("[Planners Nova] Program is active")
+        info("[Planners] 配置加载完成")
     }
 
     /**
-     * 插件停止时销毁编译程序资源。
+     * 插件停止时销毁运行期资源。
      */
     override fun onDisable() {
         // 先停定时器与调度器，避免技能卸载后仍有动作在跑。
         com.gitee.planners.module.action.ActionTimerService.stop()
         com.gitee.planners.module.action.BukkitActionDispatcher.uninstall()
-        // 全部回调与任务由编译程序一次性释放。
-        ScriptManager.close()
-        // 插件卸载后不再需要跨重载字节码缓存。
-        ScriptManager.clearCompilationCache()
     }
 
 }

@@ -322,4 +322,64 @@ object PlannersAPI {
         return ExecutableResult.successful()
     }
 
+    /**
+     * 编译一段独立的技能条件表达式。
+     *
+     * 供外部插件在加载期预编译 `hook` 里的条件文本；表达式走 Planners 的查询引擎，
+     * 支持查询路径、事件变量与普通运算，不再依赖脚本编译。
+     *
+     * @param expression 条件表达式文本。
+     * @return 已编译的条件引用。
+     * @throws IllegalArgumentException 语法非法时抛出。
+     */
+    fun compileSkillCondition(expression: String): Any {
+        return com.gitee.planners.module.action.query.QueryRef.parseVariableExpression(
+            expression,
+            "skill-condition",
+        )
+    }
+
+    /**
+     * 在给定执行上下文里求值技能条件。
+     *
+     * 执行上下文里的技能变量会作为查询变量注入，因此条件可以直接写 `<skill.xxx>`。
+     *
+     * @param compiled [compileSkillCondition] 的返回值。
+     * @param execution 已准备变量的执行上下文。
+     * @return 条件成立时返回 true；编译结果不是条件引用时返回 false。
+     */
+    fun evaluateSkillCondition(compiled: Any?, execution: SkillExecutionContext): Boolean {
+        if (compiled !is com.gitee.planners.module.action.query.QueryRef) {
+            return false
+        }
+        val variables = LinkedHashMap<String, Any?>()
+        for (entry in execution.variableSnapshot().entries) {
+            variables[entry.key] = entry.value
+        }
+        val scope = com.gitee.planners.module.action.ActionScopeFactory.forExecution(execution, variables)
+        return toBoolean(compiled.resolve(scope))
+    }
+
+    /**
+     * 按真值规则转换条件结果。
+     *
+     * @param value 求值结果。
+     * @return 对应的布尔结果。
+     */
+    private fun toBoolean(value: Any?): Boolean {
+        if (value == null) {
+            return false
+        }
+        if (value is Boolean) {
+            return value
+        }
+        if (value is Number) {
+            return value.toDouble() != 0.0
+        }
+        if (value is String) {
+            return value.isNotEmpty()
+        }
+        return true
+    }
+
 }

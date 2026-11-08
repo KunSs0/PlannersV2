@@ -45,28 +45,7 @@ object LevelCallbackExecutor {
         }
         for (callback in algorithm.getCallbacks(level)) {
             try {
-                val script = callback.script
-                if (script != null) {
-                    script.run(
-                        false,
-                        player,
-                        e.template,
-                        level,
-                        e.form,
-                        e.to,
-                        player,
-                        player.name,
-                        player.name,
-                        player.uniqueId.toString(),
-                        e.template.playerRouter,
-                        e.template.playerRouter?.currentRoute
-                    )
-                    continue
-                }
-                val command = callback.command
-                if (command != null) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), replacePlaceholders(command, player, level, e))
-                }
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), replacePlaceholders(callback.command, player, level, e))
             } catch (ex: Throwable) {
                 warning("Level callback failed: player=${player.name}, level=$level")
                 ex.printStackTrace()

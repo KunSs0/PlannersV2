@@ -1,7 +1,6 @@
 package com.gitee.planners.core.config
 
 import com.gitee.planners.module.action.ActionSpec
-import com.gitee.planners.module.script.NovaScriptUnit
 
 /**
  * 状态定义接口。
@@ -48,33 +47,17 @@ interface State {
     val name: String
 
     /**
-     * 状态提供给外部属性插件的属性源。
+     * 状态提供的属性源。
      *
      * 每一层状态都会重复追加一次该列表，不参与 Planners 逻辑属性转换。
      */
     val attribute: List<String>
 
     /**
-     * 状态脚本源码，通过约定函数名调用内置事件处理器。
-     *
-     * 内置事件函数：
-     * - onLoad(): 状态加载时执行一次
-     * - onStateAttach(): 状态附加时触发
-     * - onStateDetach(): 状态移除时触发
-     * - onStateMount(): 状态首次挂载时触发
-     * - onStateClose(): 状态完全关闭时触发
-     * - onStateEnd(): 状态自然结束时触发
-     */
-    val action: String?
-
-    /** 启动期预编译后的 Nova 状态模块。 */
-    val actionModule: NovaScriptUnit?
-
-    /**
      * 状态生命周期流程。
      *
      * 流程名与事件一一对应：`onLoad`、`onAttach`、`onDetach`、`onMount`、
-     * `onClose`、`onEnd`。声明后不再编译 [action] 脚本体。
+     * `onClose`、`onEnd`。
      */
     val flows: ActionSpec?
 }

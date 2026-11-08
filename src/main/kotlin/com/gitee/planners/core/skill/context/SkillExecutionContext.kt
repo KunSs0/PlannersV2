@@ -46,22 +46,6 @@ class SkillExecutionContext private constructor(
         return LinkedHashMap(variables)
     }
 
-    /** 为资源型 action 生成一次性 Nova 隔离绑定。 */
-    fun actionBindings(): Map<String, Any?> {
-        val bindings = LinkedHashMap<String, Any?>()
-        bindings["sender"] = sender
-        bindings["level"] = level
-        bindings["ctx"] = context
-        bindings["skill"] = skill
-        bindings["origin"] = origin
-        val profile = this.profile
-        if (profile != null) {
-            bindings["profile"] = profile
-        }
-        bindings.putAll(variables)
-        return bindings
-    }
-
     companion object {
 
         /** 根据宿主对象建立统一的技能执行上下文。 */
