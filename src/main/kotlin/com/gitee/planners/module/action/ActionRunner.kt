@@ -233,6 +233,12 @@ object ActionRunner {
                 runFlow(spec, flowId, scope, depth + 1)
                 continue
             }
+            if (entity is Player) {
+                // 玩家目标：重算该玩家的技能等级与变量，子流程里 <skill.*> 即此人的值。
+                val child = ActionScopeFactory.forSpecWithVariables(spec, entity, scope.payload)
+                runFlow(spec, flowId, child, depth + 1)
+                continue
+            }
             runFlow(spec, flowId, scope.withTarget(entity), depth + 1)
         }
         return true

@@ -51,6 +51,37 @@ object ActionScopeFactory {
     }
 
     /**
+     * 为某技能在指定玩家上构造上下文，并把该技能的变量算好。
+     *
+     * 供 `call` 逐目标展开使用：子流程里 `<skill.变量>` 拿到的是**这个玩家**
+     * 在该技能等级下的值，因此属性、护盾这类被动不需要额外的取值动作。
+     *
+     * @param spec 本次执行所属技能结构。
+     * @param player 目标玩家。
+     * @param payload 事件载荷。
+     * @return 查询上下文；技能未注册时返回只绑定玩家的上下文。
+     */
+    fun forSpecWithVariables(
+        spec: ActionSpec,
+        player: Player,
+        payload: Map<String, Any?> = emptyMap(),
+    ): QueryScope {
+        val skill = com.gitee.planners.api.Registries.SKILL.getOrNull(spec.skillId)
+        if (skill == null) {
+            return forPlayer(player, null, 0, emptyMap(), null, "trigger:" + spec.skillId, payload)
+        }
+        val level = resolveSkillLevel(player, spec.skillId)
+        val execution = com.gitee.planners.core.skill.context.SkillExecutionContext.create(
+            player,
+            level,
+            skill,
+            emptyMap(),
+        )
+        val variables = skill.evaluateDisplayVariables(execution)
+        return forPlayer(player, skill, level, variables, null, "trigger:" + spec.skillId, payload)
+    }
+
+    /**
      * 解析玩家某个技能的学习等级。
      *
      * @param player 玩家。
