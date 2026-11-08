@@ -179,6 +179,22 @@ object SymphonyDriver : AttributeDriver {
      * @param source Planners 属性源文本。
      * @return Symphony 属性源文本。
      */
+    /**
+     * 已报告过的配置问题，避免每次属性同步都重复打同一行。
+     */
+    private val reported = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /**
+     * 同一条属性配置问题只报告一次。
+     *
+     * @param message 告警内容。
+     */
+    private fun warnOnce(message: String) {
+        if (reported.add(message)) {
+            warning(message)
+        }
+    }
+
     private fun normalizeSourceLines(source: List<String>): List<String> {
         val result = ArrayList<String>()
         for (line in source) {
@@ -205,7 +221,7 @@ object SymphonyDriver : AttributeDriver {
         if (tokens.size == 2 && tokens[0].endsWith(":")) {
             val key = normalizeAttributeKey(tokens[0].dropLast(1))
             if (key == null) {
-                warning("Symphony 忽略无效属性键: ${tokens[0]}")
+                warnOnce("Symphony 忽略无效属性键: ${tokens[0]}")
                 return null
             }
             return "$key add ${stripPositiveSign(tokens[1])}"
@@ -213,7 +229,7 @@ object SymphonyDriver : AttributeDriver {
         if (tokens.size == 3 && tokens[0].endsWith(":")) {
             val key = normalizeAttributeKey(tokens[0].dropLast(1))
             if (key == null) {
-                warning("Symphony 忽略无效属性键: ${tokens[0]}")
+                warnOnce("Symphony 忽略无效属性键: ${tokens[0]}")
                 return null
             }
             if (tokens[1] == "-") {
@@ -221,23 +237,23 @@ object SymphonyDriver : AttributeDriver {
             }
             val operation = normalizeOperation(tokens[1])
             if (operation == null) {
-                warning("Symphony 忽略无效属性操作: ${tokens[1]}")
+                warnOnce("Symphony 忽略无效属性操作: ${tokens[1]}")
                 return null
             }
             return "$key $operation ${tokens[2]}"
         }
         if (tokens.size != 3) {
-            warning("Symphony 忽略格式错误的属性源: $line")
+            warnOnce("Symphony 忽略格式错误的属性源: $line")
             return null
         }
         val key = normalizeAttributeKey(tokens[0])
         if (key == null) {
-            warning("Symphony 忽略无效属性键: ${tokens[0]}")
+            warnOnce("Symphony 忽略无效属性键: ${tokens[0]}")
             return null
         }
         val operation = normalizeOperation(tokens[1])
         if (operation == null) {
-            warning("Symphony 忽略无效属性操作: ${tokens[1]}")
+            warnOnce("Symphony 忽略无效属性操作: ${tokens[1]}")
             return null
         }
         return "$key $operation ${tokens[2]}"
