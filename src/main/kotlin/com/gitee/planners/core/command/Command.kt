@@ -29,8 +29,6 @@ object Command {
     @CommandBody
     val route = CommandRoute
 
-    @CommandBody
-    val metadata = CommandMetadata
 
     @CommandBody
     val profile = CommandProfile
