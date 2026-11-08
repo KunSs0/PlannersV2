@@ -4,7 +4,6 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.directing.DirectingResult
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent.Check
-import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
@@ -78,34 +77,6 @@ object PlannersAPI {
      */
     fun cast(player: Player, skill: ImmutableSkill, level: Int): CompletableFuture<Any?> {
         return skill.execute(ProxyTarget.BukkitEntity(player), level)
-    }
-
-    /**
-     * 获取技能变量
-     *
-     * @param player 玩家
-     * @param skill 技能
-     * @param variable 变量
-     * @return 变量值
-     */
-    fun getVariableValue(player: Player, skill: ImmutableSkill, variable: Variable): CompletableFuture<Any?> {
-        val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
-        val execution = newExecution(player, skill, level)
-        return CompletableFuture.completedFuture(execution.getVariable(variable.id))
-    }
-
-    /**
-     * 获取技能变量
-     *
-     * @param player 玩家
-     * @param skill 技能
-     * @param id 变量id
-     * @return 变量值
-     */
-    fun getVariableValue(player: Player, skill: ImmutableSkill, id: String): CompletableFuture<Any?> {
-        val variable = skill.getVariableOrNull(id)
-            ?: error("Variable $id not found in skill ${skill.id}")
-        return getVariableValue(player, skill, variable)
     }
 
     /**

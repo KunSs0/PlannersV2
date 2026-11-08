@@ -108,9 +108,4 @@ object BackpackAPI {
         val slot = pageConfig.getSlotForKey(keyId) ?: return null
         return template.getEquippedSkillByBackpackSlot(currentPage, slot.id)
     }
-
-    /** 获取按键对应的 hotbar 索引 */
-    fun getHotbarIndex(keyId: String): Int {
-        return Registries.KEYBINDING.values().indexOfFirst { it.id == keyId }
-    }
 }

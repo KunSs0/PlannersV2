@@ -35,15 +35,4 @@ abstract class MetadataContainer(map: Map<String, Metadata> = emptyMap()) {
         }
     }
 
-    fun getImmutableRegistry(): Map<String, Metadata> {
-        return mapOf(*table.map { it.key to it.value }.toTypedArray())
-    }
-
-    fun copyMetaDataTo(container: MetadataContainer) { // Quick clone
-        if (this::class != container::class) {
-            throw IllegalArgumentException("MetadataContainer type mismatch")
-        }
-        container.table.putAll(this.table)
-    }
-
 }
