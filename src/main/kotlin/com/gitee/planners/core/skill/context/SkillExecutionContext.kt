@@ -11,7 +11,7 @@ import org.bukkit.entity.Player
 /**
  * 一次技能计算与执行共享的强类型业务上下文。
  *
- * 纯计算入口从该对象读取明确字段并作为 Nova 函数参数传递；只有允许创建任务或回调的
+ * 纯计算入口从该对象读取明确字段并作为动作参数传递；只有允许创建任务或回调的
  * 技能 action 会在调用边界生成隔离 bindings。
  */
 class SkillExecutionContext private constructor(

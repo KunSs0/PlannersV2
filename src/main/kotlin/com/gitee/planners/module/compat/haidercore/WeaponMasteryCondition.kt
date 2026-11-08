@@ -34,7 +34,7 @@ class WeaponMasteryCondition(
         }
     }
 
-    /** 原生参数，不经过 Nova 字符串表达式求值。 */
+    /** 原生参数，不经过字符串表达式求值。 */
     private class Requirement(val weapon: String, val min: Int) {
         companion object {
             /** 拒绝空 ID、未知字段、非整数及溢出门槛。 */
@@ -63,7 +63,7 @@ class WeaponMasteryCondition(
             return level >= requirement.min
         }
 
-        /** 同一快照批量判断，原生条件不产生 Nova 调用统计。 */
+        /** 同一快照批量判断，原生条件不产生表达式求值统计。 */
         override fun evaluateBatchPersistent(player: Player, profile: PlayerTemplate, router: PlayerRouter?, route: PlayerRoute?, conditionInputs: List<Map<String, Any>>): ConditionExecution.BatchEvaluation {
             val encoded = StringBuilder()
             for (input in conditionInputs) {

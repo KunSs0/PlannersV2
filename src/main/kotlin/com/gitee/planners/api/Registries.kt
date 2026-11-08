@@ -51,7 +51,7 @@ object Registries {
     }
 
     val LEVEL = createDeepMultiBuiltin("module/level", "example.yml") {
-        Algorithm.Nova(it)
+        Algorithm.Expression(it)
     }
 
     val KEYBINDING = createConfigSectionBuiltin({
@@ -68,7 +68,7 @@ object Registries {
         get() = Planners.backpackConfig.get()
 
     /**
-     * 重新读取业务配置，并以销毁旧实例、创建新实例的方式重建 Nova 编译程序。
+     * 重新读取业务配置，并以销毁旧实例、创建新实例的方式重建全部运行期索引。
      *
      * 此方法是 Planners 重载命令的上层编排入口。编译程序本身没有 reload 状态，
      * 任一新源码都只能在新程序加载前登记。

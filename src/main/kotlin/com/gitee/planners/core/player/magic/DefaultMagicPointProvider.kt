@@ -19,7 +19,7 @@ import taboolib.platform.util.onlinePlayers
  * 默认魔力值提供器。
  *
  * 定期在 Bukkit 主线程计算在线玩家的魔力上限与恢复值。脚本表达式会复用
- * Nova Workspace，因此所有 Bukkit 对象访问均显式调度到主线程。
+ * 查询引擎求值，因此所有 Bukkit 对象访问都显式调度到主线程。
  */
 class DefaultMagicPointProvider : MagicPointProvider {
 
@@ -69,7 +69,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
      * 注册魔力更新定时任务。
      *
      * 每次配置重载都会先取消旧任务，再使用主线程任务重新注册。运行在主线程
-     * 能保证 Nova 入口串行访问，同时满足 Bukkit 玩家对象仅由主线程访问的要求。
+     * 保证资源读写串行执行，同时满足 Bukkit 玩家对象仅由主线程访问的要求。
      */
     private fun scheduleUpdateTasks() {
         if (!enabled) {

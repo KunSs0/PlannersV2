@@ -24,7 +24,7 @@ internal class PhaseProfiler(private val title: String) {
     }
 
     /**
-     * 生成单行统计文本；[detail] 用于追加 Nova 编译程序等非阶段信息。
+     * 生成单行统计文本；[detail] 用于追加非阶段信息。
      */
     fun summary(detail: String? = null): String {
         val total = System.nanoTime() - started

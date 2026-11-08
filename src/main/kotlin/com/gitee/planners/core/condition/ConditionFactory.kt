@@ -3,7 +3,7 @@ package com.gitee.planners.core.condition
 import com.gitee.planners.module.compat.haidercore.WeaponMasteryCondition
 import taboolib.library.configuration.ConfigurationSection
 
-/** 根据模板类型创建条件，业务实现分别归属 Nova 和外部插件适配包。 */
+/** 根据模板类型创建条件，业务实现分别归属内置实现和外部插件适配包。 */
 object ConditionFactory {
     /** 解码一个条件模板；学习条件必须声明由 Planners 提供的固定 type。 */
     fun create(key: String, section: ConfigurationSection): ConditionConfig {
@@ -25,7 +25,7 @@ object ConditionFactory {
         }
         val hint = section.getString("hint")
         require(hint != null) { "原生条件 $key 缺少 hint" }
-        require(!section.contains("exper") && !section.contains("prepare")) { "条件 $key 不支持 Nova exper/prepare" }
+        require(!section.contains("exper") && !section.contains("prepare")) { "条件 $key 不支持已移除的 exper/prepare 写法" }
         val consumeValue = section["consume"]
         require(consumeValue == null || consumeValue is Boolean) { "条件 $key 的 consume 必须是 Boolean" }
         val consume = section.getBoolean("consume", false)

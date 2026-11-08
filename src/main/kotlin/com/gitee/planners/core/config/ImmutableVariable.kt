@@ -41,7 +41,7 @@ interface ImmutableVariable : Variable {
          */
         fun parse(id: String, value: Any): ImmutableVariable {
             require(identifierPattern.matches(id) && id != LITERALS_PARAMETER) {
-                "变量 '$id' 必须是合法且非保留的 Nova 标识符。"
+                "变量 '$id' 必须是合法的变量标识符。"
             }
             if (value is ConfigurationSection) {
                 return parseExpression(id, value.getValues(false))
@@ -133,7 +133,7 @@ interface ImmutableVariable : Variable {
             }
             val expression = fields["expression"]
             require(expression is String && expression.isNotBlank()) {
-                "变量 '$id.expression' 必须是非空 Nova 表达式字符串。"
+                "变量 '$id.expression' 必须是非空表达式字符串。"
             }
             return Expression(id, expression)
         }
@@ -182,7 +182,7 @@ interface ImmutableVariable : Variable {
      * `10 * skill.level + 50` 按公式，`&a冲锋 Lv<skill.level>` 按模板，
      * 其余解析不成的按普通文本。
      *
-     * 判定推迟到首次结构化求值，因此旧脚本写法里的 Nova 表达式不会在加载期报错。
+     * 判定推迟到首次结构化求值，加载期只做语法校验。
      *
      * @property id 变量名。
      * @param source 配置中的原始文本。
@@ -244,14 +244,14 @@ interface ImmutableVariable : Variable {
      * 保留旧写法兼容；新配置直接写标量即可由 [Auto] 判定。
      *
      * @property id 变量名。
-     * @property expression 待预编译的 Nova 表达式。
+     * @property expression 待预编译的表达式。
      */
     class Expression(override val id: String, private val expression: String) : ImmutableVariable {
 
         /**
          * 首次结构化求值时编译并缓存。
          *
-         * 旧脚本写法的表达式是 Nova 语法，不能在任何技能加载时都按查询表达式解析，
+         * 表达式统一按查询表达式解析，但允许引用同技能已声明的变量，
          * 因此编译推迟到真正用到结构化求值的时候。
          */
         @Volatile
@@ -356,7 +356,7 @@ interface ImmutableVariable : Variable {
          * 从末分支生成条件，保留未匹配返回 false 的既有条件变量契约。
          *
          * @param values 按配置顺序排列的分支。
-         * @return Nova 条件表达式。
+         * @return 条件表达式。
          * @throws IllegalArgumentException 分支为空或缺少表达式时抛出。
          */
         private fun createExpression(values: List<ConfigurationSection>): String {

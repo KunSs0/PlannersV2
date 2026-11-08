@@ -29,7 +29,7 @@ interface Algorithm {
      *
      * @property root 等级算法配置节。
      */
-    class Nova(val root: ConfigurationSection) : Algorithm, Unique {
+    class Expression(val root: ConfigurationSection) : Algorithm, Unique {
 
         override val id: String = root.name
 
@@ -106,7 +106,7 @@ interface Algorithm {
             if (root == null) {
                 return null
             }
-            return Nova(root)
+            return Expression(root)
         }
 
     }

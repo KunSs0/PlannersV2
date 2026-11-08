@@ -315,9 +315,9 @@ class ImmutableSkill(config: Configuration) : Unique {
     /**
      * 使用编译程序入口计算一个 `{{expression}}`。
      *
-     * @param expression 模板中的原始 Nova 表达式。
+     * @param expression 模板中的原始表达式。
      * @param execution 已完成技能变量计算的执行上下文。
-     * @return Nova 表达式结果。
+     * @return 表达式结果。
      */
     fun evaluateDisplayTemplate(expression: String, execution: SkillExecutionContext): Any? {
         val normalized = expression.trim()
@@ -331,7 +331,7 @@ class ImmutableSkill(config: Configuration) : Unique {
     /**
      * 构造显示模板的查询上下文。
      *
-     * 模板只能读到本次执行已算出的技能变量与基础字段，与旧 Nova 纯函数参数表一致。
+     * 模板只能读到本次执行已算出的技能变量与基础字段。
      *
      * @param execution 已完成技能变量计算的执行上下文。
      * @return 查询上下文。
@@ -386,7 +386,7 @@ class ImmutableSkill(config: Configuration) : Unique {
         return null
     }
 
-    /** 扫描一项显示文本，并在 程序加载 前登记其中全部 Nova 模板表达式。 */
+    /** 扫描一项显示文本，并预编译其中全部模板表达式。 */
     private fun registerDisplayTemplate(path: String, text: String?) {
         if (text == null) {
             return

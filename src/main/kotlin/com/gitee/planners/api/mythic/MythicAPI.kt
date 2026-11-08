@@ -9,7 +9,7 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import taboolib.common.util.runSync
 
-/** MythicMobs API exposed to Nova scripts. */
+/** MythicMobs API 对外只读入口。 */
 object MythicAPI {
 
     @JvmField

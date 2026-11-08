@@ -45,7 +45,7 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         val rendered = StringBuffer()
         while (matcher.find()) {
             val expression = matcher.group(1)
-            // 模板业务表达式始终通过启动期预编译的 Nova SourceUnit 执行。
+            // 模板业务表达式由查询引擎求值，使用技能自身变量与基础字段。
             val value = skill.evaluateDisplayTemplate(expression, preparedExecution)
             if (value == null) {
                 throw IllegalStateException("Skill '${skill.id}' display template returned null: {{$expression}}")
@@ -94,7 +94,7 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
         val rendered = StringBuffer()
         while (matcher.find()) {
             val expression = matcher.group(1)
-            // 模板业务表达式始终通过启动期预编译的 Nova SourceUnit 执行。
+            // 模板业务表达式由查询引擎求值，使用技能自身变量与基础字段。
             val value = skill.evaluateDisplayTemplate(expression, renderingExecution)
             if (value == null) {
                 throw IllegalStateException("Skill '${skill.id}' display template returned null: {{$expression}}")

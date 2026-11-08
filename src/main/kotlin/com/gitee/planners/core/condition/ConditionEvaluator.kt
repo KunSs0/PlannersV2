@@ -212,7 +212,7 @@ class ConditionEvaluator(
      * 在同一预编译 Workspace 中批量校验多个条件组。
      *
      * 每个请求保持与 [verify] 一致的条件顺序和失败短路结果，
-     * 脚本计算按条件定义分组批量执行，避免节点数量线性增加 Nova 调用次数。
+     * 条件计算按定义分组批量执行，避免节点数量线性增加求值次数。
      *
      * @param requests 待校验请求列表。
      * @param player 当前玩家。
