@@ -15,11 +15,11 @@ import com.gitee.planners.core.config.SkillTreeNode
 import com.gitee.planners.core.config.SkillTreeSkillNode
 import com.gitee.planners.core.database.ProfilePersistence
 import com.gitee.planners.core.database.RecordIdentity
-import com.gitee.planners.core.script.proxy.ProxyPlayerRoute
-import com.gitee.planners.core.script.proxy.ProxyNodeInfo
-import com.gitee.planners.core.script.proxy.ProxyRouteTarget
-import com.gitee.planners.core.script.proxy.ProxyTreeDefinition
-import com.gitee.planners.core.script.proxy.ProxyTreeDefinitionView
+import com.gitee.planners.core.route.proxy.ProxyPlayerRoute
+import com.gitee.planners.core.route.proxy.ProxyNodeInfo
+import com.gitee.planners.core.route.proxy.ProxyRouteTarget
+import com.gitee.planners.core.route.proxy.ProxyTreeDefinition
+import com.gitee.planners.core.route.proxy.ProxyTreeDefinitionView
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.util.concurrent.CompletableFuture

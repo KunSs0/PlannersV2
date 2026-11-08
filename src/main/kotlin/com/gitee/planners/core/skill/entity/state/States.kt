@@ -3,7 +3,7 @@ package com.gitee.planners.core.skill.entity.state
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.event.PluginReloadEvents
 import com.gitee.planners.api.event.entity.EntityStateEvent
-import com.gitee.planners.api.event.script.ScriptCustomTriggerEvent
+import com.gitee.planners.api.event.CustomTriggerEvent
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.api.job.target.hasState
 import com.gitee.planners.api.job.target.isExpired
@@ -87,7 +87,7 @@ object States {
         if (sender !is ProxyTarget.Entity<*>) {
             return
         }
-        ScriptCustomTriggerEvent(sender, name).call()
+        CustomTriggerEvent(sender, name).call()
     }
 
     private fun invokeCallback(

@@ -1,7 +1,7 @@
-import com.gitee.planners.core.script.proxy.ProxyNodeInfo
-import com.gitee.planners.core.script.proxy.ProxyPlayerRoute
-import com.gitee.planners.core.script.proxy.ProxyRouteTarget
-import com.gitee.planners.core.script.proxy.ProxyTreeDefinition
+import com.gitee.planners.core.route.proxy.ProxyNodeInfo
+import com.gitee.planners.core.route.proxy.ProxyPlayerRoute
+import com.gitee.planners.core.route.proxy.ProxyRouteTarget
+import com.gitee.planners.core.route.proxy.ProxyTreeDefinition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test

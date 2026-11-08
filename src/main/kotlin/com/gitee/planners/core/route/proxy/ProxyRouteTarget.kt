@@ -1,4 +1,4 @@
-package com.gitee.planners.core.script.proxy
+package com.gitee.planners.core.route.proxy
 
 interface ProxyRouteTarget<P> {
 

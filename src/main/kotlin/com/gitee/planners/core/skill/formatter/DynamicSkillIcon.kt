@@ -122,10 +122,6 @@ class DynamicSkillIcon(sender: ProxyTarget<*>, skill: ImmutableSkill, level: Int
     class RenderProfiling {
 
         var optionsCreateMs: Double = 0.0
-        var scriptContextMs: Double = 0.0
-        var scriptSessionOpenMs: Double = 0.0
-        var scriptSessionCloseMs: Double = 0.0
-        var scriptSessionRebindMs: Double = 0.0
         var variableEvalMs: Double = 0.0
         var variableEvalCount: Int = 0
         var templateResolveMs: Double = 0.0

@@ -1,4 +1,4 @@
-package com.gitee.planners.core.script.proxy
+package com.gitee.planners.core.route.proxy
 
 /** 单个技能树节点面向脚本的不可变查询结果。 */
 class ProxyNodeInfo(
