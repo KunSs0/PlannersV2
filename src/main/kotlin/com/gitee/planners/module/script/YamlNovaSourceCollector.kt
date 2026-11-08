@@ -1,6 +1,5 @@
 package com.gitee.planners.module.script
 
-import com.gitee.planners.core.config.ImmutableVariable
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
 import java.nio.charset.StandardCharsets
@@ -83,13 +82,11 @@ object YamlNovaSourceCollector {
         path: List<String>,
         insideVariables: Boolean
     ) {
-        // 普通常量不进入源码图，其中的引号、插值标记或代码片段均保持原始值。
+        // 变量统一由 ImmutableVariable 与查询引擎求值，不再进入 Nova 编译图：
+        // 字面量保持原值，公式与条件分支都按查询表达式解释。
         val variableIndex = path.indexOf("variables")
-        if (insideVariables && variableIndex >= 0 && path.size - variableIndex == 2 && value != null) {
-            val variable = ImmutableVariable.parse(path.last(), value)
-            if (variable is ImmutableVariable.Literal) {
-                return
-            }
+        if (insideVariables && variableIndex >= 0) {
+            return
         }
         if (value is ConfigurationSection) {
             visitSection(file, lines, value, path, insideVariables)
@@ -127,16 +124,12 @@ object YamlNovaSourceCollector {
         val yamlPath = path.joinToString(".")
         val originLine = findOriginLine(lines, path, scalar)
         registerSemanticSource(file, yamlPath, originLine, path, scalar, insideVariables)
-        var templateIndex = 0
-        val matches = templatePattern.findAll(scalar)
-        for (match in matches) {
+        // 显示 `{{...}}` 模板改由技能自身的查询上下文求值，不再登记为 Nova 源码。
+        for (match in templatePattern.findAll(scalar)) {
             val expression = match.groupValues[1].trim()
             if (expression.isEmpty()) {
-                throw IllegalArgumentException("Nova template expression must not be blank: $yamlPath")
+                throw IllegalArgumentException("显示模板表达式不能为空: $yamlPath")
             }
-            val templatePath = "$yamlPath.{{${templateIndex}}}"
-            ScriptManager.registerYamlExpression(file, templatePath, originLine, expression)
-            templateIndex += 1
         }
     }
 

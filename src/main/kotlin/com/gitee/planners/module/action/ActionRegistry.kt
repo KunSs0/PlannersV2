@@ -44,6 +44,7 @@ object ActionRegistry {
      */
     @Synchronized
     fun resetToBuiltins() {
+        clearDeferred()
         actions.clear()
         conditions.clear()
         targeters.clear()
@@ -94,6 +95,58 @@ object ActionRegistry {
     fun trigger(id: String): ActionTrigger? {
         install()
         return triggers[id.trim().lowercase(Locale.ROOT)]
+    }
+
+    /** 延迟绑定的动作引用，按配置路径去重。 */
+    private val deferred = LinkedHashMap<String, DeferredAction>()
+
+    /**
+     * 登记一条延迟绑定的动作引用。
+     *
+     * 外部插件晚于 Planners 启用时，`fc.*` 这类动作在解析阶段还没注册，
+     * 先留成引用，等启动后由 [verifyDeferred] 校验、执行时再解析。
+     *
+     * @param id 动作主键。
+     * @param path 配置路径。
+     * @param arguments 解析得到的参数。
+     * @return 延迟绑定的动作引用。
+     */
+    fun defer(id: String, path: String, arguments: ActionArguments): DeferredAction {
+        val existing = deferred[path]
+        if (existing != null) {
+            return existing
+        }
+        val created = DeferredAction(id, path, arguments)
+        deferred[path] = created
+        return created
+    }
+
+    /**
+     * 启动后校验所有延迟绑定的动作引用。
+     *
+     * 能在注册表里解析的会按真实动作重跑参数校验；仍然解析不到的收集成报告，
+     * 供调用方记录为启动告警，而不是让整个插件加载失败。
+     *
+     * @return 无法解析的条目，每项形如 `路径 -> 动作主键`。
+     */
+    fun verifyDeferred(): List<String> {
+        val unresolved = ArrayList<String>()
+        for (binding in deferred.values) {
+            val action = action(binding.id)
+            if (action == null) {
+                unresolved.add(binding.path + " -> " + binding.id)
+                continue
+            }
+            action.validate(binding.arguments)
+        }
+        return unresolved
+    }
+
+    /**
+     * 清空延迟绑定登记。
+     */
+    private fun clearDeferred() {
+        deferred.clear()
     }
 
     /**

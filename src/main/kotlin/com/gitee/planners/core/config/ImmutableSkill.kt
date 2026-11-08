@@ -14,6 +14,9 @@ import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.action.ActionParser
 import com.gitee.planners.module.action.ActionRunner
 import com.gitee.planners.module.action.ActionScopeFactory
+import com.gitee.planners.module.action.query.QueryRef
+import com.gitee.planners.module.action.query.QueryScope
+import org.bukkit.entity.Player
 import com.gitee.planners.module.action.ActionSpec
 import com.gitee.planners.module.script.NovaScriptUnit
 import com.gitee.planners.module.script.ScriptManager
@@ -211,7 +214,7 @@ class ImmutableSkill(config: Configuration) : Unique {
 
 
     /** 显示模板表达式到启动期预编译 Nova SourceUnit 的映射。 */
-    private val templateScripts = ConcurrentHashMap<String, NovaScriptUnit>()
+    private val templateRefs = ConcurrentHashMap<String, QueryRef>()
 
     init {
         registerDisplayTemplate("display.icon.name", displayIconName)
@@ -379,11 +382,69 @@ class ImmutableSkill(config: Configuration) : Unique {
      */
     fun evaluateDisplayTemplate(expression: String, execution: SkillExecutionContext): Any? {
         val normalized = expression.trim()
-        val script = templateScripts[normalized]
-        if (script == null) {
+        val ref = templateRefs[normalized]
+        if (ref == null) {
             throw IllegalStateException("Skill '$id' display template was not precompiled: {{$normalized}}")
         }
-        return ScriptManager.invokePure(script, *evaluationArguments(execution))
+        return ref.resolve(displayTemplateScope(execution))
+    }
+
+    /**
+     * 构造显示模板的查询上下文。
+     *
+     * 模板只能读到本次执行已算出的技能变量与基础字段，与旧 Nova 纯函数参数表一致。
+     *
+     * @param execution 已完成技能变量计算的执行上下文。
+     * @return 查询上下文。
+     */
+    private fun displayTemplateScope(execution: SkillExecutionContext): QueryScope {
+        val sender = execution.sender
+        val player = sender as? Player
+        if (player != null) {
+            return ActionScopeFactory.forPlayer(
+                player,
+                this,
+                execution.level,
+                execution.variableSnapshot(),
+                null,
+                "skill:$id:template",
+            )
+        }
+        return QueryScope(
+            sender = sender,
+            skill = this,
+            profile = execution.profile,
+            variables = execution.variableSnapshot(),
+            skillFieldReader = { value, field -> readDisplayField(value, field, execution.level) },
+            label = "skill:$id:template",
+        )
+    }
+
+    /**
+     * 非玩家施法者下读取技能基础字段。
+     *
+     * 技能变量已放进查询上下文的 `variables`，这里只补基础字段。
+     *
+     * @param value 技能对象。
+     * @param field 字段名。
+     * @param level 技能等级。
+     * @return 字段值；未命中时返回 null。
+     */
+    private fun readDisplayField(value: Any, field: String, level: Int): Any? {
+        val skill = value as? ImmutableSkill
+        if (skill == null) {
+            return null
+        }
+        if (field == "id") {
+            return skill.id
+        }
+        if (field == "name") {
+            return skill.id
+        }
+        if (field == "level") {
+            return level
+        }
+        return null
     }
 
     /** 扫描一项显示文本，并在 程序加载 前登记其中全部 Nova 模板表达式。 */
@@ -399,8 +460,7 @@ class ImmutableSkill(config: Configuration) : Unique {
                 throw IllegalArgumentException("Skill '$id' has a blank display template at $path")
             }
             val sourceId = "skill:$id:template:$path:$expressionIndex"
-            val script = ScriptManager.compileExpression(sourceId, templateParameterNames(), expression)
-            templateScripts[expression] = script
+            templateRefs[expression] = QueryRef.parseExpression(expression, sourceId)
             expressionIndex += 1
         }
     }

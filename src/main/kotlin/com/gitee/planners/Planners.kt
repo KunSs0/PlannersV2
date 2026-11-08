@@ -158,14 +158,24 @@ object Planners : Plugin() {
         com.gitee.planners.module.action.BukkitActionDispatcher.install()
         ScriptManager.prepare()
         YamlNovaSourceCollector.collect(getDataFolder().toPath())
-        // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
-        registerItemProviders()
-        Registries.init()
-        SkillPointsManager.prepare()
-        DefaultMagicPointProvider.expressionUpperLimit.get()
-        DefaultMagicPointProvider.expressionResume.get()
-        AttributeProxy.register(HookAttributeSource())
 
+    }
+
+    /**
+     * 汇报仍然无法解析的外部动作引用。
+     *
+     * 技能里写了某个插件提供的动作、但该插件未安装或未注册时，只记录告警，
+     * 不让整个插件加载失败；真正执行到该行时才会抛错。
+     */
+    private fun reportUnresolvedActions() {
+        val unresolved = com.gitee.planners.module.action.ActionRegistry.verifyDeferred()
+        if (unresolved.isEmpty()) {
+            return
+        }
+        warning("[Planners] 有 " + unresolved.size + " 处动作无法解析，检查对应插件是否安装：")
+        for (entry in unresolved) {
+            warning("  " + entry)
+        }
     }
 
     /**
@@ -189,6 +199,16 @@ object Planners : Plugin() {
      * 在全部配置 Registry 完成 ACTIVE 加载后预编译并激活 Nova 编译程序。
      */
     override fun onActive() {
+        // 配置在下一 tick 加载：此时全部插件已完成 onEnable，跨插件动作与触发器都已注册，
+        // 技能里的 fc.* / mm.* 才能解析成功。
+        // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
+        registerItemProviders()
+        Registries.init()
+        reportUnresolvedActions()
+        SkillPointsManager.prepare()
+        DefaultMagicPointProvider.expressionUpperLimit.get()
+        DefaultMagicPointProvider.expressionResume.get()
+        AttributeProxy.register(HookAttributeSource())
         // load 会解析全部物理入口与配置构造阶段登记的虚拟 SourceUnit。
         val profiler = PhaseProfiler("Nova startup profile")
         profiler.measure("load") { ScriptManager.load() }

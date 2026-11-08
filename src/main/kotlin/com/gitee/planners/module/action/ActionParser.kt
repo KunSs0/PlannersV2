@@ -276,20 +276,26 @@ object ActionParser {
         if (actionName.isEmpty()) {
             throw IllegalArgumentException("$path requires an action name.")
         }
-        val action = ActionRegistry.action(actionName)
-        if (action == null) {
-            throw IllegalArgumentException(
-                "$path references unknown action '$actionName', expected one of: " +
-                    ActionRegistry.actionIds().toString(),
-            )
-        }
         var arguments = ActionArguments(emptyMap(), path)
         if (index < text.length && text[index] == '{') {
             val block = ActionTextScanner.readBlock(text, index, path)
             arguments = ActionArguments(ActionTextScanner.parseArguments(block.content, path), path)
             index = block.end
         }
-        action.validate(arguments)
+        val registered = ActionRegistry.action(actionName)
+        val action: Action
+        if (registered != null) {
+            registered.validate(arguments)
+            action = registered
+        } else if (actionName.contains('.')) {
+            // 外部插件可能晚于 Planners 启用；带命名空间的动作先留成引用，启动后校验。
+            action = ActionRegistry.defer(actionName, path, arguments)
+        } else {
+            throw IllegalArgumentException(
+                "$path references unknown action '$actionName', expected one of: " +
+                    ActionRegistry.actionIds().toString(),
+            )
+        }
 
         val targeters = ArrayList<ActionTargeterStep>()
         var trigger: ActionTrigger? = null

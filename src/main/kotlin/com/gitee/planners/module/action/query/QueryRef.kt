@@ -150,12 +150,16 @@ class QueryRef private constructor(
                 return QueryRef(QueryText.parseScalar(trimmed), null, null, null, label, trimmed)
             }
             if (trimmed.equals("true", true) || trimmed.equals("false", true)) {
-                return QueryRef(trimmed.equals("true", true), null, null, null, label)
+                return QueryRef(trimmed.equals("true", true), null, null, null, label, trimmed)
             }
             if (QueryPath.isPlainPath(trimmed)) {
                 val root = trimmed.substringBefore('.')
-                if (QueryRoot.of(root) != null) {
-                    return QueryRef(null, QueryPath.parse(trimmed, label), null, null, label)
+                val resolved = QueryRoot.of(root)
+                // 只写根名（如 locator="skill"）没有字段可取，按字面量处理；
+                // sender 允许单独使用，其余根必须带至少一个字段才是查询。
+                if (resolved != null && (trimmed.contains('.') || resolved == QueryRoot.SENDER)) {
+                    // 保留原始文本：expr 这类条件需要整段公式，路径字段也要能回读原文。
+                    return QueryRef(null, QueryPath.parse(trimmed, label), null, null, label, trimmed)
                 }
             }
             val formula = tryExpression(trimmed, label)
@@ -221,8 +225,12 @@ class QueryRef private constructor(
             }
             if (QueryPath.isPlainPath(trimmed)) {
                 val root = trimmed.substringBefore('.')
-                if (QueryRoot.of(root) != null) {
-                    return QueryRef(null, QueryPath.parse(trimmed, label), null, null, label)
+                val resolved = QueryRoot.of(root)
+                // 只写根名（如 locator="skill"）没有字段可取，按字面量处理；
+                // sender 允许单独使用，其余根必须带至少一个字段才是查询。
+                if (resolved != null && (trimmed.contains('.') || resolved == QueryRoot.SENDER)) {
+                    // 保留原始文本：expr 这类条件需要整段公式，路径字段也要能回读原文。
+                    return QueryRef(null, QueryPath.parse(trimmed, label), null, null, label, trimmed)
                 }
             }
             QueryEvaluator.validate(trimmed, label)
