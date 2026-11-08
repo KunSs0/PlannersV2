@@ -109,7 +109,8 @@ object QueryEvaluator {
     /**
      * 求值裸标识符。
      *
-     * 只从查询上下文的变量表按名读取，先精确匹配再按小写匹配；找不到返回 null。
+     * 先查查询上下文的变量表，再回落到技能自身字段（`level` / `id` / `name`）；
+     * 都取不到时返回 null，让调用方按缺失处理。
      */
     private fun evaluateVariable(node: QueryNode.Variable, scope: QueryScope): Any? {
         if (scope.variables.containsKey(node.name)) {
@@ -118,6 +119,13 @@ object QueryEvaluator {
         val key = node.name.lowercase(java.util.Locale.ROOT)
         if (scope.variables.containsKey(key)) {
             return scope.variables[key]
+        }
+        val skill = scope.skill
+        if (skill == null) {
+            return null
+        }
+        if (key == "level" || key == "id" || key == "name") {
+            return scope.skillFieldReader(skill, key)
         }
         return null
     }

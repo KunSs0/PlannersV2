@@ -32,6 +32,7 @@ object ActionBuiltins {
         ActionRegistry.register(PlannersActions.MetaSet)
         ActionRegistry.register(PlannersActions.MetaGet)
         ActionRegistry.register(PlannersActions.MetaClear)
+        ActionRegistry.register(PlannersCooldownActions.Arm)
         ActionRegistry.register(PlannersCurrencyActions.Currency)
         ActionRegistry.register(PlannersEffectActions.Spawn)
     }
@@ -88,6 +89,7 @@ object ActionBuiltins {
         ActionRegistry.register(PlannersConditions.Level)
         ActionRegistry.register(PlannersConditions.Job)
         ActionRegistry.register(PlannersConditions.Wounded)
+        ActionRegistry.register(PlannersCooldownConditions.Ready)
         ActionRegistry.register(PlannersCurrencyActions.CurrencyCondition)
     }
 }
