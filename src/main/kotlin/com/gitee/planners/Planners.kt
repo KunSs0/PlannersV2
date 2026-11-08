@@ -84,24 +84,6 @@ object Planners : Plugin() {
         this
     }
 
-    @ConfigNode("settings.debug.selector.sector.enable")
-    val sectorSelectorDebug = false
-
-    @ConfigNode("settings.debug.selector.sector.particle")
-    val sectorSelectorDebugParticle = ConfigNodeTransfer<String, Particle> {
-        try {
-            Particle.valueOf(uppercase().replace(".", "_").replace("-", "_"))
-        } catch (e: Exception) {
-            warning("Unknown sector selector debug particle: $this")
-            Particle.END_ROD
-        }
-    }
-
-    @ConfigNode("settings.debug.selector.sector.step")
-    val sectorSelectorDebugStep = 0.5
-
-    @ConfigNode("settings.debug.selector.sector.y-offset")
-    val sectorSelectorDebugYOffset = 0.15
 
     @ConfigNode("settings.skill.categories")
     val skillCategorySpecs = configNodeToMap { key, value ->
@@ -135,6 +117,15 @@ object Planners : Plugin() {
             mappings = emptyMap()
         }
         AttributeRegistryEntry(key, name, mappings)
+    }
+
+    /**
+     * 加载阶段钩子。
+     *
+     * 必须保留：TabooLib 的 BukkitPlugin 在静态初始化与 onLoad 两处都会注入插件实例，
+     * 由本类的覆写保证顺序，删除后会触发「Plugin instance already set」而无法加载。
+     */
+    override fun onLoad() {
     }
 
     override fun onEnable() {
