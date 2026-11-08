@@ -16,8 +16,20 @@ object QueryEvaluator {
      * @throws IllegalArgumentException 语法非法时抛出。
      */
     fun validate(source: String, label: String) {
+        validate(source, label, false)
+    }
+
+    /**
+     * 加载期校验表达式语法。
+     *
+     * @param source 表达式文本。
+     * @param label 配置路径，用于错误信息。
+     * @param allowVariables 是否允许裸标识符按上下文变量解析。
+     * @throws IllegalArgumentException 语法非法时抛出。
+     */
+    fun validate(source: String, label: String, allowVariables: Boolean) {
         val tokens = QueryLexer(source, label).tokenize()
-        QueryParser(tokens, label).parse()
+        QueryParser(tokens, label, allowVariables).parse()
     }
 
     /**
@@ -30,8 +42,22 @@ object QueryEvaluator {
      * @throws IllegalArgumentException 语法非法或类型不匹配时抛出。
      */
     fun evaluate(source: String, scope: QueryScope, label: String): Any? {
+        return evaluate(source, scope, label, false)
+    }
+
+    /**
+     * 运行期求值。
+     *
+     * @param source 表达式文本。
+     * @param scope 查询上下文。
+     * @param label 配置路径，用于错误信息。
+     * @param allowVariables 是否允许裸标识符按上下文变量解析。
+     * @return 求值结果；缺失时返回 null。
+     * @throws IllegalArgumentException 语法非法或类型不匹配时抛出。
+     */
+    fun evaluate(source: String, scope: QueryScope, label: String, allowVariables: Boolean): Any? {
         val tokens = QueryLexer(source, label).tokenize()
-        val node = QueryParser(tokens, label).parse()
+        val node = QueryParser(tokens, label, allowVariables).parse()
         return evaluateNode(node, scope, label)
     }
 
@@ -62,7 +88,38 @@ object QueryEvaluator {
         if (node is QueryNode.Index) {
             return evaluateIndex(node, scope, label)
         }
+        if (node is QueryNode.ListLiteral) {
+            return evaluateList(node, scope, label)
+        }
+        if (node is QueryNode.Variable) {
+            return evaluateVariable(node, scope)
+        }
         throw IllegalArgumentException("$label has an unsupported expression node.")
+    }
+
+    /** 求值列表字面量，逐项求值后按原顺序返回。 */
+    private fun evaluateList(node: QueryNode.ListLiteral, scope: QueryScope, label: String): List<Any?> {
+        val result = ArrayList<Any?>(node.items.size)
+        for (item in node.items) {
+            result.add(evaluateNode(item, scope, label))
+        }
+        return result
+    }
+
+    /**
+     * 求值裸标识符。
+     *
+     * 只从查询上下文的变量表按名读取，先精确匹配再按小写匹配；找不到返回 null。
+     */
+    private fun evaluateVariable(node: QueryNode.Variable, scope: QueryScope): Any? {
+        if (scope.variables.containsKey(node.name)) {
+            return scope.variables[node.name]
+        }
+        val key = node.name.lowercase(java.util.Locale.ROOT)
+        if (scope.variables.containsKey(key)) {
+            return scope.variables[key]
+        }
+        return null
     }
 
     /**

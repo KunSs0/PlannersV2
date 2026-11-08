@@ -155,10 +155,7 @@ object YamlNovaSourceCollector {
             ScriptManager.registerYamlExpression(file, yamlPath, originLine, source)
             return
         }
-        if (key == "exper" || key == "experience" || key == "expression") {
-            ScriptManager.registerYamlExpression(file, yamlPath, originLine, source)
-            return
-        }
+        // 经验公式与 `expression` 字段已改由查询引擎求值，不再登记 Nova 源码。
         if (key == "condition" && path.contains("variables")) {
             ScriptManager.registerYamlExpression(file, yamlPath, originLine, source)
             return

@@ -76,6 +76,9 @@ enum class QueryTokenType {
     /** `]` */
     RIGHT_BRACKET,
 
+    /** `,`，用于列表字面量。 */
+    COMMA,
+
     /** 结束标记。 */
     END,
 }

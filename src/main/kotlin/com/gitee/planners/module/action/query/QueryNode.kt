@@ -56,4 +56,23 @@ sealed class QueryNode {
      * @property position 下标表达式。
      */
     class Index(val target: QueryNode, val position: QueryNode) : QueryNode()
+
+    /**
+     * 列表字面量节点，形如 `[300, 450, 630]`。
+     *
+     * 用于等级表这类「按等级查表」的配置，避免为此保留一门脚本语言。
+     *
+     * @property items 元素表达式，按书写顺序。
+     */
+    class ListLiteral(val items: List<QueryNode>) : QueryNode()
+
+    /**
+     * 裸标识符节点，形如等级表里的 `level`。
+     *
+     * 只在查询上下文的变量表里按名查找；找不到时求值为 null，不抛错，
+     * 因此配置里写错变量名不会让整个插件加载失败。
+     *
+     * @property name 变量名。
+     */
+    class Variable(val name: String) : QueryNode()
 }

@@ -160,6 +160,7 @@ class QueryLexer(private val source: String, private val label: String) {
             ')' -> QueryTokenType.RIGHT_PAREN
             '[' -> QueryTokenType.LEFT_BRACKET
             ']' -> QueryTokenType.RIGHT_BRACKET
+            ',' -> QueryTokenType.COMMA
             else -> null
         }
         if (single == null) {

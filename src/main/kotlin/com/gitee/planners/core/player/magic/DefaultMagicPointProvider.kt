@@ -4,7 +4,9 @@ import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI.plannersLoaded
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.common.metadata.metadataValue
-import com.gitee.planners.module.script.SingletonScript
+import com.gitee.planners.core.player.PlayerTemplate
+import com.gitee.planners.module.action.query.QueryRef
+import com.gitee.planners.module.action.query.QueryScope
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
 import taboolib.common.platform.service.PlatformExecutor
@@ -109,7 +111,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
         if (!enabled || !player.plannersLoaded) {
             return
         }
-        val data = expressionResume.get().eval(player, player.plannersTemplate)
+        val data = resolve(expressionResume.get(), player, player.plannersTemplate, "config:magic-point:resume")
         if (data == null) {
             throw IllegalStateException("The magic point resume expression returned null")
         }
@@ -138,7 +140,7 @@ class DefaultMagicPointProvider : MagicPointProvider {
         if (!enabled || !player.plannersLoaded) {
             return
         }
-        val data = expressionUpperLimit.get().eval(player, player.plannersTemplate)
+        val data = resolve(expressionUpperLimit.get(), player, player.plannersTemplate, "config:magic-point:upper-limit")
         if (data == null) {
             throw IllegalStateException("The magic point upper-limit expression returned null")
         }
@@ -149,21 +151,39 @@ class DefaultMagicPointProvider : MagicPointProvider {
     companion object {
 
         @ConfigNode("settings.magic-point.upper-limit.expression")
-        val expressionUpperLimit = lazyConversion<String?, SingletonScript> {
+        val expressionUpperLimit = lazyConversion<String?, QueryRef> {
             val source = this
             if (source == null || source.isBlank()) {
                 throw IllegalStateException("The magic point upper-limit expression is required")
             }
-            SingletonScript(source, "config:magic-point:upper-limit", listOf("sender", "profile"))
+            QueryRef.parseExpression(source, "config:magic-point:upper-limit")
         }
 
         @ConfigNode("settings.magic-point.resume.expression")
-        val expressionResume = lazyConversion<String?, SingletonScript> {
+        val expressionResume = lazyConversion<String?, QueryRef> {
             val source = this
             if (source == null || source.isBlank()) {
                 throw IllegalStateException("The magic point resume expression is required")
             }
-            SingletonScript(source, "config:magic-point:resume", listOf("sender", "profile"))
+            QueryRef.parseExpression(source, "config:magic-point:resume")
+        }
+
+        /**
+         * 用查询上下文求值一条法力公式。
+         *
+         * @param reference 已编译的公式。
+         * @param player 施法玩家，作为 `sender`。
+         * @param template 玩家档案，作为 `profile`。
+         * @param label 公式标识，用于错误信息。
+         * @return 求值结果。
+         */
+        fun resolve(reference: QueryRef, player: Player, template: PlayerTemplate, label: String): Any? {
+            val scope = QueryScope(
+                sender = player,
+                profile = template,
+                label = label,
+            )
+            return reference.resolve(scope)
         }
 
         @ConfigNode("settings.magic-point.upper-limit.update-tick")

@@ -1,7 +1,9 @@
 package com.gitee.planners.core.config.level
 
 import com.gitee.planners.api.common.Unique
-import com.gitee.planners.module.script.SingletonScript
+import com.gitee.planners.module.action.query.QueryRef
+import com.gitee.planners.module.action.query.QueryScope
+import com.gitee.planners.module.action.query.QueryText
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.warning
 import taboolib.common5.cint
@@ -20,7 +22,10 @@ interface Algorithm {
 
 
     /**
-     * 使用预编译 Nova 表达式计算等级经验与回调的算法实现。
+     * 用查询表达式计算等级经验与回调的算法实现。
+     *
+     * 经验公式不再走脚本编译：`level` 由执行上下文按名提供，
+     * 因此配置可以直接写 `level >= 50 ? 2147483647 : [300, 450][level - 1]`。
      *
      * @property root 等级算法配置节。
      */
@@ -32,24 +37,29 @@ interface Algorithm {
 
         override val maxLevel = root.getInt("max")
 
-        private val action: SingletonScript
+        private val experience: QueryRef
         init {
-            val experience = root.getString("experience")
-            if (experience == null || experience.isBlank()) {
+            val raw = root.getString("experience")
+            if (raw == null || raw.isBlank()) {
                 throw IllegalArgumentException("Level algorithm '$id' requires an experience expression")
             }
-            action = SingletonScript(experience, "level:$id:experience", listOf("sender", "level"))
+            experience = QueryRef.parseVariableExpression(raw, "level:$id:experience")
         }
 
         private val callbacks = parseCallbacks(root.getConfigurationSection("callbacks"))
 
         override fun getExp(player: Player, level: Int): CompletableFuture<Int> {
-            return action.run(false, player, level).thenApply { result ->
-                if (result == null) {
-                    throw IllegalStateException("Level algorithm '$id' returned null")
-                }
-                result.cint
+            val scope = QueryScope(
+                sender = player,
+                profile = player,
+                variables = mapOf("level" to level),
+                label = "level:$id:experience",
+            )
+            val result = experience.resolve(scope)
+            if (result == null) {
+                throw IllegalStateException("Level algorithm '$id' returned null")
             }
+            return CompletableFuture.completedFuture(QueryText.requireDouble(result, "level:$id:experience").cint)
         }
 
         override fun getCallbacks(level: Int): List<LevelCallback> {

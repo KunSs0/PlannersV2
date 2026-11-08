@@ -7,8 +7,13 @@ package com.gitee.planners.module.action.query
  *
  * @property tokens 词法单元列表。
  * @property label 配置路径，用于错误信息。
+ * @property allowVariables 是否允许裸标识符按上下文变量解析。
  */
-class QueryParser(private val tokens: List<QueryToken>, private val label: String) {
+class QueryParser(
+    private val tokens: List<QueryToken>,
+    private val label: String,
+    private val allowVariables: Boolean = false,
+) {
 
     private var index = 0
 
@@ -190,13 +195,21 @@ class QueryParser(private val tokens: List<QueryToken>, private val label: Strin
             }
             val root = current.text.substringBefore('.')
             if (QueryRoot.of(root) == null) {
-                throw IllegalArgumentException(
-                    "$label references unknown identifier '${current.text}', " +
-                        "expected a query path starting with one of: ${QueryRoot.keywords()}",
-                )
+                // 只有显式允许的场景（等级表这类按名取值）才把裸标识符当变量；
+                // 其余情况仍然报错，让调用方回退成字面量文本。
+                if (!allowVariables) {
+                    throw IllegalArgumentException(
+                        "$label references unknown identifier '${current.text}', " +
+                            "expected a query path starting with one of: ${QueryRoot.keywords()}",
+                    )
+                }
+                return QueryNode.Variable(current.text)
             }
             val path = QueryPath.parse(current.text, label)
             return QueryNode.Path(path)
+        }
+        if (current.isType(QueryTokenType.LEFT_BRACKET)) {
+            return parseListLiteral()
         }
         if (current.isType(QueryTokenType.LEFT_PAREN)) {
             consume()
@@ -209,6 +222,29 @@ class QueryParser(private val tokens: List<QueryToken>, private val label: Strin
             return inner
         }
         throw IllegalArgumentException("$label has unexpected '${current.text}' at position ${current.position}.")
+    }
+
+    /** 解析列表字面量，例如 `[300, 450, 630]`。 */
+    private fun parseListLiteral(): QueryNode {
+        consume()
+        val items = ArrayList<QueryNode>()
+        if (peek().isType(QueryTokenType.RIGHT_BRACKET)) {
+            consume()
+            return QueryNode.ListLiteral(items)
+        }
+        while (true) {
+            items.add(parseTernary())
+            val current = peek()
+            if (current.isType(QueryTokenType.COMMA)) {
+                consume()
+                continue
+            }
+            if (current.isType(QueryTokenType.RIGHT_BRACKET)) {
+                consume()
+                return QueryNode.ListLiteral(items)
+            }
+            throw IllegalArgumentException("$label expects ',' or ']' at position ${current.position}.")
+        }
     }
 
     /** 查看当前单元但不前进。 */

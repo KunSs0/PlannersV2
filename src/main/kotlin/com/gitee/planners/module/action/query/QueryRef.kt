@@ -20,6 +20,7 @@ class QueryRef private constructor(
     private val template: QueryTemplate?,
     val label: String,
     private val source: String? = null,
+    private val allowVariables: Boolean = false,
 ) {
 
     /**
@@ -71,7 +72,7 @@ class QueryRef private constructor(
             return path.resolve(scope)
         }
         if (expression != null) {
-            return QueryEvaluator.evaluate(expression, scope, label)
+            return QueryEvaluator.evaluate(expression, scope, label, allowVariables)
         }
         if (template != null) {
             return template.render(scope)
@@ -215,6 +216,27 @@ class QueryRef private constructor(
             }
             QueryEvaluator.validate(trimmed, label)
             return QueryRef(null, null, trimmed, null, label, trimmed)
+        }
+
+        /**
+         * 解析一段允许裸标识符的表达式。
+         *
+         * 裸标识符按查询上下文的变量表解析，用于等级表这类「同一条公式里
+         * 直接引用 `level`」的配置；其他场景请用 [parseExpression]，
+         * 以便未知标识符仍回退成字面量文本。
+         *
+         * @param text 表达式文本。
+         * @param label 配置路径，用于错误信息。
+         * @return 已解析的取值引用。
+         * @throws IllegalArgumentException 语法非法时抛出。
+         */
+        fun parseVariableExpression(text: String, label: String): QueryRef {
+            val trimmed = text.trim()
+            if (trimmed.isEmpty()) {
+                throw IllegalArgumentException("$label cannot be blank.")
+            }
+            QueryEvaluator.validate(trimmed, label, true)
+            return QueryRef(null, null, trimmed, null, label, trimmed, true)
         }
 
         /** 解析 `<>` 外壳内部的内容。 */
