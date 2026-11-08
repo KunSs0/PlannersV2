@@ -18,6 +18,54 @@ import org.bukkit.entity.Player
 object ActionScopeFactory {
 
     /**
+     * 为一条触发器派发构造上下文，绑定该流程所属技能与其学习等级。
+     *
+     * 触发器按主键派发给所有声明它的技能，因此每个技能都要拿到自己的 `skill`
+     * 与 `level`，否则被动流程无法用 `skill.level > 0` 判断「是否学会」。
+     *
+     * @param spec 本次派发的技能结构。
+     * @param player 触发本次执行的玩家。
+     * @param variables 事件载荷注入的变量。
+     * @param target 事件目标；无目标传 null。
+     * @param payload 事件载荷，供流程读取。
+     * @return 查询上下文。
+     */
+    fun forSpec(
+        spec: ActionSpec,
+        player: Player,
+        variables: Map<String, Any?> = emptyMap(),
+        target: Any? = null,
+        payload: Map<String, Any?> = emptyMap(),
+    ): QueryScope {
+        val skill = com.gitee.planners.api.Registries.SKILL.getOrNull(spec.skillId)
+        val level = if (skill == null) 0 else resolveSkillLevel(player, spec.skillId)
+        return forPlayer(
+            player,
+            skill,
+            level,
+            variables,
+            target,
+            "trigger:" + spec.skillId,
+            payload,
+        )
+    }
+
+    /**
+     * 解析玩家某个技能的学习等级。
+     *
+     * @param player 玩家。
+     * @param skillId 技能 ID。
+     * @return 技能等级；档案未加载或未学习时返回 0。
+     */
+    private fun resolveSkillLevel(player: Player, skillId: String): Int {
+        val template = resolveTemplate(player)
+        if (template == null) {
+            return 0
+        }
+        return com.gitee.planners.core.skilltree.SkillTreeNodeEffectService.getSkillLevel(template, skillId)
+    }
+
+    /**
      * 为一次技能事件构造上下文。
      *
      * @param player 触发本次执行的玩家。

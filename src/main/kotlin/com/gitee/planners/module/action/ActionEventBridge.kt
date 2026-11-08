@@ -196,7 +196,33 @@ object ActionEventBridge {
             return
         }
         try {
-            ActionTriggerRegistry.dispatch(triggerId) { scope }
+            ActionTriggerRegistry.dispatch(triggerId) { spec -> scope }
+        } catch (exception: Exception) {
+            warning("Action trigger '$triggerId' failed: ${exception.message}")
+        }
+    }
+
+    /**
+     * 派发一次触发器，并为每个技能绑定它自己的技能与等级。
+     *
+     * 被动类流程需要靠 `skill.level > 0` 判断是否学会，因此不能共用一份上下文。
+     *
+     * @param triggerId 触发器主键。
+     * @param player 触发本次执行的玩家。
+     * @param variables 事件载荷注入的变量。
+     */
+    private fun dispatchPerSpec(
+        triggerId: String,
+        player: Player,
+        variables: Map<String, Any?> = emptyMap(),
+    ) {
+        if (!ActionTriggerRegistry.hasTrigger(triggerId)) {
+            return
+        }
+        try {
+            ActionTriggerRegistry.dispatch(triggerId) { spec ->
+                ActionScopeFactory.forSpec(spec, player, variables)
+            }
         } catch (exception: Exception) {
             warning("Action trigger '$triggerId' failed: ${exception.message}")
         }
