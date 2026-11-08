@@ -4,22 +4,14 @@ state0:
   name: "眩晕"
   attribute:
     - "物理攻击: 10"
-  action: |
-    fun onLoad() {
-      // 状态加载时执行一次，可自行注册 listener
-    }
-    fun onStateAttach() {
-      this.sender.sendMessage("眩晕层数增加")
-    }
-    fun onStateDetach() {
-      this.sender.sendMessage("眩晕层数减少")
-    }
-    fun onStateMount() {
-      this.sender.sendMessage("首次获得眩晕")
-    }
-    fun onStateClose() {
-      this.sender.sendMessage("完全解除眩晕")
-    }
-    fun onStateEnd() {
-      this.sender.sendMessage("眩晕自然结束")
-    }
+  # 生命周期改成命名流程，与事件一一对应；不再编译脚本体。
+  onAttach:
+    - 'message{m="眩晕层数增加"}'
+  onDetach:
+    - 'message{m="眩晕层数减少"}'
+  onMount:
+    - 'message{m="首次获得眩晕"}'
+  onClose:
+    - 'message{m="完全解除眩晕"}'
+  onEnd:
+    - 'message{m="眩晕自然结束"}'

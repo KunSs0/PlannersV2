@@ -51,6 +51,36 @@ object ActionParser {
     }
 
     /**
+     * 解析一组命名流程，不限定流程名。
+     *
+     * 供状态定义这类「按事件名声明流程」的配置复用同一套解析与校验。
+     *
+     * @param section 流程所在节点；为空表示没有流程。
+     * @param path 当前配置路径。
+     * @param keys 只解析这些流程名；为空表示解析全部键。
+     * @return 流程名到已编译流程的映射；未配置时返回空映射。
+     * @throws IllegalArgumentException 结构或语法非法时抛出。
+     */
+    fun parseNamedFlows(
+        section: ConfigurationSection?,
+        path: String,
+        keys: Set<String> = emptySet(),
+    ): Map<String, ActionFlow> {
+        if (section == null) {
+            return emptyMap()
+        }
+        val flows = LinkedHashMap<String, ActionFlow>()
+        for (key in section.getKeys(false)) {
+            if (keys.isNotEmpty() && !keys.contains(key)) {
+                continue
+            }
+            val flowPath = "$path.$key"
+            flows[key] = parseFlow(key, section.get(key), flowPath)
+        }
+        return flows
+    }
+
+    /**
      * 拒绝 `server` 流程中依赖运行期技能上下文的条目。
      *
      * `server` 在技能注册完成时执行，此时没有玩家与目标，因此需要技能树或
