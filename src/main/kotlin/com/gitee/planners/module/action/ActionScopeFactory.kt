@@ -68,7 +68,7 @@ object ActionScopeFactory {
     ): QueryScope {
         val skill = com.gitee.planners.api.Registries.SKILL.getOrNull(spec.skillId)
         if (skill == null) {
-            return forPlayer(player, null, 0, emptyMap(), null, "trigger:" + spec.skillId, payload)
+            return forPlayer(player, null, 0, payload, null, "trigger:" + spec.skillId, payload)
         }
         val level = resolveSkillLevel(player, spec.skillId)
         val execution = com.gitee.planners.core.skill.context.SkillExecutionContext.create(
@@ -77,7 +77,11 @@ object ActionScopeFactory {
             skill,
             emptyMap(),
         )
-        val variables = skill.evaluateDisplayVariables(execution)
+        // 技能变量先放，事件载荷后覆盖：<skill.damage> 这类事件字段优先，
+        // 其余 <skill.参数> 仍能读到该玩家在当前等级下的值。
+        val variables = LinkedHashMap<String, Any?>()
+        variables.putAll(skill.evaluateDisplayVariables(execution))
+        variables.putAll(payload)
         return forPlayer(player, skill, level, variables, null, "trigger:" + spec.skillId, payload)
     }
 

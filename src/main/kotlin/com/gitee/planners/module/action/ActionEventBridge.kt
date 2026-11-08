@@ -221,7 +221,7 @@ object ActionEventBridge {
         }
         try {
             ActionTriggerRegistry.dispatch(triggerId) { spec ->
-                ActionScopeFactory.forSpec(spec, player, variables)
+                ActionScopeFactory.forSpecWithVariables(spec, player, variables)
             }
         } catch (exception: Exception) {
             warning("Action trigger '$triggerId' failed: ${exception.message}")
