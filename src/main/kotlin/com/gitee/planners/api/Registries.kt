@@ -95,6 +95,7 @@ object Registries {
             DefaultMagicPointProvider.expressionResume.get()
         }
         profiler.measure("actions") { rebuildActionIndex() }
+        info("已登记 ${AutoReloadable.size()} 个可重载注册表")
         info(profiler.summary())
     }
 
@@ -132,6 +133,7 @@ object Registries {
         profiler.measure("state") { STATE.load() }
         profiler.measure("keybinding") { KEYBINDING.load() }
         profiler.measure("actions") { rebuildActionIndex() }
+        info("已登记 ${AutoReloadable.size()} 个可重载注册表")
         info(profiler.summary())
     }
 

@@ -173,7 +173,6 @@ object EntityStateManager {
     }
 
     private fun endState(target: ProxyTarget.Entity<*>, state: State) {
-        info("State ${state.id} timer task ended")
         val bukkitTarget = target as? ProxyTarget.BukkitEntity
         if (bukkitTarget == null) {
             return
