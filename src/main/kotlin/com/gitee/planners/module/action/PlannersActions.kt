@@ -138,9 +138,6 @@ object PlannersActions {
                     continue
                 }
                 val proxy = ProxyTarget.of(entity)
-                if (proxy !is ProxyTarget.Entity<*>) {
-                    continue
-                }
                 proxy.attachState(state, ticks.toLong(), refresh)
             }
         }
@@ -178,9 +175,6 @@ object PlannersActions {
                     continue
                 }
                 val proxy = ProxyTarget.of(entity)
-                if (proxy !is ProxyTarget.Entity<*>) {
-                    continue
-                }
                 proxy.detachState(state, layer)
             }
         }

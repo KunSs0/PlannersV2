@@ -25,7 +25,7 @@ data class LevelCondition(val minimum: Int, val maximum: Int) {
         private const val TYPE = "level"
 
         /**
-         * 解析等级条件，拒绝其他条件类型与脚本条件。
+         * 解析等级条件，拒绝其他条件类型与未知字段。
          *
          * @param raw 原始配置节点。
          * @param path 配置路径。
@@ -35,12 +35,11 @@ data class LevelCondition(val minimum: Int, val maximum: Int) {
         fun parse(raw: Any?, path: String): LevelCondition {
             require(raw is Map<*, *>) { "$path 必须是对象" }
             for (key in raw.keys) {
-                require(key is String && (key == "type" || key == "props" || key == "script")) {
+                require(key is String && (key == "type" || key == "props")) {
                     "$path 包含未知字段 '$key'"
                 }
             }
             require(raw["type"] == TYPE) { "$path.type 仅支持 level，实际为 '${raw["type"]}'" }
-            require(!raw.containsKey("script")) { "$path.script 不支持脚本条件" }
             val props = raw["props"]
             require(props is Map<*, *>) { "$path.props 必须是包含 min 与 max 的对象" }
             for (key in props.keys) {
