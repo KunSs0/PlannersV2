@@ -187,9 +187,7 @@ object ActionRunner {
      */
     private fun executeLine(line: ActionLine, spec: ActionSpec, scope: QueryScope, depth: Int): Boolean {
         if (line.action.id == BuiltinActions.Call.id) {
-            val target = line.arguments.requireText(scope, "list", "l")
-            runFlow(spec, target, scope, depth + 1)
-            return true
+            return executeCall(line, spec, scope, depth)
         }
         try {
             val targets = resolveTargets(line, scope)
@@ -205,6 +203,39 @@ object ActionRunner {
             warning("Action ${line.path} failed in skill '${spec.skillId}': ${exception.message}")
             return false
         }
+    }
+
+    /**
+     * 执行一条流程调用。
+     *
+     * 没有目标器时整段只跑一次；写了目标器就按容器逐目标展开，每个目标都在
+     * 绑定该目标的子上下文里执行子流程，因此子流程里的 `target.*` 就是当前元素。
+     *
+     * @param line 动作行。
+     * @param spec 所属 Action 结构。
+     * @param scope 执行上下文。
+     * @param depth 当前调用深度。
+     * @return 执行过至少一次时返回 true。
+     */
+    private fun executeCall(line: ActionLine, spec: ActionSpec, scope: QueryScope, depth: Int): Boolean {
+        val flowId = line.arguments.requireText(scope, "list", "l")
+        if (line.targeters.isEmpty()) {
+            runFlow(spec, flowId, scope, depth + 1)
+            return true
+        }
+        val targets = resolveTargets(line, scope)
+        if (targets.isEmpty()) {
+            return false
+        }
+        for (target in targets) {
+            val entity = target.bukkitEntity()
+            if (entity == null) {
+                runFlow(spec, flowId, scope, depth + 1)
+                continue
+            }
+            runFlow(spec, flowId, scope.withTarget(entity), depth + 1)
+        }
+        return true
     }
 
     /**

@@ -47,14 +47,43 @@ class QueryPath private constructor(
      * 读取目标字段。
      *
      * `anchored` 是计算字段：判断施法者是否为该目标的当前仇恨目标，
-     * 由宿主注入的读取器给出，其余字段按实体属性读取。
+     * 由宿主注入的读取器给出；
+     * `skill.<id>` 读取该目标玩家自己的技能学习等级，供被动流程逐玩家判定；
+     * 其余字段按实体属性读取。
      */
     private fun resolveTarget(scope: QueryScope): Any? {
         val field = segments.firstOrNull()
         if (field != null && field.equals("anchored", true)) {
             return scope.anchoredReader(scope.target, scope.sender)
         }
+        if (field != null && field.equals("skill", true) && segments.size >= 2) {
+            return queryTargetSkill(scope.target, segments[1])
+        }
         return resolveEntityField(scope.target)
+    }
+
+    /**
+     * 读取目标玩家某个技能的学习等级。
+     *
+     * 只读在线且档案已加载的玩家；其余情况返回 0，让 `> 0` 这类判断自然不成立。
+     *
+     * @param target 目标实体。
+     * @param skillId 技能 ID。
+     * @return 技能等级；不可读时返回 0。
+     */
+    private fun queryTargetSkill(target: Any?, skillId: String): Int {
+        val player = target as? Player
+        if (player == null) {
+            return 0
+        }
+        if (!player.isOnline || !player.isValid || player.isDead) {
+            return 0
+        }
+        val template = com.gitee.planners.api.PlayerTemplateAPI.getOrNull(player.uniqueId)
+        if (template == null) {
+            return 0
+        }
+        return com.gitee.planners.core.skilltree.SkillTreeNodeEffectService.getSkillLevel(template, skillId)
     }
 
     /**
