@@ -1,11 +1,4 @@
 money:
   name: '金币'
-  action:
-    # 余额查询
-    hook: economyBalance(sender)
-    # 余额提取
-    withdraw: economyWithdraw(sender, arg)
-    # 余额存入
-    deposit: economyDeposit(sender, arg)
-    # 余额设置
-    set: economySetBalance(sender, arg)
+  # 经济服务里登记的货币标识；读写都走 HaiderCore 经济服务。
+  currency-id: coin

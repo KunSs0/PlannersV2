@@ -1,88 +1,84 @@
 package com.gitee.planners.module.currency
 
-import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.module.script.SingletonScript
+import com.gitee.haidercore.module.economy.api.EconomyAPI
+import com.gitee.haidercore.module.economy.common.value.Money
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.warning
-import taboolib.common5.cdouble
 import taboolib.library.configuration.ConfigurationSection
-import taboolib.module.configuration.util.mapValue
-import java.util.function.Function
+import java.math.BigDecimal
 
+/**
+ * 由 HaiderCore 经济服务支撑的货币实现。
+ *
+ * 货币定义只声明 `currency-id`，读写都走 [EconomyAPI]；
+ * 不再为每种货币维护一段脚本，也不引入脚本语言依赖。
+ *
+ * @property root 货币配置节。
+ */
 class OpenConvertibleCurrencyImpl(val root: ConfigurationSection) : OpenConvertibleCurrency {
 
     override val id = root.name
 
     override val name = root.getString("name")!!
 
-    val actions = root.mapValue("action") {
-        SimpleAction(it.toString())
-    }
+    /** 经济服务里登记的货币标识；缺省时退化为货币名。 */
+    private val currencyId = root.getString("currency-id") ?: id
 
     override fun get(player: Player): Double {
-        if (!actions.containsKey("hook")) {
-            warning("Currency $id does not have hook action.")
+        if (!ensureEnabled()) {
             return 0.0
         }
-
-        return actions["hook"]!!.getNow(player, Function { it.cdouble })
+        return EconomyAPI.getBalance(player.uniqueId, currencyId).value.toDouble()
     }
 
     override fun give(player: Player, amount: Double): Boolean {
-        if (!actions.containsKey("deposit")) {
-            warning("Currency $id does not have deposit action.")
+        if (!ensureEnabled()) {
             return false
         }
-        actions["deposit"]!!.runNow(player, "arg" to amount)
-        return true
+        return EconomyAPI.deposit(player.uniqueId, currencyId, money(amount)).success
     }
 
     override fun take(player: Player, amount: Double): Boolean {
-        if (!actions.containsKey("withdraw")) {
-            warning("Currency $id does not have withdraw action.")
+        if (!ensureEnabled()) {
             return false
         }
-        if (this.get(player) < amount) {
+        if (get(player) < amount) {
             return false
         }
-        actions["withdraw"]!!.runNow(player, "arg" to amount)
-        return true
+        return EconomyAPI.withdraw(player.uniqueId, currencyId, money(amount)).success
     }
 
     override fun set(player: Player, amount: Double) {
-        if (!actions.containsKey("set")) {
-            warning("Currency $id does not have set action.")
+        if (!ensureEnabled()) {
             return
         }
-
-        actions["set"]!!.runNow(player, "arg" to amount)
+        EconomyAPI.setBalance(player.uniqueId, currencyId, money(amount))
     }
 
     override fun has(player: Player, amount: Double): Boolean {
-        return this.get(player) >= amount
+        return get(player) >= amount
     }
 
-
-    class SimpleAction(action: String) : SingletonScript(
-        action,
-        "currency-action:${action.hashCode()}",
-        listOf("sender", "profile", "arg")
-    ) {
-
-        fun runNow(player: Player, vararg args: Pair<String, Any?>) {
-            var argument: Any? = null
-            for ((key, value) in args) {
-                if (key == "arg") {
-                    argument = value
-                }
-            }
-            this.run(false, player, player.plannersTemplate, argument)
+    /**
+     * 检查经济服务是否可用。
+     *
+     * @return 可用时返回 true；否则记录一次告警并返回 false。
+     */
+    private fun ensureEnabled(): Boolean {
+        if (!EconomyAPI.isEnabled()) {
+            warning("Currency $id requires HaiderCore economy, but the service is not enabled.")
+            return false
         }
-
-        inline fun <reified T> getNow(sender: Player, parser: Function<Any?, T>): T {
-            return parser.apply(this.eval(sender, sender.plannersTemplate, null))
-        }
-
+        return true
     }
 
+    /**
+     * 把数值转换为经济服务的精确货币值。
+     *
+     * @param amount 货币数量。
+     * @return 精确货币值。
+     */
+    private fun money(amount: Double): Money {
+        return Money.ofDecimal(BigDecimal.valueOf(amount))
+    }
 }
