@@ -6,12 +6,11 @@ __option__:
       material: IRON_INGOT
       name: "&7坚韧"
       lore:
-        - "&7等级 &fLv{{level}}"
-        - "&7防御 &7+{{defense}}"
+        - "&7等级 &fLv{{skill.level}}"
+        - "&7防御 &7+{{skill.defense}}"
         - "&7被动"
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
-    defense:
-      expression: 4 * level + 5
+    defense: "4 * skill.level + 5"
   max-level: 6
 action: ""
