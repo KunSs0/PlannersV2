@@ -137,17 +137,6 @@ object Planners : Plugin() {
         AttributeRegistryEntry(key, name, mappings)
     }
 
-    /**
-     *  _____  _                                  __      ____
-     *  |  __ \| |                                 \ \    / /__ \
-     *  | |__) | | __ _ _ __  _ __   ___ _ __ ___   \ \  / / __) |
-     *  |  ___/| |/ _` | '_ \| '_ \ / _ \ '__/ __|   \ \/ / |__ <
-     *  | |    | | (_| | | | | | | |  __/ |  \__ \    \  /  ___) |
-     *  |_|    |_|\__,_|_| |_|_| |_|\___|_|  |___/     \/  |____/
-     */
-    override fun onLoad() {
-    }
-
     override fun onEnable() {
         // 时间策略必须在技能可被释放前明确配置，不能在缺项时沿用原时间。
         skillTimingPolicy.get()

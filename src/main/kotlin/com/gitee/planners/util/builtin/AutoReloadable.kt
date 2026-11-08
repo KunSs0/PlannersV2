@@ -7,9 +7,13 @@ import taboolib.library.reflex.ClassField
 import taboolib.library.reflex.ReflexClass
 import java.util.function.Supplier
 
+/**
+ * 可被 `/pl reload` 重建的注册表。
+ *
+ * 加载由各自的注册表入口按业务依赖顺序显式调用，本接口只声明重载动作；
+ * 实现类被 [Visitor] 在 ACTIVE 阶段登记后进入重载列表。
+ */
 interface AutoReloadable {
-
-    fun onLoad()
 
     fun onReload()
 
@@ -51,7 +55,7 @@ interface AutoReloadable {
         /**
          * 登记一个可重载 registry。
          *
-         * 这里不调用 `onLoad()`：加载必须按业务依赖顺序进行，统一由
+         * 这里只登记不加载：加载必须按业务依赖顺序进行，统一由
          * `Registries.init()` 负责，否则会先按字段声明顺序加载一遍、
          * 再由 `init()` 加载一遍，白白翻倍启动耗时。
          */
