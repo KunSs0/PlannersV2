@@ -219,6 +219,10 @@ object ActionRunner {
      */
     private fun executeCall(line: ActionLine, spec: ActionSpec, scope: QueryScope, depth: Int): Boolean {
         val flowId = line.arguments.requireText(scope, "list", "l")
+        val targetSkill = line.arguments.text(scope, "skill")
+        if (targetSkill != null && !targetSkill.equals(spec.skillId, true)) {
+            return executeCrossSkillCall(line, scope, depth, targetSkill, flowId)
+        }
         if (line.targeters.isEmpty()) {
             runFlow(spec, flowId, scope, depth + 1)
             return true
@@ -240,6 +244,56 @@ object ActionRunner {
                 continue
             }
             runFlow(spec, flowId, scope.withTarget(entity), depth + 1)
+        }
+        return true
+    }
+
+    /**
+     * 执行一次跨技能流程调用。
+     *
+     * 与同技能调用的区别是「谁提供上下文」：这里**保持原施法者**，
+     * 只把技能换成目标技能，因此 `<skill.*>` 读的是施法者在该技能下的值，
+     * 而每个目标通过 `target` 绑定，用于「技能 7 落点给友方回血」这类联动。
+     *
+     * @param line 动作行。
+     * @param scope 当前执行上下文。
+     * @param depth 当前调用深度。
+     * @param skillId 目标技能 ID。
+     * @param flowId 目标技能里的流程名。
+     * @return 执行过至少一次时返回 true。
+     */
+    private fun executeCrossSkillCall(
+        line: ActionLine,
+        scope: QueryScope,
+        depth: Int,
+        skillId: String,
+        flowId: String,
+    ): Boolean {
+        val other = com.gitee.planners.api.Registries.SKILL.getOrNull(skillId)
+        val otherSpec = if (other == null) null else other.actionSpec
+        if (otherSpec == null) {
+            warning("Action ${line.path} references skill '$skillId' without a structured action.")
+            return false
+        }
+        val caster = scope.sender
+        if (caster !is Player) {
+            return false
+        }
+        val base = ActionScopeFactory.forSpecWithVariables(otherSpec, caster, scope.payload)
+        if (line.targeters.isEmpty()) {
+            runFlow(otherSpec, flowId, base, depth + 1)
+            return true
+        }
+        val targets = resolveTargets(line, scope)
+        if (targets.isEmpty()) {
+            return false
+        }
+        for (target in targets) {
+            val entity = target.bukkitEntity()
+            if (entity == null) {
+                continue
+            }
+            runFlow(otherSpec, flowId, base.withTarget(entity), depth + 1)
         }
         return true
     }

@@ -108,7 +108,7 @@ object BuiltinActions {
 
         override fun validate(arguments: ActionArguments) {
             arguments.require("list", "l")
-            arguments.rejectUnknown("list", "l")
+            arguments.rejectUnknown("list", "l", "skill")
         }
 
         override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
