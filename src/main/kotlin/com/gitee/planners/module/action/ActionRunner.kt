@@ -196,7 +196,7 @@ object ActionRunner {
             }
             val scoped = scope.withFlowRunner { flowId, child ->
                 runFlow(spec, flowId, child, depth + 1)
-            }
+            }.withLineTargets(targets)
             line.action.execute(scoped, line.arguments, targets)
             return true
         } catch (exception: Exception) {

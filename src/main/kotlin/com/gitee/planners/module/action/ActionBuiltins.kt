@@ -25,6 +25,8 @@ object ActionBuiltins {
         ActionRegistry.register(BuiltinActions.Call)
         ActionRegistry.register(BuiltinActions.Delay)
         ActionRegistry.register(BuiltinActions.TargetFinderSet)
+        ActionRegistry.register(FinderSetAction)
+        ActionRegistry.register(TargetCountAction)
         ActionRegistry.register(PlannersActions.Cooldown)
         ActionRegistry.register(PlannersActions.Experience)
         ActionRegistry.register(PlannersActions.StateAttach)
@@ -45,6 +47,7 @@ object ActionBuiltins {
     private fun installTargeters() {
         ActionRegistry.register(BuiltinTargeters.Sender)
         ActionRegistry.register(BuiltinTargeters.Wounded)
+        ActionRegistry.register(UuidTargets)
         ActionRegistry.register(BuiltinTargeters.SenderLocation)
         ActionRegistry.register(BuiltinTargeters.Current)
         ActionRegistry.register(BuiltinTargeters.Range)

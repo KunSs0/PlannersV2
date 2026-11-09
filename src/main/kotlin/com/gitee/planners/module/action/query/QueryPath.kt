@@ -44,6 +44,7 @@ class QueryPath private constructor(
             QueryRoot.ECONOMY -> queryEconomy(scope)
             QueryRoot.PLAYBACK -> queryPlayback(scope)
             QueryRoot.AREA -> resolveArea(scope)
+            QueryRoot.FINDER -> resolveFinder(scope)
         }
     }
 
@@ -211,6 +212,54 @@ class QueryPath private constructor(
             "pitch" -> location.pitch.toDouble()
             else -> null
         }
+    }
+
+    /**
+     * 读取选择器槽位。
+     *
+     * `finder.now` 取当前行目标；`finder.<名字>` 取 `finder.set` 存下的目标；`finder.<名字>.count` 取数量。
+     * 序列化为逗号分隔的实体 UUID，坐标目标不参与。
+     */
+    private fun resolveFinder(scope: QueryScope): Any? {
+        val head = segments.firstOrNull()
+        if (head == null) {
+            return null
+        }
+        if (head.equals(NOW_SEGMENT, true)) {
+            return serializeTargets(scope.lineTargets)
+        }
+        val stored = scope.finderCache[head]
+        if (stored == null) {
+            return null
+        }
+        if (segments.size == 1) {
+            return serializeTargets(stored)
+        }
+        if (segments.size == 2 && segments[1].equals(COUNT_SEGMENT, true)) {
+            return stored.size
+        }
+        return null
+    }
+
+    /**
+     * 把目标序列化成逗号分隔的 UUID。
+     *
+     * @param targets 目标列表。
+     * @return UUID 文本；没有实体目标时返回空串。
+     */
+    private fun serializeTargets(targets: List<com.gitee.planners.module.action.ActionTarget>): String {
+        val builder = StringBuilder()
+        for (target in targets) {
+            val entity = target.bukkitEntity()
+            if (entity == null) {
+                continue
+            }
+            if (builder.isNotEmpty()) {
+                builder.append(',')
+            }
+            builder.append(entity.uniqueId)
+        }
+        return builder.toString()
     }
 
     /**
@@ -418,6 +467,12 @@ class QueryPath private constructor(
         /** 区域回调中代表当前实例的分段名。 */
         private const val SELF_SEGMENT = "self"
 
+        /** 行目标序列化字段名。 */
+        private const val NOW_SEGMENT = "now"
+
+        /** 槽位数量字段名。 */
+        private const val COUNT_SEGMENT = "count"
+
         /**
          * 解析一段路径文本。
          *
@@ -490,7 +545,20 @@ class QueryPath private constructor(
                     }
                 }
             }
-            if (segments.isEmpty() && root != QueryRoot.SENDER) {                throw IllegalArgumentException("$label query path '$trimmed' requires at least one field.")
+            if (root == QueryRoot.FINDER) {
+                if (segments.isEmpty() || segments.size > 2) {
+                    throw IllegalArgumentException(
+                        "$label finder path '$trimmed' must be '<finder.now>' or '<finder.{名字}>' / '<finder.{名字}.count>'.",
+                    )
+                }
+                if (segments.size == 2 && !segments[1].equals(COUNT_SEGMENT, true)) {
+                    throw IllegalArgumentException(
+                        "$label finder path '$trimmed' only supports '.count' as the second segment.",
+                    )
+                }
+            }
+            if (segments.isEmpty() && root != QueryRoot.SENDER) {
+                throw IllegalArgumentException("$label query path '$trimmed' requires at least one field.")
             }
             return QueryPath(root, segments, trimmed)
         }

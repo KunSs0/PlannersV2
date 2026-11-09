@@ -47,6 +47,8 @@ class QueryScope(
     val targetCache: com.gitee.planners.module.action.TargetCache = com.gitee.planners.module.action.TargetCache(),
     val timerCache: com.gitee.planners.module.action.TimerCache = com.gitee.planners.module.action.TimerCache(),
     val area: com.gitee.planners.module.action.AreaInstance? = null,
+    val lineTargets: List<com.gitee.planners.module.action.ActionTarget> = emptyList(),
+    val finderCache: MutableMap<String, List<com.gitee.planners.module.action.ActionTarget>> = LinkedHashMap(),
 ) {
 
     /**
@@ -78,6 +80,8 @@ class QueryScope(
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
+            lineTargets = lineTargets,
+            finderCache = finderCache,
         )
     }
 
@@ -115,6 +119,8 @@ class QueryScope(
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
+            lineTargets = lineTargets,
+            finderCache = finderCache,
         )
     }
 
@@ -149,6 +155,8 @@ class QueryScope(
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
+            lineTargets = lineTargets,
+            finderCache = finderCache,
         )
     }
 
@@ -181,6 +189,42 @@ class QueryScope(
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
+            lineTargets = lineTargets,
+            finderCache = finderCache,
+        )
+    }
+
+    /**
+     * 绑定当前行解析出的目标，供 `finder.now` 读取。
+     *
+     * @param targets 本行目标器解析出的目标。
+     * @return 绑定了行目标的作用域。
+     */
+    fun withLineTargets(targets: List<com.gitee.planners.module.action.ActionTarget>): QueryScope {
+        return QueryScope(
+            sender = sender,
+            caster = caster,
+            target = target,
+            skill = skill,
+            profile = profile,
+            variables = variables,
+            skillFieldReader = skillFieldReader,
+            profileFieldReader = profileFieldReader,
+            dataReader = dataReader,
+            attrReader = attrReader,
+            naturalReader = naturalReader,
+            nodeReader = nodeReader,
+            label = label,
+            payload = payload,
+            flowRunner = flowRunner,
+            anchoredReader = anchoredReader,
+            onceKeys = onceKeys,
+            playbackReader = playbackReader,
+            targetCache = targetCache,
+            timerCache = timerCache,
+            area = area,
+            lineTargets = targets,
+            finderCache = finderCache,
         )
     }
 }

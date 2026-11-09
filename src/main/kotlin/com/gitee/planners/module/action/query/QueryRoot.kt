@@ -56,7 +56,15 @@ enum class QueryRoot(val id: String, val skillOnly: Boolean = false) {
      * 两种写法：`<area.{分类}.count|owner>` 查询覆盖当前作用点的实例，
      * `<area.self.*>` 只在区域回调流程内有效，读取当前实例自身。
      */
-    AREA("area", true);
+    AREA("area", true),
+
+    /**
+     * 当前行选择器解析出的目标。
+     *
+     * 只提供 inder.now：返回本行目标的实体 UUID，逗号分隔，空行返回空串。
+     * 与 @uuid 目标器配合，可把一次选择存进标记后再在另一次执行里还原。
+     */
+    FINDER("finder", true);
 
     companion object {
 
