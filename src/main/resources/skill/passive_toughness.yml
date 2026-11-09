@@ -7,7 +7,7 @@ __option__:
       name: "&7坚韧"
       lore:
         - "&7等级 &fLv<skill.level>"
-        - "&7防御 &7+<skill.defense>"
+        - "&7防御 &7+<skill.var.defense>"
         - "&7被动"
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
@@ -16,4 +16,4 @@ __option__:
   # 未注册的属性键按物理属性直通；逻辑属性需先在 settings.attribute.registry 登记。
   hook:
     attributes:
-      DEF: "skill.defense"
+      DEF: "skill.var.defense"

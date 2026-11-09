@@ -31,15 +31,15 @@ object BuiltinTargeters {
     /** 准星射线检测使用的实体膨胀半径，单位格。 */
     private const val CROSSHAIR_RAY_SIZE = 0.35
 
-    /** 以施法者自身为容器。 */
-    object Self : ActionTargeter {
+    /** 以技能施法者为容器；`self` 是同等语义的旧名。 */
+    object Sender : ActionTargeter {
 
-        override val id = "self"
+        override val id = "sender"
 
-        override val aliases = listOf("self")
+        override val aliases = listOf("sender", "self")
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val target = toTarget(scope.sender)
+            val target = toTarget(scope.caster ?: scope.sender)
             if (target == null) {
                 return emptyList()
             }
@@ -47,36 +47,16 @@ object BuiltinTargeters {
         }
     }
 
-    /**
-     * 以当前作用点为容器。
-     *
-     * 没有绑定目标时等同 `@self`；被 `call` 等流程绑定了目标之后，指向那个目标，
-     * 目标可以是实体，也可以是坐标。
-     */
-    object This : ActionTargeter {
 
-        override val id = "this"
+    /** 技能施法者所在的坐标；`self.loc` 是同等语义的旧名。 */
+    object SenderLocation : ActionTargeter {
 
-        override val aliases = listOf("this")
+        override val id = "sender.loc"
+
+        override val aliases = listOf("sender.loc", "self.loc")
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val target = focusTarget(scope)
-            if (target == null) {
-                return emptyList()
-            }
-            return listOf(target)
-        }
-    }
-
-    /** 施法者自身所在的坐标。 */
-    object SelfLocation : ActionTargeter {
-
-        override val id = "self.loc"
-
-        override val aliases = listOf("self.loc")
-
-        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val location = locationOf(scope.sender)
+            val location = locationOf(scope.caster ?: scope.sender)
             if (location == null) {
                 return emptyList()
             }
@@ -84,29 +64,6 @@ object BuiltinTargeters {
         }
     }
 
-    /**
-     * 当前作用点的坐标。
-     *
-     * 没有绑定目标时取施法者坐标；绑定目标后取该目标的坐标。
-     */
-    object ThisLocation : ActionTargeter {
-
-        override val id = "this.loc"
-
-        override val aliases = listOf("this.loc")
-
-        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val target = focusTarget(scope)
-            if (target == null) {
-                return emptyList()
-            }
-            val location = locationOf(target)
-            if (location == null) {
-                return emptyList()
-            }
-            return listOf(ActionTarget.LocationTarget(location))
-        }
-    }
 
     /**
      * 以本次技能的当前目标为容器。
@@ -871,19 +828,6 @@ object BuiltinTargeters {
         return result
     }
 
-    /**
-     * 取当前作用点：流程绑定的目标优先，其次施法者。
-     *
-     * @param scope 查询上下文。
-     * @return 目标；两者都不可用时返回 null。
-     */
-    private fun focusTarget(scope: QueryScope): ActionTarget? {
-        val bound = toTarget(scope.target)
-        if (bound != null && bound.isActive()) {
-            return bound
-        }
-        return toTarget(scope.sender)
-    }
 
     /**
      * 取目标或实体的坐标。

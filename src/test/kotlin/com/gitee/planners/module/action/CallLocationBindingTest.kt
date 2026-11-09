@@ -43,7 +43,7 @@ class CallLocationBindingTest {
         return parsed
     }
 
-    /** `call ... @this.loc` 的子流程能拿到该坐标。 */
+    /** `call ... @sender.loc` 的子流程能拿到该坐标。 */
     @Test
     fun callBindsLocationToChildFlow() {
         val world = Mockito.mock(World::class.java)
@@ -52,7 +52,7 @@ class CallLocationBindingTest {
             """
             action:
               fire:
-                - 'call{func=inner} @this.loc'
+                - 'call{func=inner} @sender.loc'
               inner:
                 - 'capture{}'
             """.trimIndent(),
@@ -70,7 +70,7 @@ class CallLocationBindingTest {
             """
             action:
               fire:
-                - 'call{func=inner} @this.loc'
+                - 'call{func=inner} @sender.loc'
               inner:
                 - 'capture{}'
             """.trimIndent(),

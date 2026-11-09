@@ -27,6 +27,7 @@ package com.gitee.planners.module.action.query
  */
 class QueryScope(
     val sender: Any? = null,
+    val caster: Any? = sender,
     val target: Any? = null,
     val skill: Any? = null,
     val profile: Any? = null,
@@ -56,6 +57,7 @@ class QueryScope(
     fun withTarget(newTarget: Any?): QueryScope {
         return QueryScope(
             sender = sender,
+            caster = caster,
             target = newTarget,
             skill = skill,
             profile = profile,
@@ -91,6 +93,7 @@ class QueryScope(
         merged[key] = value
         return QueryScope(
             sender = sender,
+            caster = caster,
             target = target,
             skill = skill,
             profile = profile,
@@ -123,6 +126,7 @@ class QueryScope(
     fun withFlowRunner(runner: (String, QueryScope) -> Unit): QueryScope {
         return QueryScope(
             sender = sender,
+            caster = caster,
             target = target,
             skill = skill,
             profile = profile,
@@ -153,6 +157,7 @@ class QueryScope(
     fun withLabel(newLabel: String): QueryScope {
         return QueryScope(
             sender = sender,
+            caster = caster,
             target = target,
             skill = skill,
             profile = profile,

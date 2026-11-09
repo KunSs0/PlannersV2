@@ -193,7 +193,7 @@ class PlannersConditionsTest {
     @Test
     fun effectSpawnIsSkillScoped() {
         val spec = ActionParser.parseLine(
-            "effect.spawn{id=\"knight_skill_6\"; ticks=<skill.duration>}",
+            "effect.spawn{id=\"knight_skill_6\"; ticks=<skill.var.duration>}",
             "action.fire[0]",
         )
         assertEquals("effect.spawn", spec.action.id)
@@ -211,14 +211,14 @@ class PlannersConditionsTest {
     fun registersAllTargeters() {
         val ids = ActionRegistry.targeterIds()
         val expected = listOf(
-            "self", "target", "range", "sector", "rect", "source", "target.finder", "crosshair",
+            "sender", "target", "range", "sector", "rect", "source", "target.finder", "crosshair",
             "enemy", "ally", "type", "exclude-type", "name", "world", "include-self", "alive",
             "sort", "reverse", "shuffle", "limit", "online-players", "attacker", "defender",
-            "this", "self.loc", "this.loc",
+            "sender.loc",
         )
         for (id in expected) {
             assertTrue(ids.contains(id), "missing targeter: $id")
         }
-        assertEquals(26, ids.size)
+        assertEquals(24, ids.size)
     }
 }

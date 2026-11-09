@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 
 /**
- * 验证 `@this` 与坐标目标器。
+ * 验证 `@sender` 与 `@sender.loc`。
  *
- * `@this` 默认等同 `@self`；被流程绑定目标后指向该目标，可能是实体也可能是坐标。
+ * `@sender` 固定指向技能施法者，不随流程目标变化；`self` 是同等语义的别名。
  */
 class TargeterFocusTest {
 
@@ -28,12 +28,13 @@ class TargeterFocusTest {
     /**
      * 构造查询上下文。
      *
-     * @param sender 施法者。
+     * @param sender 当前取数主体。
+     * @param caster 技能施法者。
      * @param target 绑定的目标。
      * @return 查询上下文。
      */
-    private fun scope(sender: Any?, target: Any? = null): QueryScope {
-        return QueryScope(sender = sender, target = target, label = "test")
+    private fun scope(sender: Any?, caster: Any? = sender, target: Any? = null): QueryScope {
+        return QueryScope(sender = sender, caster = caster, target = target, label = "test")
     }
 
     /**
@@ -47,65 +48,41 @@ class TargeterFocusTest {
         return targeter.resolve(scope, ActionArguments(emptyMap(), "test"), emptyList())
     }
 
-    /** 没有绑定目标时 @this 等同 @self：坐标施法者得到坐标目标。 */
+    /** @sender 指向施法者，即使流程已经绑定了目标。 */
     @Test
-    fun thisFallsBackToSender() {
-        val origin = location()
-        val resolved = resolve(BuiltinTargeters.This, scope(origin))
+    fun senderPinsCaster() {
+        val caster = location()
+        val bound = Location(caster.world, 9.0, 70.0, 9.0)
+        val resolved = resolve(BuiltinTargeters.Sender, scope(caster, caster, bound))
 
         assertEquals(1, resolved.size)
-        assertEquals(origin, (resolved[0] as ActionTarget.LocationTarget).location)
+        assertEquals(caster, (resolved[0] as ActionTarget.LocationTarget).location)
     }
 
-    /** 绑定坐标目标后 @this 指向该坐标。 */
+    /** 没有施法者时退回当前取数主体。 */
     @Test
-    fun thisPrefersBoundTarget() {
-        val origin = location()
-        val bound = Location(origin.world, 9.0, 70.0, 9.0)
-        val resolved = resolve(BuiltinTargeters.This, scope(origin, bound))
+    fun senderFallsBackToScopeSender() {
+        val sender = location()
+        val resolved = resolve(BuiltinTargeters.Sender, scope(sender, null))
 
         assertEquals(1, resolved.size)
-        assertEquals(bound, (resolved[0] as ActionTarget.LocationTarget).location)
+        assertEquals(sender, (resolved[0] as ActionTarget.LocationTarget).location)
     }
 
-    /** @self.loc 取施法者坐标。 */
+    /** @sender.loc 取施法者坐标。 */
     @Test
-    fun selfLocationUsesSender() {
-        val origin = location()
-        val resolved = resolve(BuiltinTargeters.SelfLocation, scope(origin))
+    fun senderLocationUsesCaster() {
+        val caster = location()
+        val resolved = resolve(BuiltinTargeters.SenderLocation, scope(caster))
 
         assertEquals(1, resolved.size)
-        assertEquals(origin, (resolved[0] as ActionTarget.LocationTarget).location)
+        assertEquals(caster, (resolved[0] as ActionTarget.LocationTarget).location)
     }
 
-    /** @this.loc 没有绑定目标时取施法者坐标。 */
+    /** 既没有施法者也没有施法主体时返回空容器。 */
     @Test
-    fun thisLocationFallsBackToSender() {
-        val origin = location()
-        val resolved = resolve(BuiltinTargeters.ThisLocation, scope(origin))
-
-        assertEquals(1, resolved.size)
-        assertEquals(origin, (resolved[0] as ActionTarget.LocationTarget).location)
-    }
-
-    /** @this.loc 绑定坐标后取该坐标。 */
-    @Test
-    fun thisLocationPrefersBoundTarget() {
-        val origin = location()
-        val bound = Location(origin.world, 3.0, 65.0, 4.0)
-        val resolved = resolve(BuiltinTargeters.ThisLocation, scope(origin, bound))
-
-        assertEquals(1, resolved.size)
-        assertEquals(bound, (resolved[0] as ActionTarget.LocationTarget).location)
-    }
-
-    /** 没有施法者也没有绑定目标时返回空容器。 */
-    @Test
-    fun returnsEmptyWithoutFocus() {
-        val resolved = resolve(BuiltinTargeters.This, scope(null))
-        val located = resolve(BuiltinTargeters.ThisLocation, scope(null))
-
-        assertTrue(resolved.isEmpty())
-        assertTrue(located.isEmpty())
+    fun returnsEmptyWithoutCaster() {
+        assertTrue(resolve(BuiltinTargeters.Sender, scope(null, null)).isEmpty())
+        assertTrue(resolve(BuiltinTargeters.SenderLocation, scope(null, null)).isEmpty())
     }
 }

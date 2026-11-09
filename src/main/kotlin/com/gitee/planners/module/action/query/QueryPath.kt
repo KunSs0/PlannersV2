@@ -210,18 +210,31 @@ class QueryPath private constructor(
         }
     }
 
-    /** 读取技能字段与本次已计算的变量。 */
+    /**
+     * 读取技能字段与技能变量。
+     *
+     * 只有 `skill.var.<变量名>` 读变量，`level` / `id` / `name` 读技能自身字段；
+     * 两者靠前缀区分，变量不再与技能字段混在同一个命名空间里。
+     */
     private fun resolveSkill(scope: QueryScope): Any? {
         val field = segments.firstOrNull()
         if (field == null) {
             return scope.skill
         }
-        if (scope.variables.containsKey(field)) {
-            return scope.variables[field]
-        }
         val key = field.lowercase(Locale.ROOT)
-        if (key != field && scope.variables.containsKey(key)) {
-            return scope.variables[key]
+        if (key == VAR_SEGMENT) {
+            if (segments.size < 2) {
+                return null
+            }
+            val name = segments[1]
+            if (scope.variables.containsKey(name)) {
+                return scope.variables[name]
+            }
+            val lowered = name.lowercase(Locale.ROOT)
+            if (scope.variables.containsKey(lowered)) {
+                return scope.variables[lowered]
+            }
+            return null
         }
         val skill = scope.skill
         if (skill == null) {
@@ -282,6 +295,9 @@ class QueryPath private constructor(
 
     companion object {
 
+        /** 技能变量的前置分段：skill.var.{变量名}。 */
+        private const val VAR_SEGMENT = "var"
+
         /**
          * 解析一段路径文本。
          *
@@ -315,6 +331,21 @@ class QueryPath private constructor(
                 throw IllegalArgumentException(
                     "$label node path '$trimmed' must be '<node.{tree}.{nodeId}>'.",
                 )
+            }
+            if (root == QueryRoot.SKILL && segments.isNotEmpty()) {
+                val head = segments[0].lowercase(Locale.ROOT)
+                if (head == VAR_SEGMENT) {
+                    if (segments.size != 2) {
+                        throw IllegalArgumentException(
+                            "$label skill path '$trimmed' must be '<skill.var.{变量名}>' with exactly one variable name.",
+                        )
+                    }
+                } else if (head != "level" && head != "id" && head != "name") {
+                    throw IllegalArgumentException(
+                        "$label skill path '$trimmed' must be '<skill.var.{变量名}>', '<skill.level>', " +
+                            "'<skill.id>' or '<skill.name>'; 变量不再直接挂在 skill 下。",
+                    )
+                }
             }
             if (segments.isEmpty() && root != QueryRoot.SENDER) {
                 throw IllegalArgumentException("$label query path '$trimmed' requires at least one field.")

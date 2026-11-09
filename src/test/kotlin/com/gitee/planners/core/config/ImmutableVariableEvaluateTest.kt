@@ -61,7 +61,7 @@ class ImmutableVariableEvaluateTest {
         val accumulated = LinkedHashMap<String, Any?>()
         val first = ImmutableVariable.parse("attackLevel", 5)
         accumulated[first.id] = first.evaluate(scope(accumulated))
-        val second = ImmutableVariable.parse("doubled", mapOf("expression" to "skill.attackLevel * 2"))
+        val second = ImmutableVariable.parse("doubled", mapOf("expression" to "skill.var.attackLevel * 2"))
         assertEquals(10.0, second.evaluate(scope(accumulated)))
     }
 

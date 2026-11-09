@@ -15,5 +15,5 @@ __option__:
 action:
   fire:
     - 'meta.get{key="x1.status"; to="idx"; default=0} @self'
-    - 'message{m="idx=<skill.idx>,x=<skill.rectX[skill.idx]>, z=<skill.rectZ[skill.idx]>"} @self'
-    - 'meta.set{key="x1.status"; value=<skill.idx == 3 ? 0 : skill.idx + 1>} @self'
+    - 'message{m="idx=<skill.var.idx>,x=<skill.var.rectX[skill.var.idx]>, z=<skill.var.rectZ[skill.var.idx]>"} @self'
+    - 'meta.set{key="x1.status"; value=<skill.var.idx == 3 ? 0 : skill.var.idx + 1>} @self'

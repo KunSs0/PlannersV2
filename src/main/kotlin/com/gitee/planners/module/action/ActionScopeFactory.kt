@@ -65,10 +65,11 @@ object ActionScopeFactory {
         spec: ActionSpec,
         player: Player,
         payload: Map<String, Any?> = emptyMap(),
+        caster: Any? = null,
     ): QueryScope {
         val skill = com.gitee.planners.api.Registries.SKILL.getOrNull(spec.skillId)
         if (skill == null) {
-            return forPlayer(player, null, 0, payload, null, "trigger:" + spec.skillId, payload)
+            return forPlayer(player, null, 0, payload, null, "trigger:" + spec.skillId, payload, caster)
         }
         val level = resolveSkillLevel(player, spec.skillId)
         val execution = com.gitee.planners.core.skill.context.SkillExecutionContext.create(
@@ -82,7 +83,7 @@ object ActionScopeFactory {
         val variables = LinkedHashMap<String, Any?>()
         variables.putAll(skill.evaluateDisplayVariables(execution))
         variables.putAll(payload)
-        return forPlayer(player, skill, level, variables, null, "trigger:" + spec.skillId, payload)
+        return forPlayer(player, skill, level, variables, null, "trigger:" + spec.skillId, payload, caster)
     }
 
     /**
@@ -119,10 +120,12 @@ object ActionScopeFactory {
         target: Any? = null,
         label: String = "",
         payload: Map<String, Any?> = emptyMap(),
+        caster: Any? = player,
     ): QueryScope {
         val template = resolveTemplate(player)
         return QueryScope(
             sender = player,
+            caster = caster,
             target = target,
             skill = skill,
             profile = template,
@@ -172,6 +175,7 @@ object ActionScopeFactory {
         if (player == null) {
             return QueryScope(
                 sender = execution.sender,
+                caster = execution.sender,
                 skill = execution.skill,
                 profile = execution.profile,
                 variables = variables,
@@ -194,6 +198,7 @@ object ActionScopeFactory {
         }
         return QueryScope(
             sender = base.sender,
+            caster = base.caster,
             target = base.target,
             skill = base.skill,
             profile = base.profile,

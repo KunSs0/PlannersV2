@@ -141,7 +141,7 @@ class TimerActionTest {
         }
     }
 
-    /** 行上的 @this.loc 会被冻结，触发时子流程拿到的仍是施放坐标。 */
+    /** 行上的 @sender.loc 会被冻结，触发时子流程拿到的仍是施放坐标。 */
     @Test
     fun freezesLocationAtStart() {
         val world = Mockito.mock(World::class.java)
@@ -150,7 +150,7 @@ class TimerActionTest {
             """
             action:
               fire:
-                - 'timer.start{id="zone"; func=inner; every=10; times=1} @this.loc'
+                - 'timer.start{id="zone"; func=inner; every=10; times=1} @sender.loc'
               inner:
                 - 'count{}'
             """.trimIndent(),

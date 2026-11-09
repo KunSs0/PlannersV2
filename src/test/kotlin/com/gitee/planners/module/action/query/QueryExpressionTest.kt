@@ -60,7 +60,7 @@ class QueryExpressionTest {
     /** 纯路径直接读取变量。 */
     @Test
     fun readsVariableByPlainPath() {
-        val ref = QueryRef.parse("<skill.power>", "test")
+        val ref = QueryRef.parse("<skill.var.power>", "test")
         assertEquals(100L, ref.resolve(scope()))
     }
 
@@ -126,7 +126,7 @@ class QueryExpressionTest {
     /** 逻辑非与负号为一元运算。 */
     @Test
     fun evaluatesUnaryOperators() {
-        val negative = QueryRef.parse("<-skill.power>", "test").resolveDouble(scope())
+        val negative = QueryRef.parse("<-skill.var.power>", "test").resolveDouble(scope())
         assertEquals(-100.0, negative)
         val notFlag = QueryRef.parse("<!(skill.level > 10)>", "test").resolveBoolean(scope())
         assertTrue(notFlag)
@@ -173,7 +173,7 @@ class QueryExpressionTest {
     /** 除零在运行期报配置错误。 */
     @Test
     fun rejectsDivideByZero() {
-        val ref = QueryRef.parse("<skill.power / 0>", "test")
+        val ref = QueryRef.parse("<skill.var.power / 0>", "test")
         val failure = assertThrows(IllegalArgumentException::class.java) {
             ref.resolveDouble(scope())
         }
@@ -183,14 +183,14 @@ class QueryExpressionTest {
     /** 整数结果渲染为不带小数位的文本。 */
     @Test
     fun rendersIntegralText() {
-        val ref = QueryRef.parse("<skill.power / 4>", "test")
+        val ref = QueryRef.parse("<skill.var.power / 4>", "test")
         assertEquals("25", ref.resolveText(scope()))
     }
 
     /** 减法两侧留空格时按运算符处理。 */
     @Test
     fun subtractsWithSpaces() {
-        val value = QueryRef.parse("<skill.power - 40>", "test").resolveDouble(scope())
+        val value = QueryRef.parse("<skill.var.power - 40>", "test").resolveDouble(scope())
         assertEquals(60.0, value)
     }
 

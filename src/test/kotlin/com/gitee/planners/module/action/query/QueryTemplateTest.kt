@@ -36,7 +36,7 @@ class QueryTemplateTest {
     /** 多个占位符与纯文本混排。 */
     @Test
     fun rendersMultiplePlaceholders() {
-        val ref = QueryRef.parse("<skill.name> 速度 <skill.speed>%", "test.m")
+        val ref = QueryRef.parse("<skill.name> 速度 <skill.var.speed>%", "test.m")
         assertEquals("冲锋 速度 95%", ref.resolveText(scope()))
     }
 

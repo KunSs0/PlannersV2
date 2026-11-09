@@ -31,7 +31,7 @@ class StructuredSkillFixtureTest {
           category: [active]
           variables:
             castTime: 0
-            display_cast_seconds: "skill.castTime / 20.0"
+            display_cast_seconds: "skill.var.castTime / 20.0"
             cooldown: 80
             speed: "skill.level * 15 + 80"
           max-level: 3
@@ -125,12 +125,12 @@ class StructuredSkillFixtureTest {
                 - 'call{func=on_empty}'
               on_result:
                 conditions:
-                  - 'expr{e="skill.directing != null"}'
+                  - 'expr{e="skill.var.directing != null"}'
                 actions:
-                  - 'message{m="&e确认: <skill.directing>"}'
+                  - 'message{m="&e确认: <skill.var.directing>"}'
               on_empty:
                 conditions:
-                  - 'expr{e="skill.directing == null"}'
+                  - 'expr{e="skill.var.directing == null"}'
                 actions:
                   - 'message{m="&c结果为空"}'
         """.trimIndent()
@@ -152,7 +152,7 @@ class StructuredSkillFixtureTest {
                 - 'call{func=on_empty}'
               on_empty:
                 conditions:
-                  - 'expr{e="skill.directing == null"}'
+                  - 'expr{e="skill.var.directing == null"}'
                 actions:
                   - 'record{tag="empty"}'
         """.trimIndent()
@@ -199,7 +199,7 @@ class StructuredSkillFixtureTest {
             __option__:
               variables:
                 castTime: 0
-                display_cast_seconds: "skill.castTime / 20.0"
+                display_cast_seconds: "skill.var.castTime / 20.0"
                 cooldown: 150
                 attack_speed: "10 * skill.level + 50"
                 duration: "2 * skill.level + 5"

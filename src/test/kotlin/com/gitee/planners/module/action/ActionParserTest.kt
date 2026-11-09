@@ -169,7 +169,7 @@ class ActionParserTest {
             "action.fire[0]",
         )
         assertEquals(2, line.targeters.size)
-        assertEquals("self", line.targeters[0].targeter.id)
+        assertEquals("sender", line.targeters[0].targeter.id)
         assertEquals("limit", line.targeters[1].targeter.id)
         assertNotNull(line.trigger)
     }

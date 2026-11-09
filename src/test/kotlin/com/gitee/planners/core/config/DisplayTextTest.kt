@@ -47,7 +47,7 @@ class DisplayTextTest {
     /** 文案里的占位符按变量取值。 */
     @Test
     fun rendersPlaceholderFromVariables() {
-        val text = DisplayText.compile("&7每段伤害: &b<skill.damage>", "test.lore")
+        val text = DisplayText.compile("&7每段伤害: &b<skill.var.damage>", "test.lore")
         assertTrue(text.dynamic)
         assertEquals("&7每段伤害: &b50", text.render(scope()))
     }
@@ -55,7 +55,7 @@ class DisplayTextTest {
     /** 占位符里可以写表达式，与动作参数一致。 */
     @Test
     fun rendersExpressionPlaceholder() {
-        val text = DisplayText.compile("总伤害 <skill.damage * skill.hits>", "test.lore")
+        val text = DisplayText.compile("总伤害 <skill.var.damage * skill.var.hits>", "test.lore")
         assertEquals("总伤害 150", text.render(scope()))
     }
 
@@ -63,7 +63,7 @@ class DisplayTextTest {
     @Test
     fun sharesScopeAcrossLines() {
         val lines = DisplayText.compileList(
-            listOf("等级 &fLv<skill.level>", "段数 &b<skill.hits>", "---"),
+            listOf("等级 &fLv<skill.level>", "段数 &b<skill.var.hits>", "---"),
             "test.lore",
         )
         val context = scope()
@@ -76,7 +76,7 @@ class DisplayTextTest {
     /** 缺失的取值渲染为空串，与动作参数行为一致。 */
     @Test
     fun missingValueRendersEmpty() {
-        val text = DisplayText.compile("威力 <skill.unknown>", "test.lore")
+        val text = DisplayText.compile("威力 <skill.var.unknown>", "test.lore")
         assertEquals("威力 ", text.render(scope()))
     }
 
