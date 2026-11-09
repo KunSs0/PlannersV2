@@ -207,6 +207,7 @@ object ActionScopeFactory {
             label = base.label,
             payload = base.payload,
             targetCache = base.targetCache,
+            timerCache = base.timerCache,
         )
     }
 

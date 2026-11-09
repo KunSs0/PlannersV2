@@ -44,6 +44,7 @@ class QueryScope(
     val onceKeys: MutableSet<String> = LinkedHashSet(),
     val playbackReader: (Map<String, Any?>, String) -> Any? = { _, _ -> null },
     val targetCache: com.gitee.planners.module.action.TargetCache = com.gitee.planners.module.action.TargetCache(),
+    val timerCache: com.gitee.planners.module.action.TimerCache = com.gitee.planners.module.action.TimerCache(),
 ) {
 
     /**
@@ -72,6 +73,7 @@ class QueryScope(
             onceKeys = onceKeys,
             playbackReader = playbackReader,
             targetCache = targetCache,
+            timerCache = timerCache,
         )
     }
 
@@ -106,6 +108,7 @@ class QueryScope(
             onceKeys = onceKeys,
             playbackReader = playbackReader,
             targetCache = targetCache,
+            timerCache = timerCache,
         )
     }
 
@@ -137,6 +140,7 @@ class QueryScope(
             onceKeys = onceKeys,
             playbackReader = playbackReader,
             targetCache = targetCache,
+            timerCache = timerCache,
         )
     }
 
@@ -166,6 +170,7 @@ class QueryScope(
             onceKeys = onceKeys,
             playbackReader = playbackReader,
             targetCache = targetCache,
+            timerCache = timerCache,
         )
     }
 }

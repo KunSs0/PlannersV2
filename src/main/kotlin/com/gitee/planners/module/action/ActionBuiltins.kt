@@ -35,6 +35,8 @@ object ActionBuiltins {
         ActionRegistry.register(PlannersCooldownActions.Arm)
         ActionRegistry.register(PlannersCurrencyActions.Currency)
         ActionRegistry.register(PlannersEffectActions.Spawn)
+        ActionRegistry.register(TimerStartAction)
+        ActionRegistry.register(TimerStopAction)
     }
 
     /** 登记目标器。 */

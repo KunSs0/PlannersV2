@@ -3,7 +3,7 @@ package com.gitee.planners.module.action
 import com.gitee.planners.module.action.query.QueryScope
 import org.bukkit.Location
 import org.bukkit.World
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,12 +17,15 @@ import taboolib.module.configuration.Configuration
  */
 class CallLocationBindingTest {
 
+    /** 本用例内的捕获结果；每个测试方法新建实例，不跨用例共享。 */
+    private val holder = Holder()
+
     /** 每个用例前安装测试动作。 */
     @BeforeEach
     fun reset() {
         ActionRegistry.resetToBuiltins()
-        ActionRegistry.register(CaptureTarget)
-        CAPTURED = null
+        ActionRegistry.register(CaptureAction(holder))
+        holder.target = null
     }
 
     /** 构造带世界坐标的上下文。 */
@@ -57,7 +60,7 @@ class CallLocationBindingTest {
 
         ActionRunner.run(parsed, "fire", scope(origin))
 
-        assertSame(origin, CAPTURED)
+        assertSame(origin, holder.target)
     }
 
     /** 目标器结果为空时子流程不执行。 */
@@ -75,11 +78,21 @@ class CallLocationBindingTest {
 
         ActionRunner.run(parsed, "fire", QueryScope(label = "call-location"))
 
-        assertEquals(null, CAPTURED)
+        assertNull(holder.target)
     }
 
-    /** 记录子流程收到的目标。 */
-    private object CaptureTarget : Action {
+    /** 子流程收到的目标容器。 */
+    private class Holder {
+
+        var target: Any? = null
+    }
+
+    /**
+     * 记录子流程上下文目标的测试动作。
+     *
+     * @property holder 所属用例的容器。
+     */
+    private class CaptureAction(private val holder: Holder) : Action {
 
         override val id = "capture"
 
@@ -92,13 +105,7 @@ class CallLocationBindingTest {
         }
 
         override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
-            CAPTURED = scope.target
+            holder.target = scope.target
         }
-    }
-
-    companion object {
-
-        /** 最近一次子流程收到的目标。 */
-        private var CAPTURED: Any? = null
     }
 }
