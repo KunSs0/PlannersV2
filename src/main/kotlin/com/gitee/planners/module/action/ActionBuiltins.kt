@@ -44,6 +44,7 @@ object ActionBuiltins {
     /** 登记目标器。 */
     private fun installTargeters() {
         ActionRegistry.register(BuiltinTargeters.Sender)
+        ActionRegistry.register(BuiltinTargeters.Wounded)
         ActionRegistry.register(BuiltinTargeters.SenderLocation)
         ActionRegistry.register(BuiltinTargeters.Current)
         ActionRegistry.register(BuiltinTargeters.Range)

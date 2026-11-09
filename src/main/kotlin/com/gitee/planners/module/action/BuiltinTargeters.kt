@@ -31,6 +31,50 @@ object BuiltinTargeters {
     /** 准星射线检测使用的实体膨胀半径，单位格。 */
     private const val CROSSHAIR_RAY_SIZE = 0.35
 
+    /**
+     * 只保留生命比例不高于阈值的容器元素。
+     *
+     * 与 `wounded` 条件同一口径，但按元素逐个过滤，供"给低血友方单独加成"这类场景使用。
+     */
+    object Wounded : ActionTargeter {
+
+        override val id = "wounded"
+
+        override val aliases = listOf("wounded")
+
+        override val scope = ActionScope.SKILL
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.require("ratio")
+            arguments.rejectUnknown("ratio")
+        }
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            val ratio = arguments.requireNumber(scope, "ratio")
+            if (ratio <= 0.0 || ratio > 1.0) {
+                throw IllegalArgumentException("${arguments.path} ratio 必须在 (0, 1] 区间。")
+            }
+            val found = ArrayList<ActionTarget>()
+            for (target in input) {
+                val entity = target.bukkitEntity()
+                if (entity == null) {
+                    continue
+                }
+                if (!entity.isValid) {
+                    continue
+                }
+                val maximum = entity.maxHealth
+                if (maximum <= 0.0) {
+                    continue
+                }
+                if (entity.health / maximum <= ratio) {
+                    found.add(target)
+                }
+            }
+            return found
+        }
+    }
+
     /** 以技能施法者为容器；`self` 是同等语义的旧名。 */
     object Sender : ActionTargeter {
 
