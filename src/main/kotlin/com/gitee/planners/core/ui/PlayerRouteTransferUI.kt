@@ -29,7 +29,7 @@ object PlayerRouteTransferUI : SingletonChoiceUI<ImmutableRoute>("route-transfer
         }
         PlayerTemplateAPI.setPlayerRoute(player, element).thenAccept { newRoute ->
             if (newRoute != null) {
-                player.sendLang("player-transfer-success", element.getJob().name)
+                player.sendLang("player-transfer-success", element.getJob().renderName(player))
             }
         }
     }

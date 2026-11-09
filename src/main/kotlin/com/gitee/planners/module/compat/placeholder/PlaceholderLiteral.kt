@@ -70,7 +70,7 @@ object PlaceholderLiteral {
             "skill_count" -> parseSkillCount(request, template)
             "backpack_page" -> parseBackpackPage(request, template)
             "backpack_page_name" -> parseBackpackPageName(request, template)
-            "skill_name" -> parseSkillName(request)
+            "skill_name" -> parseSkillName(request, player, template)
             "skill_level" -> parseSkillLevel(request, template)
             "skill_max_level" -> parseSkillMaxLevel(request)
             "skill_learned" -> parseSkillLearned(request, template)
@@ -226,7 +226,7 @@ object PlaceholderLiteral {
         if (playerRouter == null) {
             return ""
         }
-        return playerRouter.currentRoute.name
+        return playerRouter.currentRoute.getJob().renderName(template.onlinePlayer)
     }
 
     /**
@@ -346,7 +346,7 @@ object PlaceholderLiteral {
      * @param request 已解析的请求，必须包含一个技能 ID。
      * @return 技能名称；技能不存在或参数无效时为空字符串。
      */
-    private fun parseSkillName(request: Request): String {
+    private fun parseSkillName(request: Request, player: Player, template: PlayerTemplate): String {
         val skillId = getSingleArgument(request)
         if (skillId == null) {
             return ""
@@ -355,7 +355,9 @@ object PlaceholderLiteral {
         if (skill == null) {
             return ""
         }
-        return skill.name
+        // 名称里的 `<...>` 与图标文本同源，按该玩家当前的技能等级渲染。
+        val level = SkillTreeNodeEffectService.getSkillLevel(template, skillId)
+        return skill.renderName(player, level)
     }
 
     /**
@@ -518,7 +520,7 @@ object PlaceholderLiteral {
         if (skill == null) {
             return ""
         }
-        return skill.name
+        return skill.immutable.renderName(template.onlinePlayer, skill.level)
     }
 
     /**

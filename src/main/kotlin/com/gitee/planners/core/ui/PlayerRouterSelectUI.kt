@@ -26,7 +26,7 @@ object PlayerRouterSelectUI : SingletonChoiceUI<ImmutableRouter>("router-select.
         val template = player.plannersTemplate
         val playerRouter = template.playerRouter
         if (playerRouter != null) {
-            player.sendLang("player-route-exists", playerRouter.currentRoute.name)
+            player.sendLang("player-route-exists", playerRouter.currentRoute.getJob().renderName(player))
             return
         }
         event.clicker.closeInventory()
@@ -34,7 +34,7 @@ object PlayerRouterSelectUI : SingletonChoiceUI<ImmutableRouter>("router-select.
         // 选择职业
         PlayerTemplateAPI.setPlayerRoute(player, route).thenAccept {
             if (it != null) {
-                player.sendLang("player-route-selected", it.name)
+                player.sendLang("player-route-selected", it.getJob().renderName(player))
             }
         }
     }

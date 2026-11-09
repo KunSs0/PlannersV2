@@ -9,8 +9,8 @@ __option__:
       lore:
         - "释放裂地斩，对前方扇形区域内的目标造成伤害。"
         - "---"
-        - '&7吟唱时间: &f{{skill.display_cast_seconds}}秒'
-        - "技能伤害: {{skill.damage}}"
+        - '&7吟唱时间: &f<skill.display_cast_seconds>秒'
+        - "技能伤害: <skill.damage>"
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     display_cast_seconds: "skill.castTime / 20.0"

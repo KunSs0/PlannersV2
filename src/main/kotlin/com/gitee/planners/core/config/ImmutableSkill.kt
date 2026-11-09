@@ -25,7 +25,6 @@ import taboolib.module.configuration.Configuration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.Locale
-import java.util.regex.Pattern
 
 class ImmutableSkill(config: Configuration) : Unique {
 
@@ -83,11 +82,30 @@ class ImmutableSkill(config: Configuration) : Unique {
     val icon
         get() = option.getConfigurationSection("display")?.getItemStack("icon")
 
-    /** 技能图标显示名称原文，用于不创建 ItemStack 的文本渲染。 */
-    val displayIconName: String? = option.getString("display.icon.name")
+    /**
+     * 技能图标显示名称的展示文本。
+     *
+     * 文本里的 `<...>` 按求值表达式解析，与动作参数同一套语法。
+     */
+    val displayIconName: DisplayText? = DisplayText.compileOrNull(
+        option.getString("display.icon.name"),
+        "skill:$id.display.icon.name",
+    )
 
-    /** 技能图标 Lore 原文，用于不创建 ItemStack 的文本渲染。 */
-    val displayIconLore: List<String> = option.getStringList("display.icon.lore")
+    /**
+     * 技能图标 Lore 的展示文本，逐行编译。
+     */
+    val displayIconLore: List<DisplayText> = DisplayText.compileList(
+        option.getStringList("display.icon.lore"),
+        "skill:$id.display.icon.lore",
+    )
+
+    /**
+     * 技能名称的展示文本。
+     *
+     * 名字里同样可以写 `<...>` 插值；纯文本时渲染不产生求值开销。
+     */
+    val nameText: DisplayText = DisplayText.compile(name, "skill:$id.__option__.name")
 
     /** 技能分类 */
     val categories: Set<String>
@@ -188,23 +206,6 @@ class ImmutableSkill(config: Configuration) : Unique {
         require(immutableVariables.containsKey("castTime")) { "技能${id}缺少__option__.variables.castTime；瞬发技能须显式配置0。" }
     }
 
-    /**
-     * 图标显示变量的单次批处理函数。
-     *
-     * 所有值在函数局部作用域按 YAML 声明顺序计算，避免向长期 Context 写入玩家变量。
-     */
-    
-
-    /** 显示模板表达式到启动期预编译条件引用的映射。 */
-    private val templateRefs = ConcurrentHashMap<String, QueryRef>()
-
-    init {
-        registerDisplayTemplate("display.icon.name", displayIconName)
-        for (index in displayIconLore.indices) {
-            registerDisplayTemplate("display.icon.lore[$index]", displayIconLore[index])
-        }
-    }
-
     /** 外部插件实现的 Hook 标记接口 */
     interface Hook
 
@@ -237,7 +238,6 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     companion object {
         private val decoders = ConcurrentHashMap<String, Decoder>()
-        val displayTemplatePattern: Pattern = Pattern.compile("\\{\\{(.+?)}}")
 
         fun registerHook(namespace: String, decoder: Decoder) {
             decoders[namespace] = decoder
@@ -313,95 +313,112 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
     /**
-     * 使用编译程序入口计算一个 `{{expression}}`。
+     * 构造一次展示渲染共用的查询上下文。
      *
-     * @param expression 模板中的原始表达式。
-     * @param execution 已完成技能变量计算的执行上下文。
-     * @return 表达式结果。
+     * 同一次请求里的名称、图标名称与 Lore 都复用这个上下文，
+     * 变量只按声明顺序计算一次；后声明的变量可以引用先声明的结果。
+     *
+     * @param execution 本次技能执行上下文。
+     * @param payload 回调用途的载荷，供展示文本读取播放变量。
+     * @return 已完成变量计算的查询上下文。
      */
-    fun evaluateDisplayTemplate(expression: String, execution: SkillExecutionContext): Any? {
-        val normalized = expression.trim()
-        val ref = templateRefs[normalized]
-        if (ref == null) {
-            throw IllegalStateException("Skill '$id' display template was not precompiled: {{$normalized}}")
+    fun displayScope(execution: SkillExecutionContext, payload: Map<String, Any?> = emptyMap()): QueryScope {
+        val variables = LinkedHashMap<String, Any?>()
+        val scope = ActionScopeFactory.forExecution(execution, variables, payload)
+        for (entry in immutableVariables) {
+            variables[entry.key] = entry.value.evaluate(scope)
         }
-        return ref.resolve(displayTemplateScope(execution))
+        // 指向结果由运行时注入，与动作流程保持一致，供 `<skill.directing>` 读取。
+        val directing = execution.context.directing
+        if (directing != null) {
+            variables["directing"] = directing
+        }
+        return scope
     }
 
     /**
-     * 构造显示模板的查询上下文。
+     * 按玩家与技能等级构造展示渲染用的查询上下文。
      *
-     * 模板只能读到本次执行已算出的技能变量与基础字段。
+     * 供只拿得到玩家与等级的调用方使用，变量同样是算一次后共享。
      *
-     * @param execution 已完成技能变量计算的执行上下文。
-     * @return 查询上下文。
+     * @param player 当前玩家。
+     * @param level 该玩家的技能等级。
+     * @return 已完成变量计算的查询上下文。
      */
-    private fun displayTemplateScope(execution: SkillExecutionContext): QueryScope {
-        val sender = execution.sender
-        val player = sender as? Player
-        if (player != null) {
-            return ActionScopeFactory.forPlayer(
-                player,
-                this,
-                execution.level,
-                execution.variableSnapshot(),
-                null,
-                "skill:$id:template",
-            )
+    fun displayScope(player: Player, level: Int): QueryScope {
+        val variables = LinkedHashMap<String, Any?>()
+        val scope = ActionScopeFactory.forPlayer(player, this, level, variables, null, "skill:$id:display")
+        for (entry in immutableVariables) {
+            variables[entry.key] = entry.value.evaluate(scope)
         }
-        return QueryScope(
-            sender = sender,
-            skill = this,
-            profile = execution.profile,
-            variables = execution.variableSnapshot(),
-            skillFieldReader = { value, field -> readDisplayField(value, field, execution.level) },
-            label = "skill:$id:template",
-        )
+        return scope
     }
 
     /**
-     * 非玩家施法者下读取技能基础字段。
+     * 渲染技能图标名称。
      *
-     * 技能变量已放进查询上下文的 `variables`，这里只补基础字段。
-     *
-     * @param value 技能对象。
-     * @param field 字段名。
-     * @param level 技能等级。
-     * @return 字段值；未命中时返回 null。
+     * @param scope 本次请求共用的查询上下文。
+     * @return 渲染结果；未配置图标名称时返回 null。
      */
-    private fun readDisplayField(value: Any, field: String, level: Int): Any? {
-        val skill = value as? ImmutableSkill
-        if (skill == null) {
+    fun renderDisplayIconName(scope: QueryScope): String? {
+        val text = displayIconName
+        if (text == null) {
             return null
         }
-        if (field == "id") {
-            return skill.id
+        if (!text.dynamic) {
+            return text.raw
         }
-        if (field == "name") {
-            return skill.id
-        }
-        if (field == "level") {
-            return level
-        }
-        return null
+        return text.render(scope)
     }
 
-    /** 扫描一项显示文本，并预编译其中全部模板表达式。 */
-    private fun registerDisplayTemplate(path: String, text: String?) {
-        if (text == null) {
-            return
+    /**
+     * 渲染技能图标 Lore。
+     *
+     * @param scope 本次请求共用的查询上下文。
+     * @return 逐行渲染结果，顺序与配置一致。
+     */
+    fun renderDisplayIconLore(scope: QueryScope): List<String> {
+        val result = ArrayList<String>(displayIconLore.size)
+        if (displayIconLore.isEmpty()) {
+            return result
         }
-        val matcher = displayTemplatePattern.matcher(text)
-        var expressionIndex = 0
-        while (matcher.find()) {
-            val expression = matcher.group(1).trim()
-            if (expression.isEmpty()) {
-                throw IllegalArgumentException("Skill '$id' has a blank display template at $path")
+        for (text in displayIconLore) {
+            if (!text.dynamic) {
+                result.add(text.raw)
+                continue
             }
-            val sourceId = "skill:$id:template:$path:$expressionIndex"
-            templateRefs[expression] = QueryRef.parseExpression(expression, sourceId)
-            expressionIndex += 1
+            result.add(text.render(scope))
         }
+        return result
+    }
+
+    /**
+     * 渲染技能名称。
+     *
+     * @param scope 本次请求共用的查询上下文。
+     * @return 渲染结果；名称不含占位符时直接返回原文。
+     */
+    fun renderName(scope: QueryScope): String {
+        if (!nameText.dynamic) {
+            return nameText.raw
+        }
+        return nameText.render(scope)
+    }
+
+    /**
+     * 渲染技能名称。
+     *
+     * 名称不含占位符时直接返回原文，不构造查询上下文。
+     *
+     * @param player 当前玩家。
+     * @param level 该玩家的技能等级。
+     * @return 渲染结果。
+     */
+    fun renderName(player: Player, level: Int): String {
+        if (!nameText.dynamic) {
+            return nameText.raw
+        }
+        return nameText.render(displayScope(player, level))
     }
 
     /**

@@ -6,8 +6,8 @@ __option__:
       material: BLAZE_ROD
       name: "&6怒火"
       lore:
-        - "&7等级 &fLv{{skill.level}}"
-        - "&7攻击 &6+{{skill.power}}"
+        - "&7等级 &fLv<skill.level>"
+        - "&7攻击 &6+<skill.power>"
         - "&7被动"
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
