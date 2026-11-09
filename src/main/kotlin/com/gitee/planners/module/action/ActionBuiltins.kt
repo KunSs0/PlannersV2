@@ -48,6 +48,7 @@ object ActionBuiltins {
         ActionRegistry.register(BuiltinTargeters.Sender)
         ActionRegistry.register(BuiltinTargeters.Wounded)
         ActionRegistry.register(UuidTargets)
+        ActionRegistry.register(ForwardTargeter)
         ActionRegistry.register(BuiltinTargeters.SenderLocation)
         ActionRegistry.register(BuiltinTargeters.Current)
         ActionRegistry.register(BuiltinTargeters.Range)
