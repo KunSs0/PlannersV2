@@ -106,7 +106,7 @@ object SkillCastingSessions {
      */
     @SubscribeEvent
     fun onReload(event: PluginReloadEvents.Pre) {
-        // 防止旧技能模块在新Workspace激活后提交旧资源或执行旧action。
+        // 防止重载前捕获的续体在旧代际继续提交资源或执行动作。
         cancelAll()
     }
 

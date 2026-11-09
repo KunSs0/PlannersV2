@@ -25,7 +25,7 @@ class ConditionEvaluator(
         fun prepareConfiguredProperties(configurations: Collection<ConditionConfig>) {
         }
 
-        /** 每次 Workspace 重建前清除上一代函数句柄，避免旧模块 ID 被复用。 */
+        /** 条件不持有跨代际缓存；保留空入口，供重载流程按固定顺序调用。 */
         fun resetConfiguredProperties() {
         }
     }
@@ -209,7 +209,7 @@ class ConditionEvaluator(
     }
 
     /**
-     * 在同一预编译 Workspace 中批量校验多个条件组。
+     * 在同一批已准备条件中批量校验多个条件组。
      *
      * 每个请求保持与 [verify] 一致的条件顺序和失败短路结果，
      * 条件计算按定义分组批量执行，避免节点数量线性增加求值次数。
@@ -223,7 +223,7 @@ class ConditionEvaluator(
     }
 
     /**
-     * 在同一预编译 Workspace 中批量校验多个条件组，并返回请求级细分计时。
+     * 在同一批已准备条件中批量校验多个条件组，并返回请求级细分计时。
      *
      * @param requests 待校验请求列表。
      * @param player 当前玩家。
