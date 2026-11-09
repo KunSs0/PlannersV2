@@ -86,7 +86,7 @@ class OnceConditionTest {
     fun appliesToFirstTargetOnly() {
         val yaml = """
             fire:
-              - 'call{list=on_hit}'
+              - 'call{func=on_hit}'
             on_hit:
               conditions:
                 - 'once{key="ulp"}'
@@ -106,9 +106,9 @@ class OnceConditionTest {
     fun threeKeysAllowThreeHits() {
         val yaml = """
             fire:
-              - 'call{list=sound1}'
-              - 'call{list=sound2}'
-              - 'call{list=sound3}'
+              - 'call{func=sound1}'
+              - 'call{func=sound2}'
+              - 'call{func=sound3}'
             sound1:
               conditions:
                 - 'once{key="s1"}'

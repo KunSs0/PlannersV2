@@ -53,8 +53,8 @@ class CallChainSemanticsTest {
         val yaml = """
             action:
               fire:
-                - 'call{list=on_hit}'
-                - 'call{list=on_miss}'
+                - 'call{func=on_hit}'
+                - 'call{func=on_miss}'
               on_hit:
                 conditions:
                   - 'expr{e="data.flag == 1"}'
@@ -76,8 +76,8 @@ class CallChainSemanticsTest {
         val yaml = """
             action:
               fire:
-                - 'call{list=step0}'
-                - 'call{list=step1}'
+                - 'call{func=step0}'
+                - 'call{func=step1}'
               step0:
                 conditions:
                   - 'expr{e="data.x1.status == null"}'
@@ -100,8 +100,8 @@ class CallChainSemanticsTest {
         val yaml = """
             action:
               fire:
-                - 'call{list=on_a}'
-                - 'call{list=on_b}'
+                - 'call{func=on_a}'
+                - 'call{func=on_b}'
               on_a:
                 conditions:
                   - 'expr{e="data.turn == null || data.turn == 0"}'

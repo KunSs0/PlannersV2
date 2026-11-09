@@ -140,7 +140,7 @@ class ActionRunnerTest {
     fun callsAnotherFlow() {
         val yaml = """
             fire:
-              - 'call{list=inner}'
+              - 'call{func=inner}'
             inner:
               - 'record{tag="inner"}'
         """.trimIndent()
@@ -154,7 +154,7 @@ class ActionRunnerTest {
     fun rejectsCyclicCall() {
         val yaml = """
             fire:
-              - 'call{list=fire}'
+              - 'call{func=fire}'
         """.trimIndent()
         val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
         assertThrows(IllegalStateException::class.java) {
@@ -167,7 +167,7 @@ class ActionRunnerTest {
     fun rejectsUnknownFlow() {
         val yaml = """
             fire:
-              - 'call{list=missing}'
+              - 'call{func=missing}'
         """.trimIndent()
         val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
         val failure = assertThrows(IllegalArgumentException::class.java) {

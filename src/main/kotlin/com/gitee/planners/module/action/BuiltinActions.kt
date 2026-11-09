@@ -107,8 +107,8 @@ object BuiltinActions {
         override val aliases = listOf("call")
 
         override fun validate(arguments: ActionArguments) {
-            arguments.require("list", "l")
-            arguments.rejectUnknown("list", "l", "skill")
+            arguments.require("func", "f")
+            arguments.rejectUnknown("func", "f", "skill")
         }
 
         override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {

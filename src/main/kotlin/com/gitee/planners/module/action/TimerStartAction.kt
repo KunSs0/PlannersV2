@@ -24,9 +24,9 @@ object TimerStartAction : Action {
 
     override fun validate(arguments: ActionArguments) {
         arguments.require("id")
-        arguments.require("list")
+        arguments.require("func", "f")
         arguments.require("every")
-        arguments.rejectUnknown("id", "list", "every", "times", "delay")
+        arguments.rejectUnknown("id", "func", "f", "every", "times", "delay")
         val id = arguments.literalText("id")
         if (id != null && !TIMER_ID.matches(id.trim())) {
             throw IllegalArgumentException("${arguments.path} id 只允许 [A-Za-z0-9_.-]+。")
@@ -50,7 +50,7 @@ object TimerStartAction : Action {
         if (!TIMER_ID.matches(id)) {
             throw IllegalArgumentException("${arguments.path} id 只允许 [A-Za-z0-9_.-]+。")
         }
-        val flow = arguments.requireText(scope, "list")
+        val flow = arguments.requireText(scope, "func", "f")
         val every = arguments.requireInteger(scope, "every")
         if (every <= 0) {
             throw IllegalArgumentException("${arguments.path} every must be positive.")

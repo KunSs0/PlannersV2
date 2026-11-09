@@ -52,7 +52,7 @@ class CallLocationBindingTest {
             """
             action:
               fire:
-                - 'call{list=inner} @this.loc'
+                - 'call{func=inner} @this.loc'
               inner:
                 - 'capture{}'
             """.trimIndent(),
@@ -70,7 +70,7 @@ class CallLocationBindingTest {
             """
             action:
               fire:
-                - 'call{list=inner} @this.loc'
+                - 'call{func=inner} @this.loc'
               inner:
                 - 'capture{}'
             """.trimIndent(),

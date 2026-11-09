@@ -56,7 +56,7 @@ class TimerActionTest {
             """
             action:
               fire:
-                - 'timer.start{id="guard"; list=inner; every=10; times=2}'
+                - 'timer.start{id="guard"; func=inner; every=10; times=2}'
               inner:
                 - 'count{}'
             """.trimIndent(),
@@ -85,8 +85,8 @@ class TimerActionTest {
             """
             action:
               fire:
-                - 'timer.start{id="guard"; list=inner; every=10}'
-                - 'timer.start{id="guard"; list=inner; every=10}'
+                - 'timer.start{id="guard"; func=inner; every=10}'
+                - 'timer.start{id="guard"; func=inner; every=10}'
                 - 'timer.stop{id="guard"}'
               inner:
                 - 'count{}'
@@ -107,7 +107,7 @@ class TimerActionTest {
             """
             action:
               start:
-                - 'timer.start{id="guard"; list=inner; every=10}'
+                - 'timer.start{id="guard"; func=inner; every=10}'
               inner:
                 - 'count{}'
               stop:
@@ -130,7 +130,7 @@ class TimerActionTest {
                 """
                 action:
                   fire:
-                    - 'timer.start{id="guard"; list=inner; every=0}'
+                    - 'timer.start{id="guard"; func=inner; every=0}'
                   inner:
                     - 'count{}'
                 """.trimIndent(),

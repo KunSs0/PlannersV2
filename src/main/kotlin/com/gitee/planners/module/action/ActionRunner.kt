@@ -218,7 +218,7 @@ object ActionRunner {
      * @return 执行过至少一次时返回 true。
      */
     private fun executeCall(line: ActionLine, spec: ActionSpec, scope: QueryScope, depth: Int): Boolean {
-        val flowId = line.arguments.requireText(scope, "list", "l")
+        val flowId = line.arguments.requireText(scope, "func", "f")
         val targetSkill = line.arguments.text(scope, "skill")
         if (targetSkill != null && !targetSkill.equals(spec.skillId, true)) {
             return executeCrossSkillCall(line, scope, depth, targetSkill, flowId)

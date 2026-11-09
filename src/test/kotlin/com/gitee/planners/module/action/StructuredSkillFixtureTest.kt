@@ -121,8 +121,8 @@ class StructuredSkillFixtureTest {
         val text = """
             action:
               fire:
-                - 'call{list=on_result}'
-                - 'call{list=on_empty}'
+                - 'call{func=on_result}'
+                - 'call{func=on_empty}'
               on_result:
                 conditions:
                   - 'expr{e="skill.directing != null"}'
@@ -149,7 +149,7 @@ class StructuredSkillFixtureTest {
         val text = """
             action:
               fire:
-                - 'call{list=on_empty}'
+                - 'call{func=on_empty}'
               on_empty:
                 conditions:
                   - 'expr{e="skill.directing == null"}'
