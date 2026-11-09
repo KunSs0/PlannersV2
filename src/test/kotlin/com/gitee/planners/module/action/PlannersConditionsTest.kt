@@ -214,10 +214,11 @@ class PlannersConditionsTest {
             "self", "target", "range", "sector", "rect", "source", "target.finder", "crosshair",
             "enemy", "ally", "type", "exclude-type", "name", "world", "include-self", "alive",
             "sort", "reverse", "shuffle", "limit", "online-players", "attacker", "defender",
+            "this", "self.loc", "this.loc",
         )
         for (id in expected) {
             assertTrue(ids.contains(id), "missing targeter: $id")
         }
-        assertEquals(23, ids.size)
+        assertEquals(26, ids.size)
     }
 }

@@ -48,6 +48,67 @@ object BuiltinTargeters {
     }
 
     /**
+     * 以当前作用点为容器。
+     *
+     * 没有绑定目标时等同 `@self`；被 `call` 等流程绑定了目标之后，指向那个目标，
+     * 目标可以是实体，也可以是坐标。
+     */
+    object This : ActionTargeter {
+
+        override val id = "this"
+
+        override val aliases = listOf("this")
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            val target = focusTarget(scope)
+            if (target == null) {
+                return emptyList()
+            }
+            return listOf(target)
+        }
+    }
+
+    /** 施法者自身所在的坐标。 */
+    object SelfLocation : ActionTargeter {
+
+        override val id = "self.loc"
+
+        override val aliases = listOf("self.loc")
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            val location = locationOf(scope.sender)
+            if (location == null) {
+                return emptyList()
+            }
+            return listOf(ActionTarget.LocationTarget(location))
+        }
+    }
+
+    /**
+     * 当前作用点的坐标。
+     *
+     * 没有绑定目标时取施法者坐标；绑定目标后取该目标的坐标。
+     */
+    object ThisLocation : ActionTargeter {
+
+        override val id = "this.loc"
+
+        override val aliases = listOf("this.loc")
+
+        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
+            val target = focusTarget(scope)
+            if (target == null) {
+                return emptyList()
+            }
+            val location = locationOf(target)
+            if (location == null) {
+                return emptyList()
+            }
+            return listOf(ActionTarget.LocationTarget(location))
+        }
+    }
+
+    /**
      * 以本次技能的当前目标为容器。
      *
      * 单体技能不需要再写选区，直接用这一项；没有目标时容器为空，动作按空容器跳过。
@@ -808,6 +869,46 @@ object BuiltinTargeters {
             }
         }
         return result
+    }
+
+    /**
+     * 取当前作用点：流程绑定的目标优先，其次施法者。
+     *
+     * @param scope 查询上下文。
+     * @return 目标；两者都不可用时返回 null。
+     */
+    private fun focusTarget(scope: QueryScope): ActionTarget? {
+        val bound = toTarget(scope.target)
+        if (bound != null && bound.isActive()) {
+            return bound
+        }
+        return toTarget(scope.sender)
+    }
+
+    /**
+     * 取目标或实体的坐标。
+     *
+     * @param value 目标、实体或坐标。
+     * @return 坐标；无法取得时返回 null。
+     */
+    private fun locationOf(value: Any?): Location? {
+        if (value is ActionTarget.LocationTarget) {
+            return value.location
+        }
+        if (value is ActionTarget) {
+            val entity = value.bukkitEntity()
+            if (entity == null) {
+                return null
+            }
+            return entity.location
+        }
+        if (value is Location) {
+            return value
+        }
+        if (value is Entity) {
+            return value.location
+        }
+        return null
     }
 
     /**

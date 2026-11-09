@@ -234,7 +234,13 @@ object ActionRunner {
         for (target in targets) {
             val entity = target.bukkitEntity()
             if (entity == null) {
-                runFlow(spec, flowId, scope, depth + 1)
+                // 坐标目标：把该坐标绑定给子流程，子流程里的 @this 即这个坐标。
+                val location = if (target is ActionTarget.LocationTarget) target.location else null
+                if (location == null) {
+                    runFlow(spec, flowId, scope, depth + 1)
+                    continue
+                }
+                runFlow(spec, flowId, scope.withTarget(location), depth + 1)
                 continue
             }
             if (entity is Player) {
