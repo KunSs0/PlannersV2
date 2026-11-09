@@ -46,6 +46,7 @@ class QueryScope(
     val playbackReader: (Map<String, Any?>, String) -> Any? = { _, _ -> null },
     val targetCache: com.gitee.planners.module.action.TargetCache = com.gitee.planners.module.action.TargetCache(),
     val timerCache: com.gitee.planners.module.action.TimerCache = com.gitee.planners.module.action.TimerCache(),
+    val area: com.gitee.planners.module.action.AreaInstance? = null,
 ) {
 
     /**
@@ -76,6 +77,7 @@ class QueryScope(
             playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
+            area = area,
         )
     }
 
@@ -112,6 +114,7 @@ class QueryScope(
             playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
+            area = area,
         )
     }
 
@@ -145,6 +148,7 @@ class QueryScope(
             playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
+            area = area,
         )
     }
 
@@ -176,6 +180,7 @@ class QueryScope(
             playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
+            area = area,
         )
     }
 }

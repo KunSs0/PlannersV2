@@ -48,7 +48,15 @@ enum class QueryRoot(val id: String, val skillOnly: Boolean = false) {
      *
      * 由回调载荷里的播放上下文提供，随播放销毁，不跨施法保留。
      */
-    PLAYBACK("playback", true);
+    PLAYBACK("playback", true),
+
+    /**
+     * 区域实例。
+     *
+     * 两种写法：`<area.{分类}.count|owner>` 查询覆盖当前作用点的实例，
+     * `<area.self.*>` 只在区域回调流程内有效，读取当前实例自身。
+     */
+    AREA("area", true);
 
     companion object {
 

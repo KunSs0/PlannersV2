@@ -78,6 +78,7 @@ object Registries {
         // 递增动作代际，取消上一代定时器与延迟任务，避免旧技能继续执行。
         profiler.measure("actions") {
             com.gitee.planners.module.action.ActionTimerService.stop()
+            com.gitee.planners.module.action.AreaRegistry.clear()
             com.gitee.planners.module.action.ActionScheduler.nextGeneration()
         }
         // 先完整销毁旧资源树，确保旧调度任务与业务作用域不进入新配置代次。

@@ -36,6 +36,8 @@ object ActionBuiltins {
         ActionRegistry.register(PlannersCurrencyActions.Currency)
         ActionRegistry.register(PlannersEffectActions.Spawn)
         ActionRegistry.register(TimerStartAction)
+        ActionRegistry.register(AreaStartAction)
+        ActionRegistry.register(AreaStopAction)
         ActionRegistry.register(TimerStopAction)
     }
 
@@ -94,6 +96,7 @@ object ActionBuiltins {
         ActionRegistry.register(PlannersConditions.Level)
         ActionRegistry.register(PlannersConditions.Job)
         ActionRegistry.register(PlannersConditions.Wounded)
+        ActionRegistry.register(AreaContainsCondition)
         ActionRegistry.register(PlannersCooldownConditions.Ready)
         ActionRegistry.register(PlannersCurrencyActions.CurrencyCondition)
     }

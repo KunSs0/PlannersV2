@@ -195,6 +195,7 @@ object Planners : Plugin() {
     override fun onDisable() {
         // 先停定时器与调度器，避免技能卸载后仍有动作在跑。
         com.gitee.planners.module.action.ActionTimerService.stop()
+        com.gitee.planners.module.action.AreaRegistry.clear()
         com.gitee.planners.module.action.BukkitActionDispatcher.uninstall()
     }
 

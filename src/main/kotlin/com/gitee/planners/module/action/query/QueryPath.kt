@@ -1,5 +1,7 @@
 package com.gitee.planners.module.action.query
 
+import com.gitee.planners.module.action.AreaInstance
+import com.gitee.planners.module.action.AreaRegistry
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
@@ -41,6 +43,7 @@ class QueryPath private constructor(
             QueryRoot.NODE -> queryNode(scope)
             QueryRoot.ECONOMY -> queryEconomy(scope)
             QueryRoot.PLAYBACK -> queryPlayback(scope)
+            QueryRoot.AREA -> resolveArea(scope)
         }
     }
 
@@ -211,6 +214,120 @@ class QueryPath private constructor(
     }
 
     /**
+     * 读取区域实例数据。
+     *
+     * 两种写法：`area.{分类}.count|owner` 查询覆盖当前作用点的实例；
+     * `area.self.id|instance|owner|radius|height|center.{x|y|z}` 只在区域回调里有效。
+     */
+    private fun resolveArea(scope: QueryScope): Any? {
+        val head = segments.firstOrNull()
+        if (head == null) {
+            return null
+        }
+        if (head.equals(SELF_SEGMENT, true)) {
+            val instance = scope.area
+            if (instance == null) {
+                return null
+            }
+            return readAreaSelf(instance)
+        }
+        if (segments.size < 2) {
+            return null
+        }
+        val field = segments[1].lowercase(Locale.ROOT)
+        val position = areaQueryPosition(scope)
+        if (position == null) {
+            return null
+        }
+        if (field == "count") {
+            return AreaRegistry.count(position, head)
+        }
+        if (field == "owner") {
+            val owner = AreaRegistry.ownerOf(position, head)
+            if (owner == null) {
+                return null
+            }
+            return owner.toString()
+        }
+        return null
+    }
+
+    /**
+     * 读取回调中当前实例自身的字段。
+     *
+     * @param instance 当前区域实例。
+     * @return 字段值；未知字段返回 null。
+     */
+    private fun readAreaSelf(instance: AreaInstance): Any? {
+        val field = segments.getOrNull(1)
+        if (field == null) {
+            return null
+        }
+        val key = field.lowercase(Locale.ROOT)
+        if (key == "id") {
+            return instance.id
+        }
+        if (key == "instance") {
+            return instance.instance.toString()
+        }
+        if (key == "owner") {
+            return instance.ownerId.toString()
+        }
+        if (key == "radius") {
+            return instance.radius
+        }
+        if (key == "height") {
+            return instance.height
+        }
+        if (key == "center") {
+            val center = instance.center()
+            if (center == null) {
+                return null
+            }
+            val axis = segments.getOrNull(2)
+            if (axis == null) {
+                return null
+            }
+            val lower = axis.lowercase(Locale.ROOT)
+            if (lower == "x") {
+                return center.x
+            }
+            if (lower == "y") {
+                return center.y
+            }
+            if (lower == "z") {
+                return center.z
+            }
+            return null
+        }
+        return null
+    }
+
+    /**
+     * 取区域查询的判定位置。
+     *
+     * @param scope 执行上下文。
+     * @return 坐标；目标与施法者都不是实体或坐标时返回 null。
+     */
+    private fun areaQueryPosition(scope: QueryScope): Location? {
+        val target = scope.target
+        if (target is Location) {
+            return target
+        }
+        if (target is Entity) {
+            return target.location
+        }
+        val sender = scope.sender
+        if (sender is Location) {
+            return sender
+        }
+        if (sender is Entity) {
+            return sender.location
+        }
+        return null
+    }
+
+    /**
      * 读取技能字段与技能变量。
      *
      * 只有 `skill.var.<变量名>` 读变量，`level` / `id` / `name` 读技能自身字段；
@@ -298,6 +415,9 @@ class QueryPath private constructor(
         /** 技能变量的前置分段：skill.var.{变量名}。 */
         private const val VAR_SEGMENT = "var"
 
+        /** 区域回调中代表当前实例的分段名。 */
+        private const val SELF_SEGMENT = "self"
+
         /**
          * 解析一段路径文本。
          *
@@ -347,15 +467,70 @@ class QueryPath private constructor(
                     )
                 }
             }
-            if (segments.isEmpty() && root != QueryRoot.SENDER) {
-                throw IllegalArgumentException("$label query path '$trimmed' requires at least one field.")
+            if (root == QueryRoot.AREA) {
+                if (segments.size < 2) {
+                    throw IllegalArgumentException(
+                        "$label area path '$trimmed' must be '<area.{分类}.count|owner>' or '<area.self.*>'.",
+                    )
+                }
+                val head = segments[0].lowercase(Locale.ROOT)
+                if (head == SELF_SEGMENT) {
+                    validateAreaSelf(segments, trimmed, label)
+                } else {
+                    if (segments.size != 2) {
+                        throw IllegalArgumentException(
+                            "$label area path '$trimmed' must be '<area.{分类}.count|owner>'.",
+                        )
+                    }
+                    val field = segments[1].lowercase(Locale.ROOT)
+                    if (field != "count" && field != "owner") {
+                        throw IllegalArgumentException(
+                            "$label area path '$trimmed' must end with 'count' or 'owner'.",
+                        )
+                    }
+                }
+            }
+            if (segments.isEmpty() && root != QueryRoot.SENDER) {                throw IllegalArgumentException("$label query path '$trimmed' requires at least one field.")
             }
             return QueryPath(root, segments, trimmed)
         }
 
         /**
-         * 判断文本是否只由路径允许的字符组成。
+         * 校验 `area.self.*` 的剩余分段。
          *
+         * @param segments 路径分段。
+         * @param trimmed 原始路径文本。
+         * @param label 报错前缀。
+         */
+        private fun validateAreaSelf(segments: List<String>, trimmed: String, label: String) {
+            val field = segments[1].lowercase(Locale.ROOT)
+            if (field == "center") {
+                if (segments.size != 3) {
+                    throw IllegalArgumentException(
+                        "$label area path '$trimmed' must be '<area.self.center.x|y|z>'.",
+                    )
+                }
+                val axis = segments[2].lowercase(Locale.ROOT)
+                if (axis != "x" && axis != "y" && axis != "z") {
+                    throw IllegalArgumentException(
+                        "$label area path '$trimmed' must be '<area.self.center.x|y|z>'.",
+                    )
+                }
+                return
+            }
+            if (field != "id" && field != "instance" && field != "owner" && field != "radius" && field != "height") {
+                throw IllegalArgumentException(
+                    "$label area path '$trimmed' has unknown field '$field'; " +
+                        "expected id, instance, owner, radius, height or center.{x|y|z}.",
+                )
+            }
+            if (segments.size != 2) {
+                throw IllegalArgumentException("$label area path '$trimmed' has extra segments.")
+            }
+        }
+
+        /**
+         * 判断文本是否只由路径允许的字符组成。         *
          * 用于加载期的纯路径快速判定，命中时不构造表达式。
          * 首字符必须是字母或下划线，避免把 `-1` 这类负数误判为路径。
          *
