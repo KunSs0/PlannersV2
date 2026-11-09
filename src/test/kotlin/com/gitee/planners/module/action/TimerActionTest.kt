@@ -1,6 +1,8 @@
 package com.gitee.planners.module.action
 
 import com.gitee.planners.module.action.query.QueryScope
+import org.bukkit.Location
+import org.bukkit.World
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -8,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import taboolib.module.configuration.Configuration
 
 /**
@@ -138,10 +141,35 @@ class TimerActionTest {
         }
     }
 
+    /** 行上的 @this.loc 会被冻结，触发时子流程拿到的仍是施放坐标。 */
+    @Test
+    fun freezesLocationAtStart() {
+        val world = Mockito.mock(World::class.java)
+        val origin = Location(world, 8.0, 70.0, -2.0)
+        val parsed = spec(
+            """
+            action:
+              fire:
+                - 'timer.start{id="zone"; func=inner; every=10; times=1} @this.loc'
+              inner:
+                - 'count{}'
+            """.trimIndent(),
+        )
+
+        ActionRunner.run(parsed, "fire", QueryScope(sender = origin, label = "timer"))
+        val task = dispatcher.tasks[0]
+        task.runnable.run()
+
+        assertEquals(1, counter.steps)
+        assertEquals(origin, counter.lastTarget)
+    }
+
     /** 触发计数容器，按用例持有。 */
     private class Counter {
 
         var steps = 0
+
+        var lastTarget: Any? = null
     }
 
     /**
@@ -163,6 +191,7 @@ class TimerActionTest {
 
         override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
             counter.steps += 1
+            counter.lastTarget = scope.target
         }
     }
 

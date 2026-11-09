@@ -68,6 +68,18 @@ object TimerStartAction : Action {
             throw IllegalStateException("${arguments.path} 只能在技能流程里启动定时任务。")
         }
         val captured = scope
+        // 行上的目标器结果按原样冻结：坐标目标会一直被当成坐标，实体目标会一直被当成实体。
+        val boundTargets = ArrayList<Any?>()
+        for (target in targets) {
+            if (target is ActionTarget.LocationTarget) {
+                boundTargets.add(target.location.clone())
+                continue
+            }
+            val entity = target.bukkitEntity()
+            if (entity != null) {
+                boundTargets.add(entity)
+            }
+        }
         val generation = ActionScheduler.currentGeneration()
         var remaining = rawTimes ?: UNLIMITED
         var handle: ActionTask? = null
@@ -84,11 +96,7 @@ object TimerStartAction : Action {
                 task.cancel()
                 return@scheduleRepeating
             }
-            try {
-                runner.invoke(flow, TimerScopes.fresh(captured))
-            } catch (exception: Exception) {
-                warning("Action timer ${arguments.path} failed in '$flow': " + exception.message)
-            }
+            runTick(runner, flow, captured, boundTargets, arguments.path)
             if (remaining > 0) {
                 remaining -= 1
             }
@@ -97,6 +105,47 @@ object TimerStartAction : Action {
             }
         }
         scope.timerCache.store(id, handle)
+    }
+
+    /**
+     * 触发一次：没有绑定目标时只跑一遍，有绑定目标时逐个代入目标各跑一遍。
+     *
+     * @param runner 捕获的流程跳转入口。
+     * @param flow 目标流程名。
+     * @param captured 启动时捕获的作用域。
+     * @param boundTargets 冻结的目标快照。
+     * @param path 配置路径，用于告警。
+     */
+    private fun runTick(
+        runner: (String, QueryScope) -> Unit,
+        flow: String,
+        captured: QueryScope,
+        boundTargets: List<Any?>,
+        path: String,
+    ) {
+        if (boundTargets.isEmpty()) {
+            invoke(runner, flow, TimerScopes.fresh(captured, null), path)
+            return
+        }
+        for (target in boundTargets) {
+            invoke(runner, flow, TimerScopes.fresh(captured, target), path)
+        }
+    }
+
+    /**
+     * 执行一次流程，异常只记录不中断任务。
+     *
+     * @param runner 流程跳转入口。
+     * @param flow 目标流程名。
+     * @param scope 本次触发的作用域。
+     * @param path 配置路径，用于告警。
+     */
+    private fun invoke(runner: (String, QueryScope) -> Unit, flow: String, scope: QueryScope, path: String) {
+        try {
+            runner.invoke(flow, scope)
+        } catch (exception: Exception) {
+            warning("Action timer $path failed in '$flow': " + exception.message)
+        }
     }
 
     /**

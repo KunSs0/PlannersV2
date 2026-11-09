@@ -148,25 +148,25 @@ object BuiltinTargeters {
         }
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val source = scope.sender
-            if (source !is LivingEntity) {
+            val origin = originOf(scope)
+            if (origin == null) {
                 return emptyList()
             }
             val radius = arguments.requireNumber(scope, "radius")
             if (radius <= 0.0) {
                 return emptyList()
             }
-            val origin = source.location
             val world = origin.world
             if (world == null) {
                 return emptyList()
             }
+            val selfId = selfOf(scope)?.uniqueId
             val found = ArrayList<ActionTarget>()
             for (entity in world.getNearbyEntities(origin, radius, radius, radius)) {
                 if (entity !is LivingEntity) {
                     continue
                 }
-                if (entity.uniqueId == source.uniqueId) {
+                if (selfId != null && entity.uniqueId == selfId) {
                     continue
                 }
                 if (entity.location.distance(origin) > radius) {
@@ -196,16 +196,16 @@ object BuiltinTargeters {
         }
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val source = scope.sender
-            if (source !is LivingEntity) {
+            val origin = originOf(scope)
+            if (origin == null) {
                 return emptyList()
             }
+            val source = selfOf(scope)
             val radius = arguments.requireNumber(scope, "radius")
             val angle = arguments.requireNumber(scope, "angle")
             if (radius <= 0.0 || angle <= 0.0) {
                 return emptyList()
             }
-            val origin = source.location
             val world = origin.world
             if (world == null) {
                 return emptyList()
@@ -246,17 +246,17 @@ object BuiltinTargeters {
         }
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val source = scope.sender
-            if (source !is LivingEntity) {
+            val origin = originOf(scope)
+            if (origin == null) {
                 return emptyList()
             }
+            val source = selfOf(scope)
             val width = arguments.requireNumber(scope, "width")
             val height = arguments.requireNumber(scope, "height")
             val length = arguments.requireNumber(scope, "length")
             if (width <= 0.0 || height <= 0.0 || length <= 0.0) {
                 return emptyList()
             }
-            val origin = source.location
             val world = origin.world
             if (world == null) {
                 return emptyList()
@@ -911,6 +911,21 @@ object BuiltinTargeters {
         return null
     }
 
+
+    /**
+     * 取施法者实体，用于排除自身与读取朝向。
+     *
+     * @param scope 查询上下文。
+     * @return 施法者是生物时返回该生物，否则返回 null。
+     */
+    private fun selfOf(scope: QueryScope): LivingEntity? {
+        val source = scope.sender
+        if (source is LivingEntity) {
+            return source
+        }
+        return null
+    }
+
     /**
      * 把施法者转换为目标。
      *
@@ -931,12 +946,22 @@ object BuiltinTargeters {
     }
 
     /**
-     * 取施法者位置。
+     * 取选区原点：流程绑定的坐标优先，其次施法者。
+     *
+     * 绑定坐标来自 `@this.loc` 或定时任务冻结的目标，用于「以固定坐标为中心」的选区；
+     * 没有绑定坐标时退回施法者，与既有行为一致。
      *
      * @param scope 查询上下文。
-     * @return 位置；施法者不可用时返回 null。
+     * @return 原点；坐标与施法者都不可用时返回 null。
      */
     private fun originOf(scope: QueryScope): Location? {
+        val bound = scope.target
+        if (bound is Location) {
+            return bound
+        }
+        if (bound is ActionTarget.LocationTarget) {
+            return bound.location
+        }
         val sender = scope.sender
         if (sender is LivingEntity) {
             return sender.location
@@ -955,9 +980,12 @@ object BuiltinTargeters {
      * @param origin 施法者位置，作为最终回退。
      * @return 世界朝向。
      */
-    private fun resolveYaw(source: LivingEntity, override: Double?, origin: Location): Float {
+    private fun resolveYaw(source: LivingEntity?, override: Double?, origin: Location): Float {
         if (override != null) {
             return override.toFloat()
+        }
+        if (source == null) {
+            return origin.yaw
         }
         return EntityFacingProviders.getFacingYaw(source)
     }
@@ -996,13 +1024,13 @@ object BuiltinTargeters {
      * @param source 施法者。
      * @return 生物列表。
      */
-    private fun collectLiving(candidates: Collection<Entity>, source: LivingEntity): List<Entity> {
+    private fun collectLiving(candidates: Collection<Entity>, source: LivingEntity?): List<Entity> {
         val result = ArrayList<Entity>()
         for (candidate in candidates) {
             if (candidate !is LivingEntity) {
                 continue
             }
-            if (candidate.uniqueId == source.uniqueId) {
+            if (source != null && candidate.uniqueId == source.uniqueId) {
                 continue
             }
             result.add(candidate)
