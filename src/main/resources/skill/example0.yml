@@ -11,11 +11,18 @@ __option__:
         - "---"
         - '&7吟唱时间: &f<skill.display_cast_seconds>秒'
         - "技能伤害: <skill.damage>"
+        - "&7威力: &f<skill.power>"
   variables:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     display_cast_seconds: "skill.castTime / 20.0"
     cooldown: 100
     damage: "32 * skill.level + 100"
+    # 等级分段：键是单级或闭区间，值是数字或表达式；未写 0 级时取最低段。
+    power:
+      1: 50
+      2-4: 70
+      5-7: 90
+      8-10: 120
   hook:
     attributes:
       "攻击力": "10 * skill.level"

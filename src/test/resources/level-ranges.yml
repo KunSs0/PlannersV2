@@ -1,0 +1,11 @@
+skill:
+  variables:
+    power:
+      1: 50
+      2-3: 70
+      4-5: 100
+    reduction:
+      1-5: "level * 2"
+    dodge:
+      1-2: 0.10
+      3-5: 0.25

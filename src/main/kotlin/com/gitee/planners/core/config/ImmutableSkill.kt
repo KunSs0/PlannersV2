@@ -198,7 +198,7 @@ class ImmutableSkill(config: Configuration) : Unique {
     }
 
     val immutableVariables = option.mapValueWithId("variables") { id: String, value: Any ->
-        ImmutableVariable.parse(id, value)
+        ImmutableVariable.parse(id, value, maxLevel)
     }
 
     init {
