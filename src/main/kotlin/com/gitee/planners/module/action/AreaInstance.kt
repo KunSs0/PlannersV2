@@ -34,6 +34,15 @@ class AreaInstance(
     /** 周期回调的任务句柄；没有回调时为 null。 */
     var task: ActionTask? = null
 
+    /** 受伤回调流程名；未配置时为 null。 */
+    var damagedFlow: String? = null
+
+    /** 启动时捕获的作用域，供回调构造子作用域。 */
+    var captured: com.gitee.planners.module.action.query.QueryScope? = null
+
+    /** 流程跳转入口，供受伤回调使用。 */
+    var runner: ((String, com.gitee.planners.module.action.query.QueryScope) -> Unit)? = null
+
     /**
      * 取当前圆心。
      *

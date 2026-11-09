@@ -29,7 +29,7 @@ object AreaStartAction : Action {
         arguments.require("id")
         arguments.require("radius")
         arguments.require("ticks")
-        arguments.rejectUnknown("id", "radius", "ticks", "height", "period", "on.run")
+        arguments.rejectUnknown("id", "radius", "ticks", "height", "period", "on.run", "on.damaged")
 
         val id = arguments.literalText("id")
         if (id != null && !AREA_ID.matches(id.trim())) {
@@ -95,7 +95,20 @@ object AreaStartAction : Action {
             expiresAt = now + ticks.toLong() * MILLIS_PER_TICK,
         )
         AreaRegistry.register(instance)
-        if (!arguments.contains("on.run")) {
+        val damagedFlow = arguments.text(scope, "on.damaged")
+        val hasRun = arguments.contains("on.run")
+        if (damagedFlow == null && !hasRun) {
+            return
+        }
+        val runner = scope.flowRunner
+        if (runner == null) {
+            throw IllegalStateException("${arguments.path} on.run / on.damaged 只能在技能流程里使用。")
+        }
+        // 受伤回调与周期回调共用同一份捕获上下文，只是触发源不同。
+        instance.captured = scope
+        instance.runner = runner
+        instance.damagedFlow = damagedFlow
+        if (!hasRun) {
             return
         }
         val period = arguments.requireInteger(scope, "period")
@@ -103,10 +116,6 @@ object AreaStartAction : Action {
             throw IllegalArgumentException("${arguments.path} period 必须为正数。")
         }
         val flow = arguments.requireText(scope, "on.run")
-        val runner = scope.flowRunner
-        if (runner == null) {
-            throw IllegalStateException("${arguments.path} on.run 只能在技能流程里使用。")
-        }
         schedule(instance, scope, runner, flow, period)
     }
 

@@ -2,6 +2,8 @@ package com.gitee.planners.module.action
 
 import org.bukkit.Bukkit
 import org.bukkit.Location
+import org.bukkit.entity.LivingEntity
+import taboolib.common.platform.function.warning
 import java.util.UUID
 
 /**
@@ -75,6 +77,48 @@ object AreaRegistry {
             removed += 1
         }
         return removed
+    }
+
+    /**
+     * 派发区域受伤回调。
+     *
+     * 遍历覆盖受伤成员的区域实例，用「区域主作用域 + 受伤成员目标 + 承伤载荷」逐个调用。
+     * 只派发配置了受伤回调的实例；环境伤害（attacker 为空）同样派发，由配置自行过滤。
+     *
+     * @param victim 受伤成员。
+     * @param attacker 施加者；环境伤害为 null。
+     * @param damage 本次实际承伤。
+     * @param cause 业务来源。
+     */
+    fun dispatchDamaged(victim: LivingEntity, attacker: LivingEntity?, damage: Double, cause: String?) {
+        if (instances.isEmpty()) {
+            return
+        }
+        purge()
+        val position = victim.location
+        for (instance in ArrayList(instances.values)) {
+            val flow = instance.damagedFlow
+            if (flow == null) {
+                continue
+            }
+            if (!instance.contains(position)) {
+                continue
+            }
+            val captured = instance.captured
+            if (captured == null) {
+                continue
+            }
+            val runner = instance.runner
+            if (runner == null) {
+                continue
+            }
+            val child = AreaScopes.damaged(captured, instance, victim, attacker, damage, cause)
+            try {
+                runner.invoke(flow, child)
+            } catch (exception: Exception) {
+                warning("Action area '" + instance.id + "' damaged flow '$flow' failed: " + exception.message)
+            }
+        }
     }
 
     /**
