@@ -50,7 +50,7 @@ object ActionRunner {
                 continue
             }
             for (line in flow.actions) {
-                if (!line.matchesTrigger(triggerId)) {
+                if (!line.matchesTrigger(triggerId, scope)) {
                     continue
                 }
                 if (executeLine(line, spec, scope, 0)) {

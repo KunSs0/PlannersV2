@@ -25,6 +25,7 @@ class ActionRunnerTest {
         ActionRegistry.register(StrictRecordAction)
         ActionRegistry.register(DamageTrigger)
         ActionRegistry.register(QuitTrigger)
+        ActionRegistry.register(PayloadTrigger)
         RECORDS.clear()
         STRICT_RECORDS.clear()
     }
@@ -51,6 +52,16 @@ class ActionRunnerTest {
     /** 构造一个只带标签的作用域。 */
     private fun scope(): QueryScope {
         return QueryScope(label = "test")
+    }
+
+    /**
+     * 构造一个带载荷的作用域，用于验证触发器参数筛选。
+     *
+     * @param tag 载荷里的标签值。
+     * @return 带 `tag` 载荷的执行上下文。
+     */
+    private fun payloadScope(tag: String): QueryScope {
+        return QueryScope(label = "test", payload = mapOf<String, Any?>("tag" to tag))
     }
 
     /** 无条件流程按声明顺序执行全部动作。 */
@@ -133,6 +144,55 @@ class ActionRunnerTest {
         val executed = ActionRunner.fire(spec!!, "onTimer", scope())
         assertEquals(0, executed)
         assertTrue(RECORDS.isEmpty())
+    }
+
+    /**
+     * 触发器参数与载荷一致时执行该行。
+     *
+     * 筛选条件写在行尾的 `~trigger{...}` 里，业务流程不必再写一遍条件。
+     */
+    @Test
+    fun firesWhenTriggerArgumentsMatchPayload() {
+        val yaml = """
+            server:
+              - 'record{tag="hit"} ~on_test_payload{tag=alpha}'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", payloadScope("alpha"))
+        assertEquals(1, executed)
+        assertEquals(listOf("hit"), RECORDS)
+    }
+
+    /**
+     * 触发器参数与载荷不一致时跳过该行。
+     *
+     * 流程没有 `conditions`，说明筛选完全由触发器参数负责。
+     */
+    @Test
+    fun skipsWhenTriggerArgumentsMismatchPayload() {
+        val yaml = """
+            server:
+              - 'record{tag="hit"} ~on_test_payload{tag=alpha}'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", payloadScope("beta"))
+        assertEquals(0, executed)
+        assertTrue(RECORDS.isEmpty())
+    }
+
+    /**
+     * 行上没有触发器参数时派发即执行，既有触发器行为不变。
+     */
+    @Test
+    fun firesWithoutTriggerArguments() {
+        val yaml = """
+            server:
+              - 'record{tag="hit"} ~on_test_payload'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", payloadScope("beta"))
+        assertEquals(1, executed)
+        assertEquals(listOf("hit"), RECORDS)
     }
 
     /** call 执行另一个流程。 */
@@ -274,6 +334,31 @@ class ActionRunnerTest {
         override val id = "on_quit"
 
         override val aliases = listOf("on_quit")
+    }
+
+    /**
+     * 测试用带参数筛选的事件触发器。
+     *
+     * 只比较行上 `tag=…` 与载荷里的 `tag`，用于验证触发器参数在派发阶段生效。
+     */
+    private object PayloadTrigger : ActionTrigger {
+
+        override val id = "on_test_payload"
+
+        override val aliases = listOf("on_test_payload")
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.rejectUnknown("tag")
+        }
+
+        override fun matches(scope: QueryScope, arguments: ActionArguments): Boolean {
+            val expected = arguments.text(scope, "tag")
+            if (expected == null) {
+                return true
+            }
+            val actual = scope.payload["tag"]
+            return expected == actual?.toString()
+        }
     }
 
     private companion object {

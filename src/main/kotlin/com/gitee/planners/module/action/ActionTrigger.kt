@@ -1,5 +1,7 @@
 package com.gitee.planners.module.action
 
+import com.gitee.planners.module.action.query.QueryScope
+
 /**
  * 触发器。
  *
@@ -27,6 +29,20 @@ interface ActionTrigger {
      */
     fun interval(arguments: ActionArguments): Int? {
         return null
+    }
+
+    /**
+     * 判断一次派发是否命中该行声明的触发器参数。
+     *
+     * 事件触发器可以把筛选条件写进行上的 `~trigger{...}` 参数，由本方法在派发时比对载荷，
+     * 这样业务流程里不用再写一遍条件。默认返回 true：不声明筛选的触发器保持「派发即执行」。
+     *
+     * @param scope 本次派发的执行上下文，载荷位于 `scope.payload`。
+     * @param arguments 行上声明的触发器参数。
+     * @return 命中时返回 true。
+     */
+    fun matches(scope: QueryScope, arguments: ActionArguments): Boolean {
+        return true
     }
 
     /**
