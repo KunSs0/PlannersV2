@@ -1,6 +1,7 @@
 package com.gitee.planners.module.action
 
 import com.gitee.planners.module.action.query.QueryScope
+import org.bukkit.Location
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -25,8 +26,11 @@ class ActionRunnerTest {
         ActionRegistry.register(StrictRecordAction)
         ActionRegistry.register(DamageTrigger)
         ActionRegistry.register(QuitTrigger)
+        ActionRegistry.register(PayloadTrigger)
+        ActionRegistry.register(TargetRecordAction)
         RECORDS.clear()
         STRICT_RECORDS.clear()
+        TARGET_RECORDS.clear()
     }
 
     /** 读取一段 YAML 中的 `action` 节点。 */
@@ -51,6 +55,16 @@ class ActionRunnerTest {
     /** 构造一个只带标签的作用域。 */
     private fun scope(): QueryScope {
         return QueryScope(label = "test")
+    }
+
+    /**
+     * 构造一个带载荷的作用域，用于验证触发器参数筛选。
+     *
+     * @param tag 载荷里的标签值。
+     * @return 带 `tag` 载荷的执行上下文。
+     */
+    private fun payloadScope(tag: String): QueryScope {
+        return QueryScope(label = "test", payload = mapOf<String, Any?>("tag" to tag))
     }
 
     /** 无条件流程按声明顺序执行全部动作。 */
@@ -133,6 +147,102 @@ class ActionRunnerTest {
         val executed = ActionRunner.fire(spec!!, "onTimer", scope())
         assertEquals(0, executed)
         assertTrue(RECORDS.isEmpty())
+    }
+
+    /**
+     * 触发器参数与载荷一致时执行该行。
+     *
+     * 筛选条件写在行尾的 `~trigger{...}` 里，业务流程不必再写一遍条件。
+     */
+    @Test
+    fun firesWhenTriggerArgumentsMatchPayload() {
+        val yaml = """
+            server:
+              - 'record{tag="hit"} ~on_test_payload{tag=alpha}'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", payloadScope("alpha"))
+        assertEquals(1, executed)
+        assertEquals(listOf("hit"), RECORDS)
+    }
+
+    /**
+     * 触发器参数与载荷不一致时跳过该行。
+     *
+     * 流程没有 `conditions`，说明筛选完全由触发器参数负责。
+     */
+    @Test
+    fun skipsWhenTriggerArgumentsMismatchPayload() {
+        val yaml = """
+            server:
+              - 'record{tag="hit"} ~on_test_payload{tag=alpha}'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", payloadScope("beta"))
+        assertEquals(0, executed)
+        assertTrue(RECORDS.isEmpty())
+    }
+
+    /**
+     * 行上没有触发器参数时派发即执行，既有触发器行为不变。
+     */
+    @Test
+    fun firesWithoutTriggerArguments() {
+        val yaml = """
+            server:
+              - 'record{tag="hit"} ~on_test_payload'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", payloadScope("beta"))
+        assertEquals(1, executed)
+        assertEquals(listOf("hit"), RECORDS)
+    }
+
+    /**
+     * 事件派发时 `@target` 读载荷：方块命中提供坐标，实体命中提供实体。
+     */
+    @Test
+    fun resolvesTargetFromPayloadForTriggeredLine() {
+        val yaml = """
+            onTestPayload:
+              - 'target-record @target ~on_test_payload'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val location = Location(null, 1.5, 64.0, -3.25)
+        val scope = QueryScope(label = "test", payload = mapOf<String, Any?>("target" to location))
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", scope)
+        assertEquals(1, executed)
+        assertEquals(listOf("1.5,64.0,-3.25"), TARGET_RECORDS)
+    }
+
+    /**
+     * `server` 流程里不能出现技能作用域目标器，即使该行带触发器。
+     */
+    @Test
+    fun rejectsSkillTargeterInServerFlow() {
+        val yaml = """
+            server:
+              - 'target-record @target ~on_test_payload'
+        """.trimIndent()
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ActionParser.parse("test", section(yaml + "\n"), "action")
+        }
+        assertTrue(error.message!!.contains("skill-scoped"))
+    }
+
+    /**
+     * 触发器没有声明提供 `target` 时，行上用 `@target` 在加载期就报错。
+     */
+    @Test
+    fun rejectsTargetWhenTriggerDoesNotProvideIt() {
+        val yaml = """
+            onQuit:
+              - 'target-record @target ~on_quit'
+        """.trimIndent()
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ActionParser.parse("test", section(yaml + "\n"), "action")
+        }
+        assertTrue(error.message!!.contains("does not provide it"))
     }
 
     /** call 执行另一个流程。 */
@@ -276,6 +386,54 @@ class ActionRunnerTest {
         override val aliases = listOf("on_quit")
     }
 
+    /**
+     * 测试用带参数筛选的事件触发器。
+     *
+     * 只比较行上 `tag=…` 与载荷里的 `tag`，用于验证触发器参数在派发阶段生效。
+     */
+    private object PayloadTrigger : ActionTrigger {
+
+        override val id = "on_test_payload"
+
+        override val aliases = listOf("on_test_payload")
+
+        override val providedTargets = setOf("attacker", "target")
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.rejectUnknown("tag")
+        }
+
+        override fun matches(scope: QueryScope, arguments: ActionArguments): Boolean {
+            val expected = arguments.text(scope, "tag")
+            if (expected == null) {
+                return true
+            }
+            val actual = scope.payload["tag"]
+            return expected == actual?.toString()
+        }
+    }
+
+    /**
+     * 记录目标坐标的测试动作，用于验证 `@target` 的载荷解析。
+     */
+    private object TargetRecordAction : Action {
+
+        override val id = "target-record"
+
+        override val aliases = listOf("target-record")
+
+        override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
+            for (target in targets) {
+                if (target is ActionTarget.LocationTarget) {
+                    val location = target.location
+                    TARGET_RECORDS.add("" + location.x + "," + location.y + "," + location.z)
+                    continue
+                }
+                TARGET_RECORDS.add("non-location")
+            }
+        }
+    }
+
     private companion object {
 
         /** 记录动作的调用顺序。 */
@@ -283,5 +441,8 @@ class ActionRunnerTest {
 
         /** 记录不接受空目标的动作调用。 */
         val STRICT_RECORDS = ArrayList<String>()
+
+        /** 记录目标坐标。 */
+        val TARGET_RECORDS = ArrayList<String>()
     }
 }

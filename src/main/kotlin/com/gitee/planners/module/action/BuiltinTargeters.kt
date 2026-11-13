@@ -114,6 +114,7 @@ object BuiltinTargeters {
      * 以本次技能的当前目标为容器。
      *
      * 单体技能不需要再写选区，直接用这一项；没有目标时容器为空，动作按空容器跳过。
+     * 事件派发时没有绑定目标，改为读载荷里的 `target`：实体命中给实体，方块命中给坐标。
      */
     object Current : ActionTargeter {
 
@@ -123,15 +124,17 @@ object BuiltinTargeters {
 
         override val scope = ActionScope.SKILL
 
+        override val payloadKey = "target"
+
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val target = toTarget(scope.target)
-            if (target == null) {
-                return emptyList()
+            val bound = toTarget(scope.target)
+            if (bound != null) {
+                if (!bound.isActive()) {
+                    return emptyList()
+                }
+                return listOf(bound)
             }
-            if (!target.isActive()) {
-                return emptyList()
-            }
-            return listOf(target)
+            return payloadTarget(scope, payloadKey)
         }
     }
 

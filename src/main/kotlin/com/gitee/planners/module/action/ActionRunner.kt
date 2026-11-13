@@ -50,13 +50,7 @@ object ActionRunner {
                 continue
             }
             for (line in flow.actions) {
-                if (!line.matchesTrigger(triggerId)) {
-                    continue
-                }
-                // 触发器可按本次派发载荷筛选行；未声明参数或未覆盖 matches 时恒命中。
-                val trigger = line.trigger
-                val triggerArguments = line.triggerArguments
-                if (trigger != null && triggerArguments != null && !trigger.matches(scope, triggerArguments)) {
+                if (!line.matchesTrigger(triggerId, scope)) {
                     continue
                 }
                 if (executeLine(line, spec, scope, 0)) {

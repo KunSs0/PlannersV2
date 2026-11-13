@@ -1,5 +1,7 @@
 package com.gitee.planners.module.action
 
+import com.gitee.planners.module.action.query.QueryScope
+
 /**
  * 一条已编译的动作行。
  *
@@ -51,12 +53,14 @@ class ActionLine(
     /**
      * 判断是否匹配指定的触发器派发。
      *
-     * 定时触发器不参与事件派发；派发参数必须与行上声明的参数一致。
+     * 定时触发器不参与事件派发；带参数的触发器行再交给触发器自己确认本次派发是否命中参数，
+     * 因此 `~trigger{...}` 里的筛选条件在派发阶段就生效，不需要流程再判一次。
      *
      * @param triggerId 触发器主键。
+     * @param scope 本次派发的执行上下文。
      * @return 匹配时返回 true。
      */
-    fun matchesTrigger(triggerId: String): Boolean {
+    fun matchesTrigger(triggerId: String, scope: QueryScope): Boolean {
         val current = trigger
         if (current == null) {
             return false
@@ -64,7 +68,14 @@ class ActionLine(
         if (current.id != triggerId) {
             return false
         }
-        return !isTimer()
+        if (isTimer()) {
+            return false
+        }
+        val currentArguments = triggerArguments
+        if (currentArguments == null) {
+            return true
+        }
+        return current.matches(scope, currentArguments)
     }
 
     /**
