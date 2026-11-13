@@ -142,9 +142,6 @@ object ActionScopeFactory {
             attrReader = { key ->
                 readAttr(player, key)
             },
-            naturalReader = { key ->
-                ActionAttributeAccess.natural(player, key)
-            },
             nodeReader = { tree, node ->
                 readNodeLevel(template, tree, node)
             },
@@ -208,7 +205,6 @@ object ActionScopeFactory {
             profileFieldReader = base.profileFieldReader,
             dataReader = base.dataReader,
             attrReader = base.attrReader,
-            naturalReader = base.naturalReader,
             anchoredReader = base.anchoredReader,
             nodeReader = base.nodeReader,
             label = base.label,

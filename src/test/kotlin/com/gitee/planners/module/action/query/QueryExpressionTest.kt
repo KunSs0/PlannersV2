@@ -39,13 +39,6 @@ class QueryExpressionTest {
                     null
                 }
             },
-            naturalReader = { key ->
-                if (key == "STR") {
-                    10.0
-                } else {
-                    null
-                }
-            },
             nodeReader = { tree, node ->
                 if (tree == "knight_warder" && node == "knight-F-01_a") {
                     1
@@ -68,10 +61,8 @@ class QueryExpressionTest {
     @Test
     fun readsInjectedHostValues() {
         val strength = QueryRef.parse("<attr.STR>", "test").resolve(scope())
-        val natural = QueryRef.parse("<natural.STR>", "test").resolve(scope())
         val nodeLevel = QueryRef.parse("<node.knight_warder.knight-F-01_a>", "test").resolve(scope())
         assertEquals(42.0, strength)
-        assertEquals(10.0, natural)
         assertEquals(1, nodeLevel)
     }
 

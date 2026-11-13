@@ -39,7 +39,6 @@ class QueryPath private constructor(
             QueryRoot.PROFILE -> resolveProfile(scope)
             QueryRoot.DATA -> queryData(scope)
             QueryRoot.ATTR -> queryAttr(scope)
-            QueryRoot.NATURAL -> queryNatural(scope)
             QueryRoot.NODE -> queryNode(scope)
             QueryRoot.ECONOMY -> queryEconomy(scope)
             QueryRoot.AREA -> resolveArea(scope)
@@ -423,15 +422,6 @@ class QueryPath private constructor(
             return null
         }
         return scope.attrReader(key)
-    }
-
-    /** 读取职业自然成长。 */
-    private fun queryNatural(scope: QueryScope): Double? {
-        val key = segments.firstOrNull()
-        if (key == null) {
-            return null
-        }
-        return scope.naturalReader(key)
     }
 
     /** 读取技能树节点等级，要求两段。 */

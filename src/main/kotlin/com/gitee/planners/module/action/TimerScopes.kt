@@ -28,7 +28,6 @@ object TimerScopes {
             profileFieldReader = captured.profileFieldReader,
             dataReader = captured.dataReader,
             attrReader = captured.attrReader,
-            naturalReader = captured.naturalReader,
             nodeReader = captured.nodeReader,
             label = captured.label + ":timer",
             payload = captured.payload,

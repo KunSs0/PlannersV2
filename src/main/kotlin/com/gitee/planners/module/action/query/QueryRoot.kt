@@ -29,9 +29,6 @@ enum class QueryRoot(val id: String, val skillOnly: Boolean = false) {
     /** 战斗属性，含装备与 Buff 来源。 */
     ATTR("attr"),
 
-    /** 职业自然成长，只含职业成长，不含装备与 Buff。 */
-    NATURAL("natural"),
-
     /** 技能树节点学习等级，要求 `<树ID>.<节点ID>`。 */
     NODE("node", true),
 

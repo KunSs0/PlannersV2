@@ -15,7 +15,6 @@ package com.gitee.planners.module.action.query
  * @property profileFieldReader 档案字段读取器，参数为档案对象与字段名。
  * @property dataReader 共享标记读取器，参数为完整 key。
  * @property attrReader 战斗属性读取器，参数为属性键。
- * @property naturalReader 职业自然成长读取器，参数为属性键。
  * @property nodeReader 技能树节点读取器，参数为树 ID 与节点 ID。
  * @property label 配置路径，用于错误与告警信息。
  * @property payload 本次回调的外部载荷，例如连招播放句柄。
@@ -35,7 +34,6 @@ class QueryScope(
     val profileFieldReader: (Any, String) -> Any? = { _, _ -> null },
     val dataReader: (String) -> Any? = { null },
     val attrReader: (String) -> Double? = { null },
-    val naturalReader: (String) -> Double? = { null },
     val nodeReader: (String, String) -> Int = { _, _ -> 0 },
     val label: String = "",
     val payload: Map<String, Any?> = emptyMap(),
@@ -67,7 +65,6 @@ class QueryScope(
             profileFieldReader = profileFieldReader,
             dataReader = dataReader,
             attrReader = attrReader,
-            naturalReader = naturalReader,
             nodeReader = nodeReader,
             label = label,
             payload = payload,
@@ -105,7 +102,6 @@ class QueryScope(
             profileFieldReader = profileFieldReader,
             dataReader = dataReader,
             attrReader = attrReader,
-            naturalReader = naturalReader,
             nodeReader = nodeReader,
             label = label,
             payload = payload,
@@ -140,7 +136,6 @@ class QueryScope(
             profileFieldReader = profileFieldReader,
             dataReader = dataReader,
             attrReader = attrReader,
-            naturalReader = naturalReader,
             nodeReader = nodeReader,
             label = label,
             payload = payload,
@@ -173,7 +168,6 @@ class QueryScope(
             profileFieldReader = profileFieldReader,
             dataReader = dataReader,
             attrReader = attrReader,
-            naturalReader = naturalReader,
             nodeReader = nodeReader,
             label = newLabel,
             payload = payload,
@@ -206,7 +200,6 @@ class QueryScope(
             profileFieldReader = profileFieldReader,
             dataReader = dataReader,
             attrReader = attrReader,
-            naturalReader = naturalReader,
             nodeReader = nodeReader,
             label = label,
             payload = payload,
