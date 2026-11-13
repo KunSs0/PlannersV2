@@ -98,11 +98,6 @@ object ActionParser {
             }
         }
         for (line in flow.actions) {
-            // 带触发器的行由事件派发，届时已有玩家与载荷上下文，目标器可以按技能作用域解析；
-            // 只有会立即执行的行才禁止技能作用域目标器。
-            if (line.hasTrigger()) {
-                continue
-            }
             for (step in line.targeters) {
                 if (step.targeter.scope == ActionScope.SKILL) {
                     throw IllegalArgumentException(

@@ -204,7 +204,7 @@ class ActionRunnerTest {
     @Test
     fun resolvesTargetFromPayloadForTriggeredLine() {
         val yaml = """
-            server:
+            onTestPayload:
               - 'target-record @target ~on_test_payload'
         """.trimIndent()
         val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
@@ -216,13 +216,13 @@ class ActionRunnerTest {
     }
 
     /**
-     * `server` 流程里会立即执行的行仍然禁止技能作用域目标器。
+     * `server` 流程里不能出现技能作用域目标器，即使该行带触发器。
      */
     @Test
-    fun rejectsSkillTargeterOnImmediateServerLine() {
+    fun rejectsSkillTargeterInServerFlow() {
         val yaml = """
             server:
-              - 'target-record @target'
+              - 'target-record @target ~on_test_payload'
         """.trimIndent()
         val error = assertThrows(IllegalArgumentException::class.java) {
             ActionParser.parse("test", section(yaml + "\n"), "action")
@@ -236,7 +236,7 @@ class ActionRunnerTest {
     @Test
     fun rejectsTargetWhenTriggerDoesNotProvideIt() {
         val yaml = """
-            server:
+            onQuit:
               - 'target-record @target ~on_quit'
         """.trimIndent()
         val error = assertThrows(IllegalArgumentException::class.java) {
