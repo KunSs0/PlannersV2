@@ -1,6 +1,7 @@
 package com.gitee.planners.module.action
 
 import com.gitee.planners.module.action.query.QueryScope
+import org.bukkit.Location
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -26,8 +27,10 @@ class ActionRunnerTest {
         ActionRegistry.register(DamageTrigger)
         ActionRegistry.register(QuitTrigger)
         ActionRegistry.register(PayloadTrigger)
+        ActionRegistry.register(TargetRecordAction)
         RECORDS.clear()
         STRICT_RECORDS.clear()
+        TARGET_RECORDS.clear()
     }
 
     /** 读取一段 YAML 中的 `action` 节点。 */
@@ -195,6 +198,53 @@ class ActionRunnerTest {
         assertEquals(listOf("hit"), RECORDS)
     }
 
+    /**
+     * 事件派发时 `@target` 读载荷：方块命中提供坐标，实体命中提供实体。
+     */
+    @Test
+    fun resolvesTargetFromPayloadForTriggeredLine() {
+        val yaml = """
+            server:
+              - 'target-record @target ~on_test_payload'
+        """.trimIndent()
+        val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
+        val location = Location(null, 1.5, 64.0, -3.25)
+        val scope = QueryScope(label = "test", payload = mapOf<String, Any?>("target" to location))
+        val executed = ActionRunner.fire(spec!!, "on_test_payload", scope)
+        assertEquals(1, executed)
+        assertEquals(listOf("1.5,64.0,-3.25"), TARGET_RECORDS)
+    }
+
+    /**
+     * `server` 流程里会立即执行的行仍然禁止技能作用域目标器。
+     */
+    @Test
+    fun rejectsSkillTargeterOnImmediateServerLine() {
+        val yaml = """
+            server:
+              - 'target-record @target'
+        """.trimIndent()
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ActionParser.parse("test", section(yaml + "\n"), "action")
+        }
+        assertTrue(error.message!!.contains("skill-scoped"))
+    }
+
+    /**
+     * 触发器没有声明提供 `target` 时，行上用 `@target` 在加载期就报错。
+     */
+    @Test
+    fun rejectsTargetWhenTriggerDoesNotProvideIt() {
+        val yaml = """
+            server:
+              - 'target-record @target ~on_quit'
+        """.trimIndent()
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ActionParser.parse("test", section(yaml + "\n"), "action")
+        }
+        assertTrue(error.message!!.contains("does not provide it"))
+    }
+
     /** call 执行另一个流程。 */
     @Test
     fun callsAnotherFlow() {
@@ -347,6 +397,8 @@ class ActionRunnerTest {
 
         override val aliases = listOf("on_test_payload")
 
+        override val providedTargets = setOf("attacker", "target")
+
         override fun validate(arguments: ActionArguments) {
             arguments.rejectUnknown("tag")
         }
@@ -361,6 +413,27 @@ class ActionRunnerTest {
         }
     }
 
+    /**
+     * 记录目标坐标的测试动作，用于验证 `@target` 的载荷解析。
+     */
+    private object TargetRecordAction : Action {
+
+        override val id = "target-record"
+
+        override val aliases = listOf("target-record")
+
+        override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
+            for (target in targets) {
+                if (target is ActionTarget.LocationTarget) {
+                    val location = target.location
+                    TARGET_RECORDS.add("" + location.x + "," + location.y + "," + location.z)
+                    continue
+                }
+                TARGET_RECORDS.add("non-location")
+            }
+        }
+    }
+
     private companion object {
 
         /** 记录动作的调用顺序。 */
@@ -368,5 +441,8 @@ class ActionRunnerTest {
 
         /** 记录不接受空目标的动作调用。 */
         val STRICT_RECORDS = ArrayList<String>()
+
+        /** 记录目标坐标。 */
+        val TARGET_RECORDS = ArrayList<String>()
     }
 }
