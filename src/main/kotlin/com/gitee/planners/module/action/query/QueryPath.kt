@@ -42,7 +42,6 @@ class QueryPath private constructor(
             QueryRoot.NATURAL -> queryNatural(scope)
             QueryRoot.NODE -> queryNode(scope)
             QueryRoot.ECONOMY -> queryEconomy(scope)
-            QueryRoot.PLAYBACK -> queryPlayback(scope)
             QueryRoot.AREA -> resolveArea(scope)
             QueryRoot.FINDER -> resolveFinder(scope)
         }
@@ -104,20 +103,6 @@ class QueryPath private constructor(
             return 0
         }
         return com.gitee.planners.core.skilltree.SkillTreeNodeEffectService.getSkillLevel(template, skillId)
-    }
-
-    /**
-     * 读取本次连招播放的变量。
-     *
-     * 变量随播放销毁，不跨施法保留；没有播放上下文时返回 null。
-     */
-    private fun queryPlayback(scope: QueryScope): Any? {
-        val key = segments.joinToString(".")
-        if (key.isEmpty()) {
-            return scope.payload
-        }
-        // 播放变量名本身包含点号，因此整段作为键名，不按路径分段。
-        return scope.playbackReader(scope.payload, key)
     }
 
     /** 读取施法者字段。 */

@@ -30,6 +30,20 @@ interface ActionTrigger {
     }
 
     /**
+     * 判断本次派发是否命中该行声明的触发器参数。
+     *
+     * 默认全部命中：只按主键匹配派发的触发器无需覆盖。需要按载荷筛选的
+     * 事件触发器（例如弹道命中按 PlayerBullet ID 过滤）覆盖本方法。
+     *
+     * @param scope 本次派发的执行上下文，载荷在 [com.gitee.planners.module.action.query.QueryScope.payload]。
+     * @param arguments 行上声明的触发器参数。
+     * @return 命中时返回 true，该行才会执行。
+     */
+    fun matches(scope: com.gitee.planners.module.action.query.QueryScope, arguments: ActionArguments): Boolean {
+        return true
+    }
+
+    /**
      * 该触发器派发时能提供的事件实体选择器。
      *
      * 事件实体放在执行载荷里，对应关系由触发器自己声明：例如伤害类触发器

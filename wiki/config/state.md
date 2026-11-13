@@ -30,12 +30,12 @@ stun:
 | `<状态ID>.priority` | number | `0.0` | 状态优先级字段。当前内置状态流程不会按该字段排序。 | `/planners reload` |
 | `<状态ID>.max-layer` | int | 无上限 | 最大叠加层数。小于等于 `0` 表示无上限。 | `/planners reload` |
 | `<状态ID>.name` | string | 状态 ID | 状态显示名称。 | `/planners reload` |
-| `<状态ID>.attribute` | string list | 空 | 外部属性插件属性源。每层状态都会重复追加一次该列表，不参与 Planners 逻辑属性转换。 | `/planners reload` |
+| `<状态ID>.attribute` | string list | 空 | 外部属性插件属性源。每层状态都会重复追加一次该列表，直接写入属性驱动。 | `/planners reload` |
 | `<状态ID>.action` | string | 空 | SE JavaScript 脚本，定义生命周期函数。 | `/planners reload` |
 
 ## 状态属性
 
-状态属性直接写给 AttributePlus 等外部属性插件，不走 Planners 的逻辑属性/二级属性转换，也不执行公式。
+状态属性是直接交给外部属性插件的属性源文本，不经过 Planners 属性汇总，也不执行公式。
 
 ```yaml
 berserk:

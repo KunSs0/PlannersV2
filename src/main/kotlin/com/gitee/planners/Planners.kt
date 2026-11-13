@@ -1,7 +1,6 @@
 package com.gitee.planners
 
 import com.gitee.planners.api.Registries
-import com.gitee.planners.api.attribute.AttributeRegistryEntry
 import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionFactory
@@ -103,20 +102,6 @@ object Planners : Plugin() {
     @ConfigNode("settings.condition")
     val conditions = configNodeToMap { key, value ->
         ConditionFactory.create(key, value as ConfigurationSection)
-    }
-
-    @ConfigNode("settings.attribute.registry")
-    val attributeRegistry = configNodeToMap { key, value ->
-        val cfg = value as ConfigurationSection
-        val name = cfg.getString("name") ?: key
-        val mappingsSection = cfg.getConfigurationSection("mappings")
-        val mappings: Map<String, Double>
-        if (mappingsSection != null) {
-            mappings = mappingsSection.getValues(false).mapValues { (it.value as Number).toDouble() }
-        } else {
-            mappings = emptyMap()
-        }
-        AttributeRegistryEntry(key, name, mappings)
     }
 
     /**

@@ -1,4 +1,3 @@
-import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.attribute.AttributeSource
 import com.gitee.planners.api.event.PluginReloadEvents
@@ -28,7 +27,6 @@ import org.mockito.stubbing.Answer
 import taboolib.common.platform.PlatformFactory
 import taboolib.common.platform.service.PlatformExecutor
 import taboolib.common.platform.service.PlatformIO
-import taboolib.module.configuration.Configuration
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.UUID
@@ -127,7 +125,6 @@ class PlayerRouteClearTest {
         val valueField = delegate.javaClass.getDeclaredField("_value")
         valueField.isAccessible = true
         valueField.set(delegate, database)
-        Planners.attributeRegistry.reset(Configuration.fromMap(emptyMap<String, Any>()))
         source = object : AttributeSource {
             override val id = "synthetic-profession-clear"
             override val priority = 100

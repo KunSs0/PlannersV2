@@ -21,7 +21,7 @@ example_tree:
       provider:
         id: attribute
         values:
-          STR: 2
+          strength: 2
       levels:
         1:
           player_lv: { min: 1 }

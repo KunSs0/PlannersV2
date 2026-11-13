@@ -150,8 +150,9 @@ object ActionScopeFactory {
             },
             label = label,
             payload = payload,
-            anchoredReader = com.gitee.planners.module.action.ActionCombatFacts.anchoredReader,
-            playbackReader = com.gitee.planners.module.action.ActionCombatFacts.playbackReaderFunction,
+            anchoredReader = { target, sender ->
+                com.gitee.planners.module.compat.mythic.MythicThreatAccess.anchored(target, sender)
+            },
         )
     }
 
@@ -208,6 +209,7 @@ object ActionScopeFactory {
             dataReader = base.dataReader,
             attrReader = base.attrReader,
             naturalReader = base.naturalReader,
+            anchoredReader = base.anchoredReader,
             nodeReader = base.nodeReader,
             label = base.label,
             payload = base.payload,
@@ -322,9 +324,20 @@ object ActionScopeFactory {
         return metadata.asString()
     }
 
-    /** 读取战斗属性。 */
+    /** 读取战斗属性；未注册属性驱动时按缺失处理，避免打断技能执行。 */
     private fun readAttr(player: Player, key: String): Double? {
-        return ActionAttributeAccess.attr(player, key)
+        if (com.gitee.planners.module.compat.attribute.AttributeDriver.current() == null) {
+            return null
+        }
+        val values = com.gitee.planners.module.compat.attribute.AttributeDriver.get(player, key)
+        if (values.isEmpty()) {
+            return null
+        }
+        var total = 0.0
+        for (value in values) {
+            total += value
+        }
+        return total
     }
 
     /** 沿职业继承链取节点最大学习等级。 */

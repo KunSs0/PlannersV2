@@ -22,7 +22,6 @@ package com.gitee.planners.module.action.query
  * @property flowRunner 流程跳转入口；由运行时注入，供动作在执行过程中回调另一个流程。
  * @property anchoredReader 仇恨锚定读取器，判断施法者是否为目标的当前仇恨目标。
  * @property onceKeys 本次执行内已命中的一次性键；同一实例在派生作用域之间共享。
- * @property playbackReader 连招播放变量读取器，参数为回调载荷与变量名。
  * @property targetCache 本次执行的目标缓存；由调用方注入以便跨动作复用。
  */
 class QueryScope(
@@ -43,7 +42,6 @@ class QueryScope(
     val flowRunner: ((String, QueryScope) -> Unit)? = null,
     val anchoredReader: (Any?, Any?) -> Boolean = { _, _ -> false },
     val onceKeys: MutableSet<String> = LinkedHashSet(),
-    val playbackReader: (Map<String, Any?>, String) -> Any? = { _, _ -> null },
     val targetCache: com.gitee.planners.module.action.TargetCache = com.gitee.planners.module.action.TargetCache(),
     val timerCache: com.gitee.planners.module.action.TimerCache = com.gitee.planners.module.action.TimerCache(),
     val area: com.gitee.planners.module.action.AreaInstance? = null,
@@ -76,7 +74,6 @@ class QueryScope(
             flowRunner = flowRunner,
             anchoredReader = anchoredReader,
             onceKeys = onceKeys,
-            playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
@@ -115,7 +112,6 @@ class QueryScope(
             flowRunner = flowRunner,
             anchoredReader = anchoredReader,
             onceKeys = onceKeys,
-            playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
@@ -151,7 +147,6 @@ class QueryScope(
             flowRunner = runner,
             anchoredReader = anchoredReader,
             onceKeys = onceKeys,
-            playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
@@ -185,7 +180,6 @@ class QueryScope(
             flowRunner = flowRunner,
             anchoredReader = anchoredReader,
             onceKeys = onceKeys,
-            playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,
@@ -219,7 +213,6 @@ class QueryScope(
             flowRunner = flowRunner,
             anchoredReader = anchoredReader,
             onceKeys = onceKeys,
-            playbackReader = playbackReader,
             targetCache = targetCache,
             timerCache = timerCache,
             area = area,

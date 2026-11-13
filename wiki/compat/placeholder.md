@@ -14,7 +14,8 @@ Planners 使用固定的字面量占位符协议，不执行占位符参数中�
 | 背包 | `%planners_backpack_page%`、`%planners_backpack_page_name%` |
 | 技能 | `%planners_skill_name:heavy_slash%`、`%planners_skill_level:heavy_slash%`、`%planners_skill_max_level:heavy_slash%`、`%planners_skill_learned:heavy_slash%`、`%planners_skill_equipped:heavy_slash%`、`%planners_skill_page:heavy_slash%`、`%planners_skill_slot:heavy_slash%`、`%planners_skill_cooldown:heavy_slash%` |
 | 槽位 | `%planners_backpack_skill_id:0:slot0%`、`%planners_backpack_skill_name:0:slot0%`、`%planners_backpack_skill_level:0:slot0%` |
-| 属性 | `%planners_attribute:STR%` |
 | 状态 | `%planners_state_active:berserk%`、`%planners_state_layer:berserk%`、`%planners_state_remaining:berserk%` |
+
+属性数值请通过属性插件自身的占位符读取（本服为 FightCore），Planners 不提供属性占位符。
 
 百分比统一返回 `0` 至 `100` 的整数。`skill_cooldown` 和 `state_remaining` 的单位为 tick。无玩家上下文、档案未加载、未知查询或不合法参数返回空字符串；未学习技能的 `skill_level` 返回 `0`，未生效状态的 `state_layer` 和 `state_remaining` 返回 `0`。

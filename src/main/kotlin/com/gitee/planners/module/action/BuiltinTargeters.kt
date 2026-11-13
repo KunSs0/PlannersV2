@@ -4,6 +4,7 @@ import com.gitee.planners.api.common.facing.EntityFacingProviders
 import com.gitee.planners.api.common.util.RectNearestEntityFinder
 import com.gitee.planners.api.common.util.SectorNearestEntityFinder
 import com.gitee.planners.module.action.query.QueryScope
+import com.gitee.planners.module.compat.faction.EntityFriendlyPolicy
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
@@ -412,7 +413,7 @@ object BuiltinTargeters {
                 if (!entity.isValid || entity.isDead) {
                     continue
                 }
-                if (ActionFactionPolicy.isFriendly(source, entity)) {
+                if (EntityFriendlyPolicy.isFriendly(source, entity)) {
                     continue
                 }
                 if (requireLineOfSight && !source.hasLineOfSight(entity)) {
@@ -447,7 +448,7 @@ object BuiltinTargeters {
                 if (!entity.isValid || entity.isDead) {
                     continue
                 }
-                if (!ActionFactionPolicy.isFriendly(source, entity)) {
+                if (!EntityFriendlyPolicy.isFriendly(source, entity)) {
                     continue
                 }
                 result.add(target)

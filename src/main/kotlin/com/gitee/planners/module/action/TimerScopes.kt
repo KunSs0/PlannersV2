@@ -33,7 +33,6 @@ object TimerScopes {
             label = captured.label + ":timer",
             payload = captured.payload,
             anchoredReader = captured.anchoredReader,
-            playbackReader = captured.playbackReader,
             timerCache = captured.timerCache,
         )
     }

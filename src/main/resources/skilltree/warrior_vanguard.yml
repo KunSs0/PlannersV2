@@ -23,7 +23,7 @@ warrior_vanguard:
       provider:
         id: attribute
         values:
-          STR: 2
+          strength: 2
       levels:
         1: { player_lv: { min: 1 }, consume_sp: { amount: 1 } }
         2: { player_lv: { min: 5 }, consume_sp: { amount: 1 } }

@@ -44,13 +44,6 @@ enum class QueryRoot(val id: String, val skillOnly: Boolean = false) {
     ECONOMY("economy"),
 
     /**
-     * 本次连招播放的变量。
-     *
-     * 由回调载荷里的播放上下文提供，随播放销毁，不跨施法保留。
-     */
-    PLAYBACK("playback", true),
-
-    /**
      * 区域实例。
      *
      * 两种写法：`<area.{分类}.count|owner>` 查询覆盖当前作用点的实例，

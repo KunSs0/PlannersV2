@@ -143,7 +143,7 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     /**
      * 技能提供的属性。
-     * key = 属性键（在 registry 中为逻辑属性，否则为物理直通）
+     * key = 物理属性 ID（由当前属性驱动定义）
      * value = 查询表达式，例如 `10 + (skill.level - 1) * 1`
      */
     val attributeExpressions: Map<String, com.gitee.planners.module.action.query.QueryRef> =

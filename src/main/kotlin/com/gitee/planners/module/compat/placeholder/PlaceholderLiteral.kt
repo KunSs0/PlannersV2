@@ -5,7 +5,6 @@ import com.gitee.planners.api.PlayerTemplateAPI.plannersLoaded
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.api.Registries
 import com.gitee.planners.api.job.target.asTarget
-import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.config.State.Companion.path
 import com.gitee.planners.core.player.PlayerRouter
 import com.gitee.planners.core.player.PlayerSkill
@@ -81,7 +80,6 @@ object PlaceholderLiteral {
             "backpack_skill_id" -> parseBackpackSkillId(request, template)
             "backpack_skill_name" -> parseBackpackSkillName(request, template)
             "backpack_skill_level" -> parseBackpackSkillLevel(request, template)
-            "attribute" -> parseAttribute(request, player)
             "state_active" -> parseStateActive(request, player)
             "state_layer" -> parseStateLayer(request, player)
             "state_remaining" -> parseStateRemaining(request, player)
@@ -539,24 +537,6 @@ object PlaceholderLiteral {
     }
 
     /**
-     * 解析逻辑属性值。
-     *
-     * @param request 已解析的请求，必须包含一个属性 ID。
-     * @param player 查询目标玩家。
-     * @return 属性数值；属性不存在或参数无效时为空字符串。
-     */
-    private fun parseAttribute(request: Request, player: Player): String {
-        val attributeId = getSingleArgument(request)
-        if (attributeId == null) {
-            return ""
-        }
-        if (!com.gitee.planners.Planners.attributeRegistry.get().containsKey(attributeId)) {
-            return ""
-        }
-        return formatNumber(AttributeProxy.get(player, attributeId))
-    }
-
-    /**
      * 解析玩家是否拥有状态。
      *
      * @param request 已解析的请求，必须包含一个状态 ID。
@@ -665,19 +645,6 @@ object PlaceholderLiteral {
         }
         val percent = value.toDouble() * 100.0 / maximum.toDouble()
         return percent.coerceIn(0.0, 100.0).roundToLong().toString()
-    }
-
-    /**
-     * 将属性数值格式化为紧凑文本。
-     *
-     * @param value 要格式化的数值。
-     * @return 整数去除小数部分，其余数值保留原有精度。
-     */
-    private fun formatNumber(value: Double): String {
-        if (value == value.toLong().toDouble()) {
-            return value.toLong().toString()
-        }
-        return value.toString()
     }
 
     /**

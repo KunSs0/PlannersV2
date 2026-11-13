@@ -1,30 +1,17 @@
 package com.gitee.planners.module.action
 
-import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 
 /**
- * 战斗属性读取入口。
+ * 职业自然成长读取入口。
  *
- * `attr.*` 与 `natural.*` 查询根需要读取战斗属性，该能力由战斗插件提供：
- * 安装前两个读取器都返回 null，装上后按安装方实现取值。
+ * `natural.*` 查询根需要区分"职业成长"与"含装备、Buff 的属性汇总"，
+ * 该判定由战斗插件提供；安装前读取器返回 null。
  *
- * 这样 Planners 不必反向依赖战斗插件，也不会把属性公式复制一份。
+ * 战斗属性 `attr.*` 不经过本入口：Planners 直接读 [com.gitee.planners.module.compat.attribute.AttributeDriver]，
+ * 避免与属性驱动重复暴露同一份数据。
  */
 object ActionAttributeAccess {
-
-    /** 含装备与 Buff 的战斗属性读取器。 */
-    fun interface AttrReader {
-
-        /**
-         * 读取战斗属性。
-         *
-         * @param entity 目标实体。
-         * @param key 属性键。
-         * @return 属性值；不存在时返回 null。
-         */
-        fun read(entity: LivingEntity, key: String): Double?
-    }
 
     /** 只含职业自然成长的属性读取器。 */
     fun interface NaturalReader {
@@ -39,24 +26,10 @@ object ActionAttributeAccess {
         fun read(player: Player, key: String): Double?
     }
 
-    private val emptyAttr = AttrReader { _, _ -> null }
-
     private val emptyNatural = NaturalReader { _, _ -> null }
 
     @Volatile
-    private var attrReader: AttrReader = emptyAttr
-
-    @Volatile
     private var naturalReader: NaturalReader = emptyNatural
-
-    /**
-     * 安装战斗属性读取器。
-     *
-     * @param value 读取器实现。
-     */
-    fun installAttr(value: AttrReader) {
-        attrReader = value
-    }
 
     /**
      * 安装职业自然成长读取器。
@@ -71,19 +44,7 @@ object ActionAttributeAccess {
      * 恢复默认读取器。
      */
     fun reset() {
-        attrReader = emptyAttr
         naturalReader = emptyNatural
-    }
-
-    /**
-     * 读取战斗属性。
-     *
-     * @param entity 目标实体。
-     * @param key 属性键。
-     * @return 属性值；未安装读取器或属性不存在时返回 null。
-     */
-    fun attr(entity: LivingEntity, key: String): Double? {
-        return attrReader.read(entity, key)
     }
 
     /**
@@ -91,7 +52,7 @@ object ActionAttributeAccess {
      *
      * @param player 玩家。
      * @param key 属性键。
-     * @return 属性值；未安装读取器或属性不存在时返回 null。
+     * @return 自然成长值；未安装读取器或属性不存在时返回 null。
      */
     fun natural(player: Player, key: String): Double? {
         return naturalReader.read(player, key)

@@ -17,8 +17,9 @@ interface AttributeSource {
 
     /**
      * 返回该来源提供的属性。
-     * - key 在 [AttributeRegistryEntry] 中 → 视为逻辑属性，走转换管线
-     * - key 不在注册表中 → 视为物理属性，直接合并推送
+     *
+     * 键为当前属性驱动所属属性系统的物理属性 ID，例如 FightCore 的 `strength`、`health-regen`。
+     * 同一个键由多个来源提供时按来源顺序累加。
      */
     fun getAttributes(entity: LivingEntity): Map<String, Double>
 

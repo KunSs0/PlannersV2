@@ -40,7 +40,6 @@ object AreaScopes {
             label = captured.label + ":area:" + instance.id,
             payload = captured.payload,
             anchoredReader = captured.anchoredReader,
-            playbackReader = captured.playbackReader,
             timerCache = captured.timerCache,
             area = instance,
         )
@@ -86,7 +85,6 @@ object AreaScopes {
             label = captured.label + ":area:" + instance.id + ":damaged",
             payload = captured.payload,
             anchoredReader = captured.anchoredReader,
-            playbackReader = captured.playbackReader,
             timerCache = captured.timerCache,
             area = instance,
         )

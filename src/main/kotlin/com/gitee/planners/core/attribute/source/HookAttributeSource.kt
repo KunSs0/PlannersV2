@@ -12,7 +12,7 @@ import org.bukkit.entity.Player
 
 /**
  * 从 ImmutableJob / ImmutableSkill 的 hook.attributes 读取属性。
- * key 在 registry 中 → 逻辑管线；否则 → 物理直通。
+ * 键为物理属性 ID，直接参与汇总推送。
  *
  * 表达式统一由查询引擎求值：职业属性用 `profile.*`，技能属性用 `skill.*`。
  */

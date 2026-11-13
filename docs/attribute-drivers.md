@@ -2,6 +2,16 @@
 
 Planners 统一管理驱动注册、主线程写入、在线档案补刷、配置重载代际和职业属性来源清理。外部插件只实现属性 API 转换，不维护玩家集合或调度任务。
 
+## 属性键
+
+属性来源（职业、技能、技能树节点）直接提供当前驱动所属属性系统的物理属性 ID，例如 FightCore 的 `strength`、`intelligence`、`health-regen`。Planners 不维护逻辑属性映射表，也不校验键是否存在：未知键由驱动在写入时明确报错。同一个键由多个来源提供时按来源顺序累加。
+
+文本驱动（Symphony、AttributePlus 等）使用同一套键，因此属性配置与目标属性系统绑定，更换驱动需要同步修改配置。
+
+## 读取入口
+
+技能查询根 `attr.<id>` 直接读当前驱动（`AttributeDriver.get` 后求和），不再经过任何注入槽；驱动未注册时按缺失处理，技能公式得到缺失值而不是抛错。职业自然成长 `natural.<id>` 仍由属性插件注入，语义与 `attr.*` 区分。
+
 ## 注册与注销
 
 在 Bukkit 主线程、双方插件可用后调用 `AttributeDriver.register(driver)`；同一实例重复注册幂等，其他实例覆盖会明确报错。注册会自动重算在线且档案已就绪的玩家。日志记录实际实现类。
@@ -12,7 +22,7 @@ Planners 统一管理驱动注册、主线程写入、在线档案补刷、配�
 
 ## 数值与文本输出
 
-职业、技能和技能树节点先汇总为物理属性 ID 与 `Double` Map，再进入 `AttributeDriver.setValues(...)`。具有原生数值 API 的插件覆盖实例方法 `setValues(...)`，直接使用 Map，不依赖属性显示名或文本关键字。
+职业、技能和技能树节点直接汇总为物理属性 ID 与 `Double` Map，再进入 `AttributeDriver.setValues(...)`。具有原生数值 API 的插件覆盖实例方法 `setValues(...)`，直接使用 Map，不依赖属性显示名或文本关键字。
 
 文本驱动使用接口提供的统一序列化：普通十进制、不截断小数、不输出科学计数法，负值使用单一负号。状态系统继续使用文本属性入口；文本和 Map 写操作统一经 Planners 主线程调度。异步 Map 输入在排队前复制，避免调用者修改。
 
@@ -30,4 +40,4 @@ Planners 统一管理驱动注册、主线程写入、在线档案补刷、配�
 
 ## 验证
 
-JDK 21 执行 `gradlew.bat --no-daemon build`。`AttributeTokenTest` 覆盖小数和数值协议；`AttributePipelineTest` 覆盖注册所有权、数值钩子、异步输入隔离、已有档案补刷、离线/换档案、重载和卸载失效，以及等级提交完成通知。
+JDK 21 执行 `gradlew.bat --no-daemon build`。`AttributeTokenTest` 覆盖小数和数值协议；`AttributePipelineTest` 覆盖注册所有权、数值钩子、异步输入隔离、多来源同键累加、已有档案补刷、离线/换档案、重载和卸载失效，以及等级提交完成通知。

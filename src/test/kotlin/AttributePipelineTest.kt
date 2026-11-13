@@ -1,4 +1,3 @@
-import com.gitee.planners.Planners
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.attribute.AttributeSource
 import com.gitee.planners.api.event.PluginReloadEvents
@@ -23,7 +22,6 @@ import org.mockito.stubbing.Answer
 import taboolib.common.platform.PlatformFactory
 import taboolib.common.platform.service.PlatformExecutor
 import taboolib.common.platform.service.PlatformIO
-import taboolib.module.configuration.Configuration
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
@@ -81,7 +79,6 @@ class AttributePipelineTest {
         bukkit.`when`<Collection<Player>> { Bukkit.getOnlinePlayers() }.thenReturn(listOf(player))
         template = PlayerTemplate(1, player, null, emptyMap())
         PlayerTemplateAPI[player.uniqueId] = template
-        Planners.attributeRegistry.reset(Configuration.fromMap(emptyMap<String, Any>()))
         source = object : AttributeSource {
             override val id = "synthetic-refresh"
             override val priority = 100
@@ -281,6 +278,36 @@ class AttributePipelineTest {
         Mockito.clearInvocations(driver)
         drain()
         Mockito.verifyNoInteractions(driver)
+    }
+
+    /**
+     * 多个来源提供同一物理属性时累加，整组属性只推送一次。
+     */
+    @Test
+    fun sourcesAccumulateIntoOnePhysicalPush() {
+        AttributeDriver.register(driver)
+        drain()
+        Mockito.clearInvocations(driver)
+        val equipment = object : AttributeSource {
+            override val id = "synthetic-equipment"
+            override val priority = AttributeSource.PRIORITY_EQUIP
+
+            /**
+             * 与职业来源提供同一物理属性，并附带一个独立属性。
+             */
+            override fun getAttributes(entity: LivingEntity): Map<String, Double> {
+                return linkedMapOf("endurance" to 2.0, "defense" to 4.0)
+            }
+        }
+        AttributeProxy.register(equipment)
+        try {
+            AttributeProvider.refresh(template)
+            drain()
+            Mockito.verify(driver).setValues(player, "planners-proxy", linkedMapOf("endurance" to 13.2, "defense" to 4.0), -1)
+            Mockito.verify(driver).set(player, "planners-proxy", listOf("endurance: +13.2", "defense: +4"), -1)
+        } finally {
+            AttributeProxy.unregister(equipment)
+        }
     }
 
     /**

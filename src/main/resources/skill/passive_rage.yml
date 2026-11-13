@@ -13,7 +13,7 @@ __option__:
     castTime: 0 # 显式瞬发；非零值为基础施法tick，独立于动作动画。
     power: "3 * skill.level + 2"
   max-level: 5
-  # 未注册的属性键按物理属性直通；逻辑属性需先在 settings.attribute.registry 登记。
+  # 属性键必须是当前属性驱动的物理属性 ID，本示例使用 FightCore 的 damage。
   hook:
     attributes:
-      ATK: "skill.var.power"
+      damage: "skill.var.power"

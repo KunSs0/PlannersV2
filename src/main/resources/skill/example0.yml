@@ -25,7 +25,7 @@ __option__:
       8-10: 120
   hook:
     attributes:
-      "攻击力": "10 * skill.level"
+      damage: "10 * skill.level"
 action:
   fire:
     - 'message{m="技能释放成功"}'
