@@ -50,7 +50,9 @@ object DirectingSessionManager : DirectingInputReceiver {
         }
         cancel(player, DirectingSessionCloseReason.REPLACED)
         val sessionId = nextSessionId.getAndIncrement()
-        val context = DirectingSessionContext(sessionId, player, skill, definition, sourceKey)
+        // 过滤器按本次施法编译：目标规则可能依赖施法者与技能等级，不能跨会话复用。
+        val filter = DirectingFilterCompiler.compile(player, skill.immutable, skill.immutable.directingFilterSteps)
+        val context = DirectingSessionContext(sessionId, player, skill, definition, sourceKey, filter)
         val session = factory.create(context)
         val entry = Entry(sessionId, definition.type, sourceKey, session, onConfirmed)
         val previous = sessions.put(player.uniqueId, entry)

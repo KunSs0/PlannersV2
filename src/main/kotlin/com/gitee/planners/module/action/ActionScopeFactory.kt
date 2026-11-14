@@ -170,10 +170,13 @@ object ActionScopeFactory {
     ): QueryScope {
         val player = resolvePlayer(execution.sender)
         val label = "skill:" + execution.skill.id
+        // 指向确认结果在这里绑定成当前目标，`@target` 与 `<target.*>` 因此读到同一个人。
+        val directed = resolveDirectingTarget(execution.context.directing)
         if (player == null) {
             return QueryScope(
                 sender = execution.sender,
                 caster = execution.sender,
+                target = directed,
                 skill = execution.skill,
                 profile = execution.profile,
                 variables = variables,
@@ -186,7 +189,7 @@ object ActionScopeFactory {
             execution.skill,
             execution.level,
             variables,
-            null,
+            directed,
             label,
             payload,
         )
@@ -355,5 +358,21 @@ object ActionScopeFactory {
     /** 读取单条职业线的节点等级。 */
     private fun readRouteNodeLevel(route: PlayerRoute, tree: String, node: String): Int {
         return route.getNodeLevel(tree, node)
+    }
+
+    /**
+     * 把指向确认结果转换成当前目标。
+     *
+     * 只有 provider 声明实现 [com.gitee.planners.api.directing.DirectingEntityResult] 时才有实体目标；
+     * 位置、方向等结果不参与 `@target`，保持原有语义。
+     *
+     * @param directing 本次确认结果；未确认时为 null。
+     * @return 目标实体；无法作为实体目标时返回 null。
+     */
+    internal fun resolveDirectingTarget(directing: com.gitee.planners.api.directing.DirectingResult?): Any? {
+        if (directing is com.gitee.planners.api.directing.DirectingEntityResult) {
+            return directing.entity
+        }
+        return null
     }
 }

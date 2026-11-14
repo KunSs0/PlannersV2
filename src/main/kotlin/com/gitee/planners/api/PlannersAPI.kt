@@ -268,6 +268,11 @@ object PlannersAPI {
      * @return 最终释放结果。
      */
     private fun continueCast(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+        // 指向结果在最终校验前写入执行上下文：条件可以据此复核目标并在扣费前拒绝。
+        if (directing != null) {
+            execution.context.directing = directing
+            execution.setVariable("directing", directing)
+        }
         val castConditionFailure = SkillCastConditionRegistry.verify(player, skill, execution, skill.immutable.castConditions)
         if (castConditionFailure != null) {
             player.sendMessage(castConditionFailure)
@@ -284,10 +289,6 @@ object PlannersAPI {
             condition.consume(player, skill, execution)
         }
         SkillCastConditionRegistry.consume(player, skill, execution, skill.immutable.castConditions, CastCostTiming.COMMIT)
-        if (directing != null) {
-            execution.context.directing = directing
-            execution.setVariable("directing", directing)
-        }
         skill.immutable.execute(execution)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()

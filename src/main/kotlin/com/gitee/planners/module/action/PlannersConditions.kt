@@ -11,6 +11,53 @@ import org.bukkit.entity.LivingEntity
  * `data.*` 读共享标记，`skill.*` 读技能字段，`profile.*` 读档案字段。
  */
 object PlannersConditions {
+    /**
+     * 目标器链是否命中。
+     *
+     * 参数  是链文本，例如 @crosshair{range=20} @ally @alive；与动作行使用同一套解析，
+     * 链上任意一步把容器过滤为空即不成立。供「有合适目标走 A、否则走 B」类流程分支使用。
+     */
+    object Targeter : ActionCondition {
+
+        override val id = "targeter"
+
+        override val aliases = listOf("targeter")
+
+        override val scope = ActionScope.SKILL
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.rejectUnknown("e", "targeters")
+            val source = arguments.raw("e", "targeters")
+            if (source == null) {
+                throw IllegalArgumentException("${'$'}{arguments.path} requires argument 'e'.")
+            }
+        }
+
+        override fun compile(arguments: ActionArguments): Any? {
+            val source = arguments.raw("e", "targeters")
+            if (source == null) {
+                throw IllegalArgumentException("${'$'}{arguments.path} requires argument 'e'.")
+            }
+            return ActionTargeterChainParser.parseText(source, "{arguments.path}.e")
+        }
+
+        override fun test(scope: QueryScope, arguments: ActionArguments, compiled: Any?): Boolean {
+            if (compiled !is List<*>) {
+                throw IllegalStateException("${'$'}{arguments.path} chain was not compiled.")
+            }
+            var container: List<ActionTarget> = emptyList()
+            for (entry in compiled) {
+                if (entry !is ActionTargeterStep) {
+                    throw IllegalStateException("${'$'}{arguments.path} chain contains an invalid step.")
+                }
+                container = entry.apply(scope, container)
+                if (container.isEmpty()) {
+                    return false
+                }
+            }
+            return container.isNotEmpty()
+        }
+    }
 
     /**
      * 技能树节点是否已学习到指定等级。

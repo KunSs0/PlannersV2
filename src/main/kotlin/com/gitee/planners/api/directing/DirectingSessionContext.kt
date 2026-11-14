@@ -11,5 +11,13 @@ import org.bukkit.entity.Player
  * @property skill 当前玩家技能。
  * @property definition 已在技能加载期完成解析的指向定义。
  * @property sourceKey 触发当前技能的物理按键标识。
+ * @property filter 本次会话的候选过滤器；技能未声明过滤链时为 null。
  */
-class DirectingSessionContext(val sessionId: Long, val player: Player, val skill: PlayerSkill, val definition: DirectingDefinition, val sourceKey: String)
+class DirectingSessionContext(
+    val sessionId: Long,
+    val player: Player,
+    val skill: PlayerSkill,
+    val definition: DirectingDefinition,
+    val sourceKey: String,
+    val filter: DirectingCandidateFilter?,
+)

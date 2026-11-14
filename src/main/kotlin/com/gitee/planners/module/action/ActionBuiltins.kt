@@ -101,6 +101,7 @@ object ActionBuiltins {
         ActionRegistry.register(PlannersConditions.Level)
         ActionRegistry.register(PlannersConditions.Job)
         ActionRegistry.register(PlannersConditions.Wounded)
+        ActionRegistry.register(PlannersConditions.Targeter)
         ActionRegistry.register(AreaContainsCondition)
         ActionRegistry.register(PlannersCooldownConditions.Ready)
         ActionRegistry.register(PlannersCurrencyActions.CurrencyCondition)

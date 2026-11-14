@@ -92,20 +92,20 @@ function main() {
 
 ### ctx.directing
 
-只有指向性技能在服务端确认成功后才会填充 `ctx.directing`。它不替代既有 `target` 语义；取消、超时和服务端校验失败均不会执行技能脚本。
+只有指向性技能在服务端确认成功后才会填充 `ctx.directing`；取消、超时和服务端校验失败均不会执行技能脚本。
 
-当前 `fc.entity` 返回 `FightCoreEntityDirectingResult`，可通过 Java Bean getter 读取以下字段：
+provider 返回实体结果时，确认到的实体同时写入本次执行的当前目标：结构化动作可以直接用 `@target` 或 `<target.uuid>` 读取，`ctx.directing` 也保留原始结果对象。位置、方向等结果不绑定目标。
+
+当前 `fc.entity` 返回 `FightCoreEntityDirectingResult`，可通过 Java Bean getter 读取：
 
 | getter | 类型 | 说明 |
 |------|------|------|
-| `getTargetUuid()` | UUID | 服务端确认的目标 UUID |
-| `getTargetEntityId()` | Int | 确认时的目标实体 ID |
-| `getWorldName()` | String | 确认时目标所在世界名称 |
+| `getEntity()` | Entity | 服务端确认的目标实体 |
 
 ```javascript
 function main() {
   var result = ctx.directing
-  tell("目标: " + result.getTargetUuid())
+  tell("目标: " + result.getEntity().getName())
 }
 ```
 

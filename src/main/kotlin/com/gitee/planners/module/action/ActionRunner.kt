@@ -132,7 +132,7 @@ object ActionRunner {
                     index += 1
                     continue
                 }
-                scheduleNext(flow, spec, scope, index + 1, depth, ticks)
+                scheduleNext(flow, spec, scope, index + 1, ticks)
                 return executed
             }
             if (!executeLine(line, spec, scope, depth)) {
@@ -147,11 +147,14 @@ object ActionRunner {
     /**
      * 安排延迟后继续执行剩余动作。
      *
+     * 延迟续体按新的执行根处理（调用深度归零）：自循环流程靠 `delay` + `call` 反复进入自身，
+     * 若续体继承同步调用深度，第 [MAX_DEPTH] 次就会误报深度超限。同步嵌套仍受深度保护，
+     * 因此自循环的终止条件必须写在流程条件里（计数器或次数）。
+     *
      * @param flow 当前流程。
      * @param spec 所属 Action 结构。
      * @param scope 执行上下文。
      * @param next 下一个待执行下标。
-     * @param depth 当前调用深度。
      * @param ticks 延迟 tick。
      */
     private fun scheduleNext(
@@ -159,7 +162,6 @@ object ActionRunner {
         spec: ActionSpec,
         scope: QueryScope,
         next: Int,
-        depth: Int,
         ticks: Int,
     ) {
         if (!ActionScheduler.isInstalled()) {
@@ -169,7 +171,7 @@ object ActionRunner {
         }
         val generation = ActionScheduler.currentGeneration()
         ActionScheduler.schedule(ticks.toLong(), generation, Runnable {
-            runLines(flow, spec, scope, next, depth)
+            runLines(flow, spec, scope, next, 0)
         })
     }
 

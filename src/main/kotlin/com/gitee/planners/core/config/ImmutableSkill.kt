@@ -9,11 +9,13 @@ import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skill.condition.CastCostTiming
 import com.gitee.planners.core.skill.condition.SkillCastConditionConfig
 import com.gitee.planners.core.skill.directing.DirectingConfigSection
+import com.gitee.planners.core.skill.directing.DirectingFilterConfig
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.action.ActionParser
 import com.gitee.planners.module.action.ActionRunner
 import com.gitee.planners.module.action.ActionScopeFactory
+import com.gitee.planners.module.action.ActionTargeterStep
 import com.gitee.planners.module.action.query.QueryRef
 import com.gitee.planners.module.action.query.QueryScope
 import org.bukkit.entity.Player
@@ -66,6 +68,15 @@ class ImmutableSkill(config: Configuration) : Unique {
             directing = decoded
         }
     }
+
+    /**
+     * 指向候选过滤链。
+     *
+     * 来自 `__option__.directing.filter.entity.targeters`，按动作行同一套目标器语法解析；
+     * 未配置过滤链时为空列表，表示只做 provider 的几何校验。
+     */
+    val directingFilterSteps: List<ActionTargeterStep> =
+        DirectingFilterConfig.parse(option.getConfigurationSection("directing"), id)
 
     /**
      * 技能图标材质的 namespaced ID。

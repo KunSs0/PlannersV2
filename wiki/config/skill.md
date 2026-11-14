@@ -221,8 +221,34 @@ directing:
 |------|------|------|
 | `type` | String | 指向 provider 类型，例如 FightCore 的 `fc.entity`、`fc.position`、`fc.direction`。必须已注册。 |
 | `max-duration-ticks` | Int | 本次指向会话最长保持时间，必须大于 0。 |
+| `filter` | Section | 可选。候选过滤，按候选类别分块，见下节。 |
 
-除上述字段外，其余字段全部由 `type` 对应的 provider 解释。Planners 不会将指向结果写入 `target`；技能脚本在确认后通过 `ctx.directing` 获取 provider 提供的结果对象。
+除上述字段外，其余字段全部由 `type` 对应的 provider 解释。
+
+#### filter — 候选过滤
+
+`filter.<候选类别>` 描述"谁能被选中"。当前只有实体候选可过滤，写成其他类别会在加载期报错，不会静默忽略。`targeters` 使用与动作行相同的目标器语法，按声明顺序作用于每个候选；被过滤空的候选既不会出现在预览环里，也不会通过服务端确认。
+
+```yaml
+directing:
+  type: fc.entity
+  max-duration-ticks: 40
+  filter:
+    entity:
+      range: 16
+      max-angle-degrees: 18
+      require-line-of-sight: true
+      targeters:
+        - '@alive'
+        - '@ally'
+  visual:
+    effect: entity_target_marker
+    height-offset: 0.2
+```
+
+`fc.entity` 的几何约束（`range`、`max-angle-degrees`、`require-line-of-sight`）与 `targeters` 同处 `filter.entity` 下：前者由 provider 校验，后者由 Planners 编译成过滤器，预览与服务端确认共用同一份判定。
+
+确认结果按类型绑定：provider 返回实体结果时（`fc.entity`），确认到的实体会写入本次执行的当前目标，动作里可以直接用 `@target` 或 `<target.uuid>` 读取；位置、方向等结果不绑定目标，仍由 provider 自己的结果对象承载。
 
 FightCore 当前支持：
 
@@ -231,9 +257,14 @@ FightCore 当前支持：
 directing:
   type: fc.entity
   max-duration-ticks: 40
-  range: 16
-  max-angle-degrees: 18
-  require-line-of-sight: true
+  filter:
+    entity:
+      range: 16
+      max-angle-degrees: 18
+      require-line-of-sight: true
+      targeters:
+        - '@alive'
+        - '@ally'
   visual:
     effect: entity_target_marker
     height-offset: 0.2
@@ -253,7 +284,7 @@ directing:
   max-pitch-degrees: 75
 ```
 
-`fc.entity.visual` 为必填项。`effect` 必须引用 FightCore 服务端已注册的 `model` 类型特效；`height-offset` 是目标实体高度之外的有限高度偏移。瞄准期间，目标环只单播给施法者；候选变化时才更新实体锚点。确认时服务端会重新校验实体状态、世界、距离、相机方向夹角和可选视线，不信任客户端候选结果。
+`fc.entity.visual` 为必填项。`effect` 必须引用 FightCore 服务端已注册的 `model` 类型特效；`height-offset` 是目标实体高度之外的有限高度偏移。瞄准期间，目标环只单播给施法者；候选变化时才更新实体锚点。确认时服务端会重新校验实体状态、世界、距离、相机方向夹角、可选视线与业务过滤链，不信任客户端候选结果。
 
 `${表达式}` 中的 `level` 是技能等级。技能学习后，属性自动生效。
 
