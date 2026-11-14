@@ -149,7 +149,7 @@ object BuiltinTargeters {
 
         override fun validate(arguments: ActionArguments) {
             arguments.require("radius")
-            arguments.rejectUnknown("radius", "mode")
+            arguments.rejectUnknown("radius", "height", "mode")
         }
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
@@ -161,21 +161,39 @@ object BuiltinTargeters {
             if (radius <= 0.0) {
                 return emptyList()
             }
+            // 给了 height 就按圆柱判定（水平半径 + 垂直半高），否则维持球形半径。
+            val height = arguments.number(scope, "height")
+            if (height != null && height <= 0.0) {
+                return emptyList()
+            }
+            val vertical = if (height == null) radius else height
             val world = origin.world
             if (world == null) {
                 return emptyList()
             }
             val selfId = selfOf(scope)?.uniqueId
             val found = ArrayList<ActionTarget>()
-            for (entity in world.getNearbyEntities(origin, radius, radius, radius)) {
+            for (entity in world.getNearbyEntities(origin, radius, vertical, radius)) {
                 if (entity !is LivingEntity) {
                     continue
                 }
                 if (selfId != null && entity.uniqueId == selfId) {
                     continue
                 }
-                if (entity.location.distance(origin) > radius) {
-                    continue
+                val location = entity.location
+                if (height == null) {
+                    if (location.distance(origin) > radius) {
+                        continue
+                    }
+                } else {
+                    val deltaX = location.x - origin.x
+                    val deltaZ = location.z - origin.z
+                    if (deltaX * deltaX + deltaZ * deltaZ > radius * radius) {
+                        continue
+                    }
+                    if (abs(location.y - origin.y) > height) {
+                        continue
+                    }
                 }
                 found.add(ActionTarget.EntityTarget(entity))
             }
