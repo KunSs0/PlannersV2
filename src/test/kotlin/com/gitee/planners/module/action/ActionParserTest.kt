@@ -21,11 +21,9 @@ class ActionParserTest {
     }
 
     /**
-     * 读取一段 YAML 中的 `action` 节点。
-     *
-     * 传入的文本从第 0 列开始书写，本方法统一缩进两格挂到 `action` 之下。
+     * 把从第 0 列开始的文本缩进两格挂到 `action` 之下。
      */
-    private fun section(yaml: String): taboolib.library.configuration.ConfigurationSection {
+    private fun actionYaml(yaml: String): String {
         val builder = StringBuilder()
         builder.append("action:\n")
         for (line in yaml.trimEnd().lines()) {
@@ -37,10 +35,65 @@ class ActionParserTest {
             builder.append(line)
             builder.append('\n')
         }
-        val configuration = Configuration.loadFromString(builder.toString())
+        return builder.toString()
+    }
+
+    /**
+     * 读取一段 YAML 中的 `action` 节点。
+     */
+    private fun section(yaml: String): taboolib.library.configuration.ConfigurationSection {
+        val configuration = Configuration.loadFromString(actionYaml(yaml))
         val result = configuration.getConfigurationSection("action")
         assertNotNull(result, "action section must be present")
         return result!!
+    }
+
+    /**
+     * 读取一段 YAML 中的 `action` 原始值，用于列表与字符串形态。
+     */
+    private fun actionNode(yaml: String): Any? {
+        val configuration = Configuration.loadFromString(actionYaml(yaml))
+        return configuration.get("action")
+    }
+
+    /** 顶层行列表被解析为 fire 单流程。 */
+    @Test
+    fun parsesTopLevelLineListAsFire() {
+        val spec = ActionParser.parse("test", actionNode("- 'log{text=\"a\"}'"), "action")
+        assertNotNull(spec)
+        val flow = spec!!.flow(ActionSpec.FIRE)
+        assertNotNull(flow)
+        assertEquals(1, flow!!.actions.size)
+    }
+
+    /** 顶层 conditions/actions 块等价于只有 fire 的单流程。 */
+    @Test
+    fun parsesTopLevelBlockAsFire() {
+        val spec = ActionParser.parse(
+            "test",
+            section(
+                """
+                conditions:
+                - 'expr{e="1 > 0"}'
+                actions:
+                - 'log{text="a"}'
+                """.trimIndent(),
+            ),
+            "action",
+        )
+        assertNotNull(spec)
+        val flow = spec!!.flow(ActionSpec.FIRE)
+        assertNotNull(flow)
+        assertEquals(1, flow!!.conditions.size)
+        assertEquals(1, flow!!.actions.size)
+    }
+
+    /** 顶层字符串属于已移除的脚本写法，解析期直接拒绝。 */
+    @Test
+    fun rejectsTopLevelString() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ActionParser.parse("test", actionNode("'log{text=\"a\"}'"), "action")
+        }
     }
 
     /** 纯列表流程被解析为无条件的动作行。 */
@@ -53,14 +106,6 @@ class ActionParserTest {
         assertEquals(2, flow!!.actions.size)
         assertTrue(flow.conditions.isEmpty())
         assertEquals("log", flow.actions[0].action.id)
-    }
-
-    /** 单行字符串流程等价于一行动作。 */
-    @Test
-    fun parsesSingleLineFlow() {
-        val spec = ActionParser.parse("test", section("fire: 'log{text=\"a\"}'\n"), "action")
-        assertNotNull(spec)
-        assertEquals(1, spec!!.flow(ActionSpec.FIRE)!!.actions.size)
     }
 
     /** 条件段与动作段被分别解析。 */

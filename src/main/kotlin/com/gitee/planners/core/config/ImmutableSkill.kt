@@ -22,6 +22,7 @@ import org.bukkit.entity.Player
 import com.gitee.planners.module.action.ActionSpec
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
+import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
 import java.util.concurrent.CompletableFuture
@@ -132,15 +133,17 @@ class ImmutableSkill(config: Configuration) : Unique {
     /**
      * 结构化动作配置节点。
      *
-     * 只接受映射写法（流程名到动作列表）；写成字符串属于已移除的脚本写法，
-     * 加载期直接报错，不再静默忽略。
+     * 支持流程表与动作行列表两种写法；行列表按 `fire` 单流程解析。写成顶层字符串属于
+     * 已移除的脚本写法，加载期直接报错，不再静默忽略。
      */
-    private val actionSection = config.getConfigurationSection("action")
+    private val actionNode = config.get("action")
 
     /**
      * 结构化的 Action 定义。
      */
-    val actionSpec: ActionSpec? = if (actionSection == null) {
+    val actionSpec: ActionSpec? = if (actionNode is ConfigurationSection || actionNode is List<*>) {
+        ActionParser.parse(id, actionNode, "skill:$id.action")
+    } else {
         val legacy = config.getString("action", config.getString("run", ""))
         if (legacy != null && legacy.isNotBlank()) {
             throw IllegalArgumentException(
@@ -148,8 +151,6 @@ class ImmutableSkill(config: Configuration) : Unique {
             )
         }
         null
-    } else {
-        ActionParser.parse(id, actionSection, "skill:$id.action")
     }
 
     /**

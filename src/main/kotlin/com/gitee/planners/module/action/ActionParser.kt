@@ -24,15 +24,38 @@ object ActionParser {
     /**
      * 解析一个技能的 `action` 节点。
      *
+     * 接受流程表与动作行列表两种写法：行列表等价于只有 [defaultFlow] 的单流程，
+     * 与 Creator、QuestsEngine、FightCore 的写法保持一致。顶层字符串是已移除的脚本写法，
+     * 由调用方拒绝。
+     *
      * @param skillId 所属技能 ID。
-     * @param section `action` 节点；为空表示该技能没有动作。
+     * @param raw `action` 节点原始值；为空表示该技能没有动作。
      * @param path 当前配置路径。
+     * @param defaultFlow 行列表形态使用的流程名。
      * @return 解析结果；未配置时返回 null。
      * @throws IllegalArgumentException 结构或语法非法时抛出。
      */
-    fun parse(skillId: String, section: ConfigurationSection?, path: String): ActionSpec? {
-        if (section == null) {
+    fun parse(
+        skillId: String,
+        raw: Any?,
+        path: String,
+        defaultFlow: String = ActionSpec.FIRE,
+    ): ActionSpec? {
+        if (raw == null) {
             return null
+        }
+        if (raw is List<*>) {
+            val flow = ActionFlow(defaultFlow, emptyList(), parseLines(raw, path), path)
+            return ActionSpec(skillId, linkedMapOf(defaultFlow to flow))
+        }
+        if (raw !is ConfigurationSection) {
+            throw IllegalArgumentException("$path must be an action flow object or an action line list.")
+        }
+        val section = raw
+        if (isFlowBlock(section)) {
+            // 顶层 conditions/actions 块等价于只有 defaultFlow 的单流程。
+            val flow = parseSectionFlow(defaultFlow, section, path)
+            return ActionSpec(skillId, linkedMapOf(defaultFlow to flow))
         }
         val flows = LinkedHashMap<String, ActionFlow>()
         for (key in section.getKeys(false)) {
@@ -109,20 +132,32 @@ object ActionParser {
     }
 
     /**
+     * 判断配置节是否写成 conditions/actions 块，而不是流程表。
+     *
+     * @param section 当前配置节。
+     * @return 含保留键时返回 true。
+     */
+    private fun isFlowBlock(section: ConfigurationSection): Boolean {
+        for (key in section.getKeys(false)) {
+            val normalized = key.trim().lowercase(Locale.ROOT)
+            if (normalized == CONDITIONS || normalized == ACTIONS) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
      * 解析单个流程。
      *
      * @param id 流程名。
-     * @param raw 流程原始值：字符串、列表或含 `conditions`/`actions` 的段。
+     * @param raw 流程原始值：动作行列表或含 `conditions`/`actions` 的段。
      * @param path 当前配置路径。
      * @return 已编译流程。
      */
     private fun parseFlow(id: String, raw: Any?, path: String): ActionFlow {
         if (raw == null) {
             throw IllegalArgumentException("$path cannot be empty.")
-        }
-        if (raw is String) {
-            val line = parseLine(raw, "$path[0]")
-            return ActionFlow(id, emptyList(), listOf(line), path)
         }
         if (raw is List<*>) {
             val actions = parseLines(raw, path)
@@ -135,7 +170,7 @@ object ActionParser {
             val section = taboolib.module.configuration.Configuration.fromMap(raw)
             return parseSectionFlow(id, section, path)
         }
-        throw IllegalArgumentException("$path must be a string, a list or a section with conditions/actions.")
+        throw IllegalArgumentException("$path must be a line list or a section with conditions/actions.")
     }
 
     /**
