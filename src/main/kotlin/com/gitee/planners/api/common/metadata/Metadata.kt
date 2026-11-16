@@ -15,7 +15,8 @@ interface Metadata {
 
     val clazz: Class<*>
 
-    val timeoutTick: Long
+    /** 失效时刻，单位毫秒；-1 表示永久有效。 */
+    val expiresAtMillis: Long
 
     fun isTimeout(): Boolean
 

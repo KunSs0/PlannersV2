@@ -16,10 +16,18 @@ class MetadataTypeToken {
 
     }
 
-    open class TypeToken(override val clazz: Class<*>, var any: Any, override val timeoutTick: Long) : Metadata {
+    /**
+     * 带失效时刻的元数据。
+     *
+     * @param clazz 值类型。
+     * @param any 实际值。
+     * @param expiresAtMillis 失效时刻（毫秒绝对时间），-1 表示永久有效。
+     */
+    open class TypeToken(override val clazz: Class<*>, var any: Any, override val expiresAtMillis: Long) : Metadata {
 
+        /** 当前时间已越过失效时刻时视为过期。 */
         override fun isTimeout(): Boolean {
-            return timeoutTick != -1L && System.currentTimeMillis() > timeoutTick
+            return expiresAtMillis != -1L && System.currentTimeMillis() > expiresAtMillis
         }
 
         override fun asBoolean(): Boolean {

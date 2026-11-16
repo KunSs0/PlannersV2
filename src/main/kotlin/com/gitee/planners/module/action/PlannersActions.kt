@@ -182,6 +182,8 @@ object PlannersActions {
 
     /**
      * 写入共享标记。
+     *
+     * `timeout` 以游戏 tick 计，-1 表示永久有效。
      */
     object MetaSet : Action {
 
@@ -198,14 +200,14 @@ object PlannersActions {
         override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
             val key = arguments.requireText(scope, "key")
             val value = arguments.requireText(scope, "value")
-            val timeout = arguments.integer(scope, "timeout") ?: -1
+            val timeoutTicks = arguments.integer(scope, "timeout") ?: -1
             for (target in targets) {
                 val entity = target.bukkitEntity()
                 if (entity == null) {
                     continue
                 }
                 val proxy = ProxyTarget.of(entity)
-                proxy.setMetadata(key, metadataValue(value, timeout.toLong()))
+                proxy.setMetadata(key, metadataValue(value, timeoutTicks.toLong()))
             }
         }
     }

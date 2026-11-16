@@ -37,7 +37,7 @@ metadata <id> to <value> [timeout: <duration>] [at <objective>:TargetContainer(s
 **参数说明**:
 - `<id>`: **必填** - 元数据键名
 - `to <value>`: **必填** - 要设置的元数据值
-- `timeout <duration>`: **选填** - 超时时间（毫秒），-1表示永久，默认为-1
+- `timeout <duration>`: **选填** - 超时时间（tick，1 tick = 50 毫秒），-1表示永久，默认为-1
 - `at <objective>`: **选填** - 目标容器，默认为执行者
 
 **返回值**: 无
@@ -71,11 +71,11 @@ set playerState to metadata "combat.state" def "idle"
 
 ### 示例2：设置临时标记
 ```kether
-metadata "marked.target" to "boss" timeout 30000
+metadata "marked.target" to "boss" timeout 600
 ```
 **详细讲解**:
 - `metadata "marked.target" to "boss"` 设置标记目标为boss
-- `timeout 30000` 设置30秒后自动清除标记
+- `timeout 600` 设置600 tick（30秒）后自动清除标记
 - 适用于临时状态标记，避免手动清理
 
 ## 实际功能示例
@@ -229,6 +229,6 @@ manageSkillCooldownMarkers
 ## 注意事项
 
 - 元数据只在当前会话中有效，重启后会被清除
-- 超时时间单位为毫秒
+- 超时时间单位为 tick（1 tick = 50 毫秒），与技能持续期变量同单位，不需要额外乘 50
 - 数值类型的元数据可以使用 `add` 操作
 - 建议为重要的元数据设置合理的超时时间

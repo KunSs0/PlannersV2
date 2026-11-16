@@ -171,7 +171,7 @@ object ProfilePersistence {
         if (metadata is MetadataTypeToken.Void || metadata.isTimeout()) {
             snapshot = ProfileSnapshot.Metadata(user, key, null, null, 0)
         } else {
-            snapshot = ProfileSnapshot.Metadata(user, key, metadata.clazz.name, Metadata.Loader.toJson(metadata), metadata.timeoutTick)
+            snapshot = ProfileSnapshot.Metadata(user, key, metadata.clazz.name, Metadata.Loader.toJson(metadata), metadata.expiresAtMillis)
         }
         enqueue("元数据 user=$user, key=$key") {
             Database.INSTANCE.store.saveMetadata(snapshot)

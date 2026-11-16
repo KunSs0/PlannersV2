@@ -251,8 +251,8 @@ class DatabaseLocal : Database {
         }.map {
             val type = Class.forName(getString("type"))
             val token = getString("token")
-            val timeoutTick = getLong("stop_time")
-            getString("node") to Metadata.Loader.parseTypeToken(type, token, timeoutTick)
+            val expiresAtMillis = getLong("stop_time")
+            getString("node") to Metadata.Loader.parseTypeToken(type, token, expiresAtMillis)
         }.toMap()
     }
 
