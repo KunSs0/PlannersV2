@@ -142,6 +142,24 @@ object PickSessionManager : PickInputReceiver {
     }
 
     /**
+     * 客户端确认时没有任何有效目标：按失败结算并关闭会话。
+     *
+     * 否则会话会悬挂到超时，玩家既拿不到失败反馈，技能也一直不结算。
+     *
+     * @param player 输入所属玩家。
+     * @param reason 失败原因。
+     */
+    override fun fail(player: Player, reason: PickFailureReason) {
+        val entry = sessions.remove(player.uniqueId)
+        if (entry == null) {
+            return
+        }
+        entry.cancelTimeout()
+        notifyFailure(entry, reason)
+        entry.close(PickCloseReason.CANCELLED)
+    }
+
+    /**
      * 在 Planners 核心启用时绑定公开输入入口。
      */
     @Awake(LifeCycle.ENABLE)

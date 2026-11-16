@@ -32,4 +32,15 @@ interface PickInputReceiver {
      * @param player 要取消会话的玩家。
      */
     fun cancel(player: Player)
+
+    /**
+     * 结算一次没有结论的确认。
+     *
+     * 客户端松开按键但没有任何有效目标时使用：与确认失败同样上报失败事件，
+     * 让技能得到统一的失败反馈，而不是停留在没有结论的会话里。
+     *
+     * @param player 输入所属玩家。
+     * @param reason 失败原因。
+     */
+    fun fail(player: Player, reason: PickFailureReason)
 }

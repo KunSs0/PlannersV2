@@ -65,6 +65,16 @@ object PickAPI {
     }
 
     /**
+     * 结算一次没有有效目标的确认。
+     *
+     * @param player 输入所属玩家。
+     * @param reason 失败原因。
+     */
+    fun fail(player: Player, reason: PickFailureReason) {
+        resolveReceiver().fail(player, reason)
+    }
+
+    /**
      * 获取已绑定的核心输入接收者。
      *
      * @return 当前接收者。
