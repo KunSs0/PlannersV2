@@ -88,6 +88,11 @@ class PickFailureEventTest {
         val definition = object : PickDefinition {
             override val type = type
             override val maxDurationTicks = 200
+
+            /** 该替身不对表现层公开字段，缺失 factory 的判定只依赖类型标识。 */
+            override fun fields(): Map<String, Any?> {
+                return emptyMap()
+            }
         }
         val immutable = Mockito.mock(ImmutableSkill::class.java)
         Mockito.`when`(immutable.pick).thenReturn(definition)
