@@ -2,48 +2,57 @@ package com.gitee.planners.api.common.util
 
 import org.bukkit.Location
 import org.bukkit.entity.Entity
-import org.bukkit.util.Vector
-import taboolib.common5.cfloat
-import taboolib.module.navigation.BoundingBox
-import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.hypot
+import org.bukkit.util.BoundingBox
+import kotlin.math.cos
+import kotlin.math.sin
 
-class SectorNearestEntityFinder(origin: Location,val angle: Double,val radius: Double,val direction: Float, samples: List<Entity>) : NearestEntityFinder(origin, samples) {
+/**
+ * 水平扇形实体查找器。
+ *
+ * 以 origin 为顶点、沿 facing 方向张开 angle 度的扇形，判定实体真实碰撞箱是否与扇形相交：
+ * 身体压住扇面边缘即命中，不再要求实体中心落在扇形内。垂直方向不参与判定，与既有语义一致。
+ *
+ * @param origin 扇形顶点。
+ * @param angle 扇形开角（度，full）。
+ * @param radius 扇形半径。
+ * @param direction 朝向 yaw（度）。
+ * @param samples 待筛选实体列表。
+ */
+class SectorNearestEntityFinder(
+    origin: Location,
+    val angle: Double,
+    val radius: Double,
+    val direction: Float,
+    samples: List<Entity>,
+) : NearestEntityFinder(origin, samples) {
+
+    private val radians = Math.toRadians(direction.toDouble())
+    private val forwardX = -sin(radians)
+    private val forwardZ = cos(radians)
+    private val halfAngle = Math.toRadians(angle / 2.0)
 
     override fun request(): List<Entity> {
-        return samples.filter { isBoundingBoxInSector(getBoundingBox(it)) }
-    }
-
-    fun isBoundingBoxInSector(boundingBox: BoundingBox): Boolean {
-        val center = boundingBox.getCenter()
-        val centerAB = Vector(center.x - this.origin.x, 0.0, center.z - this.origin.z)
-        val distanceAB = hypot(centerAB.x, centerAB.z)
-        if (distanceAB > this.radius) {
-            return false
+        val result = ArrayList<Entity>(samples.size)
+        for (entity in samples) {
+            val box = getBoundingBox(entity)
+            val touched = SelectionGeometry.sectorTouchesBox(
+                origin.x,
+                origin.z,
+                radius,
+                halfAngle,
+                forwardX,
+                forwardZ,
+                box,
+            )
+            if (touched) {
+                result.add(entity)
+            }
         }
-        // 计算向量的角度
-        val angle = Math.toDegrees(atan2(-centerAB.x, centerAB.z))
-
-        // 将扇形方向转换为与 Minecraft yaw 一致的角度差
-        val difference = normalizeYaw(angle.cfloat - this.direction)
-
-        // 如果矩形中心与扇形中心的角度差在扇形开角度的一半之内，则认为碰撞
-        return abs(difference) <= this.angle / 2
+        return result
     }
 
-    @Suppress("NAME_SHADOWING")
-    fun normalizeYaw(yaw: Float): Float {
-        var yaw = yaw
-        yaw %= 360.0f
-        if (yaw >= 180.0f) {
-            yaw -= 360.0f
-        } else if (yaw < -180.0f) {
-            yaw += 360.0f
-        }
-        return yaw
-    }
-    fun BoundingBox.getCenter(): Vector {
-        return Vector((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2)
+    override fun samplingBounds(): BoundingBox {
+        // 扇形始终落在“顶点 + 半径”的圆内，用该圆的外接立方体取样即可覆盖全部命中。
+        return SelectionGeometry.sphereBounds(origin.x, origin.y, origin.z, radius)
     }
 }

@@ -4,6 +4,7 @@ import com.gitee.planners.module.action.query.QueryScope
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.LivingEntity
+import org.bukkit.util.BoundingBox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -47,6 +48,10 @@ class BoundLocationRangeTest {
         val entity = Mockito.mock(LivingEntity::class.java)
         Mockito.`when`(entity.location).thenReturn(where)
         Mockito.`when`(entity.uniqueId).thenReturn(UUID.randomUUID())
+        // 判定按真实 AABB：脚底为坐标原点，宽 0.6、高 1.8。
+        Mockito.`when`(entity.boundingBox).thenReturn(
+            BoundingBox(where.x - 0.3, where.y, where.z - 0.3, where.x + 0.3, where.y + 1.8, where.z + 0.3),
+        )
         return entity
     }
 
@@ -57,7 +62,7 @@ class BoundLocationRangeTest {
         val origin = location(world, 0.0, 64.0, 0.0)
         val near = entity(location(world, 1.0, 64.0, 0.0))
         val far = entity(location(world, 40.0, 64.0, 0.0))
-        Mockito.`when`(world.getNearbyEntities(origin, 3.0, 3.0, 3.0))
+        Mockito.`when`(world.getNearbyEntities(Mockito.any(BoundingBox::class.java), Mockito.any()))
             .thenReturn(listOf<org.bukkit.entity.Entity>(near, far))
         val scope = QueryScope(target = origin, label = "bound")
 
@@ -77,8 +82,7 @@ class BoundLocationRangeTest {
         val world = Mockito.mock(World::class.java)
         val sender = entity(location(world, 5.0, 64.0, 0.0))
         val near = entity(location(world, 6.0, 64.0, 0.0))
-        val senderLocation = sender.location
-        Mockito.`when`(world.getNearbyEntities(senderLocation, 3.0, 3.0, 3.0))
+        Mockito.`when`(world.getNearbyEntities(Mockito.any(BoundingBox::class.java), Mockito.any()))
             .thenReturn(listOf<org.bukkit.entity.Entity>(near))
         val scope = QueryScope(sender = sender, label = "sender")
 

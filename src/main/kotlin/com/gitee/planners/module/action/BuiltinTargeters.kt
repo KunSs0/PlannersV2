@@ -3,16 +3,16 @@ package com.gitee.planners.module.action
 import com.gitee.planners.api.common.facing.EntityFacingProviders
 import com.gitee.planners.api.common.util.RectNearestEntityFinder
 import com.gitee.planners.api.common.util.SectorNearestEntityFinder
+import com.gitee.planners.api.common.util.SelectionGeometry
 import com.gitee.planners.module.action.query.QueryScope
 import com.gitee.planners.module.compat.faction.EntityFriendlyPolicy
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import kotlin.math.abs
-import kotlin.math.ceil
+import org.bukkit.util.BoundingBox
+import java.util.function.Predicate
 import kotlin.math.cos
-import kotlin.math.hypot
 import kotlin.math.sin
 
 /**
@@ -166,32 +166,25 @@ object BuiltinTargeters {
             if (height != null && height <= 0.0) {
                 return emptyList()
             }
-            val vertical = if (height == null) radius else height
             val world = origin.world
             if (world == null) {
                 return emptyList()
             }
-            val selfId = selfOf(scope)?.uniqueId
+            val source = selfOf(scope)
+            val bounds = if (height == null) {
+                SelectionGeometry.sphereBounds(origin.x, origin.y, origin.z, radius)
+            } else {
+                SelectionGeometry.cylinderBounds(origin.x, origin.y, origin.z, radius, height)
+            }
             val found = ArrayList<ActionTarget>()
-            for (entity in world.getNearbyEntities(origin, radius, vertical, radius)) {
-                if (entity !is LivingEntity) {
-                    continue
-                }
-                if (selfId != null && entity.uniqueId == selfId) {
-                    continue
-                }
-                val location = entity.location
+            for (entity in collectLiving(world, bounds, source)) {
+                val box = entity.boundingBox
                 if (height == null) {
-                    if (location.distance(origin) > radius) {
+                    if (!SelectionGeometry.sphereTouchesBox(origin.x, origin.y, origin.z, radius, box)) {
                         continue
                     }
                 } else {
-                    val deltaX = location.x - origin.x
-                    val deltaZ = location.z - origin.z
-                    if (deltaX * deltaX + deltaZ * deltaZ > radius * radius) {
-                        continue
-                    }
-                    if (abs(location.y - origin.y) > height) {
+                    if (!SelectionGeometry.cylinderTouchesBox(origin.x, origin.y, origin.z, radius, height, box)) {
                         continue
                     }
                 }
@@ -239,10 +232,10 @@ object BuiltinTargeters {
             val offsetZ = arguments.number(scope, "offsetZ") ?: 0.0
             val directionYaw = resolveYaw(source, yawOverride, origin)
             val center = offsetCenter(origin, directionYaw, offsetX, offsetY, offsetZ)
-            val preRadius = radius + hypot(offsetX, offsetZ)
-            val sampling = collectLiving(world.getNearbyEntities(center, preRadius, preRadius, preRadius), source)
+            val finder = SectorNearestEntityFinder(center, angle, radius, directionYaw, emptyList())
+            finder.samples = collectLiving(world, finder.samplingBounds(), source)
             val found = ArrayList<ActionTarget>()
-            val matched = SectorNearestEntityFinder(center, angle, radius, directionYaw, sampling).request()
+            val matched = finder.request()
             for (entity in matched) {
                 if (entity is LivingEntity) {
                     found.add(ActionTarget.EntityTarget(entity))
@@ -288,9 +281,7 @@ object BuiltinTargeters {
             val offsetY = arguments.number(scope, "offsetY") ?: 0.0
             val offsetZ = arguments.number(scope, "offsetZ") ?: 0.0
             val directionYaw = resolveYaw(source, null, origin)
-            val preRadius = hypot(hypot(width / 2.0 + abs(offsetX), length / 2.0 + abs(offsetZ)), height / 2.0 + abs(offsetY))
-            val sampling = collectLiving(world.getNearbyEntities(origin, preRadius, preRadius, preRadius), source)
-            val matched = RectNearestEntityFinder(
+            val finder = RectNearestEntityFinder(
                 origin,
                 width,
                 height,
@@ -299,8 +290,10 @@ object BuiltinTargeters {
                 offsetX,
                 offsetY,
                 offsetZ,
-                sampling,
-            ).request()
+                emptyList(),
+            )
+            finder.samples = collectLiving(world, finder.samplingBounds(), source)
+            val matched = finder.request()
             val found = ArrayList<ActionTarget>()
             for (entity in matched) {
                 if (entity is LivingEntity) {
@@ -1028,22 +1021,26 @@ object BuiltinTargeters {
     }
 
     /**
-     * 从候选实体中筛出存活的生物，并排除施法者自身。
+     * 按取样包围盒收集候选生物，并排除施法者自身。
      *
-     * @param candidates 候选实体。
+     * 交给宿主按 AABB 相交过滤，避免把大范围内的掉落物、箭矢、盔甲架等非生物对象
+     * 全部装进列表后再丢弃。
+     *
+     * @param world 世界。
+     * @param bounds 取样包围盒。
      * @param source 施法者。
      * @return 生物列表。
      */
-    private fun collectLiving(candidates: Collection<Entity>, source: LivingEntity?): List<Entity> {
-        val result = ArrayList<Entity>()
+    private fun collectLiving(world: org.bukkit.World, bounds: BoundingBox, source: LivingEntity?): List<LivingEntity> {
+        val predicate = Predicate<Entity> { candidate ->
+            candidate is LivingEntity && (source == null || candidate.uniqueId != source.uniqueId)
+        }
+        val candidates = world.getNearbyEntities(bounds, predicate)
+        val result = ArrayList<LivingEntity>(candidates.size)
         for (candidate in candidates) {
-            if (candidate !is LivingEntity) {
-                continue
+            if (candidate is LivingEntity) {
+                result.add(candidate)
             }
-            if (source != null && candidate.uniqueId == source.uniqueId) {
-                continue
-            }
-            result.add(candidate)
         }
         return result
     }

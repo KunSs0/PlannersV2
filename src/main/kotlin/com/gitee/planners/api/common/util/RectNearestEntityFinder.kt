@@ -2,27 +2,25 @@ package com.gitee.planners.api.common.util
 
 import org.bukkit.Location
 import org.bukkit.entity.Entity
-import org.bukkit.util.Vector
-import taboolib.module.navigation.BoundingBox
-import kotlin.math.abs
+import org.bukkit.util.BoundingBox
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * 3D 矩形（Box）实体查找器
+ * 3D 矩形（Box）实体查找器。
  *
- * 以 origin + offset 为中心，沿 facing 方向旋转的矩形包围盒，
- * 检测实体包围盒中心是否在矩形内。
+ * 以 origin + offset 为中心、沿 facing 方向旋转的矩形盒，判定实体真实碰撞箱是否与矩形相交：
+ * 身体擦过矩形边缘即命中，不再要求实体中心进入矩形。
  *
- * @param origin    技能原点
- * @param width     矩形宽度（左右方向，full）
- * @param height    矩形高度（上下方向，full）
- * @param length    矩形长度（前后方向，full）
- * @param direction 朝向 yaw（度）
- * @param offsetX   中心左右偏移（局部坐标，右为正）
- * @param offsetY   中心上下偏移（世界 Y 轴）
- * @param offsetZ   中心前后偏移（局部坐标，前为正）
- * @param samples   待筛选实体列表
+ * @param origin 技能原点。
+ * @param width 矩形宽度（左右方向，full）。
+ * @param height 矩形高度（上下方向，full）。
+ * @param length 矩形长度（前后方向，full）。
+ * @param direction 朝向 yaw（度）。
+ * @param offsetX 中心左右偏移（局部坐标，右为正）。
+ * @param offsetY 中心上下偏移（世界 Y 轴）。
+ * @param offsetZ 中心前后偏移（局部坐标，前为正）。
+ * @param samples 待筛选实体列表。
  */
 class RectNearestEntityFinder(
     origin: Location,
@@ -33,7 +31,7 @@ class RectNearestEntityFinder(
     val offsetX: Double,
     val offsetY: Double,
     val offsetZ: Double,
-    samples: List<Entity>
+    samples: List<Entity>,
 ) : NearestEntityFinder(origin, samples) {
 
     private val radians = Math.toRadians(direction.toDouble())
@@ -42,8 +40,19 @@ class RectNearestEntityFinder(
     private val rightX = cos(radians)
     private val rightZ = sin(radians)
 
+    /**
+     * 矩形中心 X。
+     */
     val centerX = origin.x + offsetZ * forwardX + offsetX * rightX
+
+    /**
+     * 矩形中心 Y。
+     */
     val centerY = origin.y + offsetY
+
+    /**
+     * 矩形中心 Z。
+     */
     val centerZ = origin.z + offsetZ * forwardZ + offsetX * rightZ
 
     private val halfW = width / 2.0
@@ -51,28 +60,72 @@ class RectNearestEntityFinder(
     private val halfL = length / 2.0
 
     override fun request(): List<Entity> {
-        return samples.filter { isBoundingBoxInRect(getBoundingBox(it)) }
+        val result = ArrayList<Entity>(samples.size)
+        for (entity in samples) {
+            val box = getBoundingBox(entity)
+            val touched = SelectionGeometry.rotatedBoxTouchesBox(
+                centerX,
+                centerY,
+                centerZ,
+                halfW,
+                halfH,
+                halfL,
+                forwardX,
+                forwardZ,
+                rightX,
+                rightZ,
+                box,
+            )
+            if (touched) {
+                result.add(entity)
+            }
+        }
+        return result
     }
 
-    private fun isBoundingBoxInRect(bb: BoundingBox): Boolean {
-        val bc = bb.getCenter()
-
-        // 实体包围盒中心 → rect 中心的向量
-        val dx = bc.x - centerX
-        val dy = bc.y - centerY
-        val dz = bc.z - centerZ
-
-        // 投影到 rect 局部坐标系
-        val localX = dx * rightX + dz * rightZ    // 左右分量
-        val localY = dy                             // 上下分量（世界 Y 轴）
-        val localZ = dx * forwardX + dz * forwardZ  // 前后分量
-
-        return abs(localX) <= halfW &&
-                abs(localY) <= halfH &&
-                abs(localZ) <= halfL
+    override fun samplingBounds(): BoundingBox {
+        // 旋转矩形的世界 AABB 由 8 个角决定，先取角点再求各轴极值。
+        var minX = Double.MAX_VALUE
+        var minY = Double.MAX_VALUE
+        var minZ = Double.MAX_VALUE
+        var maxX = -Double.MAX_VALUE
+        var maxY = -Double.MAX_VALUE
+        var maxZ = -Double.MAX_VALUE
+        for (side in SIGNS) {
+            for (vertical in SIGNS) {
+                for (depth in SIGNS) {
+                    val pointX = centerX + rightX * halfW * side + forwardX * halfL * depth
+                    val pointY = centerY + halfH * vertical
+                    val pointZ = centerZ + rightZ * halfW * side + forwardZ * halfL * depth
+                    if (pointX < minX) {
+                        minX = pointX
+                    }
+                    if (pointX > maxX) {
+                        maxX = pointX
+                    }
+                    if (pointY < minY) {
+                        minY = pointY
+                    }
+                    if (pointY > maxY) {
+                        maxY = pointY
+                    }
+                    if (pointZ < minZ) {
+                        minZ = pointZ
+                    }
+                    if (pointZ > maxZ) {
+                        maxZ = pointZ
+                    }
+                }
+            }
+        }
+        return BoundingBox(minX, minY, minZ, maxX, maxY, maxZ)
     }
 
-    private fun BoundingBox.getCenter(): Vector {
-        return Vector((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2)
+    companion object {
+
+        /**
+         * 角点符号组合。
+         */
+        private val SIGNS = doubleArrayOf(-1.0, 1.0)
     }
 }

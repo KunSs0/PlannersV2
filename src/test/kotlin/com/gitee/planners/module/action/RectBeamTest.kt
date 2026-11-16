@@ -6,6 +6,7 @@ import org.bukkit.World
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.util.BoundingBox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -37,12 +38,7 @@ class RectBeamTest {
         val beside = entity(world, 2.0, 64.0, 7.5)
         val behind = entity(world, 0.0, 64.0, 0.0)
         Mockito.`when`(
-            world.getNearbyEntities(
-                Mockito.any(Location::class.java),
-                Mockito.anyDouble(),
-                Mockito.anyDouble(),
-                Mockito.anyDouble(),
-            ),
+            world.getNearbyEntities(Mockito.any(BoundingBox::class.java), Mockito.any()),
         ).thenReturn(listOf(inside, beyondLength, beside, behind))
 
         val resolved = BuiltinTargeters.Rect.resolve(
@@ -82,6 +78,10 @@ class RectBeamTest {
         Mockito.`when`(entity.width).thenReturn(0.6)
         Mockito.`when`(entity.height).thenReturn(1.8)
         Mockito.`when`(entity.uniqueId).thenReturn(UUID.randomUUID())
+        // 判定按真实 AABB：脚底为 y，宽 0.6、高 1.8。
+        Mockito.`when`(entity.boundingBox).thenReturn(
+            BoundingBox(x - 0.3, y, z - 0.3, x + 0.3, y + 1.8, z + 0.3),
+        )
         return entity
     }
 }

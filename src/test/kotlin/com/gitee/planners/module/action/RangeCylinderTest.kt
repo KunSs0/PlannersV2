@@ -4,6 +4,7 @@ import com.gitee.planners.module.action.query.QueryScope
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.LivingEntity
+import org.bukkit.util.BoundingBox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -31,7 +32,7 @@ class RangeCylinderTest {
         val origin = Location(world, 0.0, 64.0, 0.0)
         val inside = entity(Location(world, 2.0, 65.5, 0.0))
         val tooHigh = entity(Location(world, 0.0, 67.0, 0.0))
-        Mockito.`when`(world.getNearbyEntities(origin, 4.0, 2.0, 4.0))
+        Mockito.`when`(world.getNearbyEntities(Mockito.any(BoundingBox::class.java), Mockito.any()))
             .thenReturn(listOf<org.bukkit.entity.Entity>(inside, tooHigh))
         val scope = QueryScope(target = origin, label = "area")
 
@@ -52,7 +53,7 @@ class RangeCylinderTest {
         val origin = Location(world, 0.0, 64.0, 0.0)
         val inside = entity(Location(world, 3.9, 64.0, 0.0))
         val outside = entity(Location(world, 4.5, 64.0, 0.0))
-        Mockito.`when`(world.getNearbyEntities(origin, 4.0, 2.0, 4.0))
+        Mockito.`when`(world.getNearbyEntities(Mockito.any(BoundingBox::class.java), Mockito.any()))
             .thenReturn(listOf<org.bukkit.entity.Entity>(inside, outside))
         val scope = QueryScope(target = origin, label = "area")
 
@@ -72,7 +73,7 @@ class RangeCylinderTest {
         val world = Mockito.mock(World::class.java)
         val origin = Location(world, 0.0, 64.0, 0.0)
         val above = entity(Location(world, 0.0, 66.5, 0.0))
-        Mockito.`when`(world.getNearbyEntities(origin, 4.0, 4.0, 4.0))
+        Mockito.`when`(world.getNearbyEntities(Mockito.any(BoundingBox::class.java), Mockito.any()))
             .thenReturn(listOf<org.bukkit.entity.Entity>(above))
         val scope = QueryScope(target = origin, label = "area")
 
@@ -106,6 +107,10 @@ class RangeCylinderTest {
         val entity = Mockito.mock(LivingEntity::class.java)
         Mockito.`when`(entity.location).thenReturn(where)
         Mockito.`when`(entity.uniqueId).thenReturn(UUID.randomUUID())
+        // 判定按真实 AABB：脚底为坐标原点，宽 0.6、高 1.8。
+        Mockito.`when`(entity.boundingBox).thenReturn(
+            BoundingBox(where.x - 0.3, where.y, where.z - 0.3, where.x + 0.3, where.y + 1.8, where.z + 0.3),
+        )
         return entity
     }
 }
