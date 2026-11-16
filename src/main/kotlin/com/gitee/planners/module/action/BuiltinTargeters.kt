@@ -129,6 +129,8 @@ object BuiltinTargeters {
             val source = selfOf(scope)
             val finder = RangeNearestEntityFinder(origin, radius, height, emptyList())
             finder.samples = collectLiving(world, finder.samplingBounds(), source)
+            // 调试开关开启时先画判定范围：即使没有任何命中也能看到当前选区。
+            SelectorDebug.drawRange(scope.sender, finder)
             val found = ArrayList<ActionTarget>()
             for (entity in finder.request()) {
                 if (entity is LivingEntity) {
@@ -179,6 +181,8 @@ object BuiltinTargeters {
             val center = offsetCenter(origin, directionYaw, offsetX, offsetY, offsetZ)
             val finder = SectorNearestEntityFinder(center, angle, radius, directionYaw, emptyList())
             finder.samples = collectLiving(world, finder.samplingBounds(), source)
+            // 调试开关开启时先画判定范围：即使没有任何命中也能看到当前选区。
+            SelectorDebug.drawSector(scope.sender, finder)
             val found = ArrayList<ActionTarget>()
             val matched = finder.request()
             for (entity in matched) {
@@ -238,6 +242,8 @@ object BuiltinTargeters {
                 emptyList(),
             )
             finder.samples = collectLiving(world, finder.samplingBounds(), source)
+            // 调试开关开启时先画判定范围：即使没有任何命中也能看到当前选区。
+            SelectorDebug.drawRect(scope.sender, finder)
             val matched = finder.request()
             val found = ArrayList<ActionTarget>()
             for (entity in matched) {

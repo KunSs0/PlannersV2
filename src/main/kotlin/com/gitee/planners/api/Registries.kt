@@ -82,7 +82,11 @@ object Registries {
             com.gitee.planners.module.action.ActionScheduler.nextGeneration()
         }
         // 先完整销毁旧资源树，确保旧调度任务与业务作用域不进入新配置代次。
-        profiler.measure("config") { Planners.config.reload() }
+        profiler.measure("config") {
+            Planners.config.reload()
+            // 调试开关随配置重载重新同步，避免改动后仍沿用启动时的值。
+            Planners.applySelectorDebugConfiguration()
+        }
         // 重载直接入口也必须清除旧施法续体，并严格校验新时间策略。
         profiler.measure("sessions") {
             com.gitee.planners.core.skill.timing.SkillCastingSessions.cancelAll()

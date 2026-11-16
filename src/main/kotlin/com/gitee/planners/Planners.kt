@@ -14,6 +14,7 @@ import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.core.skill.SkillPointsPolicy
 import com.gitee.planners.core.skill.timing.SkillTimingPolicy
 import com.gitee.planners.module.compat.zaphkiel.ZaphkielItemProvider
+import com.gitee.planners.module.action.SelectorDebug
 import com.gitee.planners.util.PhaseProfiler
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
@@ -96,6 +97,46 @@ object Planners : Plugin() {
         SelectionOcclusion.configure(resolved)
         resolved
     }
+
+    /**
+     * 选区调试总开关。
+     *
+     * 开启后内置选区目标器把本次判定范围绘成粒子，只发给施法玩家；属调试用途，
+     * 每个选区每次执行都会发送粒子，正式使用必须关闭。
+     */
+    @ConfigNode("settings.debug.selector.enable")
+    val selectorDebugEnabled = false
+
+    /**
+     * 选区调试使用的粒子类型。
+     *
+     * 按 Bukkit Particle 名称解析，未知名称在加载期直接报错，不做静默回退。
+     */
+    @ConfigNode("settings.debug.selector.particle")
+    val selectorDebugParticle = ConfigNodeTransfer<String, Particle> {
+        val normalized = trim().uppercase().replace('.', '_').replace('-', '_')
+        var parsed: Particle? = null
+        try {
+            parsed = Particle.valueOf(normalized)
+        } catch (error: IllegalArgumentException) {
+            parsed = null
+        }
+        // 名称写错时不能悄悄换成默认粒子，否则调试结果会与配置不符。
+        if (parsed == null) {
+            throw IllegalArgumentException(
+                "settings.debug.selector.particle 无法解析 '$this'：不是有效的 Bukkit 粒子名称。",
+            )
+        }
+        parsed
+    }
+
+    /** 选区调试采样间距，单位格；越小越密、粒子越多。 */
+    @ConfigNode("settings.debug.selector.step")
+    val selectorDebugStep = 0.5
+
+    /** 扇形调试平面的抬高量，单位格；矩形是三维框，不读取此值。 */
+    @ConfigNode("settings.debug.selector.y-offset")
+    val selectorDebugYOffset = 0.15
 
     @ConfigNode("settings.skill-points")
     val skillPointsPolicy = ConfigNodeTransfer<ConfigurationSection, SkillPointsPolicy> {
@@ -209,12 +250,29 @@ object Planners : Plugin() {
         registerItemProviders()
         Registries.init()
         selectionUnimpededTypes.get()
+        // 选区调试开关在业务加载完成后再同步：目标器只读取已校验的缓存值。
+        applySelectorDebugConfiguration()
         reportUnresolvedActions()
         SkillPointsManager.prepare()
         DefaultMagicPointProvider.expressionUpperLimit.get()
         DefaultMagicPointProvider.expressionResume.get()
         AttributeProxy.register(HookAttributeSource())
         info("[Planners] 配置加载完成")
+    }
+
+    /**
+     * 把选区调试配置同步给目标器。
+     *
+     * 目标器绘制时只读取已经解析好的缓存值，因此启动与配置重载后各同步一次。
+     * 采样间距不合法时在这里直接失败，避免带着错误配置继续运行。
+     */
+    fun applySelectorDebugConfiguration() {
+        SelectorDebug.apply(
+            selectorDebugEnabled,
+            selectorDebugParticle.get(),
+            selectorDebugStep,
+            selectorDebugYOffset,
+        )
     }
 
     /**

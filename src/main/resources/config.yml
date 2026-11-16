@@ -10,6 +10,19 @@ database:
 
 settings:
 
+  # 选区调试：开启后内置选区（@rect/@sector/@range）把本次判定范围绘成粒子，只发给施法玩家。
+  # 矩形画三维棱框、扇形画平面边框、球形与圆柱画轮廓；每个选区每次执行都会发送粒子，
+  # 仅用于开发调试，正式使用必须关闭。
+  debug:
+    selector:
+      enable: false
+      # 粒子类型，取 Bukkit Particle 名称（如 END_ROD、DUST）；未知名称在加载期报错。
+      particle: END_ROD
+      # 采样间距（格）；越小越密、粒子越多。
+      step: 0.5
+      # 扇形调试平面的抬高量（格）；矩形是三维框，不使用此值。
+      y-offset: 0.15
+
   # 技能树学习条件模板
   # props 为默认值，节点 levels.<等级> 中的同名字段覆盖；unset 为占位值，节点必须覆盖。
   condition:
