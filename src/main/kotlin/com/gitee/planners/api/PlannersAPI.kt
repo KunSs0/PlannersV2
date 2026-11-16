@@ -16,9 +16,7 @@ import com.gitee.planners.core.skill.timing.SkillCastingSessions
 import com.gitee.planners.core.skill.timing.SkillTimingService
 import com.gitee.planners.core.skill.directing.DirectingSessionManager
 import com.gitee.planners.core.skill.precondition.CastPreCondition
-import com.gitee.planners.core.skill.precondition.CastPreConditionFeedback
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
-import com.gitee.planners.core.skill.precondition.DefaultCastPreConditionFeedback
 import com.gitee.planners.core.skill.precondition.builtin.CooldownPreCondition
 import com.gitee.planners.core.skill.precondition.builtin.MagicPointPreCondition
 import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
@@ -32,9 +30,6 @@ object PlannersAPI {
 
     /** 释放前条件列表 */
     private val castPreConditions = CopyOnWriteArrayList<CastPreCondition>()
-
-    /** 释放前条件失败时的反馈实现 */
-    private var castPreConditionFeedback: CastPreConditionFeedback = DefaultCastPreConditionFeedback()
 
     init {
         // 注册内置释放前条件
@@ -60,12 +55,19 @@ object PlannersAPI {
     }
 
     /**
-     * 替换释放前条件失败时的反馈实现。
+     * 上报一次释放前条件失败：先发默认聊天提示，再派发事件给业务补充反馈。
      *
-     * @param feedback 反馈实现
+     * @param player 玩家
+     * @param skill 技能
+     * @param failure 失败的校验与上下文
      */
-    fun setCastPreConditionFeedback(feedback: CastPreConditionFeedback) {
-        castPreConditionFeedback = feedback
+    private fun reportPreConditionFailure(player: Player, skill: PlayerSkill, failure: CastPreConditionResult.Failure) {
+        var message = failure.condition.hint(player, failure)
+        failure.context.forEach { (key, value) ->
+            message = message.replace("{$key}", value.toString())
+        }
+        player.sendMessage("§c$message")
+        PlayerSkillCastEvent.emit(PlayerSkillCastEvent.PreConditionFailed(player, skill, failure))
     }
 
     /**
@@ -174,7 +176,7 @@ object PlannersAPI {
         for (condition in sortedConditions) {
             val result = condition.verify(player, skill, execution)
             if (result is CastPreConditionResult.Failure) {
-                castPreConditionFeedback.onFailed(player, result)
+                reportPreConditionFailure(player, skill, result)
                 return ExecutableResult.preConditionFailed(result)
             }
         }
@@ -281,7 +283,7 @@ object PlannersAPI {
         for (condition in sortedConditions) {
             val result = condition.verify(player, skill, execution)
             if (result is CastPreConditionResult.Failure) {
-                castPreConditionFeedback.onFailed(player, result)
+                reportPreConditionFailure(player, skill, result)
                 return ExecutableResult.preConditionFailed(result)
             }
         }

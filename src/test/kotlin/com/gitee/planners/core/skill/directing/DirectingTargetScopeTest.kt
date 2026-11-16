@@ -1,13 +1,17 @@
 package com.gitee.planners.core.skill.directing
 
 import com.gitee.planners.api.directing.DirectingEntityResult
+import com.gitee.planners.api.directing.DirectingLocResult
 import com.gitee.planners.api.directing.DirectingResult
 import com.gitee.planners.module.action.ActionArguments
 import com.gitee.planners.module.action.ActionRegistry
 import com.gitee.planners.module.action.ActionScopeFactory
 import com.gitee.planners.module.action.ActionTargeterStep
+import com.gitee.planners.module.action.ActionTarget
 import com.gitee.planners.module.action.query.QueryRef
 import com.gitee.planners.module.action.query.QueryScope
+import org.bukkit.Location
+import org.bukkit.World
 import org.bukkit.entity.Player
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -43,9 +47,37 @@ class DirectingTargetScopeTest {
     @Test
     fun ignoresOtherResult() {
         val result = object : DirectingResult {
-            override val type = "fc.position"
+            override val type = "fc.unknown"
         }
         assertNull(ActionScopeFactory.resolveDirectingTarget(result))
+    }
+
+    /** 位置结果被绑定成坐标目标。 */
+    @Test
+    fun bindsLocResult() {
+        val location = Location(null, 12.0, 64.0, -3.0)
+        val result = object : DirectingLocResult {
+            override val type = "fc.position"
+            override val location = location
+        }
+        assertSame(location, ActionScopeFactory.resolveDirectingTarget(result))
+    }
+
+    /** 坐标结果经 `@target` 变成坐标目标，供 area 锚点固定使用。 */
+    @Test
+    fun currentTargeterReturnsBoundLocation() {
+        val player = player()
+        val location = Location(Mockito.mock(World::class.java), 12.0, 64.0, -3.0)
+        val scope = QueryScope(sender = player, target = location, label = "test")
+        val targeter = ActionRegistry.targeter("target")
+        if (targeter == null) {
+            throw AssertionError("builtin targeter 'target' must be registered")
+        }
+        val step = ActionTargeterStep(targeter, ActionArguments(emptyMap(), "test"), "test")
+        val targets = step.apply(scope, emptyList())
+        assertEquals(1, targets.size)
+        val bound = targets[0] as ActionTarget.LocationTarget
+        assertEquals(location, bound.location)
     }
 
     /** 未确认指向时保持无目标。 */

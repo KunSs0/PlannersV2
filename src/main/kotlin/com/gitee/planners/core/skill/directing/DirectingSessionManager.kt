@@ -1,5 +1,7 @@
 package com.gitee.planners.core.skill.directing
 
+import com.gitee.planners.api.directing.DirectingFailureReason
+import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.directing.DirectingInput
 import com.gitee.planners.api.directing.DirectingAPI
 import com.gitee.planners.api.directing.DirectingInputReceiver
@@ -46,6 +48,8 @@ object DirectingSessionManager : DirectingInputReceiver {
         }
         val factory = DirectingSessionFactoryRegistry.getOrNull(definition.type)
         if (factory == null) {
+            // 只有配置解析、没有运行期会话时必须明确拒绝，不能静默取消让玩家以为按键失效。
+            reportFailure(player, skill, sourceKey, DirectingFailureReason.NO_FACTORY)
             return false
         }
         cancel(player, DirectingSessionCloseReason.REPLACED)
@@ -54,7 +58,7 @@ object DirectingSessionManager : DirectingInputReceiver {
         val filter = DirectingFilterCompiler.compile(player, skill.immutable, skill.immutable.directingFilterSteps)
         val context = DirectingSessionContext(sessionId, player, skill, definition, sourceKey, filter)
         val session = factory.create(context)
-        val entry = Entry(sessionId, definition.type, sourceKey, session, onConfirmed)
+        val entry = Entry(sessionId, definition.type, sourceKey, skill, player, session, onConfirmed)
         val previous = sessions.put(player.uniqueId, entry)
         if (previous != null) {
             previous.close(DirectingSessionCloseReason.REPLACED)
@@ -110,6 +114,7 @@ object DirectingSessionManager : DirectingInputReceiver {
             throw throwable
         }
         if (result == null) {
+            notifyFailure(entry, DirectingFailureReason.INVALID_TARGET)
             entry.close(DirectingSessionCloseReason.CANCELLED)
             return
         }
@@ -178,7 +183,34 @@ object DirectingSessionManager : DirectingInputReceiver {
         if (!removed) {
             return
         }
+        notifyFailure(entry, DirectingFailureReason.TIMEOUT)
         entry.close(DirectingSessionCloseReason.TIMED_OUT)
+    }
+
+    /**
+     * 上报一次指向失败，同一会话只报一次。
+     *
+     * @param entry 会话条目。
+     * @param reason 失败原因。
+     */
+    private fun notifyFailure(entry: Entry, reason: DirectingFailureReason) {
+        if (entry.notified) {
+            return
+        }
+        entry.notified = true
+        reportFailure(entry.player, entry.skill, entry.sourceKey, reason)
+    }
+
+    /**
+     * 记录并派发一次指向失败事件。
+     *
+     * @param player 施法者。
+     * @param skill 技能。
+     * @param sourceKey 本次按键标识。
+     * @param reason 失败原因。
+     */
+    private fun reportFailure(player: Player, skill: PlayerSkill, sourceKey: String, reason: DirectingFailureReason) {
+        PlayerSkillCastEvent.emit(PlayerSkillCastEvent.DirectingFailed(player, skill, sourceKey, reason))
     }
 
     /**
@@ -198,9 +230,20 @@ object DirectingSessionManager : DirectingInputReceiver {
     /**
      * 单个会话与其释放续体。
      */
-    private class Entry(val sessionId: Long, val type: String, val sourceKey: String, val session: DirectingSession, val onConfirmed: (DirectingResult) -> ExecutableResult) {
+    private class Entry(
+        val sessionId: Long,
+        val type: String,
+        val sourceKey: String,
+        val skill: PlayerSkill,
+        val player: Player,
+        val session: DirectingSession,
+        val onConfirmed: (DirectingResult) -> ExecutableResult,
+    ) {
 
         var timeoutTask: PlatformExecutor.PlatformTask? = null
+
+        /** 是否已上报过失败，保证一轮指向只提示一次。 */
+        var notified: Boolean = false
 
         /**
          * 取消会话超时任务。

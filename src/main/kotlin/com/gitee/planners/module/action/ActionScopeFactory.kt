@@ -373,6 +373,10 @@ object ActionScopeFactory {
         if (directing is com.gitee.planners.api.directing.DirectingEntityResult) {
             return directing.entity
         }
+        // 位置指向把确认到的坐标绑成当前目标：`@target` 会转成坐标目标，area 锚点解析也会固定在该点。
+        if (directing is com.gitee.planners.api.directing.DirectingLocResult) {
+            return directing.location
+        }
         return null
     }
 }
