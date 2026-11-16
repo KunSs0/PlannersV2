@@ -32,50 +32,6 @@ object BuiltinTargeters {
     /** 准星射线检测使用的实体膨胀半径，单位格。 */
     private const val CROSSHAIR_RAY_SIZE = 0.35
 
-    /**
-     * 只保留生命比例不高于阈值的容器元素。
-     *
-     * 与 `wounded` 条件同一口径，但按元素逐个过滤，供"给低血友方单独加成"这类场景使用。
-     */
-    object Wounded : ActionTargeter {
-
-        override val id = "wounded"
-
-        override val aliases = listOf("wounded")
-
-        override val scope = ActionScope.SKILL
-
-        override fun validate(arguments: ActionArguments) {
-            arguments.require("ratio")
-            arguments.rejectUnknown("ratio")
-        }
-
-        override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
-            val ratio = arguments.requireNumber(scope, "ratio")
-            if (ratio <= 0.0 || ratio > 1.0) {
-                throw IllegalArgumentException("${arguments.path} ratio 必须在 (0, 1] 区间。")
-            }
-            val found = ArrayList<ActionTarget>()
-            for (target in input) {
-                val entity = target.bukkitEntity()
-                if (entity == null) {
-                    continue
-                }
-                if (!entity.isValid) {
-                    continue
-                }
-                val maximum = entity.maxHealth
-                if (maximum <= 0.0) {
-                    continue
-                }
-                if (entity.health / maximum <= ratio) {
-                    found.add(target)
-                }
-            }
-            return found
-        }
-    }
-
     /** 以技能施法者为容器；`self` 是同等语义的旧名。 */
     object Sender : ActionTargeter {
 
@@ -654,7 +610,13 @@ object BuiltinTargeters {
         }
     }
 
-    /** 按距离、名称或随机排序。 */
+    /**
+     * 按距离、名称、生命值、生命比例或随机排序。
+     *
+     * 数值键（`distance` / `health` / `health-ratio`）支持 `order=asc|desc`，缺省升序；
+     * 读不到数值的目标（位置目标、无有效生命上限）在两种顺序下都排在最后，不参与比较。
+     * `name` 与 `random` 不接受 `order`，避免写出不生效的配置。
+     */
     object Sort : ActionTargeter {
 
         override val id = "sort"
@@ -665,18 +627,42 @@ object BuiltinTargeters {
 
         override fun validate(arguments: ActionArguments) {
             arguments.require("by")
-            arguments.rejectUnknown("by")
+            arguments.rejectUnknown("by", "order")
+            val order = arguments.literalText("order")
+            if (order == null) {
+                return
+            }
+            val normalized = order.trim().lowercase()
+            if (normalized != "asc" && normalized != "desc") {
+                throw IllegalArgumentException("${arguments.path} order must be asc or desc.")
+            }
+            val by = arguments.literalText("by")
+            if (by == null) {
+                return
+            }
+            val key = by.trim().lowercase()
+            if (key == "random" || key == "name") {
+                throw IllegalArgumentException(
+                    "${arguments.path} order 只对 distance / health / health-ratio 生效。",
+                )
+            }
         }
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
             val by = arguments.requireText(scope, "by").lowercase()
+            val descending = isDescending(scope, arguments)
             if (by == "distance") {
                 val origin = originOf(scope)
                 if (origin == null) {
                     return input
                 }
-                val sorted = input.sortedBy { target -> distanceOf(target, origin) }
-                return ArrayList(sorted)
+                return sortByValue(input, descending) { target -> distanceValue(target, origin) }
+            }
+            if (by == "health") {
+                return sortByValue(input, descending) { target -> healthValue(target) }
+            }
+            if (by == "health-ratio") {
+                return sortByValue(input, descending) { target -> healthRatioValue(target) }
             }
             if (by == "name") {
                 val sorted = input.sortedBy { target -> nameOf(target) }
@@ -686,7 +672,9 @@ object BuiltinTargeters {
                 val shuffled = input.shuffled()
                 return ArrayList(shuffled)
             }
-            throw IllegalArgumentException("${arguments.path} sort must be distance, name or random.")
+            throw IllegalArgumentException(
+                "${arguments.path} sort must be distance, name, health, health-ratio or random.",
+            )
         }
     }
 
@@ -1031,18 +1019,119 @@ object BuiltinTargeters {
     }
 
     /**
-     * 计算目标到原点的距离。
+     * 读取排序方向。
+     *
+     * @param scope 当前执行上下文。
+     * @param arguments 目标器参数。
+     * @return 降序时返回 true；缺省升序。
+     */
+    private fun isDescending(scope: QueryScope, arguments: ActionArguments): Boolean {
+        val raw = arguments.text(scope, "order")
+        if (raw == null) {
+            return false
+        }
+        return raw.trim().lowercase() == "desc"
+    }
+
+    /**
+     * 按数值键排序。
+     *
+     * 读不到数值的目标（位置目标、无有效生命上限）在升序与降序下都排在最后：
+     * 缺数据不应当因为换方向而抢到队首。相同数值保持输入顺序，便于「同分按上游顺序」的稳定输出。
+     *
+     * @param input 上游容器。
+     * @param descending 是否降序。
+     * @param valueOf 目标到排序数值的映射，返回 null 表示该目标缺少排序数据。
+     * @return 排好序的新容器。
+     */
+    private fun sortByValue(
+        input: List<ActionTarget>,
+        descending: Boolean,
+        valueOf: (ActionTarget) -> Double?,
+    ): List<ActionTarget> {
+        val entries = ArrayList<SortEntry>(input.size)
+        var index = 0
+        for (target in input) {
+            entries.add(SortEntry(index, valueOf(target), target))
+            index += 1
+        }
+        entries.sortWith(Comparator { left, right ->
+            val leftValue = left.value
+            val rightValue = right.value
+            if (leftValue == null && rightValue == null) {
+                left.index.compareTo(right.index)
+            } else if (leftValue == null) {
+                1
+            } else if (rightValue == null) {
+                -1
+            } else {
+                val compared = leftValue.compareTo(rightValue)
+                if (compared != 0) {
+                    if (descending) {
+                        -compared
+                    } else {
+                        compared
+                    }
+                } else {
+                    left.index.compareTo(right.index)
+                }
+            }
+        })
+        val result = ArrayList<ActionTarget>(entries.size)
+        for (entry in entries) {
+            result.add(entry.target)
+        }
+        return result
+    }
+
+    /**
+     * 计算目标到原点的距离，用于距离排序。
      *
      * @param target 目标。
      * @param origin 原点。
-     * @return 距离；无法计算时返回最大值。
+     * @return 距离；目标没有实体句柄时返回 null。
      */
-    private fun distanceOf(target: ActionTarget, origin: Location): Double {
+    private fun distanceValue(target: ActionTarget, origin: Location): Double? {
         val entity = target.bukkitEntity()
         if (entity == null) {
-            return Double.MAX_VALUE
+            return null
         }
         return entity.location.distance(origin)
+    }
+
+    /**
+     * 读取目标当前生命，用于生命值排序。
+     *
+     * @param target 目标。
+     * @return 当前生命；没有实体句柄或生命上限无效时返回 null。
+     */
+    private fun healthValue(target: ActionTarget): Double? {
+        val entity = target.bukkitEntity()
+        if (entity == null) {
+            return null
+        }
+        if (entity.maxHealth <= 0.0) {
+            return null
+        }
+        return entity.health
+    }
+
+    /**
+     * 读取目标生命比例，用于「缺血优先」这类排序。
+     *
+     * @param target 目标。
+     * @return `当前生命 / 生命上限`；没有实体句柄或上限无效时返回 null。
+     */
+    private fun healthRatioValue(target: ActionTarget): Double? {
+        val entity = target.bukkitEntity()
+        if (entity == null) {
+            return null
+        }
+        val maximum = entity.maxHealth
+        if (maximum <= 0.0) {
+            return null
+        }
+        return entity.health / maximum
     }
 
     /**
@@ -1058,4 +1147,13 @@ object BuiltinTargeters {
         }
         return entity.name
     }
+
+    /**
+     * 排序条目：带排序数值与原始序号。
+     *
+     * @property index 输入顺序，作为同值时的稳定次序键。
+     * @property value 排序数值；null 表示缺少排序数据。
+     * @property target 目标。
+     */
+    private class SortEntry(val index: Int, val value: Double?, val target: ActionTarget)
 }

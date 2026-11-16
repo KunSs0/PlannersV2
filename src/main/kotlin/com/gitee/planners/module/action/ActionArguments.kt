@@ -16,6 +16,9 @@ class ActionArguments(values: Map<String, String>, val path: String) {
 
     private val refs: Map<String, QueryRef>
 
+    /** 规范化键到原始配置文本的快照，用于派生子视图。 */
+    private val sources: Map<String, String>
+
     /** 全部参数键，按声明顺序。 */
     val keys: Set<String>
         get() {
@@ -24,6 +27,7 @@ class ActionArguments(values: Map<String, String>, val path: String) {
 
     init {
         val snapshot = LinkedHashMap<String, QueryRef>()
+        val originals = LinkedHashMap<String, String>()
         for (entry in values.entries) {
             val key = entry.key.trim().lowercase(Locale.ROOT)
             if (key.isEmpty()) {
@@ -34,8 +38,10 @@ class ActionArguments(values: Map<String, String>, val path: String) {
             }
             val label = "$path.$key"
             snapshot[key] = QueryRef.parse(entry.value, label)
+            originals[key] = entry.value
         }
         this.refs = snapshot
+        this.sources = originals
     }
 
     /**
@@ -289,6 +295,31 @@ class ActionArguments(values: Map<String, String>, val path: String) {
      */
     fun all(): Map<String, QueryRef> {
         return refs
+    }
+
+    /**
+     * 派生出剔除指定键的参数子视图。
+     *
+     * 供转发型条目使用：外层条目先取走自己的参数，再把剩余参数整套交给被引用的实现，
+     * 由内层实现按自己的键校验并给出带路径的错误。子视图沿用当前配置路径，
+     * 原始文本保持一致，因此模板与表达式写法不会在派生过程中丢信息。
+     *
+     * @param keys 需要剔除的参数名，大小写不敏感。
+     * @return 已剔除指定键的新参数表。
+     */
+    fun without(vararg keys: String): ActionArguments {
+        val removed = LinkedHashSet<String>()
+        for (key in keys) {
+            removed.add(key.lowercase(Locale.ROOT))
+        }
+        val kept = LinkedHashMap<String, String>()
+        for (entry in sources.entries) {
+            if (removed.contains(entry.key)) {
+                continue
+            }
+            kept[entry.key] = entry.value
+        }
+        return ActionArguments(kept, path)
     }
 
     /**

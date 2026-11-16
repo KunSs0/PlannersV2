@@ -211,10 +211,10 @@ class PlannersConditionsTest {
     fun registersAllTargeters() {
         val ids = ActionRegistry.targeterIds()
         val expected = listOf(
-            "sender", "wounded", "uuid", "forward", "target", "range", "sector", "rect", "source", "target.finder", "crosshair",
+            "sender", "uuid", "forward", "target", "range", "sector", "rect", "source", "target.finder", "crosshair",
             "enemy", "ally", "type", "exclude-type", "name", "world", "include-self", "alive",
             "sort", "reverse", "shuffle", "limit", "online-players", "attacker", "defender",
-            "sender.loc", "finder.capture",
+            "sender.loc", "finder.capture", "filter",
         )
         for (id in expected) {
             assertTrue(ids.contains(id), "missing targeter: $id")

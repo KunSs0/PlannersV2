@@ -1,5 +1,8 @@
 package com.gitee.planners.module.action
 
+import com.gitee.planners.module.action.rule.FilterRules
+import com.gitee.planners.module.action.rule.FilterTargeter
+
 /**
  * 内置动作、条件、目标器与触发器的安装入口。
  *
@@ -13,8 +16,14 @@ object ActionBuiltins {
     fun install() {
         installActions()
         installTargeters()
+        installRules()
         installTriggers()
         installConditions()
+    }
+
+    /** 登记过滤规则。 */
+    private fun installRules() {
+        FilterRules.install()
     }
 
     /** 登记动作。 */
@@ -48,7 +57,6 @@ object ActionBuiltins {
     /** 登记目标器。 */
     private fun installTargeters() {
         ActionRegistry.register(BuiltinTargeters.Sender)
-        ActionRegistry.register(BuiltinTargeters.Wounded)
         ActionRegistry.register(UuidTargets)
         ActionRegistry.register(ForwardTargeter)
         ActionRegistry.register(BuiltinTargeters.SenderLocation)
@@ -68,6 +76,7 @@ object ActionBuiltins {
         ActionRegistry.register(BuiltinTargeters.World)
         ActionRegistry.register(BuiltinTargeters.IncludeSelf)
         ActionRegistry.register(BuiltinTargeters.Alive)
+        ActionRegistry.register(FilterTargeter)
         ActionRegistry.register(BuiltinTargeters.Sort)
         ActionRegistry.register(BuiltinTargeters.Reverse)
         ActionRegistry.register(BuiltinTargeters.Shuffle)

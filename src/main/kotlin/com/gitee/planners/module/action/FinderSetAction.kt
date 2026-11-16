@@ -27,6 +27,8 @@ object FinderSetAction : Action {
             throw IllegalArgumentException("${arguments.path} id 不能为空。")
         }
         // 存快照，后续行重新解析目标器不会影响已存内容。
+        // 同时写入 TargetCache：`@target.finder` 与 `finder.<名字>` 必须看到同一批目标。
         scope.finderCache[key] = ArrayList(targets)
+        TargetCache.store(scope, key, targets)
     }
 }

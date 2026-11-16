@@ -22,11 +22,15 @@ class ActionTargeterChainParserTest {
     /** 按声明顺序解析条目，参数保持可求值。 */
     @Test
     fun parsesEntriesInOrder() {
-        val steps = ActionTargeterChainParser.parseEntries(listOf("@alive", "@wounded{ratio=0.3}"), "test.filter")
+        val steps = ActionTargeterChainParser.parseEntries(
+            listOf("@alive", "@filter{r=health.ratio; max=0.3}"),
+            "test.filter",
+        )
         assertEquals(2, steps.size)
         assertEquals("alive", steps[0].targeter.id)
-        assertEquals("wounded", steps[1].targeter.id)
-        assertEquals(0.3, steps[1].arguments.requireNumber(QueryScope(label = "test"), "ratio"))
+        assertEquals("filter", steps[1].targeter.id)
+        assertEquals(listOf("health.ratio"), steps[1].arguments.list(QueryScope(label = "test"), "r"))
+        assertEquals(0.3, steps[1].arguments.requireNumber(QueryScope(label = "test"), "max"))
     }
 
     /** 整段文本按空白拆成多步。 */
@@ -98,10 +102,10 @@ class ActionTargeterChainParserTest {
     @Test
     fun rejectsIllegalArguments() {
         assertThrows(IllegalArgumentException::class.java) {
-            ActionTargeterChainParser.parseEntries(listOf("@wounded{ratio=0.3; extra=1}"), "test.chain")
+            ActionTargeterChainParser.parseEntries(listOf("@filter{r=health.ratio; max=0.3; extra=1}"), "test.chain")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ActionTargeterChainParser.parseEntries(listOf("@wounded{}"), "test.chain")
+            ActionTargeterChainParser.parseEntries(listOf("@filter{}"), "test.chain")
         }
     }
 

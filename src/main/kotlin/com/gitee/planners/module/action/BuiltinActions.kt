@@ -153,7 +153,10 @@ object BuiltinActions {
 
         override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
             val key = arguments.requireText(scope, "id")
+            // 目标槽位是两个视图的同一份快照：@target.finder 读 TargetCache，
+            // finder.<名字>.count 读 FinderCache。写一侧会让“名单正确但计数是上一跳”的错账无法排查。
             TargetCache.store(scope, key, targets)
+            scope.finderCache[key] = ArrayList(targets)
         }
     }
 }

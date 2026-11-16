@@ -1,5 +1,6 @@
 package com.gitee.planners.module.action
 
+import com.gitee.planners.module.action.rule.FilterRules
 import java.util.Locale
 
 /**
@@ -49,6 +50,7 @@ object ActionRegistry {
         conditions.clear()
         targeters.clear()
         triggers.clear()
+        FilterRules.reset()
         installed = false
         install()
     }
