@@ -31,24 +31,16 @@ class SectorNearestEntityFinder(
     private val forwardZ = cos(radians)
     private val halfAngle = Math.toRadians(angle / 2.0)
 
-    override fun request(): List<Entity> {
-        val result = ArrayList<Entity>(samples.size)
-        for (entity in samples) {
-            val box = getBoundingBox(entity)
-            val touched = SelectionGeometry.sectorTouchesBox(
-                origin.x,
-                origin.z,
-                radius,
-                halfAngle,
-                forwardX,
-                forwardZ,
-                box,
-            )
-            if (touched) {
-                result.add(entity)
-            }
-        }
-        return result
+    override fun touches(box: BoundingBox): Boolean {
+        return SelectionGeometry.sectorTouchesBox(
+            origin.x,
+            origin.z,
+            radius,
+            halfAngle,
+            forwardX,
+            forwardZ,
+            box,
+        )
     }
 
     override fun samplingBounds(): BoundingBox {

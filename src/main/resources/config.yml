@@ -216,10 +216,7 @@ settings:
             slot3:
               key: key6
               category: [active, passive]
-  bukkit-launch:
-    unimpeded-types:
-      - AIR
-      - SHORT_GRASS
-      - GLASS
-      - WATER
-      - DANDELION
+  selection:
+    # 选区穿透白名单：命中判定不会穿过实心方块，这里的方块不遮挡视线。
+    # 支持方块 Tag（如 minecraft:fences）与方块类型（如 STONE）；未知条目会在加载时报错。
+    unimpeded-types: []

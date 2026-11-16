@@ -1,6 +1,7 @@
 package com.gitee.planners
 
 import com.gitee.planners.api.Registries
+import com.gitee.planners.api.common.util.SelectionOcclusion
 import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionFactory
@@ -17,7 +18,9 @@ import com.gitee.planners.util.PhaseProfiler
 import com.gitee.planners.util.configNodeToMap
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.Particle
+import org.bukkit.Tag
 import taboolib.common.platform.Platform
 import taboolib.common.platform.Plugin
 import taboolib.common.platform.function.adaptCommandSender
@@ -61,16 +64,37 @@ object Planners : Plugin() {
         SkillTimingPolicy.parse(this)
     }
 
-    @ConfigNode("settings.bukkit-launch.unimpeded-types")
-    val unimpededTypes = ConfigNodeTransfer<List<String>, List<Material>> {
-        this.mapNotNull {
-            try {
-                Material.valueOf(it.uppercase().replace(".", "_"))
-            }catch (e: Exception) {
-                warning("Unknown material type: $it")
-                return@mapNotNull null
+    /**
+     * 选区穿透白名单：这些方块不遮挡选区视线（支持方块 Tag 与 Material 名）。
+     *
+     * 解析结果直接写入遮挡判定，属系统级规则；未知条目按配置路径报错，不做静默忽略。
+     */
+    @ConfigNode("settings.selection.unimpeded-types")
+    val selectionUnimpededTypes = ConfigNodeTransfer<List<String>, Set<Material>> {
+        val resolved = LinkedHashSet<Material>()
+        for (entry in this) {
+            val text = entry.trim()
+            if (text.isEmpty()) {
+                continue
             }
+            val keyText = if (text.startsWith("#")) text.substring(1) else text
+            if (keyText.contains(':')) {
+                val tag = resolveBlockTag(keyText)
+                if (tag != null) {
+                    resolved.addAll(tag.values)
+                    continue
+                }
+            }
+            val material = Material.matchMaterial(keyText)
+            if (material == null) {
+                throw IllegalArgumentException(
+                    "settings.selection.unimpeded-types 无法解析 '$entry'：既不是方块 Tag 也不是方块类型。",
+                )
+            }
+            resolved.add(material)
         }
+        SelectionOcclusion.configure(resolved)
+        resolved
     }
 
     @ConfigNode("settings.skill-points")
@@ -123,6 +147,24 @@ object Planners : Plugin() {
     }
 
     /**
+     * 解析方块 Tag。
+     *
+     * @param key 形如 minecraft:fences 的键。
+     * @return 方块 Tag；键非法或标签不存在时返回 null。
+     */
+    private fun resolveBlockTag(key: String): Tag<Material>? {
+        val namespaced = try {
+            NamespacedKey.fromString(key)
+        } catch (error: IllegalArgumentException) {
+            null
+        }
+        if (namespaced == null) {
+            return null
+        }
+        return Bukkit.getTag(Tag.REGISTRY_BLOCKS, namespaced, Material::class.java)
+    }
+
+    /**
      * 汇报仍然无法解析的外部动作引用。
      *
      * 技能里写了某个插件提供的动作、但该插件未安装或未注册时，只记录告警，
@@ -166,6 +208,7 @@ object Planners : Plugin() {
         // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
         registerItemProviders()
         Registries.init()
+        selectionUnimpededTypes.get()
         reportUnresolvedActions()
         SkillPointsManager.prepare()
         DefaultMagicPointProvider.expressionUpperLimit.get()
@@ -181,6 +224,7 @@ object Planners : Plugin() {
         // 先停定时器与调度器，避免技能卸载后仍有动作在跑。
         com.gitee.planners.module.action.ActionTimerService.stop()
         com.gitee.planners.module.action.AreaRegistry.clear()
+        com.gitee.planners.module.action.CaptureRegistry.clear()
         com.gitee.planners.module.action.BukkitActionDispatcher.uninstall()
     }
 

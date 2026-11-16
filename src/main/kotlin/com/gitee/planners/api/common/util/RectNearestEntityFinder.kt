@@ -59,28 +59,25 @@ class RectNearestEntityFinder(
     private val halfH = height / 2.0
     private val halfL = length / 2.0
 
-    override fun request(): List<Entity> {
-        val result = ArrayList<Entity>(samples.size)
-        for (entity in samples) {
-            val box = getBoundingBox(entity)
-            val touched = SelectionGeometry.rotatedBoxTouchesBox(
-                centerX,
-                centerY,
-                centerZ,
-                halfW,
-                halfH,
-                halfL,
-                forwardX,
-                forwardZ,
-                rightX,
-                rightZ,
-                box,
-            )
-            if (touched) {
-                result.add(entity)
-            }
-        }
-        return result
+    override fun touches(box: BoundingBox): Boolean {
+        return SelectionGeometry.rotatedBoxTouchesBox(
+            centerX,
+            centerY,
+            centerZ,
+            halfW,
+            halfH,
+            halfL,
+            forwardX,
+            forwardZ,
+            rightX,
+            rightZ,
+            box,
+        )
+    }
+
+    override fun occlusionOrigin(): Location {
+        // 遮挡射线从身体中心高度出发，贴墙施法时身前 0~2 格内的方块同样能挡住光束。
+        return Location(origin.world, origin.x, origin.y + offsetY, origin.z)
     }
 
     override fun samplingBounds(): BoundingBox {

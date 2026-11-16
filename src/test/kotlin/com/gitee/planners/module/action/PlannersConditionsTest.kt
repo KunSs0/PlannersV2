@@ -214,11 +214,11 @@ class PlannersConditionsTest {
             "sender", "wounded", "uuid", "forward", "target", "range", "sector", "rect", "source", "target.finder", "crosshair",
             "enemy", "ally", "type", "exclude-type", "name", "world", "include-self", "alive",
             "sort", "reverse", "shuffle", "limit", "online-players", "attacker", "defender",
-            "sender.loc",
+            "sender.loc", "finder.capture",
         )
         for (id in expected) {
             assertTrue(ids.contains(id), "missing targeter: $id")
         }
-        assertEquals(27, ids.size)
+        assertEquals(28, ids.size)
     }
 }

@@ -79,9 +79,9 @@ class NearestEntityFinderBoundingBoxTest {
      */
     private fun probeFinder(entities: List<Entity>): NearestEntityFinder {
         return object : NearestEntityFinder(Location(null, 0.0, 64.0, 0.0), entities) {
-            override fun request(): List<Entity> = samples
-
             override fun samplingBounds(): BoundingBox = BoundingBox(-1.0, 63.0, -1.0, 1.0, 65.0, 1.0)
+
+            override fun touches(box: BoundingBox): Boolean = true
         }
     }
 

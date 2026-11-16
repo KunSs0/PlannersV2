@@ -1,9 +1,9 @@
 package com.gitee.planners.module.action
 
 import com.gitee.planners.api.common.facing.EntityFacingProviders
+import com.gitee.planners.api.common.util.RangeNearestEntityFinder
 import com.gitee.planners.api.common.util.RectNearestEntityFinder
 import com.gitee.planners.api.common.util.SectorNearestEntityFinder
-import com.gitee.planners.api.common.util.SelectionGeometry
 import com.gitee.planners.module.action.query.QueryScope
 import com.gitee.planners.module.compat.faction.EntityFriendlyPolicy
 import org.bukkit.Location
@@ -171,24 +171,13 @@ object BuiltinTargeters {
                 return emptyList()
             }
             val source = selfOf(scope)
-            val bounds = if (height == null) {
-                SelectionGeometry.sphereBounds(origin.x, origin.y, origin.z, radius)
-            } else {
-                SelectionGeometry.cylinderBounds(origin.x, origin.y, origin.z, radius, height)
-            }
+            val finder = RangeNearestEntityFinder(origin, radius, height, emptyList())
+            finder.samples = collectLiving(world, finder.samplingBounds(), source)
             val found = ArrayList<ActionTarget>()
-            for (entity in collectLiving(world, bounds, source)) {
-                val box = entity.boundingBox
-                if (height == null) {
-                    if (!SelectionGeometry.sphereTouchesBox(origin.x, origin.y, origin.z, radius, box)) {
-                        continue
-                    }
-                } else {
-                    if (!SelectionGeometry.cylinderTouchesBox(origin.x, origin.y, origin.z, radius, height, box)) {
-                        continue
-                    }
+            for (entity in finder.request()) {
+                if (entity is LivingEntity) {
+                    found.add(ActionTarget.EntityTarget(entity))
                 }
-                found.add(ActionTarget.EntityTarget(entity))
             }
             return merge(scope, arguments, input, found)
         }
@@ -406,7 +395,7 @@ object BuiltinTargeters {
         override val scope = ActionScope.SKILL
 
         override fun validate(arguments: ActionArguments) {
-            arguments.rejectUnknown("los")
+            arguments.rejectUnknown()
         }
 
         override fun resolve(scope: QueryScope, arguments: ActionArguments, input: List<ActionTarget>): List<ActionTarget> {
@@ -414,7 +403,6 @@ object BuiltinTargeters {
             if (source !is LivingEntity) {
                 return emptyList()
             }
-            val requireLineOfSight = arguments.boolean(scope, "los") ?: false
             val result = ArrayList<ActionTarget>()
             for (target in input) {
                 val entity = target.bukkitEntity()
@@ -428,9 +416,6 @@ object BuiltinTargeters {
                     continue
                 }
                 if (EntityFriendlyPolicy.isFriendly(source, entity)) {
-                    continue
-                }
-                if (requireLineOfSight && !source.hasLineOfSight(entity)) {
                     continue
                 }
                 result.add(target)
