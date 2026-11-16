@@ -8,9 +8,9 @@ package com.gitee.planners.api.pick
 enum class PickFailureReason {
 
     /**
-     * provider 只有配置解析、没有注册运行期会话创建器。
+     * 没有注册表现后端，指向无法开始。
      */
-    NO_FACTORY,
+    NO_PRESENTATION,
 
     /**
      * 会话确认时判定落点或目标非法（超距、无落点、被遮挡等）。

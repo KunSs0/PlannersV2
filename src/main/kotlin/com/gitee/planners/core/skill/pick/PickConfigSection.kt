@@ -13,6 +13,15 @@ import taboolib.library.configuration.ConfigurationSection
 class PickSection(private val section: ConfigurationSection) : PickConfig {
 
     /**
+     * 读取全部字段名。
+     *
+     * @return 字段名集合。
+     */
+    override fun keys(): Set<String> {
+        return section.getKeys(false)
+    }
+
+    /**
      * 判断字段是否存在。
      */
     override fun contains(key: String): Boolean {

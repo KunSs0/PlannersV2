@@ -40,6 +40,13 @@ interface PickConfig {
     fun getBoolean(key: String): Boolean
 
     /**
+     * 读取全部字段名。
+     *
+     * @return 字段名集合。
+     */
+    fun keys(): Set<String>
+
+    /**
      * 读取字符串配置。
      *
      * @param key 配置字段名。

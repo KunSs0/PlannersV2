@@ -48,7 +48,7 @@ class PickFailureEventTest {
 
     /** 缺少运行期 factory 时派发 NO_FACTORY 事件并取消施放。 */
     @Test
-    fun reportsMissingFactory() {
+    fun reportsMissingPresentation() {
         val player = player()
         val skill = skill("fc.position")
 
@@ -59,7 +59,7 @@ class PickFailureEventTest {
         assertFalse(started)
         assertEquals(1, events.size)
         val event = events[0] as PlayerSkillCastEvent.PickFailed
-        assertEquals(PickFailureReason.NO_FACTORY, event.reason)
+        assertEquals(PickFailureReason.NO_PRESENTATION, event.reason)
         assertEquals("key5", event.sourceKey)
         assertEquals("sage_prayer_binding_glyph", event.skill.id)
         assertEquals(player, event.player)

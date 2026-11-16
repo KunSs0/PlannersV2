@@ -49,7 +49,7 @@ object PickSessionManager : PickInputReceiver {
         val factory = PickSessionFactoryRegistry.getOrNull(definition.type)
         if (factory == null) {
             // 只有配置解析、没有运行期会话时必须明确拒绝，不能静默取消让玩家以为按键失效。
-            reportFailure(player, skill, sourceKey, PickFailureReason.NO_FACTORY)
+            reportFailure(player, skill, sourceKey, PickFailureReason.NO_PRESENTATION)
             return false
         }
         cancel(player, PickCloseReason.REPLACED)
