@@ -22,8 +22,6 @@ import org.bukkit.entity.Entity
 import org.bukkit.util.Vector
 import kotlin.math.abs
 import kotlin.math.acos
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * Planners 自建的指向会话。
@@ -122,9 +120,9 @@ class PlannersPickSession(
             return null
         }
         val target = entity.location.clone().add(0.0, entity.height / 2.0, 0.0).toVector().subtract(eye.toVector())
-        if (target.lengthSquared() > 0.0) {
-            val aim = directionOf(input.aimYaw, input.aimPitch)
-            val dot = aim.dot(target.normalize())
+        val aim = Vector(input.aimX, input.aimY, input.aimZ)
+        if (target.lengthSquared() > 0.0 && aim.lengthSquared() > 0.0) {
+            val dot = aim.normalize().dot(target.normalize())
             val angle = Math.toDegrees(acos(dot.coerceIn(-1.0, 1.0)))
             if (angle > definition.maxAngleDegrees) {
                 return null
@@ -151,10 +149,17 @@ class PlannersPickSession(
         if (input !is PickDirectionInput) {
             return null
         }
-        if (abs(input.pitch) > definition.maxPitchDegrees) {
+        val aim = Vector(input.aimX, input.aimY, input.aimZ)
+        if (aim.lengthSquared() <= 0.0) {
             return null
         }
-        return PickDirectionResult(input.yaw, input.pitch)
+        val normalized = aim.normalize()
+        // 与 Minecraft 一致：pitch 为负表示向上，这里只校验绝对值上限。
+        val pitch = Math.toDegrees(kotlin.math.asin(-normalized.y.coerceIn(-1.0, 1.0)))
+        if (abs(pitch) > definition.maxPitchDegrees) {
+            return null
+        }
+        return PickDirectionResult(normalized.x, normalized.y, normalized.z)
     }
 
     /**
@@ -181,19 +186,5 @@ class PlannersPickSession(
             return true
         }
         return hitPosition.distance(location.toVector()) <= lineOfSightTolerance
-    }
-
-    /**
-     * 由相机朝向构造单位方向向量。
-     *
-     * @param yaw 水平朝向，单位为度。
-     * @param pitch 俯仰角，单位为度。
-     * @return 单位方向向量。
-     */
-    private fun directionOf(yaw: Float, pitch: Float): Vector {
-        val yawRadians = Math.toRadians(yaw.toDouble())
-        val pitchRadians = Math.toRadians(pitch.toDouble())
-        val cosPitch = cos(pitchRadians)
-        return Vector(-sin(yawRadians) * cosPitch, -sin(pitchRadians), cos(yawRadians) * cosPitch)
     }
 }

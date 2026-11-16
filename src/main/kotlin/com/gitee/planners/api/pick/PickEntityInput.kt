@@ -9,14 +9,16 @@ import java.util.UUID
  *
  * @property sessionId 会话 ID。
  * @property entityId 客户端选中的实体唯一 ID。
- * @property aimYaw 上报时的相机水平朝向，单位为度。
- * @property aimPitch 上报时的相机俯仰角，单位为度。
+ * @property aimX 上报时相机前向的 X 分量。
+ * @property aimY 上报时相机前向的 Y 分量。
+ * @property aimZ 上报时相机前向的 Z 分量。
  */
 class PickEntityInput(
     override val sessionId: Long,
     val entityId: UUID,
-    val aimYaw: Float,
-    val aimPitch: Float,
+    val aimX: Double,
+    val aimY: Double,
+    val aimZ: Double,
 ) : PickInput {
 
     override val type = EntityPickDefinition.TYPE
