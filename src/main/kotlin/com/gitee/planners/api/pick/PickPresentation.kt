@@ -19,8 +19,8 @@ interface PickPresentation {
     /**
      * 结束一次表现。
      *
-     * @param sessionId 会话 ID。
+     * @param context 本次会话的固定上下文。
      * @param reason 会话结束原因。
      */
-    fun close(sessionId: Long, reason: PickCloseReason)
+    fun close(context: PickContext, reason: PickCloseReason)
 }

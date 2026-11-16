@@ -13,6 +13,12 @@ class DirectionPickDefinition(
 
     override val type = TYPE
 
+    override fun fields(): Map<String, Any?> {
+        return mapOf(
+            "maxPitchDegrees" to maxPitchDegrees,
+        )
+    }
+
     companion object {
 
         /** 类型标识。 */

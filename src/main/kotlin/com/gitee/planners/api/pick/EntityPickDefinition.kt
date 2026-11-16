@@ -17,6 +17,14 @@ class EntityPickDefinition(
 
     override val type = TYPE
 
+    override fun fields(): Map<String, Any?> {
+        return mapOf(
+            "range" to range,
+            "maxAngleDegrees" to maxAngleDegrees,
+            "requireLineOfSight" to requireLineOfSight,
+        )
+    }
+
     companion object {
 
         /** 类型标识。 */

@@ -65,7 +65,7 @@ class PlannersPickSession(
     }
 
     override fun close(reason: PickCloseReason) {
-        presentation.close(context.sessionId, reason)
+        presentation.close(context, reason)
     }
 
     /**

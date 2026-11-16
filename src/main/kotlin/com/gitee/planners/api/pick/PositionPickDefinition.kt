@@ -17,6 +17,14 @@ class PositionPickDefinition(
 
     override val type = TYPE
 
+    override fun fields(): Map<String, Any?> {
+        return mapOf(
+            "range" to range,
+            "placement" to placement,
+            "requireLineOfSight" to requireLineOfSight,
+        )
+    }
+
     companion object {
 
         /** 类型标识。 */
