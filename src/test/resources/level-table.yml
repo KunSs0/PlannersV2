@@ -1,0 +1,45 @@
+table:
+  min: 1
+  max: 3
+  experience:
+    1: 300
+    2: 450
+    3: 630
+expression:
+  min: 1
+  max: 3
+  experience:
+    1: "300 + level * 10"
+    2-3: "level * 100"
+reserved:
+  min: 1
+  max: 2
+  experience:
+    1: 300
+    2: 450
+    3-4: 630
+zero:
+  min: 0
+  max: 2
+  experience:
+    0: 100
+    1: 300
+    2: 450
+missing:
+  min: 1
+  max: 4
+  experience:
+    1: 300
+    2: 450
+    4: 630
+overlap:
+  min: 1
+  max: 4
+  experience:
+    1-2: 300
+    2-4: 450
+inverted:
+  min: 5
+  max: 3
+  experience:
+    1: 300

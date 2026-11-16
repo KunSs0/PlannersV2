@@ -1,8 +1,20 @@
+# 等级经验算法：每个 ID 一套曲线，供 config.yml 的 settings.level.algorithm
+# 或 router 的 __option__.algorithm.level 按 ID 引用。
 def0:
   min: 1
   max: 100
-  # 查询表达式：支持运算符与三元，不支持 if/else 关键字或函数调用。
-  experience: "level <= 10 ? level * 200 : (level <= 20 ? level * 600 : (level <= 30 ? level * 900 : (level <= 40 ? level * 1200 : (level <= 50 ? level * 1600 : level * 3000))))"
+  # 等级键表：键是等级（2）或闭区间（10-20），值是「该级升到下一级所需经验」。
+  # 值可以写数字，也可以写查询表达式（可直接使用 level），不支持函数调用。
+  # 必须覆盖 min..max；超出 max 的档位会保留但不参与计算。
+  experience:
+    1-10: "level * 200"
+    11-20: "level * 600"
+    21-30: "level * 900"
+    31-40: "level * 1200"
+    41-50: "level * 1600"
+    51-100: "level * 3000"
+  # 旧写法：单条公式同样可用，但不支持缺档/重叠校验，新配置优先用等级键。
+  # experience: "level <= 10 ? level * 200 : (level <= 20 ? level * 600 : level * 3000)"
   # 到达指定等级时执行的控制台命令
   # 可用变量:
   #   sender - 玩家对象

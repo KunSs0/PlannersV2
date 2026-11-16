@@ -1,6 +1,7 @@
 package com.gitee.planners.module.action
 
 import com.gitee.planners.core.config.State
+import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.core.config.level.LevelCallback
 import com.gitee.planners.module.action.query.QueryRef
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -61,7 +62,7 @@ class DefaultResourceLoadTest {
         }
     }
 
-    /** 默认等级算法的经验表达式必须能被查询引擎解析。 */
+    /** 默认等级算法必须能按当前实现解析：等级键走分段校验，单条公式走查询引擎。 */
     @Test
     fun defaultLevelExpressionsCompile() {
         val files = yamlFiles(File(root, "module/level"))
@@ -69,9 +70,9 @@ class DefaultResourceLoadTest {
         for (file in files) {
             val config = Configuration.loadFromFile(file)
             for (id in config.getKeys(false).toList()) {
-                val expression = config.getString("$id.experience")
-                assertNotNull(expression, "module/level/$id 缺少 experience")
-                QueryRef.parseVariableExpression(expression!!, "level:$id:experience")
+                val section = config.getConfigurationSection(id)
+                assertNotNull(section, "module/level/$id 必须是配置节点")
+                assertNotNull(Algorithm.parse(section!!), "module/level/$id 缺少 experience")
             }
         }
     }

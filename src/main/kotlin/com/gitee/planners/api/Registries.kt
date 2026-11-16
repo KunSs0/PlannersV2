@@ -51,7 +51,8 @@ object Registries {
     }
 
     val LEVEL = createDeepMultiBuiltin("module/level", "example.yml") {
-        Algorithm.Expression(it)
+        // 按 experience 的类型分派：等级键表或旧的单条公式。
+        Algorithm.parse(it) ?: throw IllegalStateException("等级算法 '${it.name}' 缺少 experience 配置")
     }
 
     val KEYBINDING = createConfigSectionBuiltin({
@@ -94,6 +95,7 @@ object Registries {
         profiler.measure("timing") { Planners.skillTimingPolicy.get() }
         // Registry 重读会重新构造业务对象。
         profiler.measure("registries") { AutoReloadable.onReload() }
+        profiler.measure("level-reference") { validateLevelAlgorithmReferences() }
         profiler.measure("points") { SkillPointsManager.prepare() }
         profiler.measure("magic") {
             DefaultMagicPointProvider.expressionUpperLimit.get()
@@ -124,6 +126,29 @@ object Registries {
     }
 
     /**
+     * 校验各路由 `__option__.algorithm.level` 引用的等级算法。
+     *
+     * 路由先于等级注册表加载，解析因此推迟到访问时；两者都就绪后在这里统一校验，
+     * 避免写错 ID 时静默回落到 `settings.level.algorithm`。
+     *
+     * @throws IllegalArgumentException 引用了不存在的等级算法 ID 时抛出。
+     */
+    private fun validateLevelAlgorithmReferences() {
+        for (router in ROUTER.values()) {
+            val reference = router.levelAlgorithmReference
+            if (reference == null) {
+                continue
+            }
+            if (LEVEL.getOrNull(reference) == null) {
+                throw IllegalArgumentException(
+                    "路由 '${router.id}' 的 __option__.algorithm.level 引用了不存在的等级算法 '$reference'；" +
+                        "可用算法: " + LEVEL.keys().joinToString(", "),
+                )
+            }
+        }
+    }
+
+    /**
      * 按业务依赖顺序加载所有注册表。
      */
     fun init() {
@@ -135,6 +160,7 @@ object Registries {
         profiler.measure("router") { ROUTER.load() }
         profiler.measure("currency") { CURRENCY.load() }
         profiler.measure("level") { LEVEL.load() }
+        profiler.measure("level-reference") { validateLevelAlgorithmReferences() }
         profiler.measure("state") { STATE.load() }
         profiler.measure("keybinding") { KEYBINDING.load() }
         profiler.measure("actions") { rebuildActionIndex() }

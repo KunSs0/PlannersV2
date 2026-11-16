@@ -3,6 +3,7 @@ package com.gitee.planners.core.config
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.module.action.query.QueryRef
 import com.gitee.planners.module.action.query.QueryScope
+import taboolib.common.platform.function.warning
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
 
@@ -36,19 +37,30 @@ interface ImmutableVariable : Variable {
          *
          * @param id 上下文变量名。
          * @param value YAML 中的原始值。
-         * @param maxLevel 技能等级上限；职业等不分级的配置传 null。
+         * @param maxLevel 等级上限；不分级的配置传 null。
+         * @param minLevel 等级下限，等级分段的覆盖校验从这里开始；技能固定为 1。
+         * @param levelRef 取值时读取当前等级的引用；缺省按技能等级 `skill.level`。
+         * @param label 等级分段相关报错里使用的配置来源名；缺省用变量名。
          * @return 常量、表达式、条件分支或等级分段定义。
          * @throws IllegalArgumentException 名称、表达式结构或分段区间不合法时抛出。
          */
-        fun parse(id: String, value: Any, maxLevel: Int? = null): ImmutableVariable {
+        fun parse(
+            id: String,
+            value: Any,
+            maxLevel: Int? = null,
+            minLevel: Int = 1,
+            levelRef: QueryRef? = null,
+            label: String? = null,
+        ): ImmutableVariable {
             require(identifierPattern.matches(id)) {
                 "变量 '$id' 必须是合法的变量标识符。"
             }
+            val source = label ?: id
             if (value is ConfigurationSection) {
-                return parseMap(id, value.getValues(false), maxLevel)
+                return parseMap(id, value.getValues(false), maxLevel, minLevel, levelRef, source)
             }
             if (value is Map<*, *>) {
-                return parseMap(id, value, maxLevel)
+                return parseMap(id, value, maxLevel, minLevel, levelRef, source)
             }
             if (value is List<*>) {
                 val first = value.firstOrNull()
@@ -99,10 +111,20 @@ interface ImmutableVariable : Variable {
          *
          * @param id 变量名。
          * @param fields 映射内容。
-         * @param maxLevel 技能等级上限；不分级的配置传 null。
+         * @param maxLevel 等级上限；不分级的配置传 null。
+         * @param minLevel 等级下限。
+         * @param levelRef 读取当前等级的引用；缺省按技能等级。
+         * @param label 报错里使用的配置来源名。
          * @return 显式表达式或等级分段定义。
          */
-        private fun parseMap(id: String, fields: Map<*, *>, maxLevel: Int?): ImmutableVariable {
+        private fun parseMap(
+            id: String,
+            fields: Map<*, *>,
+            maxLevel: Int?,
+            minLevel: Int,
+            levelRef: QueryRef?,
+            label: String,
+        ): ImmutableVariable {
             if (fields.size == 1 && fields.containsKey("expression")) {
                 val expression = fields["expression"]
                 require(expression is String && expression.isNotBlank()) {
@@ -110,7 +132,7 @@ interface ImmutableVariable : Variable {
                 }
                 return Expression(id, expression)
             }
-            return parseLevelRanges(id, fields, maxLevel)
+            return parseLevelRanges(id, fields, maxLevel, minLevel, levelRef, label)
         }
 
         /**
@@ -118,16 +140,26 @@ interface ImmutableVariable : Variable {
          *
          * @param id 变量名。
          * @param fields 等级键到取值的映射。
-         * @param maxLevel 技能等级上限。
+         * @param maxLevel 等级上限。
+         * @param minLevel 等级下限。
+         * @param levelRef 读取当前等级的引用；缺省按技能等级。
+         * @param label 报错里使用的配置来源名。
          * @return 等级分段定义。
          * @throws IllegalArgumentException 键格式、区间重叠、缺档或取值语法不合法时抛出。
          */
-        private fun parseLevelRanges(id: String, fields: Map<*, *>, maxLevel: Int?): ImmutableVariable {
+        private fun parseLevelRanges(
+            id: String,
+            fields: Map<*, *>,
+            maxLevel: Int?,
+            minLevel: Int,
+            levelRef: QueryRef?,
+            label: String,
+        ): ImmutableVariable {
             if (fields.isEmpty()) {
-                throw IllegalArgumentException("变量 '$id' 的等级分段不能为空。")
+                throw IllegalArgumentException("$label 的等级分段不能为空。")
             }
             if (maxLevel == null) {
-                throw IllegalArgumentException("变量 '$id' 使用了等级分段，但该配置没有技能等级上限。")
+                throw IllegalArgumentException("$label 使用了等级分段，但该配置没有等级上限。")
             }
             val spans = ArrayList<Span>()
             for (entry in fields.entries) {
@@ -146,26 +178,56 @@ interface ImmutableVariable : Variable {
                     }
 
                     else -> {
-                        throw IllegalArgumentException("变量 '$id' 的等级分段键必须是文本或整数。")
+                        throw IllegalArgumentException("$label 的等级分段键必须是文本或整数。")
                     }
                 }
                 val match = levelKeyPattern.matchEntire(key)
                 if (match == null) {
                     throw IllegalArgumentException(
-                        "变量 '$id' 的键 '$key' 既不是等级分段也不是 expression：只允许 expression、" +
+                        "$label 的键 '$key' 既不是等级分段也不是 expression：只允许 expression、" +
                             "单级 '3: 值' 或区间 '2-4: 值'。",
                     )
                 }
                 val from = match.groupValues[1].toInt()
                 val to = if (match.groupValues[2].isEmpty()) from else match.groupValues[2].toInt()
                 if (to < from) {
-                    throw IllegalArgumentException("变量 '$id' 的分段 '$key' 区间倒置。")
+                    throw IllegalArgumentException("$label 的分段 '$key' 区间倒置。")
                 }
-                spans.add(Span(from, to, compileSpanValue(id, key, entry.value)))
+                spans.add(Span(from, to, compileSpanValue(label, key, entry.value)))
             }
             spans.sortWith(Comparator { left, right -> left.from - right.from })
-            validateSpans(id, spans, maxLevel)
-            return LevelRanges(id, spans)
+            reportReservedSpans(label, spans, maxLevel)
+            validateSpans(label, spans, minLevel, maxLevel)
+            val resolvedLevelRef = levelRef ?: QueryRef.parsePath("skill.level", "variable:$id.level")
+            return LevelRanges(id, spans, resolvedLevelRef)
+        }
+
+        /**
+         * 提示高于等级上限、当前不参与计算的分段。
+         *
+         * 保留完整曲线（例如测试服只开放前 30 级）时允许超出上限的分段存在，
+         * 但必须让配置作者知道它们不会生效。
+         *
+         * @param label 配置来源名。
+         * @param spans 全部已解析的分段。
+         * @param maxLevel 等级上限。
+         */
+        private fun reportReservedSpans(label: String, spans: List<Span>, maxLevel: Int) {
+            val reserved = ArrayList<Span>()
+            for (span in spans) {
+                if (span.from > maxLevel) {
+                    reserved.add(span)
+                }
+            }
+            if (reserved.isEmpty()) {
+                return
+            }
+            val first = reserved[0]
+            val last = reserved[reserved.size - 1]
+            warning(
+                "$label 含超出等级上限 $maxLevel 的预留档 " +
+                    "${first.from}-${last.to}，这些档位不参与计算。",
+            )
         }
 
         /**
@@ -173,39 +235,40 @@ interface ImmutableVariable : Variable {
          *
          * 数值与布尔按常量处理；文本必须能解析成求值表达式，不再静默回退成字面量。
          *
-         * @param id 变量名。
+         * @param label 配置来源名。
          * @param key 分段键，用于错误信息。
          * @param rawValue 配置中的原始取值。
          * @return 该段的取值引用。
          */
-        private fun compileSpanValue(id: String, key: String, rawValue: Any?): QueryRef {
+        private fun compileSpanValue(label: String, key: String, rawValue: Any?): QueryRef {
             if (rawValue == null) {
-                throw IllegalArgumentException("变量 '$id' 的分段 '$key' 缺少取值。")
+                throw IllegalArgumentException("$label 的分段 '$key' 缺少取值。")
             }
             if (rawValue is Number || rawValue is Boolean) {
-                return QueryRef.parse(rawValue.toString(), "variable:$id[$key]")
+                return QueryRef.parse(rawValue.toString(), "$label[$key]")
             }
             require(rawValue is String) {
-                "变量 '$id' 的分段 '$key' 只接受数值、布尔或表达式文本。"
+                "$label 的分段 '$key' 只接受数值、布尔或表达式文本。"
             }
             val text = rawValue.trim()
             if (text.isEmpty()) {
-                throw IllegalArgumentException("变量 '$id' 的分段 '$key' 取值不能为空。")
+                throw IllegalArgumentException("$label 的分段 '$key' 取值不能为空。")
             }
-            return QueryRef.parseVariableExpression(text, "variable:$id[$key]")
+            return QueryRef.parseVariableExpression(text, "$label[$key]")
         }
 
         /**
          * 校验分段覆盖与重叠。
          *
-         * @param id 变量名。
+         * @param label 配置来源名。
          * @param spans 已按起始等级排序的分段。
-         * @param maxLevel 技能等级上限。
+         * @param minLevel 等级下限。
+         * @param maxLevel 等级上限。
          * @throws IllegalArgumentException 覆盖缺失或同时命中多个分段时抛出。
          */
-        private fun validateSpans(id: String, spans: List<Span>, maxLevel: Int) {
+        private fun validateSpans(label: String, spans: List<Span>, minLevel: Int, maxLevel: Int) {
             val missing = ArrayList<Int>()
-            for (level in 1..maxLevel) {
+            for (level in minLevel..maxLevel) {
                 var matched = 0
                 for (span in spans) {
                     if (level >= span.from && level <= span.to) {
@@ -213,7 +276,7 @@ interface ImmutableVariable : Variable {
                     }
                 }
                 if (matched > 1) {
-                    throw IllegalArgumentException("变量 '$id' 的等级 $level 被多个分段覆盖。")
+                    throw IllegalArgumentException("$label 的等级 $level 被多个分段覆盖。")
                 }
                 if (matched == 0) {
                     missing.add(level)
@@ -221,7 +284,8 @@ interface ImmutableVariable : Variable {
             }
             if (missing.isNotEmpty()) {
                 throw IllegalArgumentException(
-                    "变量 '$id' 的等级分段缺少等级 " + missing.joinToString(", ") + " 的取值（上限 $maxLevel）。",
+                    "$label 的等级分段缺少等级 " + missing.joinToString(", ") +
+                        " 的取值（等级上限 $maxLevel）。",
                 )
             }
         }
@@ -344,19 +408,23 @@ interface ImmutableVariable : Variable {
     }
 
     /**
-     * 按技能等级分段取值的变量。
+     * 按等级分段取值的变量。
      *
      * 键是等级（`3`）或闭区间（`2-4`），取值是数字、布尔或求值表达式；
      * 表达式里可以直接写 `level` 与其它已声明的变量。
      * 等级 0（未学习、图标预览）取最低段，除非显式声明了 `0:`。
      *
+     * 等级来源由调用方注入：技能读 `skill.level`，等级经验表读上下文的 `level` 变量。
+     *
      * @property id 变量名。
      * @property spans 已按起始等级排序且互不重叠的分段。
+     * @property levelRef 读取当前等级的引用。
      */
-    class LevelRanges(override val id: String, private val spans: List<Span>) : ImmutableVariable {
-
-        /** 读取当前技能等级的取值引用。 */
-        private val levelRef = QueryRef.parsePath("skill.level", "variable:$id.level")
+    class LevelRanges(
+        override val id: String,
+        private val spans: List<Span>,
+        private val levelRef: QueryRef,
+    ) : ImmutableVariable {
 
         /**
          * 取当前等级所在分段的取值。
@@ -372,7 +440,7 @@ interface ImmutableVariable : Variable {
         /**
          * 选中等级对应的分段。
          *
-         * @param level 当前技能等级。
+         * @param level 当前等级。
          * @return 命中的分段。
          * @throws IllegalArgumentException 低于 0 以外的等级没有任何分段时抛出。
          */

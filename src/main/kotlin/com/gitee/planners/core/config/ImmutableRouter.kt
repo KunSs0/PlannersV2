@@ -1,5 +1,6 @@
 package com.gitee.planners.core.config
 
+import com.gitee.planners.api.Registries
 import com.gitee.planners.api.common.Unique
 import com.gitee.planners.core.config.level.Algorithm
 import com.gitee.planners.util.mapSectionNotNull
@@ -12,8 +13,58 @@ class ImmutableRouter(private val config: Configuration) : Unique {
 
     val name = config.getString("__option__.name", id)!!
 
-    val algorithmLevel =
-        Algorithm.parse(config.getConfigurationSection("__option__.algorithm.level"))
+    /**
+     * 写在 `algorithm.level` 下的内联等级算法，旧配置继续可用。
+     */
+    private val inlineLevelAlgorithm = Algorithm.parse(config.getConfigurationSection("__option__.algorithm.level"))
+
+    /**
+     * `algorithm.level` 引用的等级算法 ID。
+     *
+     * 语义与 `settings.level.algorithm` 一致，指向 `module/level` 下的算法键；
+     * 只在访问时查注册表，避免依赖注册表加载顺序与热重载顺序。
+     */
+    val levelAlgorithmReference: String? =
+        if (config.isConfigurationSection("__option__.algorithm.level")) {
+            null
+        } else {
+            readLevelAlgorithmReference()
+        }
+
+    /**
+     * 本路由使用的等级算法。
+     *
+     * 内联算法优先；否则按引用 ID 查 `module/level` 注册表，未配置时返回 null，
+     * 由调用方回落到 `settings.level.algorithm`。
+     */
+    val algorithmLevel: Algorithm?
+        get() {
+            if (inlineLevelAlgorithm != null) {
+                return inlineLevelAlgorithm
+            }
+            val reference = levelAlgorithmReference
+            if (reference == null) {
+                return null
+            }
+            return Registries.LEVEL.getOrNull(reference)
+        }
+
+    /**
+     * 读取 `algorithm.level` 的算法 ID。
+     *
+     * @return 已去掉首尾空白的 ID；未配置或为空时返回 null。
+     */
+    private fun readLevelAlgorithmReference(): String? {
+        val raw = config.getString("__option__.algorithm.level")
+        if (raw == null) {
+            return null
+        }
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) {
+            return null
+        }
+        return trimmed
+    }
 
     /**
      * 职业系 Bukkit 图标。
