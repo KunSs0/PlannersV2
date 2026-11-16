@@ -4,10 +4,10 @@ import com.gitee.planners.Planners
 import com.gitee.planners.api.common.Unique
 import com.gitee.planners.api.pick.PickDefinition
 import com.gitee.planners.api.pick.PickResult
-import com.gitee.planners.api.pick.PickTypeRegistry
 import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skill.condition.CastCostTiming
 import com.gitee.planners.core.skill.condition.SkillCastConditionConfig
+import com.gitee.planners.core.skill.pick.PickDefinitionParser
 import com.gitee.planners.core.skill.pick.PickSection
 import com.gitee.planners.core.skill.pick.PickFilterConfig
 import com.gitee.planners.api.job.Variable
@@ -57,16 +57,8 @@ class ImmutableSkill(config: Configuration) : Unique {
             if (type == null || type.isBlank()) {
                 throw IllegalArgumentException("Skill '$id' pick configuration is missing type")
             }
-            val provider = PickTypeRegistry.getOrNull(type)
-            if (provider == null) {
-                throw IllegalArgumentException("Skill '$id' pick type is not registered: $type")
-            }
             val config = PickSection(pickSection)
-            val decoded = provider.decode(config)
-            if (decoded.type != type) {
-                throw IllegalArgumentException("Skill '$id' pick provider returned a mismatched type: ${decoded.type}")
-            }
-            pick = decoded
+            pick = PickDefinitionParser.parse(config, "skill.$id.pick")
         }
     }
 

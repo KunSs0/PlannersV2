@@ -9,7 +9,7 @@ import com.gitee.planners.api.pick.PickResult
 import com.gitee.planners.api.pick.PickSession
 import com.gitee.planners.api.pick.PickCloseReason
 import com.gitee.planners.api.pick.PickContext
-import com.gitee.planners.api.pick.PickSessionFactoryRegistry
+import com.gitee.planners.api.pick.PickPresentationRegistry
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import org.bukkit.entity.Player
@@ -46,8 +46,8 @@ object PickSessionManager : PickInputReceiver {
         if (definition == null) {
             return false
         }
-        val factory = PickSessionFactoryRegistry.getOrNull(definition.type)
-        if (factory == null) {
+        val presentation = PickPresentationRegistry.getOrNull()
+        if (presentation == null) {
             // 只有配置解析、没有运行期会话时必须明确拒绝，不能静默取消让玩家以为按键失效。
             reportFailure(player, skill, sourceKey, PickFailureReason.NO_PRESENTATION)
             return false
@@ -57,7 +57,7 @@ object PickSessionManager : PickInputReceiver {
         // 过滤器按本次施法编译：目标规则可能依赖施法者与技能等级，不能跨会话复用。
         val filter = PickFilterCompiler.compile(player, skill.immutable, skill.immutable.pickFilterSteps)
         val context = PickContext(sessionId, player, skill, definition, sourceKey, filter)
-        val session = factory.create(context)
+        val session = PlannersPickSession(context, presentation)
         val entry = Entry(sessionId, definition.type, sourceKey, skill, player, session, onConfirmed)
         val previous = sessions.put(player.uniqueId, entry)
         if (previous != null) {

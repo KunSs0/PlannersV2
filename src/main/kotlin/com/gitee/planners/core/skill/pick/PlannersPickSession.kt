@@ -1,0 +1,199 @@
+package com.gitee.planners.core.skill.pick
+
+import com.gitee.planners.api.pick.DirectionPickDefinition
+import com.gitee.planners.api.pick.EntityPickDefinition
+import com.gitee.planners.api.pick.PickCloseReason
+import com.gitee.planners.api.pick.PickContext
+import com.gitee.planners.api.pick.PickDirectionInput
+import com.gitee.planners.api.pick.PickDirectionResult
+import com.gitee.planners.api.pick.PickEntityInput
+import com.gitee.planners.api.pick.PickEntityResult
+import com.gitee.planners.api.pick.PickInput
+import com.gitee.planners.api.pick.PickLocResult
+import com.gitee.planners.api.pick.PickPositionInput
+import com.gitee.planners.api.pick.PickPresentation
+import com.gitee.planners.api.pick.PickResult
+import com.gitee.planners.api.pick.PickSession
+import com.gitee.planners.api.pick.PositionPickDefinition
+import org.bukkit.Bukkit
+import org.bukkit.FluidCollisionMode
+import org.bukkit.Location
+import org.bukkit.entity.Entity
+import org.bukkit.util.Vector
+import kotlin.math.abs
+import kotlin.math.acos
+import kotlin.math.cos
+import kotlin.math.sin
+
+/**
+ * Planners 自建的指向会话。
+ *
+ * 会话只做两件事：把开始/结束交给表现后端，以及在确认时按 type 重新校验客户端上报的
+ * 快照。几何、地面、视线与夹角全部在服务端复核，客户端上报只作为候选。
+ *
+ * @property context 会话固定上下文。
+ * @property presentation 表现后端。
+ */
+class PlannersPickSession(
+    private val context: PickContext,
+    private val presentation: PickPresentation,
+) : PickSession {
+
+    /** 视线校验时允许命中点与落点的偏差。 */
+    private val lineOfSightTolerance = 0.5
+
+    override fun begin() {
+        presentation.open(context)
+    }
+
+    override fun update(input: PickInput) {
+        // 瞄准期快照只用于表现层预览，服务端不累积状态；确认时重新校验。
+    }
+
+    override fun confirm(input: PickInput): PickResult? {
+        val definition = context.definition
+        if (definition is PositionPickDefinition) {
+            return confirmPosition(definition, input)
+        }
+        if (definition is EntityPickDefinition) {
+            return confirmEntity(definition, input)
+        }
+        if (definition is DirectionPickDefinition) {
+            return confirmDirection(definition, input)
+        }
+        return null
+    }
+
+    override fun close(reason: PickCloseReason) {
+        presentation.close(context.sessionId, reason)
+    }
+
+    /**
+     * 校验位置指向。
+     *
+     * @param definition 位置定义。
+     * @param input 客户端快照。
+     * @return 确认结果；校验失败时返回 null。
+     */
+    private fun confirmPosition(definition: PositionPickDefinition, input: PickInput): PickResult? {
+        if (input !is PickPositionInput) {
+            return null
+        }
+        val player = context.player
+        val world = player.world
+        val location = Location(world, input.x, input.y, input.z)
+        val eye = player.eyeLocation
+        if (eye.distance(location) > definition.range) {
+            return null
+        }
+        if (!world.getBlockAt(location.clone().add(0.0, -0.05, 0.0)).type.isSolid) {
+            return null
+        }
+        if (!world.getBlockAt(location).isPassable) {
+            return null
+        }
+        if (!world.getBlockAt(location.clone().add(0.0, 1.0, 0.0)).isPassable) {
+            return null
+        }
+        if (definition.requireLineOfSight && !hasLineOfSight(location)) {
+            return null
+        }
+        return PickLocResult(location)
+    }
+
+    /**
+     * 校验实体指向。
+     *
+     * @param definition 实体定义。
+     * @param input 客户端快照。
+     * @return 确认结果；校验失败时返回 null。
+     */
+    private fun confirmEntity(definition: EntityPickDefinition, input: PickInput): PickResult? {
+        if (input !is PickEntityInput) {
+            return null
+        }
+        val entity: Entity = Bukkit.getEntity(input.entityId) ?: return null
+        if (!entity.isValid || entity.isDead) {
+            return null
+        }
+        val player = context.player
+        val eye = player.eyeLocation
+        if (eye.distance(entity.location) > definition.range) {
+            return null
+        }
+        val target = entity.location.clone().add(0.0, entity.height / 2.0, 0.0).toVector().subtract(eye.toVector())
+        if (target.lengthSquared() > 0.0) {
+            val aim = directionOf(input.aimYaw, input.aimPitch)
+            val dot = aim.dot(target.normalize())
+            val angle = Math.toDegrees(acos(dot.coerceIn(-1.0, 1.0)))
+            if (angle > definition.maxAngleDegrees) {
+                return null
+            }
+        }
+        if (definition.requireLineOfSight && !player.hasLineOfSight(entity)) {
+            return null
+        }
+        val filter = context.filter
+        if (filter != null && !filter.accept(entity)) {
+            return null
+        }
+        return PickEntityResult(entity)
+    }
+
+    /**
+     * 校验方向指向。
+     *
+     * @param definition 方向定义。
+     * @param input 客户端快照。
+     * @return 确认结果；校验失败时返回 null。
+     */
+    private fun confirmDirection(definition: DirectionPickDefinition, input: PickInput): PickResult? {
+        if (input !is PickDirectionInput) {
+            return null
+        }
+        if (abs(input.pitch) > definition.maxPitchDegrees) {
+            return null
+        }
+        return PickDirectionResult(input.yaw, input.pitch)
+    }
+
+    /**
+     * 判断施法者眼睛到落点之间是否没有遮挡。
+     *
+     * @param location 落点。
+     * @return 无遮挡时返回 true。
+     */
+    private fun hasLineOfSight(location: Location): Boolean {
+        val eye = context.player.eyeLocation
+        val world = context.player.world
+        val target = location.clone().add(0.0, 0.1, 0.0)
+        val delta = target.toVector().subtract(eye.toVector())
+        val distance = delta.length()
+        if (distance <= 0.0) {
+            return true
+        }
+        val hit = world.rayTraceBlocks(eye, delta.normalize(), distance, FluidCollisionMode.NEVER, true)
+        if (hit == null) {
+            return true
+        }
+        val hitPosition = hit.hitPosition
+        if (hitPosition == null) {
+            return true
+        }
+        return hitPosition.distance(location.toVector()) <= lineOfSightTolerance
+    }
+
+    /**
+     * 由相机朝向构造单位方向向量。
+     *
+     * @param yaw 水平朝向，单位为度。
+     * @param pitch 俯仰角，单位为度。
+     * @return 单位方向向量。
+     */
+    private fun directionOf(yaw: Float, pitch: Float): Vector {
+        val yawRadians = Math.toRadians(yaw.toDouble())
+        val pitchRadians = Math.toRadians(pitch.toDouble())
+        val cosPitch = cos(pitchRadians)
+        return Vector(-sin(yawRadians) * cosPitch, -sin(pitchRadians), cos(yawRadians) * cosPitch)
+    }
+}

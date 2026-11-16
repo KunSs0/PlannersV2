@@ -38,7 +38,7 @@ class PickTargetScopeTest {
     @Test
     fun bindsEntityResult() {
         val player = player()
-        val result = EntityResult(player)
+        val result = PickEntityResult(player)
         val bound = ActionScopeFactory.resolvePickTarget(result)
         assertSame(player, bound)
     }
@@ -47,7 +47,7 @@ class PickTargetScopeTest {
     @Test
     fun ignoresOtherResult() {
         val result = object : PickResult {
-            override val type = "fc.unknown"
+            override val type = "unknown"
         }
         assertNull(ActionScopeFactory.resolvePickTarget(result))
     }
@@ -56,10 +56,7 @@ class PickTargetScopeTest {
     @Test
     fun bindsLocResult() {
         val location = Location(null, 12.0, 64.0, -3.0)
-        val result = object : PickLocResult {
-            override val type = "fc.position"
-            override val location = location
-        }
+        val result = PickLocResult(location)
         assertSame(location, ActionScopeFactory.resolvePickTarget(result))
     }
 
@@ -116,11 +113,5 @@ class PickTargetScopeTest {
         Mockito.`when`(player.isOnline).thenReturn(true)
         Mockito.`when`(player.name).thenReturn("target")
         return player
-    }
-
-    /** 以实体为结果的指向结果替身。 */
-    private class EntityResult(override val entity: Player) : PickEntityResult {
-
-        override val type = "fc.entity"
     }
 }
