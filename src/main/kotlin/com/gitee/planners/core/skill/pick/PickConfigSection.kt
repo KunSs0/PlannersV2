@@ -1,16 +1,16 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
-import com.gitee.planners.api.directing.DirectingConfig
+import com.gitee.planners.api.pick.PickConfig
 import taboolib.library.configuration.ConfigurationSection
 
 /**
- * TabooLib 配置段到 [DirectingConfig] 的内部适配器。
+ * TabooLib 配置段到 [PickConfig] 的内部适配器。
  *
  * 该类只存在于 Planners 本体，使公开 provider API 不泄漏被 API 打包重定位的 TabooLib 类型。
  *
- * @property section 待读取的 directing 配置段。
+ * @property section 待读取的 pick 配置段。
  */
-class DirectingConfigSection(private val section: ConfigurationSection) : DirectingConfig {
+class PickSection(private val section: ConfigurationSection) : PickConfig {
 
     /**
      * 判断字段是否存在。

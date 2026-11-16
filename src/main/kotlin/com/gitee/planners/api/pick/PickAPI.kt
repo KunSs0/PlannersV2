@@ -1,14 +1,14 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 import org.bukkit.entity.Player
 
 /**
  * 指向会话的外部输入入口。
  */
-object DirectingAPI {
+object PickAPI {
 
     @Volatile
-    private var receiver: DirectingInputReceiver? = null
+    private var receiver: PickInputReceiver? = null
 
     /**
      * 绑定 Planners core 提供的唯一指向输入接收者。
@@ -16,10 +16,10 @@ object DirectingAPI {
      * @param inputReceiver 待绑定的接收者。
      * @throws IllegalStateException 已有不同接收者时抛出。
      */
-    fun bind(inputReceiver: DirectingInputReceiver) {
+    fun bind(inputReceiver: PickInputReceiver) {
         val previous = receiver
         if (previous != null && previous !== inputReceiver) {
-            throw IllegalStateException("DirectingAPI 已绑定输入接收者")
+            throw IllegalStateException("PickAPI 已绑定输入接收者")
         }
         receiver = inputReceiver
     }
@@ -29,7 +29,7 @@ object DirectingAPI {
      *
      * @param inputReceiver 当前生命周期即将停止的接收者。
      */
-    fun unbind(inputReceiver: DirectingInputReceiver) {
+    fun unbind(inputReceiver: PickInputReceiver) {
         if (receiver === inputReceiver) {
             receiver = null
         }
@@ -41,7 +41,7 @@ object DirectingAPI {
      * @param player 输入所属玩家。
      * @param input provider 专属快照。
      */
-    fun update(player: Player, input: DirectingInput) {
+    fun update(player: Player, input: PickInput) {
         resolveReceiver().update(player, input)
     }
 
@@ -51,7 +51,7 @@ object DirectingAPI {
      * @param player 输入所属玩家。
      * @param input 松开按键时的 provider 专属快照。
      */
-    fun confirm(player: Player, sourceKey: String, input: DirectingInput) {
+    fun confirm(player: Player, sourceKey: String, input: PickInput) {
         resolveReceiver().confirm(player, sourceKey, input)
     }
 
@@ -70,10 +70,10 @@ object DirectingAPI {
      * @return 当前接收者。
      * @throws IllegalStateException Planners core 尚未初始化时抛出。
      */
-    private fun resolveReceiver(): DirectingInputReceiver {
+    private fun resolveReceiver(): PickInputReceiver {
         val current = receiver
         if (current == null) {
-            throw IllegalStateException("DirectingAPI 尚未绑定输入接收者")
+            throw IllegalStateException("PickAPI 尚未绑定输入接收者")
         }
         return current
     }

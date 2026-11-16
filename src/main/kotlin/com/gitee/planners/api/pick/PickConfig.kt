@@ -1,11 +1,11 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 /**
  * 指向性技能配置读取契约。
  *
  * 该接口隔离底层配置库，避免 provider API 暴露会被插件 API 打包重定位的配置类型。
  */
-interface DirectingConfig {
+interface PickConfig {
 
     /**
      * 判断配置是否包含指定字段。

@@ -1,4 +1,4 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 import org.bukkit.entity.Entity
 
@@ -9,7 +9,7 @@ import org.bukkit.entity.Entity
  * `<target.*>` 查询根读到同一个人；provider 自己的结果类型仍由 provider 持有，
  * Planners 不关心其具体实现。
  */
-interface DirectingEntityResult : DirectingResult {
+interface PickEntityResult : PickResult {
 
     /**
      * 服务端完成校验后确认的目标实体。

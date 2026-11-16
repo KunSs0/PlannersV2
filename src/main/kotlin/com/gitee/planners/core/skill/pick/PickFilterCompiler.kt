@@ -1,7 +1,7 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.api.directing.DirectingCandidateFilter
+import com.gitee.planners.api.pick.PickCandidateFilter
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.skilltree.SkillTreeNodeEffectService
 import com.gitee.planners.module.action.ActionScopeFactory
@@ -13,7 +13,7 @@ import org.bukkit.entity.Player
  *
  * 过滤链需要施法者与技能等级才能求值，因此每个会话各自编译一份，不跨玩家或跨次施法共享。
  */
-object DirectingFilterCompiler {
+object PickFilterCompiler {
 
     /**
      * 为一次指向会话编译过滤器。
@@ -23,7 +23,7 @@ object DirectingFilterCompiler {
      * @param steps 技能上声明的过滤链。
      * @return 过滤器；未声明过滤链时返回 null，表示只做几何校验。
      */
-    fun compile(player: Player, skill: ImmutableSkill, steps: List<ActionTargeterStep>): DirectingCandidateFilter? {
+    fun compile(player: Player, skill: ImmutableSkill, steps: List<ActionTargeterStep>): PickCandidateFilter? {
         if (steps.isEmpty()) {
             return null
         }
@@ -35,8 +35,8 @@ object DirectingFilterCompiler {
             level,
             emptyMap(),
             null,
-            "skill:" + skill.id + ".directing.filter",
+            "skill:" + skill.id + ".pick.filter",
         )
-        return DirectingTargeterFilter(scope, steps)
+        return PickTargeterFilter(scope, steps)
     }
 }

@@ -1,7 +1,7 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
-import com.gitee.planners.api.directing.DirectingDefinition
-import com.gitee.planners.api.directing.DirectingFailureReason
+import com.gitee.planners.api.pick.PickDefinition
+import com.gitee.planners.api.pick.PickFailureReason
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
@@ -21,7 +21,7 @@ import java.util.UUID
 /**
  * 指向失败必须派发一次事件，而不是静默取消。
  */
-class DirectingFailureEventTest {
+class PickFailureEventTest {
 
     /** 记录本次用例派发的事件。 */
     private val events = ArrayList<BukkitProxyEvent>()
@@ -52,14 +52,14 @@ class DirectingFailureEventTest {
         val player = player()
         val skill = skill("fc.position")
 
-        val started = DirectingSessionManager.start(player, skill, "key5") {
+        val started = PickSessionManager.start(player, skill, "key5") {
             ExecutableResult.cancelledWithEvent()
         }
 
         assertFalse(started)
         assertEquals(1, events.size)
-        val event = events[0] as PlayerSkillCastEvent.DirectingFailed
-        assertEquals(DirectingFailureReason.NO_FACTORY, event.reason)
+        val event = events[0] as PlayerSkillCastEvent.PickFailed
+        assertEquals(PickFailureReason.NO_FACTORY, event.reason)
         assertEquals("key5", event.sourceKey)
         assertEquals("sage_prayer_binding_glyph", event.skill.id)
         assertEquals(player, event.player)
@@ -85,12 +85,12 @@ class DirectingFailureEventTest {
      * @return 技能替身。
      */
     private fun skill(type: String): PlayerSkill {
-        val definition = object : DirectingDefinition {
+        val definition = object : PickDefinition {
             override val type = type
             override val maxDurationTicks = 200
         }
         val immutable = Mockito.mock(ImmutableSkill::class.java)
-        Mockito.`when`(immutable.directing).thenReturn(definition)
+        Mockito.`when`(immutable.pick).thenReturn(definition)
         val skill = Mockito.mock(PlayerSkill::class.java)
         Mockito.`when`(skill.immutable).thenReturn(immutable)
         Mockito.`when`(skill.id).thenReturn("sage_prayer_binding_glyph")

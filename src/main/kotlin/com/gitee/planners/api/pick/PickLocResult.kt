@@ -1,4 +1,4 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 import org.bukkit.Location
 
@@ -9,7 +9,7 @@ import org.bukkit.Location
  * `<target.*>` 查询根与 `area.start` 的锚点解析读到同一个坐标；provider 自己的结果
  * 类型仍由 provider 持有。
  */
-interface DirectingLocResult : DirectingResult {
+interface PickLocResult : PickResult {
 
     /**
      * 服务端完成校验后确认的落点。

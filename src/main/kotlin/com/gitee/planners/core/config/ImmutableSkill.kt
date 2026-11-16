@@ -2,14 +2,14 @@ package com.gitee.planners.core.config
 
 import com.gitee.planners.Planners
 import com.gitee.planners.api.common.Unique
-import com.gitee.planners.api.directing.DirectingDefinition
-import com.gitee.planners.api.directing.DirectingResult
-import com.gitee.planners.api.directing.DirectingProviderRegistry
+import com.gitee.planners.api.pick.PickDefinition
+import com.gitee.planners.api.pick.PickResult
+import com.gitee.planners.api.pick.PickTypeRegistry
 import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skill.condition.CastCostTiming
 import com.gitee.planners.core.skill.condition.SkillCastConditionConfig
-import com.gitee.planners.core.skill.directing.DirectingConfigSection
-import com.gitee.planners.core.skill.directing.DirectingFilterConfig
+import com.gitee.planners.core.skill.pick.PickSection
+import com.gitee.planners.core.skill.pick.PickFilterConfig
 import com.gitee.planners.api.job.Variable
 import com.gitee.planners.api.job.target.ProxyTarget
 import com.gitee.planners.module.action.ActionParser
@@ -44,40 +44,40 @@ class ImmutableSkill(config: Configuration) : Unique {
     /**
      * 指向性技能定义。
      *
-     * 该字段在技能加载阶段按 `__option__.directing.type` 找到对应 provider 后完成解析，
+     * 该字段在技能加载阶段按 `__option__.pick.type` 找到对应 provider 后完成解析，
      * 普通技能没有该配置时保持 null。
      */
-    val directing: DirectingDefinition?
+    val pick: PickDefinition?
     init {
-        val directingSection = option.getConfigurationSection("directing")
-        if (directingSection == null) {
-            directing = null
+        val pickSection = option.getConfigurationSection("pick")
+        if (pickSection == null) {
+            pick = null
         } else {
-            val type = directingSection.getString("type")
+            val type = pickSection.getString("type")
             if (type == null || type.isBlank()) {
-                throw IllegalArgumentException("Skill '$id' directing configuration is missing type")
+                throw IllegalArgumentException("Skill '$id' pick configuration is missing type")
             }
-            val provider = DirectingProviderRegistry.getOrNull(type)
+            val provider = PickTypeRegistry.getOrNull(type)
             if (provider == null) {
-                throw IllegalArgumentException("Skill '$id' directing type is not registered: $type")
+                throw IllegalArgumentException("Skill '$id' pick type is not registered: $type")
             }
-            val config = DirectingConfigSection(directingSection)
+            val config = PickSection(pickSection)
             val decoded = provider.decode(config)
             if (decoded.type != type) {
-                throw IllegalArgumentException("Skill '$id' directing provider returned a mismatched type: ${decoded.type}")
+                throw IllegalArgumentException("Skill '$id' pick provider returned a mismatched type: ${decoded.type}")
             }
-            directing = decoded
+            pick = decoded
         }
     }
 
     /**
      * 指向候选过滤链。
      *
-     * 来自 `__option__.directing.filter.entity.targeters`，按动作行同一套目标器语法解析；
+     * 来自 `__option__.pick.filter.entity.targeters`，按动作行同一套目标器语法解析；
      * 未配置过滤链时为空列表，表示只做 provider 的几何校验。
      */
-    val directingFilterSteps: List<ActionTargeterStep> =
-        DirectingFilterConfig.parse(option.getConfigurationSection("directing"), id)
+    val pickFilterSteps: List<ActionTargeterStep> =
+        PickFilterConfig.parse(option.getConfigurationSection("pick"), id)
 
     /**
      * 技能图标材质的 namespaced ID。
@@ -273,9 +273,9 @@ class ImmutableSkill(config: Configuration) : Unique {
 
         val execution = SkillExecutionContext.create(sender, level, this@ImmutableSkill, variables)
         execution.origin = (sender as? ProxyTarget.Location<*>)?.getBukkitLocation()
-        val directing = variables["directing"]
-        if (directing is DirectingResult) {
-            execution.context.directing = directing
+        val pick = variables["pick"]
+        if (pick is PickResult) {
+            execution.context.pick = pick
         }
 
         val task = {
@@ -340,10 +340,10 @@ class ImmutableSkill(config: Configuration) : Unique {
         for (entry in immutableVariables) {
             variables[entry.key] = entry.value.evaluate(scope)
         }
-        // 指向结果由运行时注入，与动作流程保持一致，供 `<skill.directing>` 读取。
-        val directing = execution.context.directing
-        if (directing != null) {
-            variables["directing"] = directing
+        // 指向结果由运行时注入，与动作流程保持一致，供 `<skill.pick>` 读取。
+        val pick = execution.context.pick
+        if (pick != null) {
+            variables["pick"] = pick
         }
         return scope
     }
@@ -455,10 +455,10 @@ class ImmutableSkill(config: Configuration) : Unique {
         for (entry in immutableVariables) {
             accumulated[entry.key] = entry.value.evaluate(scope)
         }
-        // 指向结果由运行时注入，覆盖同名变量，供 `<skill.directing>` 读取。
-        val directing = execution.context.directing
-        if (directing != null) {
-            accumulated["directing"] = directing
+        // 指向结果由运行时注入，覆盖同名变量，供 `<skill.pick>` 读取。
+        val pick = execution.context.pick
+        if (pick != null) {
+            accumulated["pick"] = pick
         }
         for (entry in accumulated) {
             execution.setVariable(entry.key, entry.value)

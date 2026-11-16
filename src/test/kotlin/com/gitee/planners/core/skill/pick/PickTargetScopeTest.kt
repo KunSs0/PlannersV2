@@ -1,8 +1,8 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
-import com.gitee.planners.api.directing.DirectingEntityResult
-import com.gitee.planners.api.directing.DirectingLocResult
-import com.gitee.planners.api.directing.DirectingResult
+import com.gitee.planners.api.pick.PickEntityResult
+import com.gitee.planners.api.pick.PickLocResult
+import com.gitee.planners.api.pick.PickResult
 import com.gitee.planners.module.action.ActionArguments
 import com.gitee.planners.module.action.ActionRegistry
 import com.gitee.planners.module.action.ActionScopeFactory
@@ -26,7 +26,7 @@ import java.util.UUID
  *
  * 断言 `@target` 目标器与 `<target.*>` 查询根读到同一个服务端确认实体；不启动服务端。
  */
-class DirectingTargetScopeTest {
+class PickTargetScopeTest {
 
     /** 每个用例前恢复内置目标器。 */
     @BeforeEach
@@ -39,28 +39,28 @@ class DirectingTargetScopeTest {
     fun bindsEntityResult() {
         val player = player()
         val result = EntityResult(player)
-        val bound = ActionScopeFactory.resolveDirectingTarget(result)
+        val bound = ActionScopeFactory.resolvePickTarget(result)
         assertSame(player, bound)
     }
 
     /** 非实体结果不参与目标绑定。 */
     @Test
     fun ignoresOtherResult() {
-        val result = object : DirectingResult {
+        val result = object : PickResult {
             override val type = "fc.unknown"
         }
-        assertNull(ActionScopeFactory.resolveDirectingTarget(result))
+        assertNull(ActionScopeFactory.resolvePickTarget(result))
     }
 
     /** 位置结果被绑定成坐标目标。 */
     @Test
     fun bindsLocResult() {
         val location = Location(null, 12.0, 64.0, -3.0)
-        val result = object : DirectingLocResult {
+        val result = object : PickLocResult {
             override val type = "fc.position"
             override val location = location
         }
-        assertSame(location, ActionScopeFactory.resolveDirectingTarget(result))
+        assertSame(location, ActionScopeFactory.resolvePickTarget(result))
     }
 
     /** 坐标结果经 `@target` 变成坐标目标，供 area 锚点固定使用。 */
@@ -83,7 +83,7 @@ class DirectingTargetScopeTest {
     /** 未确认指向时保持无目标。 */
     @Test
     fun ignoresMissingResult() {
-        assertNull(ActionScopeFactory.resolveDirectingTarget(null))
+        assertNull(ActionScopeFactory.resolvePickTarget(null))
     }
 
     /** 查询根从当前目标读取字段。 */
@@ -119,7 +119,7 @@ class DirectingTargetScopeTest {
     }
 
     /** 以实体为结果的指向结果替身。 */
-    private class EntityResult(override val entity: Player) : DirectingEntityResult {
+    private class EntityResult(override val entity: Player) : PickEntityResult {
 
         override val type = "fc.entity"
     }

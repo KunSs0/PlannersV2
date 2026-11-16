@@ -1,11 +1,11 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 /**
  * 指向失败原因。
  *
  * 只描述"这次选点没有得出结论"，不包含玩家主动取消、被新会话替换或离线这几种非失败场景。
  */
-enum class DirectingFailureReason {
+enum class PickFailureReason {
 
     /**
      * provider 只有配置解析、没有注册运行期会话创建器。

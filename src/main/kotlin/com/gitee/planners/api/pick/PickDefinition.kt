@@ -1,12 +1,12 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 /**
  * 指向性技能的不可变定义。
  *
- * 定义由 [DirectingProvider] 在技能加载阶段解析，并保存在技能对象中。
+ * 定义由 [PickType] 在技能加载阶段解析，并保存在技能对象中。
  * Planners 只读取持续时间；具体的选中参数、客户端表现和服务端校验均由 provider 持有。
  */
-interface DirectingDefinition {
+interface PickDefinition {
 
     /**
      * 当前定义所属的 provider 类型。

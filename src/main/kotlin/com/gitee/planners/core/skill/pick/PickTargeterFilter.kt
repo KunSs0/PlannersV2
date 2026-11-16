@@ -1,6 +1,6 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
-import com.gitee.planners.api.directing.DirectingCandidateFilter
+import com.gitee.planners.api.pick.PickCandidateFilter
 import com.gitee.planners.module.action.ActionTarget
 import com.gitee.planners.module.action.ActionTargeterStep
 import com.gitee.planners.module.action.query.QueryScope
@@ -17,10 +17,10 @@ import org.bukkit.entity.Player
  * @property scope 绑定施法者与技能的查询上下文。
  * @property steps 按声明顺序执行的目标器步骤。
  */
-class DirectingTargeterFilter(
+class PickTargeterFilter(
     private val scope: QueryScope,
     private val steps: List<ActionTargeterStep>,
-) : DirectingCandidateFilter {
+) : PickCandidateFilter {
 
     /**
      * 对单个候选执行过滤链。

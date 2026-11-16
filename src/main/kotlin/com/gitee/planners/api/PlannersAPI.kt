@@ -1,7 +1,7 @@
 package com.gitee.planners.api
 
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
-import com.gitee.planners.api.directing.DirectingResult
+import com.gitee.planners.api.pick.PickResult
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent.Check
 import com.gitee.planners.api.job.target.ProxyTarget
@@ -14,7 +14,7 @@ import com.gitee.planners.core.skill.condition.SkillCastCondition
 import com.gitee.planners.core.skill.condition.SkillCastConditionRegistry
 import com.gitee.planners.core.skill.timing.SkillCastingSessions
 import com.gitee.planners.core.skill.timing.SkillTimingService
-import com.gitee.planners.core.skill.directing.DirectingSessionManager
+import com.gitee.planners.core.skill.pick.PickSessionManager
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.core.skill.precondition.builtin.CooldownPreCondition
@@ -181,18 +181,18 @@ object PlannersAPI {
             }
         }
         SkillCastConditionRegistry.consume(player, skill, execution, skill.immutable.castConditions, CastCostTiming.START)
-        val directing = skill.immutable.directing
-        if (directing != null) {
+        val pick = skill.immutable.pick
+        if (pick != null) {
             if (sourceKey.isEmpty()) {
                 return ExecutableResult.cancelledWithEvent()
             }
-            val started = DirectingSessionManager.start(player, skill, sourceKey) { result ->
-                continueAfterDirecting(player, skill, execution, sortedConditions, result)
+            val started = PickSessionManager.start(player, skill, sourceKey) { result ->
+                continueAfterPick(player, skill, execution, sortedConditions, result)
             }
             if (!started) {
                 return ExecutableResult.cancelledWithEvent()
             }
-            return ExecutableResult.intercepted("directing:${directing.type}")
+            return ExecutableResult.intercepted("pick:${pick.type}")
         }
         if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
@@ -207,14 +207,14 @@ object PlannersAPI {
      * @param skill 当前玩家技能。
      * @param execution 已在按下时计算变量和时间快照的执行上下文。
      * @param sortedConditions 已排序的释放前条件。
-     * @param directing 已确认的指向性结果。
+     * @param pick 已确认的指向性结果。
      * @return 最终释放结果。
      */
-    private fun continueAfterDirecting(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult): ExecutableResult {
+    private fun continueAfterPick(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, pick: PickResult): ExecutableResult {
         if (!PlayerSkillCastEvent.Pre(player, skill).call()) {
             return ExecutableResult.cancelledWithEvent()
         }
-        return beginCasting(player, skill, execution, sortedConditions, directing)
+        return beginCasting(player, skill, execution, sortedConditions, pick)
     }
 
     /**
@@ -224,15 +224,15 @@ object PlannersAPI {
      * @param skill 当前玩家技能。
      * @param execution 已捕获最终时间的执行上下文。
      * @param sortedConditions 已排序的最终资源条件。
-     * @param directing 本次指向结果，非指向技能为null。
+     * @param pick 本次指向结果，非指向技能为null。
      * @return 瞬发、等待或Hook接管的释放结果。
      */
-    private fun beginCasting(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+    private fun beginCasting(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, pick: PickResult?): ExecutableResult {
         // 不缩短招式动画；施法等待与动画衔接是两个独立阶段。
         val timing = execution.timing
         check(timing != null) { "技能时间尚未准备：${skill.id}" }
         return SkillCastingSessions.begin(player, timing.castTimeTicks) {
-            executeInputHook(player, skill, execution, sortedConditions, directing)
+            executeInputHook(player, skill, execution, sortedConditions, pick)
         }
     }
 
@@ -243,20 +243,20 @@ object PlannersAPI {
      * @param skill 当前玩家技能。
      * @param execution 已准备时间的执行上下文。
      * @param sortedConditions 已排序的资源条件。
-     * @param directing 本次指向结果。
+     * @param pick 本次指向结果。
      * @return Hook拦截结果或最终释放结果。
      */
-    private fun executeInputHook(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+    private fun executeInputHook(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, pick: PickResult?): ExecutableResult {
         // 每个释放入口均复用原执行上下文，Hook恢复不重新计算变量和急速。
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
             val context = SkillInputExec.Context(player, skill) { _ ->
-                continueCast(player, skill, execution, sortedConditions, directing)
+                continueCast(player, skill, execution, sortedConditions, pick)
             }
             interceptor.intercept(context)
             return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
         }
-        return continueCast(player, skill, execution, sortedConditions, directing)
+        return continueCast(player, skill, execution, sortedConditions, pick)
     }
 
     /**
@@ -266,14 +266,14 @@ object PlannersAPI {
      * @param skill 当前玩家技能。
      * @param execution 已准备变量和唯一时间快照的执行上下文。
      * @param sortedConditions 已排序的释放前条件。
-     * @param directing 已确认的指向性结果；普通技能为 null。
+     * @param pick 已确认的指向性结果；普通技能为 null。
      * @return 最终释放结果。
      */
-    private fun continueCast(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, directing: DirectingResult?): ExecutableResult {
+    private fun continueCast(player: Player, skill: PlayerSkill, execution: SkillExecutionContext, sortedConditions: List<CastPreCondition>, pick: PickResult?): ExecutableResult {
         // 指向结果在最终校验前写入执行上下文：条件可以据此复核目标并在扣费前拒绝。
-        if (directing != null) {
-            execution.context.directing = directing
-            execution.setVariable("directing", directing)
+        if (pick != null) {
+            execution.context.pick = pick
+            execution.setVariable("pick", pick)
         }
         val castConditionFailure = SkillCastConditionRegistry.verify(player, skill, execution, skill.immutable.castConditions)
         if (castConditionFailure != null) {

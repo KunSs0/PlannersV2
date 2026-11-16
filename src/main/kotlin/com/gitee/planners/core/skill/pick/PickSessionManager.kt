@@ -1,15 +1,15 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
-import com.gitee.planners.api.directing.DirectingFailureReason
+import com.gitee.planners.api.pick.PickFailureReason
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
-import com.gitee.planners.api.directing.DirectingInput
-import com.gitee.planners.api.directing.DirectingAPI
-import com.gitee.planners.api.directing.DirectingInputReceiver
-import com.gitee.planners.api.directing.DirectingResult
-import com.gitee.planners.api.directing.DirectingSession
-import com.gitee.planners.api.directing.DirectingSessionCloseReason
-import com.gitee.planners.api.directing.DirectingSessionContext
-import com.gitee.planners.api.directing.DirectingSessionFactoryRegistry
+import com.gitee.planners.api.pick.PickInput
+import com.gitee.planners.api.pick.PickAPI
+import com.gitee.planners.api.pick.PickInputReceiver
+import com.gitee.planners.api.pick.PickResult
+import com.gitee.planners.api.pick.PickSession
+import com.gitee.planners.api.pick.PickCloseReason
+import com.gitee.planners.api.pick.PickContext
+import com.gitee.planners.api.pick.PickSessionFactoryRegistry
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import org.bukkit.entity.Player
@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * 该管理器负责会话替换、超时、玩家离线清理和确认后恢复技能释放；provider 不直接维护玩家会话表。
  */
-object DirectingSessionManager : DirectingInputReceiver {
+object PickSessionManager : PickInputReceiver {
 
     private val sessions = ConcurrentHashMap<UUID, Entry>()
     private val nextSessionId = AtomicLong(1L)
@@ -41,27 +41,27 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param onConfirmed 服务端校验成功后的释放续体。
      * @return 创建成功时返回 true；未注册运行时创建器时返回 false。
      */
-    fun start(player: Player, skill: PlayerSkill, sourceKey: String, onConfirmed: (DirectingResult) -> ExecutableResult): Boolean {
-        val definition = skill.immutable.directing
+    fun start(player: Player, skill: PlayerSkill, sourceKey: String, onConfirmed: (PickResult) -> ExecutableResult): Boolean {
+        val definition = skill.immutable.pick
         if (definition == null) {
             return false
         }
-        val factory = DirectingSessionFactoryRegistry.getOrNull(definition.type)
+        val factory = PickSessionFactoryRegistry.getOrNull(definition.type)
         if (factory == null) {
             // 只有配置解析、没有运行期会话时必须明确拒绝，不能静默取消让玩家以为按键失效。
-            reportFailure(player, skill, sourceKey, DirectingFailureReason.NO_FACTORY)
+            reportFailure(player, skill, sourceKey, PickFailureReason.NO_FACTORY)
             return false
         }
-        cancel(player, DirectingSessionCloseReason.REPLACED)
+        cancel(player, PickCloseReason.REPLACED)
         val sessionId = nextSessionId.getAndIncrement()
         // 过滤器按本次施法编译：目标规则可能依赖施法者与技能等级，不能跨会话复用。
-        val filter = DirectingFilterCompiler.compile(player, skill.immutable, skill.immutable.directingFilterSteps)
-        val context = DirectingSessionContext(sessionId, player, skill, definition, sourceKey, filter)
+        val filter = PickFilterCompiler.compile(player, skill.immutable, skill.immutable.pickFilterSteps)
+        val context = PickContext(sessionId, player, skill, definition, sourceKey, filter)
         val session = factory.create(context)
         val entry = Entry(sessionId, definition.type, sourceKey, skill, player, session, onConfirmed)
         val previous = sessions.put(player.uniqueId, entry)
         if (previous != null) {
-            previous.close(DirectingSessionCloseReason.REPLACED)
+            previous.close(PickCloseReason.REPLACED)
         }
         entry.timeoutTask = submit(delay = definition.maxDurationTicks.toLong()) {
             timeout(player.uniqueId, entry)
@@ -70,7 +70,7 @@ object DirectingSessionManager : DirectingInputReceiver {
             session.begin()
         } catch (throwable: Throwable) {
             sessions.remove(player.uniqueId, entry)
-            entry.close(DirectingSessionCloseReason.CANCELLED)
+            entry.close(PickCloseReason.CANCELLED)
             throw throwable
         }
         return true
@@ -82,7 +82,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param player 输入所属玩家。
      * @param input provider 专属输入。
      */
-    override fun update(player: Player, input: DirectingInput) {
+    override fun update(player: Player, input: PickInput) {
         val entry = sessions[player.uniqueId]
         if (entry == null || entry.sessionId != input.sessionId || entry.type != input.type) {
             return
@@ -96,7 +96,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param player 输入所属玩家。
      * @param input provider 专属输入。
      */
-    override fun confirm(player: Player, sourceKey: String, input: DirectingInput) {
+    override fun confirm(player: Player, sourceKey: String, input: PickInput) {
         val entry = sessions[player.uniqueId]
         if (entry == null || entry.sessionId != input.sessionId || entry.type != input.type || entry.sourceKey != sourceKey) {
             return
@@ -106,19 +106,19 @@ object DirectingSessionManager : DirectingInputReceiver {
             return
         }
         entry.cancelTimeout()
-        val result: DirectingResult?
+        val result: PickResult?
         try {
             result = entry.session.confirm(input)
         } catch (throwable: Throwable) {
-            entry.close(DirectingSessionCloseReason.CANCELLED)
+            entry.close(PickCloseReason.CANCELLED)
             throw throwable
         }
         if (result == null) {
-            notifyFailure(entry, DirectingFailureReason.INVALID_TARGET)
-            entry.close(DirectingSessionCloseReason.CANCELLED)
+            notifyFailure(entry, PickFailureReason.INVALID_TARGET)
+            entry.close(PickCloseReason.CANCELLED)
             return
         }
-        entry.close(DirectingSessionCloseReason.CONFIRMED)
+        entry.close(PickCloseReason.CONFIRMED)
         entry.onConfirmed(result)
     }
 
@@ -128,7 +128,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param player 要清理的玩家。
      * @param reason 停止原因。
      */
-    fun cancel(player: Player, reason: DirectingSessionCloseReason) {
+    fun cancel(player: Player, reason: PickCloseReason) {
         cancel(player.uniqueId, reason)
     }
 
@@ -138,7 +138,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param player 要取消会话的玩家。
      */
     override fun cancel(player: Player) {
-        cancel(player, DirectingSessionCloseReason.CANCELLED)
+        cancel(player, PickCloseReason.CANCELLED)
     }
 
     /**
@@ -146,7 +146,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      */
     @Awake(LifeCycle.ENABLE)
     fun onEnable() {
-        DirectingAPI.bind(DirectingSessionManager)
+        PickAPI.bind(PickSessionManager)
     }
 
     /**
@@ -156,7 +156,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      */
     @SubscribeEvent
     fun onPlayerQuit(event: PlayerQuitEvent) {
-        cancel(event.player.uniqueId, DirectingSessionCloseReason.PLAYER_QUIT)
+        cancel(event.player.uniqueId, PickCloseReason.PLAYER_QUIT)
     }
 
     /**
@@ -167,9 +167,9 @@ object DirectingSessionManager : DirectingInputReceiver {
         val entries = ArrayList(sessions.entries)
         sessions.clear()
         for (mapEntry in entries) {
-            mapEntry.value.close(DirectingSessionCloseReason.PLUGIN_DISABLED)
+            mapEntry.value.close(PickCloseReason.PLUGIN_DISABLED)
         }
-        DirectingAPI.unbind(DirectingSessionManager)
+        PickAPI.unbind(PickSessionManager)
     }
 
     /**
@@ -183,8 +183,8 @@ object DirectingSessionManager : DirectingInputReceiver {
         if (!removed) {
             return
         }
-        notifyFailure(entry, DirectingFailureReason.TIMEOUT)
-        entry.close(DirectingSessionCloseReason.TIMED_OUT)
+        notifyFailure(entry, PickFailureReason.TIMEOUT)
+        entry.close(PickCloseReason.TIMED_OUT)
     }
 
     /**
@@ -193,7 +193,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param entry 会话条目。
      * @param reason 失败原因。
      */
-    private fun notifyFailure(entry: Entry, reason: DirectingFailureReason) {
+    private fun notifyFailure(entry: Entry, reason: PickFailureReason) {
         if (entry.notified) {
             return
         }
@@ -209,8 +209,8 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param sourceKey 本次按键标识。
      * @param reason 失败原因。
      */
-    private fun reportFailure(player: Player, skill: PlayerSkill, sourceKey: String, reason: DirectingFailureReason) {
-        PlayerSkillCastEvent.emit(PlayerSkillCastEvent.DirectingFailed(player, skill, sourceKey, reason))
+    private fun reportFailure(player: Player, skill: PlayerSkill, sourceKey: String, reason: PickFailureReason) {
+        PlayerSkillCastEvent.emit(PlayerSkillCastEvent.PickFailed(player, skill, sourceKey, reason))
     }
 
     /**
@@ -219,7 +219,7 @@ object DirectingSessionManager : DirectingInputReceiver {
      * @param playerId 玩家唯一标识。
      * @param reason 停止原因。
      */
-    private fun cancel(playerId: UUID, reason: DirectingSessionCloseReason) {
+    private fun cancel(playerId: UUID, reason: PickCloseReason) {
         val entry = sessions.remove(playerId)
         if (entry == null) {
             return
@@ -236,8 +236,8 @@ object DirectingSessionManager : DirectingInputReceiver {
         val sourceKey: String,
         val skill: PlayerSkill,
         val player: Player,
-        val session: DirectingSession,
-        val onConfirmed: (DirectingResult) -> ExecutableResult,
+        val session: PickSession,
+        val onConfirmed: (PickResult) -> ExecutableResult,
     ) {
 
         var timeoutTask: PlatformExecutor.PlatformTask? = null
@@ -261,7 +261,7 @@ object DirectingSessionManager : DirectingInputReceiver {
          *
          * @param reason 会话停止原因。
          */
-        fun close(reason: DirectingSessionCloseReason) {
+        fun close(reason: PickCloseReason) {
             cancelTimeout()
             session.close(reason)
         }

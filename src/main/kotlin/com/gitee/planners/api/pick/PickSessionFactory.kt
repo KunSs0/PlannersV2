@@ -1,9 +1,9 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 /**
  * provider 类型对应的指向会话创建器。
  */
-interface DirectingSessionFactory {
+interface PickSessionFactory {
 
     /**
      * 支持的 provider 类型。
@@ -16,5 +16,5 @@ interface DirectingSessionFactory {
      * @param context 本次施法的固定上下文。
      * @return 新建的 provider 会话。
      */
-    fun create(context: DirectingSessionContext): DirectingSession
+    fun create(context: PickContext): PickSession
 }

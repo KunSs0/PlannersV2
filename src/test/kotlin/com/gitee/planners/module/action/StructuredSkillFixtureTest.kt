@@ -125,17 +125,17 @@ class StructuredSkillFixtureTest {
                 - 'call{func=on_empty}'
               on_result:
                 conditions:
-                  - 'expr{e="skill.var.directing != null"}'
+                  - 'expr{e="skill.var.pick != null"}'
                 actions:
-                  - 'message{m="&e确认: <skill.var.directing>"}'
+                  - 'message{m="&e确认: <skill.var.pick>"}'
               on_empty:
                 conditions:
-                  - 'expr{e="skill.var.directing == null"}'
+                  - 'expr{e="skill.var.pick == null"}'
                 actions:
                   - 'message{m="&c结果为空"}'
         """.trimIndent()
         val configuration = Configuration.loadFromString(text)
-        val spec = ActionParser.parse("entity-directing", configuration.getConfigurationSection("action"), "action")
+        val spec = ActionParser.parse("entity-pick", configuration.getConfigurationSection("action"), "action")
         assertNotNull(spec)
         assertTrue(spec!!.hasFlow("on_result"))
         assertTrue(spec.hasFlow("on_empty"))
@@ -145,26 +145,26 @@ class StructuredSkillFixtureTest {
 
     /** 指向结果为空时只走空分支。 */
     @Test
-    fun branchPicksEmptyWhenDirectingMissing() {
+    fun branchPicksEmptyWhenPickMissing() {
         val text = """
             action:
               fire:
                 - 'call{func=on_empty}'
               on_empty:
                 conditions:
-                  - 'expr{e="skill.var.directing == null"}'
+                  - 'expr{e="skill.var.pick == null"}'
                 actions:
                   - 'record{tag="empty"}'
         """.trimIndent()
         ActionRegistry.register(BranchRecorder)
         BranchRecorder.HITS.clear()
         val configuration = Configuration.loadFromString(text)
-        val spec = ActionParser.parse("entity-directing", configuration.getConfigurationSection("action"), "action")
+        val spec = ActionParser.parse("entity-pick", configuration.getConfigurationSection("action"), "action")
         val scope = QueryScope(
             skill = Any(),
             variables = mapOf(),
             skillFieldReader = { _, _ -> null },
-            label = "entity-directing",
+            label = "entity-pick",
         )
         ActionRunner.run(spec!!, ActionSpec.FIRE, scope)
         assertEquals(listOf("empty"), BranchRecorder.HITS)

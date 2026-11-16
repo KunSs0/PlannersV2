@@ -1,4 +1,4 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
 import com.gitee.planners.module.action.ActionRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test
 import taboolib.module.configuration.Configuration
 
 /**
- * 验证 `directing.filter` 配置段的解析。
+ * 验证 `pick.filter` 配置段的解析。
  *
  * 覆盖正常链、未配置、缺少子段与未知类别；只读内存中的 YAML，不依赖 Bukkit 运行环境。
  */
-class DirectingFilterConfigTest {
+class PickFilterConfigTest {
 
     /** 每个用例前恢复内置目标器。 */
     @BeforeEach
@@ -23,8 +23,8 @@ class DirectingFilterConfigTest {
     /** 按声明顺序解析 `filter.entity.targeters`。 */
     @Test
     fun parsesEntityFilterChain() {
-        val steps = DirectingFilterConfig.parse(
-            directingSection(
+        val steps = PickFilterConfig.parse(
+            pickSection(
                 """
                 type: fc.entity
                 max-duration-ticks: 20
@@ -46,8 +46,8 @@ class DirectingFilterConfigTest {
     /** 未配置过滤链时保持空列表，表示只做几何校验。 */
     @Test
     fun keepsEmptyChainWhenAbsent() {
-        val steps = DirectingFilterConfig.parse(
-            directingSection(
+        val steps = PickFilterConfig.parse(
+            pickSection(
                 """
                 type: fc.entity
                 max-duration-ticks: 20
@@ -58,18 +58,18 @@ class DirectingFilterConfigTest {
         assertEquals(0, steps.size)
     }
 
-    /** 没有 directing 段时同样视为未配置。 */
+    /** 没有 pick 段时同样视为未配置。 */
     @Test
-    fun keepsEmptyChainWithoutDirectingSection() {
-        assertEquals(0, DirectingFilterConfig.parse(null, "test").size)
+    fun keepsEmptyChainWithoutPickSection() {
+        assertEquals(0, PickFilterConfig.parse(null, "test").size)
     }
 
     /** `filter.entity` 必须写成配置段。 */
     @Test
     fun rejectsScalarEntitySection() {
         val error = assertThrows(IllegalArgumentException::class.java) {
-            DirectingFilterConfig.parse(
-                directingSection(
+            PickFilterConfig.parse(
+                pickSection(
                     """
                     type: fc.entity
                     max-duration-ticks: 20
@@ -93,8 +93,8 @@ class DirectingFilterConfigTest {
     @Test
     fun rejectsUnknownFilterKind() {
         val error = assertThrows(IllegalArgumentException::class.java) {
-            DirectingFilterConfig.parse(
-                directingSection(
+            PickFilterConfig.parse(
+                pickSection(
                     """
                     type: fc.position
                     max-duration-ticks: 20
@@ -116,9 +116,9 @@ class DirectingFilterConfigTest {
         }
     }
 
-    /** 读取 YAML 里的 `directing` 段。 */
-    private fun directingSection(yaml: String): taboolib.library.configuration.ConfigurationSection? {
-        val builder = StringBuilder("directing:\n")
+    /** 读取 YAML 里的 `pick` 段。 */
+    private fun pickSection(yaml: String): taboolib.library.configuration.ConfigurationSection? {
+        val builder = StringBuilder("pick:\n")
         for (line in yaml.trimIndent().lines()) {
             if (line.isBlank()) {
                 builder.append('\n')
@@ -129,6 +129,6 @@ class DirectingFilterConfigTest {
             builder.append('\n')
         }
         val configuration = Configuration.loadFromString(builder.toString())
-        return configuration.getConfigurationSection("directing")
+        return configuration.getConfigurationSection("pick")
     }
 }

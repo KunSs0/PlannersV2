@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 import taboolib.module.configuration.Configuration
 
 /**
- * 验证业务里「directing 选人 + 通用治疗」流程能被加载期解析。
+ * 验证业务里「pick 选人 + 通用治疗」流程能被加载期解析。
  *
  * fixture 与 `sage_prayer_quick_mending.yml` 的 `action.fire` 同构：不读服务端业务目录，
  * 只保证表达式、目标器与参数语法在 Planners 侧可编译。
@@ -22,7 +22,7 @@ class MendingFlowFixtureTest {
 
     /** 两行 fire 都能被解析，且治疗行只作用于当前目标。 */
     @Test
-    fun parsesDirectingHealFlow() {
+    fun parsesPickHealFlow() {
         val text = """
             action:
               fire:

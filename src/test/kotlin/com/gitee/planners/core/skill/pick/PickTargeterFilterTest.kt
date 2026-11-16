@@ -1,4 +1,4 @@
-package com.gitee.planners.core.skill.directing
+package com.gitee.planners.core.skill.pick
 
 import com.gitee.planners.module.action.ActionArguments
 import com.gitee.planners.module.action.ActionRegistry
@@ -19,7 +19,7 @@ import org.mockito.Mockito
  *
  * 使用 Mockito 构造实体，不启动服务端；新增的测试目标器在每个用例后撤销。
  */
-class DirectingTargeterFilterTest {
+class PickTargeterFilterTest {
 
     /** 每个用例前恢复内置目标器并注册一个固定拒绝的目标器。 */
     @BeforeEach
@@ -38,7 +38,7 @@ class DirectingTargeterFilterTest {
     @Test
     fun keepsAliveCandidate() {
         val entity = livingEntity(true, false)
-        val filter = DirectingTargeterFilter(QueryScope(label = "test"), steps("@alive"))
+        val filter = PickTargeterFilter(QueryScope(label = "test"), steps("@alive"))
         assertTrue(filter.accept(entity))
     }
 
@@ -46,7 +46,7 @@ class DirectingTargeterFilterTest {
     @Test
     fun rejectsDeadCandidate() {
         val entity = livingEntity(true, true)
-        val filter = DirectingTargeterFilter(QueryScope(label = "test"), steps("@alive"))
+        val filter = PickTargeterFilter(QueryScope(label = "test"), steps("@alive"))
         assertFalse(filter.accept(entity))
     }
 
@@ -54,7 +54,7 @@ class DirectingTargeterFilterTest {
     @Test
     fun rejectsInvalidCandidate() {
         val entity = livingEntity(false, false)
-        val filter = DirectingTargeterFilter(QueryScope(label = "test"), steps("@alive"))
+        val filter = PickTargeterFilter(QueryScope(label = "test"), steps("@alive"))
         assertFalse(filter.accept(entity))
     }
 
@@ -62,7 +62,7 @@ class DirectingTargeterFilterTest {
     @Test
     fun rejectsWhenAnyStepDropsCandidate() {
         val entity = livingEntity(true, false)
-        val filter = DirectingTargeterFilter(QueryScope(label = "test"), steps("@alive", "@filter.reject"))
+        val filter = PickTargeterFilter(QueryScope(label = "test"), steps("@alive", "@filter.reject"))
         assertFalse(filter.accept(entity))
     }
 

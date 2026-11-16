@@ -1,4 +1,4 @@
-package com.gitee.planners.api.directing
+package com.gitee.planners.api.pick
 
 import com.gitee.planners.core.player.PlayerSkill
 import org.bukkit.entity.Player
@@ -13,11 +13,11 @@ import org.bukkit.entity.Player
  * @property sourceKey 触发当前技能的物理按键标识。
  * @property filter 本次会话的候选过滤器；技能未声明过滤链时为 null。
  */
-class DirectingSessionContext(
+class PickContext(
     val sessionId: Long,
     val player: Player,
     val skill: PlayerSkill,
-    val definition: DirectingDefinition,
+    val definition: PickDefinition,
     val sourceKey: String,
-    val filter: DirectingCandidateFilter?,
+    val filter: PickCandidateFilter?,
 )

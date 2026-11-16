@@ -1,6 +1,6 @@
 package com.gitee.planners.api.event.player
 
-import com.gitee.planners.api.directing.DirectingFailureReason
+import com.gitee.planners.api.pick.PickFailureReason
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import org.bukkit.entity.Player
@@ -66,11 +66,11 @@ class PlayerSkillCastEvent {
      * @param sourceKey 本次按键标识
      * @param reason 失败原因
      */
-    class DirectingFailed(
+    class PickFailed(
         val player: Player,
         val skill: PlayerSkill,
         val sourceKey: String,
-        val reason: DirectingFailureReason,
+        val reason: PickFailureReason,
     ) : BukkitProxyEvent()
 
     companion object {

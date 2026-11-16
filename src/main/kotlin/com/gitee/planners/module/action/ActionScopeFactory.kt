@@ -171,7 +171,7 @@ object ActionScopeFactory {
         val player = resolvePlayer(execution.sender)
         val label = "skill:" + execution.skill.id
         // 指向确认结果在这里绑定成当前目标，`@target` 与 `<target.*>` 因此读到同一个人。
-        val directed = resolveDirectingTarget(execution.context.directing)
+        val directed = resolvePickTarget(execution.context.pick)
         if (player == null) {
             return QueryScope(
                 sender = execution.sender,
@@ -363,19 +363,19 @@ object ActionScopeFactory {
     /**
      * 把指向确认结果转换成当前目标。
      *
-     * 只有 provider 声明实现 [com.gitee.planners.api.directing.DirectingEntityResult] 时才有实体目标；
+     * 只有 provider 声明实现 [com.gitee.planners.api.pick.PickEntityResult] 时才有实体目标；
      * 位置、方向等结果不参与 `@target`，保持原有语义。
      *
-     * @param directing 本次确认结果；未确认时为 null。
+     * @param pick 本次确认结果；未确认时为 null。
      * @return 目标实体；无法作为实体目标时返回 null。
      */
-    internal fun resolveDirectingTarget(directing: com.gitee.planners.api.directing.DirectingResult?): Any? {
-        if (directing is com.gitee.planners.api.directing.DirectingEntityResult) {
-            return directing.entity
+    internal fun resolvePickTarget(pick: com.gitee.planners.api.pick.PickResult?): Any? {
+        if (pick is com.gitee.planners.api.pick.PickEntityResult) {
+            return pick.entity
         }
         // 位置指向把确认到的坐标绑成当前目标：`@target` 会转成坐标目标，area 锚点解析也会固定在该点。
-        if (directing is com.gitee.planners.api.directing.DirectingLocResult) {
-            return directing.location
+        if (pick is com.gitee.planners.api.pick.PickLocResult) {
+            return pick.location
         }
         return null
     }

@@ -12,7 +12,7 @@ import com.gitee.planners.api.event.player.PlayerLevelChangedEvent
 import com.gitee.planners.api.PlayerTemplateAPI
 import com.gitee.planners.api.event.player.PlayerRouteClearedEvent
 import com.gitee.planners.core.attribute.AttributeProxy
-import com.gitee.planners.core.skill.directing.DirectingSessionManager
+import com.gitee.planners.core.skill.pick.PickSessionManager
 import com.gitee.planners.core.skill.timing.SkillCastingSessions
 import com.gitee.planners.module.compat.attribute.AttributeDriver
 import com.gitee.planners.module.compat.attribute.AttributeProvider
@@ -60,7 +60,7 @@ class PlayerTemplate(
         // 先断开有效技能入口，再取消持有旧技能续体的会话。
         playerRouter = null
         SkillCastingSessions.cancel(onlinePlayer)
-        DirectingSessionManager.cancel(onlinePlayer)
+        PickSessionManager.cancel(onlinePlayer)
         // 只替换 Planners 的聚合来源，装备等其他来源继续由属性系统保留。
         AttributeProxy.sync(onlinePlayer)
         ProfilePersistence.deleteRouter(router) {

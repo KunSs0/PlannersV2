@@ -1,6 +1,6 @@
 package com.gitee.planners.api
 
-import com.gitee.planners.api.directing.DirectingResult
+import com.gitee.planners.api.pick.PickResult
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import org.bukkit.entity.Player
@@ -24,7 +24,7 @@ class SkillInputExec private constructor() {
     class Context(
         val player: Player,
         val skill: PlayerSkill,
-        private val continuation: (DirectingResult?) -> ExecutableResult
+        private val continuation: (PickResult?) -> ExecutableResult
     ) {
         private val resumed = AtomicBoolean(false)
 
@@ -43,13 +43,13 @@ class SkillInputExec private constructor() {
         /**
          * 恢复技能执行并提供指向性结果。
          *
-         * @param directing 已确认的指向性结果。
+         * @param pick 已确认的指向性结果。
          * @return 当前释放结果。
          */
-        fun resume(directing: DirectingResult): ExecutableResult {
+        fun resume(pick: PickResult): ExecutableResult {
             // 与无指向版本共享同一个消费标记。
             check(resumed.compareAndSet(false, true)) { "同一次技能释放只能恢复一次。" }
-            return continuation(directing)
+            return continuation(pick)
         }
 
         /**
