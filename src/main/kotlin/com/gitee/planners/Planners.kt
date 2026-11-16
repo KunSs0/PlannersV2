@@ -35,6 +35,7 @@ import taboolib.module.configuration.Configuration
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.metrics.Metrics
 import taboolib.platform.BukkitPlugin
+import java.util.logging.Level
 
 object Planners : Plugin() {
 
@@ -248,16 +249,38 @@ object Planners : Plugin() {
         // 技能里的 fc.* / mm.* 才能解析成功。
         // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
         registerItemProviders()
-        Registries.init()
-        selectionUnimpededTypes.get()
-        // 选区调试开关在业务加载完成后再同步：目标器只读取已校验的缓存值。
-        applySelectorDebugConfiguration()
-        reportUnresolvedActions()
-        SkillPointsManager.prepare()
-        DefaultMagicPointProvider.expressionUpperLimit.get()
-        DefaultMagicPointProvider.expressionResume.get()
-        AttributeProxy.register(HookAttributeSource())
+        try {
+            Registries.init()
+            selectionUnimpededTypes.get()
+            // 选区调试开关在业务加载完成后再同步：目标器只读取已校验的缓存值。
+            applySelectorDebugConfiguration()
+            reportUnresolvedActions()
+            SkillPointsManager.prepare()
+            DefaultMagicPointProvider.expressionUpperLimit.get()
+            DefaultMagicPointProvider.expressionResume.get()
+            AttributeProxy.register(HookAttributeSource())
+        } catch (throwable: Throwable) {
+            stopServerForConfigError(throwable)
+            return
+        }
         info("[Planners] 配置加载完成")
+    }
+
+    /**
+     * 配置错误导致注册表只完成部分加载时立即停止服务器。
+     *
+     * 缺表继续运行会让等级、职业路由、键位与技能查询持续抛错，并把不完整状态写回玩家档案，
+     * 因此保留原始堆栈后停服，等配置修正再启动。
+     */
+    private fun stopServerForConfigError(throwable: Throwable) {
+        Bukkit.getLogger().log(Level.SEVERE, "[Planners] 配置加载失败，注册表处于不完整状态；为避免写坏玩家数据，服务器将立即停止。", throwable)
+        if (Bukkit.isPrimaryThread()) {
+            Bukkit.getServer().shutdown()
+            return
+        }
+        Bukkit.getScheduler().runTask(BukkitPlugin.getInstance(), Runnable {
+            Bukkit.getServer().shutdown()
+        })
     }
 
     /**
