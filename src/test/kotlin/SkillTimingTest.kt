@@ -184,7 +184,7 @@ class SkillTimingTest {
     @Test
     fun inputHookContinuationIsSingleUse() {
         var commits = 0
-        val context = SkillInputExec.Context(player(), Mockito.mock(PlayerSkill::class.java)) {
+        val context = SkillInputExec.Context(player(), Mockito.mock(PlayerSkill::class.java), null) {
             commits += 1
             ExecutableResult.successful()
         }

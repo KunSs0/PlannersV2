@@ -10,6 +10,7 @@ import com.gitee.planners.module.action.ActionTargeterStep
 import com.gitee.planners.module.action.ActionTarget
 import com.gitee.planners.module.action.query.QueryRef
 import com.gitee.planners.module.action.query.QueryScope
+import com.gitee.planners.core.skill.context.SkillExecutionContext
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
@@ -81,6 +82,24 @@ class PickTargetScopeTest {
     @Test
     fun ignoresMissingResult() {
         assertNull(ActionScopeFactory.resolvePickTarget(null))
+    }
+
+    /**
+     * 技能执行上下文里已确认的指向结果必须成为查询上下文的目标。
+     *
+     * 关键帧回调复用施放快照时，`@target` 依赖这条绑定；缺失就会退回无可选目标。
+     */
+    @Test
+    fun forExecutionBindsCastedPick() {
+        val entity = Mockito.mock(Player::class.java)
+        val skill = Mockito.mock(com.gitee.planners.core.config.ImmutableSkill::class.java)
+        Mockito.`when`(skill.id).thenReturn("pick-fixture")
+        val execution = SkillExecutionContext.create(Any(), 1, skill)
+        execution.context.pick = PickEntityResult(entity)
+
+        val scope = ActionScopeFactory.forExecution(execution, LinkedHashMap<String, Any?>())
+
+        assertSame(entity, scope.target)
     }
 
     /** 查询根从当前目标读取字段。 */

@@ -112,18 +112,24 @@ object PlannersAPI {
     /**
      * 执行玩家技能 action 中定义的回调函数。
      *
+     * 回调沿用调用方给出的施放指向结果，`@target`、`<target.*>` 与 `<skill.pick>` 因此
+     * 继续解析到施放确认的目标或落点，不会退化成施放者自己。
+     *
      * @param player 玩家
      * @param skill 玩家技能
      * @param method 回调函数名
      * @param variables 额外上下文变量
      * @param payload 回调负载
+     * @param pick 本次施放已确认的指向结果；无指向时为 null
      * @return 函数存在并完成调用时返回 true，函数不存在时返回 false
      */
-    fun executeSkillCallback(player: Player, skill: PlayerSkill, method: String, variables: Map<String, Any>, payload: Map<String, Any>): Boolean {
+    fun executeSkillCallback(player: Player, skill: PlayerSkill, method: String, variables: Map<String, Any>, payload: Map<String, Any>, pick: PickResult?): Boolean {
         val extraVariables = LinkedHashMap<String, Any>()
         extraVariables.putAll(variables)
         val level = SkillTreeNodeEffectService.getSkillLevel(player.plannersTemplate, skill.id)
         val execution = newExecution(player, skill.immutable, level)
+        // 指向结果必须在动作执行前写入上下文，回调里的目标器与查询根都从这里读取。
+        execution.context.pick = pick
         for ((id, value) in extraVariables) {
             execution.setVariable(id, value)
         }
@@ -250,8 +256,9 @@ object PlannersAPI {
         // 每个释放入口均复用原执行上下文，Hook恢复不重新计算变量和急速。
         val interceptor = skillInputExecHooks.firstOrNull()
         if (interceptor != null) {
-            val context = SkillInputExec.Context(player, skill) { _ ->
-                continueCast(player, skill, execution, sortedConditions, pick)
+            // 施放确认的指向结果随上下文交给 Hook，Hook 直接恢复时据此绑定 `@target` 的目标或落点。
+            val context = SkillInputExec.Context(player, skill, pick) { resumePick ->
+                continueCast(player, skill, execution, sortedConditions, resumePick)
             }
             interceptor.intercept(context)
             return ExecutableResult.intercepted(interceptor.javaClass.simpleName)
