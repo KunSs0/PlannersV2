@@ -2,6 +2,9 @@ package com.gitee.planners.core.skill.pick
 
 import com.gitee.planners.api.pick.PickFailureReason
 import com.gitee.planners.api.event.player.PlayerSkillCastEvent
+import com.gitee.planners.api.pick.EntityPickDefinition
+import com.gitee.planners.api.pick.PickDefinition
+import com.gitee.planners.api.pick.PickEntityResult
 import com.gitee.planners.api.pick.PickInput
 import com.gitee.planners.api.pick.PickAPI
 import com.gitee.planners.api.pick.PickInputReceiver
@@ -58,7 +61,7 @@ object PickSessionManager : PickInputReceiver {
         val filter = PickFilterCompiler.compile(player, skill.immutable, skill.immutable.pickFilterSteps)
         val context = PickContext(sessionId, player, skill, definition, sourceKey, filter)
         val session = PlannersPickSession(context, presentation)
-        val entry = Entry(sessionId, definition.type, sourceKey, skill, player, session, onConfirmed)
+        val entry = Entry(sessionId, definition.type, sourceKey, skill, player, session, onConfirmed, resolveFallback(definition))
         val previous = sessions.put(player.uniqueId, entry)
         if (previous != null) {
             previous.close(PickCloseReason.REPLACED)
@@ -114,6 +117,13 @@ object PickSessionManager : PickInputReceiver {
             throw throwable
         }
         if (result == null) {
+            // 没有选中任何合规目标时，定义了兜底策略的指向改以施法者本人为结果继续施放；
+            // 兜底同样只确认一次，失败反馈只在没有任何兜底时派发。
+            if (entry.fallback == EntityPickDefinition.FALLBACK_SELF) {
+                entry.close(PickCloseReason.CONFIRMED)
+                entry.onConfirmed(PickEntityResult(entry.player))
+                return
+            }
             notifyFailure(entry, PickFailureReason.INVALID_TARGET)
             entry.close(PickCloseReason.CANCELLED)
             return
@@ -232,6 +242,21 @@ object PickSessionManager : PickInputReceiver {
     }
 
     /**
+     * 读取本次会话的兜底策略。
+     *
+     * 只有实体指向声明了兜底，其余类型未选中目标一律按失败结算。
+     *
+     * @param definition 本次生效的指向定义。
+     * @return 兜底策略；未声明时返回 null。
+     */
+    private fun resolveFallback(definition: PickDefinition): String? {
+        if (definition is EntityPickDefinition) {
+            return definition.fallback
+        }
+        return null
+    }
+
+    /**
      * 按 UUID 移除单个会话。
      *
      * @param playerId 玩家唯一标识。
@@ -256,6 +281,8 @@ object PickSessionManager : PickInputReceiver {
         val player: Player,
         val session: PickSession,
         val onConfirmed: (PickResult) -> ExecutableResult,
+        /** 本次会话的兜底策略；null 表示未选中目标直接按失败结算。 */
+        val fallback: String?,
     ) {
 
         var timeoutTask: PlatformExecutor.PlatformTask? = null

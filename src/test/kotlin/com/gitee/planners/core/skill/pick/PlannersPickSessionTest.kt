@@ -101,7 +101,7 @@ class PlannersPickSessionTest {
     fun confirmEntityAcceptsWithinAngle() {
         val world = server.addSimpleWorld("world")
         val zombie = world.spawnEntity(Location(world, 0.5, 64.0, 3.0), EntityType.ZOMBIE)
-        val definition = EntityPickDefinition(40, 16.0, 30.0, false)
+        val definition = EntityPickDefinition(40, 16.0, 30.0, false, null)
         val player = Mockito.mock(Player::class.java)
         Mockito.`when`(player.world).thenReturn(world)
         Mockito.`when`(player.eyeLocation).thenReturn(Location(world, 0.5, 65.0, 0.5))
@@ -117,12 +117,21 @@ class PlannersPickSessionTest {
     fun confirmEntityRejectsBeyondAngle() {
         val world = server.addSimpleWorld("world")
         val zombie = world.spawnEntity(Location(world, 0.5, 64.0, 3.0), EntityType.ZOMBIE)
-        val definition = EntityPickDefinition(40, 16.0, 30.0, false)
+        val definition = EntityPickDefinition(40, 16.0, 30.0, false, null)
         val player = Mockito.mock(Player::class.java)
         Mockito.`when`(player.world).thenReturn(world)
         Mockito.`when`(player.eyeLocation).thenReturn(Location(world, 0.5, 65.0, 0.5))
         val session = session(definition, player)
         val result = session.confirm(PickEntityInput(1L, zombie.uniqueId, 0.0, 0.0, -1.0))
+        assertNull(result)
+    }
+
+    /** 客户端没有上报实体时不做几何校验，按未选中返回，由会话层决定是否兜底。 */
+    @Test
+    fun confirmEntityWithoutReportedTargetReturnsNull() {
+        val definition = EntityPickDefinition(40, 16.0, 30.0, false, EntityPickDefinition.FALLBACK_SELF)
+        val session = session(definition, playerWithFloor())
+        val result = session.confirm(PickEntityInput(1L, null, 0.0, 0.0, 1.0))
         assertNull(result)
     }
 

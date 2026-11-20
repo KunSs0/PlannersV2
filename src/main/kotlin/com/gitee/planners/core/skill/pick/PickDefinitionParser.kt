@@ -18,7 +18,7 @@ object PickDefinitionParser {
     private val POSITION_KEYS = setOf("type", "max-duration-ticks", "range", "placement", "require-line-of-sight")
 
     /** `entity` 允许的字段。 */
-    private val ENTITY_KEYS = setOf("type", "max-duration-ticks", "range", "max-angle-degrees", "require-line-of-sight", "filter")
+    private val ENTITY_KEYS = setOf("type", "max-duration-ticks", "range", "max-angle-degrees", "require-line-of-sight", "filter", "fallback")
 
     /** `direction` 允许的字段。 */
     private val DIRECTION_KEYS = setOf("type", "max-duration-ticks", "max-pitch-degrees")
@@ -79,7 +79,33 @@ object PickDefinitionParser {
             throw IllegalArgumentException("$path.max-angle-degrees 必须在 0..180 之间")
         }
         val requireLineOfSight = readBoolean(config, "require-line-of-sight", path)
-        return EntityPickDefinition(maxDurationTicks, range, maxAngleDegrees, requireLineOfSight)
+        val fallback = readFallback(config, path)
+        return EntityPickDefinition(maxDurationTicks, range, maxAngleDegrees, requireLineOfSight, fallback)
+    }
+
+    /**
+     * 读取可选的兜底策略。
+     *
+     * 兜底策略决定“没有选中任何合规实体”时是否继续技能流程，因此未声明的策略必须报错，
+     * 不能静默按空值处理。
+     *
+     * @param config 配置段。
+     * @param path 配置路径。
+     * @return 兜底策略；未声明时返回 null。
+     */
+    private fun readFallback(config: PickConfig, path: String): String? {
+        if (!config.contains("fallback")) {
+            return null
+        }
+        val raw = config.getString("fallback")
+        if (raw == null) {
+            throw IllegalArgumentException("$path.fallback 不能为空")
+        }
+        val value = raw.trim()
+        if (value == EntityPickDefinition.FALLBACK_SELF) {
+            return value
+        }
+        throw IllegalArgumentException("$path.fallback 未内置：$raw（可用 self）")
     }
 
     /**

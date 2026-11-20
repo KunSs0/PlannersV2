@@ -18,7 +18,6 @@ import com.gitee.planners.api.pick.PositionPickDefinition
 import org.bukkit.Bukkit
 import org.bukkit.FluidCollisionMode
 import org.bukkit.Location
-import org.bukkit.entity.Entity
 import org.bukkit.util.Vector
 import kotlin.math.abs
 import kotlin.math.acos
@@ -102,15 +101,24 @@ class PlannersPickSession(
     /**
      * 校验实体指向。
      *
+     * 上报没有实体 ID 时不做几何校验，直接按“未选中”返回，由会话层按定义的兜底策略处理。
+     *
      * @param definition 实体定义。
      * @param input 客户端快照。
-     * @return 确认结果；校验失败时返回 null。
+     * @return 确认结果；校验失败或未选中时返回 null。
      */
     private fun confirmEntity(definition: EntityPickDefinition, input: PickInput): PickResult? {
         if (input !is PickEntityInput) {
             return null
         }
-        val entity: Entity = Bukkit.getEntity(input.entityId) ?: return null
+        val entityId = input.entityId
+        if (entityId == null) {
+            return null
+        }
+        val entity = Bukkit.getEntity(entityId)
+        if (entity == null) {
+            return null
+        }
         if (!entity.isValid || entity.isDead) {
             return null
         }
