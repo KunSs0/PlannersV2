@@ -6,6 +6,7 @@ import com.gitee.planners.api.PlannersAPI
 import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.condition.SkillCastConditionRegistry
+import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import taboolib.common.platform.function.submit
@@ -131,6 +132,12 @@ object PlayerSkillStatus {
     private fun evaluate(player: Player, skill: PlayerSkill): Status {
         return try {
             val execution = PlannersAPI.newExecution(player, skill)
+            for (condition in PlannersAPI.castPreConditions().sortedBy { it.priority }) {
+                val result = condition.verify(player, skill, execution)
+                if (result is CastPreConditionResult.Failure) {
+                    return Status(false, reasonOf(condition.key), mapOf("condition" to condition.key))
+                }
+            }
             val failure = SkillCastConditionRegistry.verify(player, skill, execution, skill.immutable.castConditions)
             if (failure != null) {
                 Status(false, "condition", mapOf("message" to failure))
@@ -139,6 +146,23 @@ object PlayerSkillStatus {
             }
         } catch (exception: Exception) {
             Status(false, "unknown", mapOf("error" to (exception.message ?: "check failed")))
+        }
+    }
+
+    /**
+     * 前置条件标识映射到状态原因。
+     *
+     * @param key 前置条件标识。
+     * @return 原因枚举值。
+     */
+    private fun reasonOf(key: String): String {
+        return when (key) {
+            "cooldown" -> "cooldown"
+            "mp" -> "mana"
+            "stamina" -> "stamina"
+            "weaponcategory" -> "weapon"
+            "player-state" -> "player-state"
+            else -> "condition"
         }
     }
 

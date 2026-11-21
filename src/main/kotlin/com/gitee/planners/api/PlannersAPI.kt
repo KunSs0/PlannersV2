@@ -49,6 +49,17 @@ object PlannersAPI {
         castPreConditions.add(condition)
     }
 
+    /**
+     * 当前注册的释放前条件。
+     *
+     * 供状态检查复用同一批条件，保证「灰着一定能解释、亮着一定能放」。
+     *
+     * @return 按注册顺序排列的只读快照。
+     */
+    fun castPreConditions(): List<CastPreCondition> {
+        return ArrayList(castPreConditions)
+    }
+
     fun registerCastCondition(id: String, condition: SkillCastCondition) {
         SkillCastConditionRegistry.register(id, condition)
     }
