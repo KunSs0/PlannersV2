@@ -6,7 +6,7 @@ import com.gitee.planners.core.attribute.AttributeProxy
 import com.gitee.planners.core.attribute.source.HookAttributeSource
 import com.gitee.planners.core.condition.ConditionFactory
 import com.gitee.planners.core.condition.ConditionEvaluator
-import com.gitee.planners.core.skill.condition.HolyEmblemCastCondition
+import com.gitee.planners.core.skill.condition.ItemCostCastCondition
 import com.gitee.planners.core.config.BackpackConfig
 import com.gitee.planners.core.config.SkillCategorySpec
 import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
@@ -235,7 +235,7 @@ object Planners : Plugin() {
         }
         try {
             ZaphkielItemProvider.register()
-            com.gitee.planners.api.PlannersAPI.registerCastCondition(HolyEmblemCastCondition.ID, HolyEmblemCastCondition())
+            com.gitee.planners.api.PlannersAPI.registerCastCondition("item_cost", ItemCostCastCondition())
         } catch (error: LinkageError) {
             warning("Zaphkiel 物品库 API 缺失或不匹配，zap: 物品条件将始终不满足", error)
         }

@@ -6,6 +6,7 @@ import com.gitee.planners.api.pick.PickDefinition
 import com.gitee.planners.api.pick.PickResult
 import com.gitee.planners.core.skill.context.SkillExecutionContext
 import com.gitee.planners.core.skill.condition.SkillCastConditionConfig
+import com.gitee.planners.core.skill.condition.SkillCastConditionRegistry
 import com.gitee.planners.core.skill.pick.PickDefinitionParser
 import com.gitee.planners.core.skill.pick.PickSection
 import com.gitee.planners.core.skill.pick.PickFilterConfig
@@ -200,6 +201,11 @@ class ImmutableSkill(config: Configuration) : Unique {
                             props[propId] = propValue
                         }
                     }
+                }
+                // 外部条件可能晚于技能注册；已注册的在这里做参数校验，未注册的留给释放期报错。
+                val condition = SkillCastConditionRegistry.getOrNull(id)
+                if (condition != null) {
+                    condition.validate(props, "skill:${this@ImmutableSkill.id}.condition.consume.cast.$id")
                 }
             }
             result.add(SkillCastConditionConfig(id, props))

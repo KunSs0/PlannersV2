@@ -1,5 +1,6 @@
-package com.gitee.planners.core.skill.condition
+package com.gitee.planners.module.compat.zaphkiel
 
+import com.gitee.planners.core.skill.condition.CastCostReservation
 import ink.ptms.zaphkiel.Zaphkiel
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -15,7 +16,7 @@ import java.lang.reflect.Array
  * @property player 扣费玩家。
  * @property slots 涉及的槽位快照。
  */
-class ZaphkielItemCost(
+class ZaphkielItemReservation(
     private val player: Player,
     private val slots: List<SlotSnapshot>,
 ) : CastCostReservation {
@@ -108,7 +109,7 @@ class ZaphkielItemCost(
          * @return 扣费句柄。
          * @throws IllegalArgumentException 数量不足时抛出。
          */
-        fun prepare(player: Player, itemId: String, amount: Int): ZaphkielItemCost {
+        fun prepare(player: Player, itemId: String, amount: Int): ZaphkielItemReservation {
             require(Bukkit.isPrimaryThread()) { "准备物品消费必须在主线程执行" }
             require(amount > 0) { "物品数量必须为正" }
             require(itemId.isNotEmpty()) { "物品ID不能为空" }
@@ -137,7 +138,7 @@ class ZaphkielItemCost(
                 slot += 1
             }
             require(remaining == 0) { "缺少物品: $itemId" }
-            return ZaphkielItemCost(player, slots)
+            return ZaphkielItemReservation(player, slots)
         }
 
         /**

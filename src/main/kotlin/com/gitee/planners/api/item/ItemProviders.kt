@@ -37,4 +37,11 @@ object ItemProviders {
     fun values(): List<ItemProvider> {
         return ArrayList(providers.values)
     }
+
+    /** 已注册适配器 ID，用于配置错误信息。 */
+    fun ids(): Set<String> {
+        val result = LinkedHashSet<String>()
+        result.addAll(providers.keys)
+        return result
+    }
 }
