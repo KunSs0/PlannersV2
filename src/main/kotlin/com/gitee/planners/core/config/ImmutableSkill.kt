@@ -123,6 +123,14 @@ class ImmutableSkill(config: Configuration) : Unique {
     val async = option.getBoolean("async", true)
 
     /**
+     * 共享冷却组标识。
+     *
+     * 写在 `__option__.cooldown.group`，例如 `cooldown: {group: ritual}`；同组技能共享冷却：
+     * 任一成员提交冷却后，其余成员同步进入同样的剩余时间。未声明时该技能独立冷却。
+     */
+    val cooldownGroup: String? = parseCooldownGroup(option, "skill:$id.__option__.cooldown.group")
+
+    /**
      * 结构化动作配置节点。
      *
      * 支持流程表与动作行列表两种写法；行列表按 `fire` 单流程解析。写成顶层字符串属于
@@ -515,4 +523,31 @@ class ImmutableSkill(config: Configuration) : Unique {
 
     override fun toString(): String = "ImmutableSkill(id='$id', startedLevel=$startedLevel, immutableVariables=$immutableVariables)"
 
+    /**
+     * 解析共享冷却组。
+     *
+     * @param option 技能 `__option__` 节。
+     * @param path 配置路径，用于错误信息。
+     * @return 组标识；未配置时返回 null。
+     * @throws IllegalArgumentException 组标识不是小写 kebab-case 时抛出。
+     */
+    private fun parseCooldownGroup(option: ConfigurationSection, path: String): String? {
+        val section = option.getConfigurationSection("cooldown")
+        if (section == null) {
+            return null
+        }
+        val raw = section.getString("group")
+        if (raw == null || raw.isBlank()) {
+            return null
+        }
+        val group = raw.trim()
+        require(COOLDOWN_GROUP_ID.matches(group)) {
+            "$path 必须是 小写 kebab-case，实际：$raw"
+        }
+        return group
+    }
+
 }
+
+/** 冷却组标识允许的字符。 */
+private val COOLDOWN_GROUP_ID = Regex("^[a-z0-9]+(?:-[a-z0-9]+)*$")

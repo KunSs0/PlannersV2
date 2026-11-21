@@ -107,7 +107,7 @@ object Registries {
     }
 
     /**
-     * 用当前已加载技能重建 Action 触发器索引、加载期流程与定时任务。
+     * 用当前已加载技能重建 Action 触发器索引、加载期流程、定时任务与共享冷却组。
      *
      * 只收集写成结构化 `action` 的技能；旧脚本写法的技能不参与，
      * 因此迁移期间两种写法可以共存。
@@ -123,6 +123,8 @@ object Registries {
         com.gitee.planners.module.action.ActionTriggerRegistry.rebuild(specs)
         com.gitee.planners.module.action.ActionServerFlows.runAll(specs)
         com.gitee.planners.module.action.ActionTimerService.restart(specs)
+        // 冷却组随技能表重建：改 `__option__.cooldown.group` 后重载即生效。
+        com.gitee.planners.core.skill.cooler.CooldownGroups.rebuild(SKILL.values())
     }
 
     /**

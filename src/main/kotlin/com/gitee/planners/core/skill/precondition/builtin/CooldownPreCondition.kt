@@ -2,6 +2,7 @@ package com.gitee.planners.core.skill.precondition.builtin
 
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.cooler.Cooler
+import com.gitee.planners.core.skill.cooler.CooldownGroups
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.core.skill.context.SkillExecutionContext
@@ -47,6 +48,8 @@ class CooldownPreCondition : CastPreCondition {
         val cooldown = timing.cooldownTicks
         if (cooldown != null) {
             Cooler.INSTANCE.set(player, skill, cooldown)
+            // 同组仪式技能共享冷却：只延长、不缩短，成员各自写 Cooler 后 HUD 自动更新。
+            CooldownGroups.share(player, skill.immutable, cooldown)
         }
     }
 
