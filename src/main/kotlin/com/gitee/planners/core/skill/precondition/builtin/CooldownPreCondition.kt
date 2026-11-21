@@ -1,8 +1,8 @@
 package com.gitee.planners.core.skill.precondition.builtin
 
+import com.gitee.planners.api.Registries
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.cooler.Cooler
-import com.gitee.planners.core.skill.cooler.CooldownGroups
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.core.skill.context.SkillExecutionContext
@@ -48,9 +48,49 @@ class CooldownPreCondition : CastPreCondition {
         val cooldown = timing.cooldownTicks
         if (cooldown != null) {
             Cooler.INSTANCE.set(player, skill, cooldown)
-            // 同组仪式技能共享冷却：只延长、不缩短，成员各自写 Cooler 后 HUD 自动更新。
-            CooldownGroups.share(player, skill.immutable, cooldown)
+            shareCooldown(player, skill, cooldown)
         }
     }
 
+    /**
+     * 把本次冷却同步给同组技能。
+     *
+     * 组由 `__option__.cooldown.group` 声明，直接遍历当前技能表匹配组标识，不额外维护索引；
+     * 只延长、不缩短：成员剩余更长时跳过，避免短冷却技能把同组的长冷却洗掉。
+     *
+     * @param player 本次施放者。
+     * @param skill 本次释放的技能。
+     * @param ticks 本次最终冷却 tick。
+     */
+    private fun shareCooldown(player: Player, skill: PlayerSkill, ticks: Int) {
+        if (ticks <= 0) {
+            return
+        }
+        val group = skill.immutable.cooldownGroup
+        if (group == null) {
+            return
+        }
+        for (member in Registries.SKILL.values()) {
+            if (member.id == skill.id || member.cooldownGroup != group) {
+                continue
+            }
+            val remaining = Cooler.INSTANCE.get(player, member)
+            if (!shouldExtend(remaining, ticks)) {
+                continue
+            }
+            Cooler.INSTANCE.set(player, member, ticks)
+        }
+    }
+
+}
+
+/**
+ * 判断本次冷却是否覆盖成员现有剩余。
+ *
+ * @param remainingTicks 成员现有剩余 tick。
+ * @param ticks 本次冷却 tick。
+ * @return 需要写入时返回 true。
+ */
+internal fun shouldExtend(remainingTicks: Long, ticks: Int): Boolean {
+    return remainingTicks < ticks.toLong()
 }
