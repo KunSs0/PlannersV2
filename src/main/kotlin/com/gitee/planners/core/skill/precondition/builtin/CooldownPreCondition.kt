@@ -6,6 +6,7 @@ import com.gitee.planners.core.skill.cooler.Cooler
 import com.gitee.planners.core.skill.precondition.CastPreCondition
 import com.gitee.planners.core.skill.precondition.CastPreConditionResult
 import com.gitee.planners.core.skill.context.SkillExecutionContext
+import com.gitee.planners.core.skill.status.PlayerSkillStatus
 import org.bukkit.entity.Player
 import taboolib.platform.util.asLangText
 
@@ -48,6 +49,7 @@ class CooldownPreCondition : CastPreCondition {
         val cooldown = timing.cooldownTicks
         if (cooldown != null) {
             Cooler.INSTANCE.set(player, skill, cooldown)
+            PlayerSkillStatus.invalidate(player, "cooldown")
             shareCooldown(player, skill, cooldown)
         }
     }
