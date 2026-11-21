@@ -42,19 +42,26 @@ object SkillCastConditionRegistry {
         return null
     }
 
+    /**
+     * 提交全部条件成本。
+     *
+     * 只在所有条件校验通过后调用一次：逐条准备预留，全部成功后统一提交；
+     * 任一环节失败按已准备的预留整体回滚。
+     *
+     * @param player 施放者。
+     * @param skill 技能。
+     * @param execution 执行上下文。
+     * @param configs 已编译的条件列表。
+     */
     fun consume(
         player: Player,
         skill: PlayerSkill,
         execution: SkillExecutionContext,
-        configs: List<SkillCastConditionConfig>,
-        timing: CastCostTiming
+        configs: List<SkillCastConditionConfig>
     ) {
         val reservations = ArrayList<CastCostReservation>()
         try {
             for (config in configs) {
-                if (config.costTiming != timing) {
-                    continue
-                }
                 val condition = conditions[config.id]
                 if (condition == null) {
                     throw IllegalStateException("未注册技能释放条件：${config.id}")

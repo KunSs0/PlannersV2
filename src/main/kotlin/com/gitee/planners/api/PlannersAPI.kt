@@ -9,7 +9,6 @@ import com.gitee.planners.core.config.ImmutableSkill
 import com.gitee.planners.core.player.PlayerSkill
 import com.gitee.planners.core.skill.ExecutableResult
 import com.gitee.planners.core.skill.context.SkillExecutionContext
-import com.gitee.planners.core.skill.condition.CastCostTiming
 import com.gitee.planners.core.skill.condition.SkillCastCondition
 import com.gitee.planners.core.skill.condition.SkillCastConditionRegistry
 import com.gitee.planners.core.skill.timing.SkillCastingSessions
@@ -186,7 +185,6 @@ object PlannersAPI {
                 return ExecutableResult.preConditionFailed(result)
             }
         }
-        SkillCastConditionRegistry.consume(player, skill, execution, skill.immutable.castConditions, CastCostTiming.START)
         val pick = skill.immutable.pick
         if (pick != null) {
             if (sourceKey.isEmpty()) {
@@ -297,7 +295,7 @@ object PlannersAPI {
         for (condition in sortedConditions) {
             condition.consume(player, skill, execution)
         }
-        SkillCastConditionRegistry.consume(player, skill, execution, skill.immutable.castConditions, CastCostTiming.COMMIT)
+        SkillCastConditionRegistry.consume(player, skill, execution, skill.immutable.castConditions)
         skill.immutable.execute(execution)
         PlayerSkillCastEvent.Post(player, skill).call()
         return ExecutableResult.successful()

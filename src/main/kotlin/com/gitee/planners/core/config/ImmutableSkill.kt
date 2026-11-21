@@ -5,7 +5,6 @@ import com.gitee.planners.api.common.Unique
 import com.gitee.planners.api.pick.PickDefinition
 import com.gitee.planners.api.pick.PickResult
 import com.gitee.planners.core.skill.context.SkillExecutionContext
-import com.gitee.planners.core.skill.condition.CastCostTiming
 import com.gitee.planners.core.skill.condition.SkillCastConditionConfig
 import com.gitee.planners.core.skill.pick.PickDefinitionParser
 import com.gitee.planners.core.skill.pick.PickSection
@@ -22,6 +21,7 @@ import org.bukkit.entity.Player
 import com.gitee.planners.module.action.ActionSpec
 import com.gitee.planners.util.getOption
 import com.gitee.planners.util.mapValueWithId
+import taboolib.common.platform.function.warning
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.library.xseries.getItemStack
 import taboolib.module.configuration.Configuration
@@ -177,34 +177,32 @@ class ImmutableSkill(config: Configuration) : Unique {
             if (id.contains('.')) {
                 throw IllegalArgumentException("Skill '${this@ImmutableSkill.id}' cast condition id must not contain '.'")
             }
-            val conditionSection = section.getConfigurationSection(id)
-            if (conditionSection == null) {
-                throw IllegalArgumentException("Skill '$id' cast condition must be a configuration section")
-            }
-            val propsSection = conditionSection.getConfigurationSection("props")
+            val raw = section.get(id)
             val props = LinkedHashMap<String, Any>()
-            if (propsSection != null) {
-                for ((propId, propValue) in propsSection.getValues(false)) {
-                    if (propValue != null) {
-                        props[propId] = propValue
+            if (raw != null) {
+                val conditionSection = section.getConfigurationSection(id)
+                if (conditionSection == null) {
+                    throw IllegalArgumentException(
+                        "Skill '$id' cast condition must be a configuration section or an empty '{}'",
+                    )
+                }
+                // cost.timing 已移除：成本统一在所有条件通过后提交，遗留配置只提示不阻断加载。
+                if (conditionSection.contains("cost")) {
+                    warning(
+                        "Skill '${this@ImmutableSkill.id}' cast condition '$id' 的 cost 段已移除并忽略；" +
+                            "成本统一在所有条件通过后提交。",
+                    )
+                }
+                val propsSection = conditionSection.getConfigurationSection("props")
+                if (propsSection != null) {
+                    for ((propId, propValue) in propsSection.getValues(false)) {
+                        if (propValue != null) {
+                            props[propId] = propValue
+                        }
                     }
                 }
             }
-            val costSection = conditionSection.getConfigurationSection("cost")
-            val timing = if (costSection == null) {
-                null
-            } else {
-                val rawTiming = costSection.getString("timing")
-                if (rawTiming == null) {
-                    throw IllegalArgumentException("Skill '${this@ImmutableSkill.id}' cast condition '$id' cost is missing timing")
-                }
-                try {
-                    CastCostTiming.valueOf(rawTiming.uppercase())
-                } catch (exception: IllegalArgumentException) {
-                    throw IllegalArgumentException("Skill '${this@ImmutableSkill.id}' cast condition '$id' cost timing is invalid: $rawTiming")
-                }
-            }
-            result.add(SkillCastConditionConfig(id, props, timing))
+            result.add(SkillCastConditionConfig(id, props))
         }
         return result
     }
