@@ -13,6 +13,7 @@ import com.gitee.planners.core.player.magic.DefaultMagicPointProvider
 import com.gitee.planners.core.skill.SkillPointsManager
 import com.gitee.planners.core.skill.SkillPointsPolicy
 import com.gitee.planners.core.skill.timing.SkillTimingPolicy
+import com.gitee.planners.module.compat.zaphkiel.ItemChangeListener
 import com.gitee.planners.module.compat.zaphkiel.ZaphkielItemProvider
 import com.gitee.planners.module.action.SelectorDebug
 import com.gitee.planners.util.PhaseProfiler
@@ -235,6 +236,7 @@ object Planners : Plugin() {
         }
         try {
             ZaphkielItemProvider.register()
+            ItemChangeListener.register()
             com.gitee.planners.api.PlannersAPI.registerCastCondition("item_cost", ItemCostCastCondition())
         } catch (error: LinkageError) {
             warning("Zaphkiel 物品库 API 缺失或不匹配，zap: 物品条件将始终不满足", error)
