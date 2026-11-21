@@ -251,6 +251,7 @@ object Planners : Plugin() {
         // 技能里的 fc.* / mm.* 才能解析成功。
         // 物品库适配器必须在条件解析前注册，缺失时只影响对应物品条件。
         registerItemProviders()
+        com.gitee.planners.core.skill.status.SkillStatusListener.register()
         try {
             Registries.init()
             selectionUnimpededTypes.get()
