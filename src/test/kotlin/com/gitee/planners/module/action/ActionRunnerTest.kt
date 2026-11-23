@@ -115,7 +115,7 @@ class ActionRunnerTest {
         val yaml = """
             fire:
               - 'record{tag="now"}'
-              - 'record{tag="later"} ~onTimer{ticks=20}'
+              - 'record{tag="later"} ~pl.ontimer{ticks=20}'
         """.trimIndent()
         val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
         ActionRunner.run(spec!!, ActionSpec.FIRE, scope())
@@ -128,7 +128,7 @@ class ActionRunnerTest {
         val yaml = """
             server:
               - 'record{tag="on-damage"} ~fc.on_damage_modify'
-              - 'record{tag="on-quit"} ~on_quit'
+              - 'record{tag="on-quit"} ~pl.on_quit'
         """.trimIndent()
         val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
         val executed = ActionRunner.fire(spec!!, "fc.on_damage_modify", scope())
@@ -141,10 +141,10 @@ class ActionRunnerTest {
     fun timerLineIsNotFired() {
         val yaml = """
             fire:
-              - 'record{tag="tick"} ~onTimer{ticks=20}'
+              - 'record{tag="tick"} ~pl.ontimer{ticks=20}'
         """.trimIndent()
         val spec = ActionParser.parse("test", section(yaml + "\n"), "action")
-        val executed = ActionRunner.fire(spec!!, "onTimer", scope())
+        val executed = ActionRunner.fire(spec!!, "pl.ontimer", scope())
         assertEquals(0, executed)
         assertTrue(RECORDS.isEmpty())
     }
@@ -237,7 +237,7 @@ class ActionRunnerTest {
     fun rejectsTargetWhenTriggerDoesNotProvideIt() {
         val yaml = """
             onQuit:
-              - 'target-record @target ~on_quit'
+              - 'target-record @target ~pl.on_quit'
         """.trimIndent()
         val error = assertThrows(IllegalArgumentException::class.java) {
             ActionParser.parse("test", section(yaml + "\n"), "action")
@@ -381,9 +381,9 @@ class ActionRunnerTest {
      */
     private object QuitTrigger : ActionTrigger {
 
-        override val id = "on_quit"
+        override val id = "pl.on_quit"
 
-        override val aliases = listOf("on_quit")
+        override val aliases = listOf("pl.on_quit")
     }
 
     /**

@@ -69,7 +69,7 @@ class ActionTimerServiceTest {
     /** 定时器行在重建时注册为周期任务。 */
     @Test
     fun registersRepeatingTask() {
-        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~onTimer{ticks=20}'")
+        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~pl.ontimer{ticks=20}'")
         ActionTimerService.restart(listOf(skill))
         assertEquals(1, dispatcher.tasks.size)
         assertEquals(20L, dispatcher.tasks[0].periodTicks)
@@ -79,7 +79,7 @@ class ActionTimerServiceTest {
     /** 到点后执行动作。 */
     @Test
     fun runsActionOnTick() {
-        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~onTimer{ticks=20}'")
+        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~pl.ontimer{ticks=20}'")
         ActionTimerService.restart(listOf(skill))
         dispatcher.tick()
         assertEquals(listOf("a"), TICKS)
@@ -93,7 +93,7 @@ class ActionTimerServiceTest {
               conditions:
                 - 'chance{value=0}'
               actions:
-                - 'tick{tag="a"} ~onTimer{ticks=20}'
+                - 'tick{tag="a"} ~pl.ontimer{ticks=20}'
         """.trimIndent()
         val skill = spec("s1", yaml)
         ActionTimerService.restart(listOf(skill))
@@ -104,7 +104,7 @@ class ActionTimerServiceTest {
     /** times 限制执行次数。 */
     @Test
     fun respectsTimesLimit() {
-        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~onTimer{ticks=20; times=2}'")
+        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~pl.ontimer{ticks=20; times=2}'")
         ActionTimerService.restart(listOf(skill))
         dispatcher.tick()
         dispatcher.tick()
@@ -115,7 +115,7 @@ class ActionTimerServiceTest {
     /** stop 取消全部任务。 */
     @Test
     fun stopCancelsTasks() {
-        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~onTimer{ticks=20}'")
+        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~pl.ontimer{ticks=20}'")
         ActionTimerService.restart(listOf(skill))
         ActionTimerService.stop()
         assertTrue(dispatcher.tasks[0].cancelled)
@@ -126,7 +126,7 @@ class ActionTimerServiceTest {
     /** 重建会取消上一代任务，不产生重复定时器。 */
     @Test
     fun restartReplacesPreviousTasks() {
-        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~onTimer{ticks=20}'")
+        val skill = spec("s1", "fire:\n- 'tick{tag=\"a\"} ~pl.ontimer{ticks=20}'")
         ActionTimerService.restart(listOf(skill))
         ActionTimerService.restart(listOf(skill))
         assertEquals(2, dispatcher.tasks.size)
@@ -138,7 +138,7 @@ class ActionTimerServiceTest {
     @Test
     fun rejectsDynamicPeriod() {
         val failure = assertThrows(IllegalArgumentException::class.java) {
-            ActionParser.parseLine("tick{tag=\"a\"} ~onTimer{ticks=<skill.level>}", "action.fire[0]")
+            ActionParser.parseLine("tick{tag=\"a\"} ~pl.ontimer{ticks=<skill.level>}", "action.fire[0]")
         }
         assertTrue(failure.message!!.contains("literal"))
     }
@@ -146,7 +146,7 @@ class ActionTimerServiceTest {
     /** 非定时触发器不注册周期任务。 */
     @Test
     fun ignoresEventTriggerLines() {
-        val skill = spec("s1", "server:\n- 'tick{tag=\"a\"} ~on_quit'")
+        val skill = spec("s1", "server:\n- 'tick{tag=\"a\"} ~pl.on_quit'")
         ActionTimerService.restart(listOf(skill))
         assertTrue(dispatcher.tasks.isEmpty())
     }
@@ -163,7 +163,7 @@ class ActionTimerServiceTest {
     /** server 流程不处理定时器行。 */
     @Test
     fun serverFlowSkipsTimerLines() {
-        val skill = spec("s1", "server:\n- 'tick{tag=\"boot\"} ~onTimer{ticks=20}'")
+        val skill = spec("s1", "server:\n- 'tick{tag=\"boot\"} ~pl.ontimer{ticks=20}'")
         ActionServerFlows.runAll(listOf(skill))
         assertTrue(TICKS.isEmpty())
     }

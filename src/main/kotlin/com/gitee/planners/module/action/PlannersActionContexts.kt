@@ -25,7 +25,8 @@ object PlannersActionContexts {
         val attributes = AttributeBagImpl.builder()
             .put(PlannersActionAttributes.SCOPE, scope)
             .build()
-        val actor = PlannersActionTargets.toAction(scope.sender)
+        // 施法者即触发者：与技能侧 sender 目标器取同一对象，避免两条派发路径给出不同结果
+        val actor = PlannersActionTargets.toAction(scope.caster ?: scope.sender)
         val origin = PlannersActionTargets.toAction(scope.target)
         return ActionContext(
             Action.scopes().require(PlannersActionScopes.SKILL),

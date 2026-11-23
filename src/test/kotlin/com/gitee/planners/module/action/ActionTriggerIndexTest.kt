@@ -54,31 +54,31 @@ class ActionTriggerIndexTest {
     /** 索引按触发器归并技能。 */
     @Test
     fun indexesSpecsByTrigger() {
-        val first = spec("s1", "server:\n- 'count{tag=\"a\"} ~on_quit'")
-        val second = spec("s2", "server:\n- 'count{tag=\"b\"} ~on_quit'\n- 'count{tag=\"c\"} ~on_skill_cast'")
+        val first = spec("s1", "server:\n- 'count{tag=\"a\"} ~pl.on_quit'")
+        val second = spec("s2", "server:\n- 'count{tag=\"b\"} ~pl.on_quit'\n- 'count{tag=\"c\"} ~pl.on_skill_cast'")
         val index = ActionTriggerIndex.build(listOf(first, second))
-        assertTrue(index.hasTrigger("on_quit"))
-        assertEquals(2, index.specsFor("on_quit").size)
-        assertEquals(1, index.specsFor("on_skill_cast").size)
-        assertFalse(index.hasTrigger("on_level"))
+        assertTrue(index.hasTrigger("pl.on_quit"))
+        assertEquals(2, index.specsFor("pl.on_quit").size)
+        assertEquals(1, index.specsFor("pl.on_skill_cast").size)
+        assertFalse(index.hasTrigger("pl.on_level"))
     }
 
     /** 定时器行不进入事件索引。 */
     @Test
     fun ignoresTimerLines() {
-        val spec = spec("s1", "fire:\n- 'count{tag=\"a\"} ~onTimer{ticks=20}'")
+        val spec = spec("s1", "fire:\n- 'count{tag=\"a\"} ~pl.ontimer{ticks=20}'")
         val index = ActionTriggerIndex.build(listOf(spec))
-        assertFalse(index.hasTrigger("onTimer"))
+        assertFalse(index.hasTrigger("pl.ontimer"))
         assertTrue(index.triggerIds().isEmpty())
     }
 
     /** 派发只命中声明了该触发器的技能。 */
     @Test
     fun dispatchesOnlyMatchingSpecs() {
-        val first = spec("s1", "server:\n- 'count{tag=\"a\"} ~on_quit'")
-        val second = spec("s2", "server:\n- 'count{tag=\"b\"} ~on_skill_cast'")
+        val first = spec("s1", "server:\n- 'count{tag=\"a\"} ~pl.on_quit'")
+        val second = spec("s2", "server:\n- 'count{tag=\"b\"} ~pl.on_skill_cast'")
         val index = ActionTriggerIndex.build(listOf(first, second))
-        val executed = index.dispatch("on_quit") { QueryScope(label = "test") }
+        val executed = index.dispatch("pl.on_quit") { QueryScope(label = "test") }
         assertEquals(1, executed)
         assertEquals(listOf("a"), HITS)
     }
@@ -86,10 +86,10 @@ class ActionTriggerIndexTest {
     /** 同一触发器的多个技能都会派发。 */
     @Test
     fun dispatchesAllMatchingSpecs() {
-        val first = spec("s1", "server:\n- 'count{tag=\"a\"} ~on_quit'")
-        val second = spec("s2", "server:\n- 'count{tag=\"b\"} ~on_quit'")
+        val first = spec("s1", "server:\n- 'count{tag=\"a\"} ~pl.on_quit'")
+        val second = spec("s2", "server:\n- 'count{tag=\"b\"} ~pl.on_quit'")
         val index = ActionTriggerIndex.build(listOf(first, second))
-        val executed = index.dispatch("on_quit") { QueryScope(label = "test") }
+        val executed = index.dispatch("pl.on_quit") { QueryScope(label = "test") }
         assertEquals(2, executed)
         assertEquals(listOf("a", "b"), HITS)
     }
@@ -97,9 +97,9 @@ class ActionTriggerIndexTest {
     /** 未声明的触发器派发不产生任何执行。 */
     @Test
     fun dispatchesNothingForUnknownTrigger() {
-        val spec = spec("s1", "server:\n- 'count{tag=\"a\"} ~on_quit'")
+        val spec = spec("s1", "server:\n- 'count{tag=\"a\"} ~pl.on_quit'")
         val index = ActionTriggerIndex.build(listOf(spec))
-        val executed = index.dispatch("on_level") { QueryScope(label = "test") }
+        val executed = index.dispatch("pl.on_level") { QueryScope(label = "test") }
         assertEquals(0, executed)
         assertTrue(HITS.isEmpty())
     }

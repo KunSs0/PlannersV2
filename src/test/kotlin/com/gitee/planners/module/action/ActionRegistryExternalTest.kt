@@ -77,7 +77,7 @@ class ActionRegistryExternalTest {
         ActionRegistry.unregisterAll(Any())
         assertNotNull(ActionRegistry.action("message"))
         assertNotNull(ActionRegistry.targeter("self"))
-        assertNotNull(ActionRegistry.trigger("onTimer"))
+        assertNotNull(ActionRegistry.trigger("pl.ontimer"))
         assertNotNull(ActionRegistry.condition("expr"))
     }
 

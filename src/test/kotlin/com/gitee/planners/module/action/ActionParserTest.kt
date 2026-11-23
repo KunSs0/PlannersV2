@@ -190,7 +190,7 @@ class ActionParserTest {
     fun rejectsMultipleTriggers() {
         val failure = assertThrows(IllegalArgumentException::class.java) {
             ActionParser.parseLine(
-                "log{text=\"a\"} ~onTimer{ticks=20} ~onTimer{ticks=40}",
+                "log{text=\"a\"} ~pl.ontimer{ticks=20} ~pl.ontimer{ticks=40}",
                 "action.fire[0]",
             )
         }
@@ -200,9 +200,9 @@ class ActionParserTest {
     /** 触发器冒号写法等价于 ticks 参数。 */
     @Test
     fun parsesTriggerColonForm() {
-        val line = ActionParser.parseLine("log{text=\"a\"} ~onTimer:20", "action.fire[0]")
+        val line = ActionParser.parseLine("log{text=\"a\"} ~pl.ontimer:20", "action.fire[0]")
         assertNotNull(line.trigger)
-        assertEquals("onTimer", line.trigger!!.id)
+        assertEquals("pl.ontimer", line.trigger!!.id)
         assertEquals(20, line.triggerArguments!!.literalInteger("ticks"))
     }
 
@@ -210,7 +210,7 @@ class ActionParserTest {
     @Test
     fun parsesTargeterAndTrigger() {
         val line = ActionParser.parseLine(
-            "log{text=\"a\"} @self @limit{n=3} ~onTimer{ticks=20}",
+            "log{text=\"a\"} @self @limit{n=3} ~pl.ontimer{ticks=20}",
             "action.fire[0]",
         )
         assertEquals(2, line.targeters.size)
@@ -222,7 +222,7 @@ class ActionParserTest {
     /** 触发器行的定时判定成立。 */
     @Test
     fun detectsTimerLine() {
-        val line = ActionParser.parseLine("log{text=\"a\"} ~onTimer{ticks=20}", "action.fire[0]")
+        val line = ActionParser.parseLine("log{text=\"a\"} ~pl.ontimer{ticks=20}", "action.fire[0]")
         assertTrue(line.hasTrigger())
         assertTrue(line.isTimer())
     }

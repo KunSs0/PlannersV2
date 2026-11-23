@@ -15,9 +15,9 @@ object BuiltinTriggers {
      */
     object Timer : ActionTrigger {
 
-        override val id = "onTimer"
+        override val id = "pl.ontimer"
 
-        override val aliases = listOf("ontimer", "timer", "t")
+        override val aliases = listOf(id, "timer", "t")
 
         override fun validate(arguments: ActionArguments) {
             arguments.rejectUnknown("ticks", "t", "interval", "id", "delay", "d", "times", "n")
