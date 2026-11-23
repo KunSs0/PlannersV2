@@ -63,6 +63,35 @@ class FlowRunnerTest {
         assertEquals(listOf("hit"), HITS)
     }
 
+    /** 条件成立进入 then 流程，不成立进入 else 流程。 */
+    @Test
+    fun ifSelectsBranchFlow() {
+        val trueYaml = """
+            fire:
+              - 'if{c="chance{value=1}";then=on_true;else=on_false}'
+            on_true:
+              - 'record{tag="true"}'
+            on_false:
+              - 'record{tag="false"}'
+        """.trimIndent()
+        val trueSpec = ActionParser.parse("test", section(trueYaml + "\n"), "action")!!
+        ActionRunner.run(trueSpec, ActionSpec.FIRE, blankScope())
+        assertEquals(listOf("true"), HITS)
+
+        HITS.clear()
+        val falseYaml = """
+            fire:
+              - 'if{c="chance{value=0}";then=on_true;else=on_false}'
+            on_true:
+              - 'record{tag="true"}'
+            on_false:
+              - 'record{tag="false"}'
+        """.trimIndent()
+        val falseSpec = ActionParser.parse("test", section(falseYaml + "\n"), "action")!!
+        ActionRunner.run(falseSpec, ActionSpec.FIRE, blankScope())
+        assertEquals(listOf("false"), HITS)
+    }
+
     /** 跳转时传入的目标对后续流程可见。 */
     @Test
     fun flowRunnerCarriesTarget() {

@@ -117,6 +117,52 @@ object BuiltinActions {
     }
 
     /**
+     * 条件分支：条件成立进入 `then` 流程，否则进入 `else` 流程。
+     *
+     * 条件在行执行时求值，分支通过运行时注入的流程入口同步跳转。
+     */
+    object IfBranch : Action {
+
+        override val id = "if"
+
+        override val aliases = listOf("if")
+
+        override val acceptsEmptyTargets = true
+
+        override fun validate(arguments: ActionArguments) {
+            val raw = arguments.get("c", "cond", "condition")
+            val conditionText = raw?.sourceText()
+            if (conditionText == null) {
+                throw IllegalArgumentException(arguments.path + " requires argument 'c'.")
+            }
+            ActionParser.parseCondition(conditionText, arguments.path + ".c")
+            val thenFlow = arguments.get("then")?.sourceText()
+            val elseFlow = arguments.get("else")?.sourceText()
+            if ((thenFlow == null || thenFlow.isBlank()) && (elseFlow == null || elseFlow.isBlank())) {
+                throw IllegalArgumentException(arguments.path + " requires then or else.")
+            }
+        }
+
+        override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
+            val raw = arguments.requireText(scope, "c", "cond", "condition")
+            val condition = ActionParser.parseCondition(raw, arguments.path + ".c")
+            val flowId = if (condition.matches(scope)) {
+                arguments.text(scope, "then")
+            } else {
+                arguments.text(scope, "else")
+            }
+            if (flowId == null || flowId.isBlank()) {
+                return
+            }
+            val runner = scope.flowRunner
+            if (runner == null) {
+                throw IllegalStateException("if 只能在动作结构执行链中使用。")
+            }
+            runner(flowId, scope)
+        }
+    }
+
+    /**
      * 延迟占位；实际调度由运行时读取参数完成。
      */
     object Delay : Action {
