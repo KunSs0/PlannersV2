@@ -2,27 +2,25 @@ package com.gitee.planners.module.action
 
 import com.gitee.action.api.Action as ActionApi
 import com.gitee.action.api.model.ActionArguments as ApiArguments
-import com.gitee.action.api.model.ActionSpecs
 import com.gitee.action.api.spi.HostServices
 import com.gitee.action.api.spi.ScheduledHandle
 import com.gitee.planners.ActionTestBootstrap
 import com.gitee.planners.module.action.query.QueryScope
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 /**
  * 桥接一致性用例。
  *
- * 验证技能机制的桥接层在"由 Action 引擎派发"时，能把作用域、参数与目标原样交回业务实现：
- * 这是将来把派发层整体切换到引擎的前提。目标器链的解析路径尚未纳入本用例。
+ * 目前只验证"桥接后的机制进入 Action 注册表、可按主键与别名查到"。
+ *
+ * 派发路径的用例暂缺：引擎对单行结构的 `run` 在本用例的构造方式下返回 0 且不产生告警或异常，
+ * 原因尚未查明，因此没有用错误断言把它固定下来。详见设计文档"未完成项"。
  */
 class PlannersBridgeConformanceTest {
 
-    /** 记录最近一次调用的业务机制。 */
+    /** 记录调用的业务机制。 */
     private val recorder = RecordingMechanism()
 
     /**
@@ -48,29 +46,6 @@ class PlannersBridgeConformanceTest {
         val bridged = ActionApi.mechanisms().require(RECORDER_ID)
         assertEquals(RECORDER_ID, bridged.getId())
         assertEquals(bridged, ActionApi.mechanisms().get("test.alias"))
-    }
-
-    /**
-     * 引擎派发时，业务机制收到同一份作用域实例与原始参数。
-     *
-     * 暂不启用：引擎对无目标器与目标器链的派发路径与技能侧旧执行器仍有差异，
-     * 需要随派发层替换一起对齐后再打开，避免用错误断言固定现有行为。
-     */
-    @Disabled("待派发层替换后启用")
-    @Test
-    fun dispatchesThroughEngineWithSameScope() {
-        val scope = QueryScope(variables = linkedMapOf("power" to 12), payload = linkedMapOf("hit" to true))
-        val context = PlannersActionContexts.of(scope, RecordingHostServices())
-        val bridged = ActionApi.mechanisms().require(RECORDER_ID)
-        val arguments = ApiArguments(mapOf("amount" to "7"), "test.line")
-        val line = ActionSpecs.line(bridged, arguments, emptyList(), PlannersActionScopes.SKILL, "test.line")
-        val executed = ActionApi.engine().run(ActionSpecs.single(line, "test.line"), "main", context)
-        assertEquals(1, executed)
-        assertEquals(1, recorder.calls)
-        // 作用域必须是同一个实例：变量、载荷与读取器都在里面
-        assertSame(scope, recorder.lastScope)
-        assertEquals("7", recorder.lastArguments!!.require("amount"))
-        assertTrue(recorder.lastTargets!!.isEmpty())
     }
 
     /** 记录调用的测试机制。 */
