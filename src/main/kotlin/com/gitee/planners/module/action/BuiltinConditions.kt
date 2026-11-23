@@ -24,18 +24,19 @@ object BuiltinConditions {
         override val aliases = listOf("expr", "expression")
 
         override fun validate(arguments: ActionArguments) {
-            arguments.rejectUnknown("e", "expr", "expression")
-            val source = arguments.raw("e", "expr", "expression")
+            // 参数名与 core 的 expr 对齐为 c，同时兼容旧写法 e
+            arguments.rejectUnknown("c", "e", "expr", "expression")
+            val source = arguments.raw("c", "e", "expr", "expression")
             if (source == null) {
-                throw IllegalArgumentException("${arguments.path} requires argument 'e'.")
+                throw IllegalArgumentException("${arguments.path} requires argument 'c'.")
             }
             QueryRef.parseVariableExpression(source, "${arguments.path}.e")
         }
 
         override fun compile(arguments: ActionArguments): Any? {
-            val source = arguments.raw("e", "expr", "expression")
+            val source = arguments.raw("c", "e", "expr", "expression")
             if (source == null) {
-                throw IllegalArgumentException("${arguments.path} requires argument 'e'.")
+                throw IllegalArgumentException("${arguments.path} requires argument 'c'.")
             }
             // 允许裸标识符：表达式里可以直接引用事件载荷变量（cause、damage）与技能字段（level）。
             return QueryRef.parseVariableExpression(source, "${arguments.path}.e")
