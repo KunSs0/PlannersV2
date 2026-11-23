@@ -21,6 +21,8 @@ object PlannersActionInstaller {
         }
         installed = true
         PlannersActionScopes.install(owner)
+        // 技能侧条目一次性适配进 Action，供新的解析与派发路径使用
+        PlannersActionBridges.installRegistry(owner)
     }
 
     /**
