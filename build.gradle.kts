@@ -37,6 +37,7 @@ taboolib {
 
     description {
         dependencies {
+            name("Action")
             name("MythicMobs").optional(true)
             name("PlaceholderAPI").optional(true)
             // 运行期不再加载脚本；软依赖只声明加载顺序：FightCore 的 Nova 脚本调用本插件 API，本插件需先启用。
@@ -92,6 +93,9 @@ dependencies {
     testRuntimeOnly(files(relocatedTaboolibTestLibraries).builtBy(relocateTaboolibTestLibraries))
 
     compileOnly("ink.ptms:nms-all:1.0.0")
+    // 动作执行由前置插件 Action 提供（编译期只依赖公共 API 包）
+    compileOnly(files("libs/action-api.jar"))
+    testImplementation(files("libs/action-api.jar"))
     compileOnly("ink.ptms.core:v12004:12004:mapped")
     compileOnly("ink.ptms.core:v12004:12004:universal")
 
