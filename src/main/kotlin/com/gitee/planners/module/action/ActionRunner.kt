@@ -1,5 +1,6 @@
 package com.gitee.planners.module.action
 
+import com.gitee.planners.api.PlayerTemplateAPI.plannersTemplate
 import com.gitee.planners.module.action.query.QueryScope
 import org.bukkit.Location
 import org.bukkit.entity.LivingEntity
@@ -191,6 +192,13 @@ object ActionRunner {
         if (line.action.id == BuiltinActions.Call.id) {
             return executeCall(line, spec, scope, depth)
         }
+        // 跨技能编排单独成两条机制：run 走 API 直调，cast 走完整释放
+        if (line.action.id == BuiltinActions.SkillRun.id) {
+            return executeSkillRun(line, scope, depth)
+        }
+        if (line.action.id == BuiltinActions.SkillCast.id) {
+            return executeSkillCast(line, scope)
+        }
         try {
             val targets = resolveTargets(line, scope)
             if (targets.isEmpty() && !line.action.acceptsEmptyTargets) {
@@ -221,10 +229,6 @@ object ActionRunner {
      */
     private fun executeCall(line: ActionLine, spec: ActionSpec, scope: QueryScope, depth: Int): Boolean {
         val flowId = line.arguments.requireText(scope, "func", "f")
-        val targetSkill = line.arguments.text(scope, "skill")
-        if (targetSkill != null && !targetSkill.equals(spec.skillId, true)) {
-            return executeCrossSkillCall(line, scope, depth, targetSkill, flowId)
-        }
         if (line.targeters.isEmpty()) {
             runFlow(spec, flowId, scope, depth + 1)
             return true
@@ -270,13 +274,11 @@ object ActionRunner {
      * @param flowId 目标技能里的流程名。
      * @return 执行过至少一次时返回 true。
      */
-    private fun executeCrossSkillCall(
-        line: ActionLine,
-        scope: QueryScope,
-        depth: Int,
-        skillId: String,
-        flowId: String,
-    ): Boolean {
+    private fun executeSkillRun(line: ActionLine, scope: QueryScope, depth: Int): Boolean {
+        val skillId = line.arguments.requireText(scope, "skill")
+        // 未指定流程时执行目标技能的入口流程
+        val explicitFlow = line.arguments.text(scope, "func", "f")
+        val flowId = if (explicitFlow == null) ActionSpec.FIRE else explicitFlow
         val other = com.gitee.planners.api.Registries.SKILL.getOrNull(skillId)
         val otherSpec = if (other == null) null else other.actionSpec
         if (otherSpec == null) {
@@ -302,6 +304,37 @@ object ActionRunner {
                 continue
             }
             runFlow(otherSpec, flowId, base.withTarget(entity), depth + 1)
+        }
+        return true
+    }
+
+    /**
+     * 释放另一个技能：走目标技能自己的冷却、消耗、释放条件与入口流程。
+     *
+     * @param line 动作行。
+     * @param scope 执行上下文。
+     * @return 释放请求被接受时返回 true。
+     */
+    private fun executeSkillCast(line: ActionLine, scope: QueryScope): Boolean {
+        val skillId = line.arguments.requireText(scope, "skill")
+        val caster = scope.sender
+        if (caster !is Player) {
+            return false
+        }
+        val template = caster.plannersTemplate
+        // 技能查询是异步的，释放必须在主线程进行
+        template.getSkill(skillId).thenAccept { skill ->
+            if (org.bukkit.Bukkit.isPrimaryThread()) {
+                com.gitee.planners.api.PlannersAPI.cast(caster, skill)
+            } else {
+                org.bukkit.Bukkit.getScheduler().runTask(
+                    taboolib.platform.BukkitPlugin.getInstance(),
+                    Runnable { com.gitee.planners.api.PlannersAPI.cast(caster, skill) },
+                )
+            }
+        }.exceptionally { failure ->
+            warning("Action ${line.path} failed to cast skill '$skillId': ${failure.message}")
+            null
         }
         return true
     }

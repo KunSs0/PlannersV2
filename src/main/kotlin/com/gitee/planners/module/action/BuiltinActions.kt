@@ -98,7 +98,9 @@ object BuiltinActions {
     }
 
     /**
-     * 执行另一个流程。
+     * 执行本结构内的另一个流程。
+     *
+     * 跨技能调用已拆到 `pl.skill.run` / `pl.skill.cast`，因此本动作只接受 `func`/`f`。
      */
     object Call : Action {
 
@@ -108,11 +110,54 @@ object BuiltinActions {
 
         override fun validate(arguments: ActionArguments) {
             arguments.require("func", "f")
-            arguments.rejectUnknown("func", "f", "skill")
+            arguments.rejectUnknown("func", "f")
         }
 
         override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
             // 流程跳转由运行时处理，本动作不直接执行副作用。
+        }
+    }
+
+    /**
+     * 执行另一个技能的动作结构：API 级直调，不检查冷却、消耗与释放条件。
+     *
+     * `skill` 指定目标技能；`f` 可选，缺省执行目标技能的入口流程。
+     * 施法者保持为当前上下文的施法者，写了目标器时按目标逐个展开。
+     */
+    object SkillRun : Action {
+
+        override val id = "pl.skill.run"
+
+        override val aliases = listOf(id)
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.require("skill")
+            arguments.rejectUnknown("skill", "func", "f")
+        }
+
+        override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
+            // 跨技能编排由运行时处理，本动作不直接执行副作用。
+        }
+    }
+
+    /**
+     * 释放另一个技能：走目标技能自己的冷却、消耗、释放条件与入口流程。
+     *
+     * `skill` 指定目标技能；施法者取当前上下文的施法者。
+     */
+    object SkillCast : Action {
+
+        override val id = "pl.skill.cast"
+
+        override val aliases = listOf(id)
+
+        override fun validate(arguments: ActionArguments) {
+            arguments.require("skill")
+            arguments.rejectUnknown("skill")
+        }
+
+        override fun execute(scope: QueryScope, arguments: ActionArguments, targets: List<ActionTarget>) {
+            // 技能释放由运行时处理，本动作不直接执行副作用。
         }
     }
 

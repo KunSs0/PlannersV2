@@ -32,6 +32,8 @@ object ActionBuiltins {
         ActionRegistry.register(BuiltinActions.Command)
         ActionRegistry.register(BuiltinActions.Log)
         ActionRegistry.register(BuiltinActions.Call)
+        ActionRegistry.register(BuiltinActions.SkillRun)
+        ActionRegistry.register(BuiltinActions.SkillCast)
         ActionRegistry.register(BuiltinActions.IfBranch)
         ActionRegistry.register(BuiltinActions.Delay)
         ActionRegistry.register(BuiltinActions.TargetFinderSet)
