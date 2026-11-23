@@ -23,6 +23,8 @@ object PlannersActionInstaller {
         PlannersActionScopes.install(owner)
         // 技能侧条目一次性适配进 Action，供新的解析与派发路径使用
         PlannersActionBridges.installRegistry(owner)
+        // 技能取值根同样注册进 Action，表达式统一由前置插件求值
+        PlannersQueryRoots.install(owner)
     }
 
     /**
