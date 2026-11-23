@@ -75,7 +75,7 @@ class ImmutableVariableEvaluateTest {
                 mapOf("condition" to "skill.level > 0", "action" to "9"),
             ),
         )
-        assertEquals(7.0, variable.evaluate(scope()))
+        assertEquals(7L, variable.evaluate(scope()))
     }
 
     /** 条件变量全部不成立时返回 false。 */

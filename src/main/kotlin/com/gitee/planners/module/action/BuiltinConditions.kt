@@ -1,6 +1,5 @@
 package com.gitee.planners.module.action
 
-import com.gitee.planners.module.action.query.QueryEvaluator
 import com.gitee.planners.module.action.query.QueryRef
 import com.gitee.planners.module.action.query.QueryScope
 import java.util.concurrent.ThreadLocalRandom
@@ -30,7 +29,7 @@ object BuiltinConditions {
             if (source == null) {
                 throw IllegalArgumentException("${arguments.path} requires argument 'e'.")
             }
-            QueryEvaluator.validate(source, "${arguments.path}.e", true)
+            QueryRef.parseVariableExpression(source, "${arguments.path}.e")
         }
 
         override fun compile(arguments: ActionArguments): Any? {

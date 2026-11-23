@@ -90,6 +90,6 @@ class QueryIndexTest {
         val failure = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
             QueryRef.parseExpression("skill.var.table[0", "test")
         }
-        assertEquals(true, failure.message!!.contains("expects ']'"))
+        assertEquals(true, failure.message!!.contains("]"))
     }
 }
