@@ -121,6 +121,8 @@ dependencies {
 
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
+    // 单测需要真实引擎来验证桥接契约
+    testImplementation(files("libs/action-runtime.jar"))
     compileOnly(files("libs/HaiderCore-2.0.0-api.jar"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(files("libs/HaiderCore-2.0.0-api.jar"))

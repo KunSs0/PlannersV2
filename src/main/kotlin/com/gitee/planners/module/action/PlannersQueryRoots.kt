@@ -24,6 +24,10 @@ object PlannersQueryRoots {
      */
     fun install(owner: Any) {
         for (root in QueryRoot.values()) {
+            // 重复安装（重载或测试）时跳过已存在的根
+            if (Action.values().get(root.id) != null) {
+                continue
+            }
             Action.values().register(RootBridge(root), owner)
         }
     }
