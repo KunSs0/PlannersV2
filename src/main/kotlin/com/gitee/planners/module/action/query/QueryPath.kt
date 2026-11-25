@@ -34,6 +34,7 @@ class QueryPath private constructor(
     fun resolve(scope: QueryScope): Any? {
         return when (root) {
             QueryRoot.SENDER -> resolveSender(scope)
+            QueryRoot.CASTER -> resolveCaster(scope)
             QueryRoot.TARGET -> resolveTarget(scope)
             QueryRoot.SKILL -> resolveSkill(scope)
             QueryRoot.PROFILE -> resolveProfile(scope)
@@ -107,6 +108,17 @@ class QueryPath private constructor(
     /** 读取施法者字段。 */
     private fun resolveSender(scope: QueryScope): Any? {
         return resolveEntityField(scope.sender)
+    }
+
+    /**
+     * 读取本次施法的施法者字段。
+     *
+     * 与 [resolveSender] 的差别只在逐目标子流程：`call{func=…} @target` 命中玩家目标时
+     * 会用该玩家重建作用域，此时 `sender` 是当前元素、`caster` 仍是发起者。
+     * 逐目标流程里拼「施法者标识」这类 key 必须走这里。
+     */
+    private fun resolveCaster(scope: QueryScope): Any? {
+        return resolveEntityField(scope.caster)
     }
 
     /** 读取实体或位置字段，按实际类型分派。 */
@@ -532,7 +544,7 @@ class QueryPath private constructor(
                     )
                 }
             }
-            if (segments.isEmpty() && root != QueryRoot.SENDER) {
+            if (segments.isEmpty() && !root.bareAllowed) {
                 throw IllegalArgumentException("$label query path '$trimmed' requires at least one field.")
             }
             return QueryPath(root, segments, trimmed)

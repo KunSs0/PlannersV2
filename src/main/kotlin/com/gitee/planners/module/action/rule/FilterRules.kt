@@ -7,7 +7,8 @@ import java.util.Locale
  *
  * 内置规则由 [install] 登记；外部插件按 `registerExternal` 登记，停用时用
  * `unregisterAll` 整体撤销，与动作注册表的依赖方向、生命周期一致。
- * 规则主键按域分组（`health.*`、`team.*`），因此不设别名。
+ * 规则主键按域分组（`health.*`、`team.*`、`distance`），因此不设别名。
+ * `team.same` 由 FightCore 注册：严格同队需要 Creator 队伍 API，Planners 自身不依赖它。
  */
 object FilterRules {
 
@@ -38,6 +39,7 @@ object FilterRules {
         register(HealthRatioRule)
         register(TeamAllyRule)
         register(TeamEnemyRule)
+        register(DistanceRule)
     }
 
     /**

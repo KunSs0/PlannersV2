@@ -206,8 +206,8 @@ class QueryRef private constructor(
                 val root = trimmed.substringBefore('.')
                 val resolved = QueryRoot.of(root)
                 // 只写根名（如 locator="skill"）没有字段可取，按字面量处理；
-                // sender 允许单独使用，其余根必须带至少一个字段才是查询。
-                if (resolved != null && (trimmed.contains('.') || resolved == QueryRoot.SENDER)) {
+                // sender / caster 允许单独使用，其余根必须带至少一个字段才是查询。
+                if (resolved != null && (trimmed.contains('.') || resolved.bareAllowed)) {
                     // 保留原始文本：expr 这类条件需要整段公式，路径字段也要能回读原文。
                     return QueryRef(null, QueryPath.parse(trimmed, label), null, null, label, trimmed)
                 }
@@ -322,8 +322,8 @@ class QueryRef private constructor(
                 val root = trimmed.substringBefore('.')
                 val resolved = QueryRoot.of(root)
                 // 只写根名（如 locator="skill"）没有字段可取，按字面量处理；
-                // sender 允许单独使用，其余根必须带至少一个字段才是查询。
-                if (resolved != null && (trimmed.contains('.') || resolved == QueryRoot.SENDER)) {
+                // sender / caster 允许单独使用，其余根必须带至少一个字段才是查询。
+                if (resolved != null && (trimmed.contains('.') || resolved.bareAllowed)) {
                     // 保留原始文本：expr 这类条件需要整段公式，路径字段也要能回读原文。
                     return QueryRef(null, QueryPath.parse(trimmed, label), null, null, label, trimmed)
                 }

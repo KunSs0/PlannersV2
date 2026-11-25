@@ -8,11 +8,30 @@ package com.gitee.planners.module.action.query
  *
  * @property id 配置中出现的关键字，小写。
  * @property skillOnly 是否只允许出现在技能流程中。
+ * @property bareAllowed 是否允许只写根名（`<sender>` / `<caster>` 直接取对象本身）。
  */
-enum class QueryRoot(val id: String, val skillOnly: Boolean = false) {
+enum class QueryRoot(
+    val id: String,
+    val skillOnly: Boolean = false,
+    val bareAllowed: Boolean = false,
+) {
 
-    /** 施法者，字段按运行期实际类型分派。 */
-    SENDER("sender"),
+    /**
+     * 当前执行上下文的施法者，字段按运行期实际类型分派。
+     *
+     * 逐目标 `call` 命中玩家目标时会改写成该玩家；要读"最初发起本次施法的人"，
+     * 必须用 [CASTER]。
+     */
+    SENDER("sender", bareAllowed = true),
+
+    /**
+     * 本次施法的施法者，整个执行周期不变。
+     *
+     * 与 [SENDER] 的差别只在逐目标子流程：那里 `sender` 是当前元素（可能已被换成目标玩家），
+     * `caster` 仍是发起者。拼「施法者标识」这类 key 时必须用这个根，否则同一个目标会被
+     * 多个施法者共用一把 key。
+     */
+    CASTER("caster", bareAllowed = true),
 
     /** 当前目标，即最近一个目标器解析出的接收者。 */
     TARGET("target", true),
